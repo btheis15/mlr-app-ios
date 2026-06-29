@@ -142,120 +142,68 @@ extension LocalPlace {
 // Jul 27 = Monday · Jul 28 = Tuesday · Jul 29 = Wednesday · Jul 30 = Thursday · Jul 31 = Friday
 
 extension ScheduleItem {
+    // One headline activity per day so far. Titles are real; times, locations,
+    // and details are still being set, so they read "TBD" (no placeholders).
+    // Emoji is prepended to the title (ScheduleItem has no emoji field).
     static let seed: [ScheduleItem] = [
-        // Monday Jul 27 — Arrival Day
         ScheduleItem(
-            id: "arrival",
+            id: "games-up-top",
             day: "Monday",
-            time: "3:00 PM",
-            title: "Arrival & check-in",
-            location: "Main Lodge",
-            description: "Roll in, grab your cabin keys at the lodge, and settle the kids. Coolers to the boathouse fridge.",
+            time: "TBD",
+            title: "🏅 Games Up Top",
+            location: "TBD",
+            description: "Details TBD.",
             isPrivate: false,
-            leads: ["Steward Eadric of House Larkspur"]
+            leads: []
         ),
         ScheduleItem(
-            id: "welcome-bonfire",
-            day: "Monday",
-            time: "7:30 PM",
-            title: "Welcome bonfire & s'mores",
-            location: "Lakeside fire pit",
-            description: "Kick off the week by the water. Marshmallows and firewood provided — bring a chair and your stories.",
-            isPrivate: false,
-            leads: ["Baron Aldric of House Thornwood"]
-        ),
-        // Tuesday Jul 28
-        ScheduleItem(
-            id: "pancake-breakfast",
+            id: "lake-day",
             day: "Tuesday",
-            time: "8:00 AM",
-            title: "Pancake breakfast",
-            location: "Lodge deck",
-            description: "Grandpa's famous blueberry pancakes. Coffee's on by 7:30.",
+            time: "TBD",
+            title: "🏖️ Lake Day",
+            location: "TBD",
+            description: "Details TBD.",
             isPrivate: false,
-            leads: ["Master Tobias of House Fenwick"]
+            leads: []
         ),
         ScheduleItem(
-            id: "pontoon-parade",
-            day: "Tuesday",
-            time: "1:00 PM",
-            title: "Pontoon parade",
-            location: "Main dock",
-            description: "Deck out the pontoons and cruise the bay. Best-decorated boat wins the golden paddle.",
-            isPrivate: false,
-            leads: ["Captain Rowan of House Eldermoor"]
-        ),
-        // Wednesday Jul 29
-        ScheduleItem(
-            id: "musky-tournament",
+            id: "golf-outing",
             day: "Wednesday",
-            time: "6:00 AM",
-            title: "Musky fishing tournament",
-            location: "North bay",
-            description: "The big one. Two-person boats, catch-and-release, biggest musky takes the trophy. Early start — coffee at the dock.",
+            time: "TBD",
+            title: "⛳ Golf Outing",
+            location: "TBD",
+            description: "Details TBD.",
             isPrivate: false,
-            leads: ["Master Bartholomew of House Eldermoor"]
+            leads: []
         ),
         ScheduleItem(
-            id: "kids-olympics",
-            day: "Wednesday",
-            time: "10:00 AM",
-            title: "Kids' lake olympics",
-            location: "Swim beach",
-            description: "Cannonball contest, sandcastle build-off, and the legendary tube relay.",
-            isPrivate: false,
-            leads: ["Lady Wynne of House Larkspur"]
-        ),
-        // Thursday Jul 30
-        ScheduleItem(
-            id: "cousins-cookout",
+            id: "variety-show",
             day: "Thursday",
-            time: "5:30 PM",
-            title: "Cousins' cookout (potluck)",
-            location: "Pavilion",
-            description: "Everyone brings a dish — see the Crew tab for who's got what. Grill fired up at 5.",
+            time: "TBD",
+            title: "🎭 Variety Show",
+            location: "TBD",
+            description: "Hosted by Michelle Birkholz. Details TBD.",
             isPrivate: false,
-            leads: ["Goodwife Maren of House Hollowbrook"]
+            leads: ["Michelle Birkholz"]
         ),
         ScheduleItem(
-            id: "talent-show",
-            day: "Thursday",
-            time: "7:00 PM",
-            title: "Family talent show",
-            location: "Lodge great room",
-            description: "Sign up at the lodge. Acts of all kinds welcome — the cheesier the better.",
-            isPrivate: false,
-            leads: ["Bard Percival of House Wyndmere"]
-        ),
-        // Friday Jul 31 — Last Day
-        ScheduleItem(
-            id: "group-photo",
+            id: "friday-tbd",
             day: "Friday",
-            time: "11:00 AM",
-            title: "Big group photo",
-            location: "Lodge front steps",
-            description: "Everyone, all of us, matching-ish shirts. Don't be late!",
+            time: "TBD",
+            title: "🗓️ TBD",
+            location: "TBD",
+            description: "Details TBD.",
             isPrivate: false,
-            leads: ["Dame Cecily of House Brightwater"]
+            leads: []
         ),
-        ScheduleItem(
-            id: "fireworks",
-            day: "Friday",
-            time: "9:30 PM",
-            title: "Fireworks over the lake",
-            location: "Lakeside lawn",
-            description: "The grand finale. Blankets out, lights down, look up.",
-            isPrivate: false,
-            leads: ["Sir Reginald of House Pemberlye"]
-        ),
-        // Anytime
+        // Anytime — runs all week with no set time.
         ScheduleItem(
             id: "scavenger-hunt",
             day: "Anytime",
             time: "Any time",
-            title: "Family Fest scavenger hunt",
+            title: "🗺️ Family Fest scavenger hunt",
             location: "Pick up your card at the Main Lodge",
-            description: "Track down hidden landmarks & oddities around the lake — any time, all week. Pick up a hunt card at the lodge, then find each spot at your own pace — solo, as a family, or as a house. Finish any day and turn it in at the lodge for a prize at the farewell BBQ.",
+            description: "Track down hidden landmarks & oddities around the lake — any time, all week. Pick up a hunt card at the lodge, then find each spot around Muskellunge Lake at your own pace — solo, as a family, or as a house. Finish the list any day and turn it in at the lodge for a prize at the farewell BBQ.",
             isPrivate: false,
             leads: []
         ),
@@ -266,56 +214,58 @@ extension ScheduleItem {
 // Jul 27 = Monday · Jul 28 = Tuesday · Jul 29 = Wednesday · Jul 30 = Thursday · Jul 31 = Friday
 
 extension FestDinner {
+    // Head chefs are real; menus, crew, times, and locations are still being set
+    // (they read "TBD" — no placeholders).
     static let seed: [FestDinner] = [
         FestDinner(
             id: "d-mon",
             day: "Monday",
-            title: "The Welcoming Feast",
-            chef: "Baron Aldric of House Thornwood",
-            menu: "Flame-charred sausages & beef rounds of the realm, fire-roasted corn, and the Baron's legendary potato salad.",
-            location: "Lakeside Pavilion",
-            time: "6:00 PM",
-            crew: ["House Thornwood", "The Ravenshire Clan", "House Larkspur"]
+            title: "Monday Dinner",
+            chef: "Jessica Stewart",
+            menu: "TBD",
+            location: "TBD",
+            time: "TBD",
+            crew: []
         ),
         FestDinner(
             id: "d-tue",
             day: "Tuesday",
-            title: "Ye Olde Pizza Forge",
-            chef: "Dame Cecily of House Brightwater",
-            menu: "Wood-fired hand pies & flatbreads from the dock forge, a garden-greens salad, and lemon ices for the squires.",
-            location: "Main Dock",
-            time: "6:30 PM",
-            crew: ["House Brightwater", "The Wyndmere Troupe"]
+            title: "Tuesday Dinner",
+            chef: "Natalie de Pareja & Karen",
+            menu: "TBD",
+            location: "TBD",
+            time: "TBD",
+            crew: []
         ),
         FestDinner(
             id: "d-wed",
             day: "Wednesday",
-            title: "Dragonscale Fish Fry",
-            chef: "Master Bartholomew of House Eldermoor",
-            menu: "Beer-battered walleye from the day's catch, golden hush puppies, and slaw of the realm.",
-            location: "Boathouse",
-            time: "5:30 PM",
-            crew: ["House Eldermoor", "The Ashforge Family", "House Fenwick"]
+            title: "Wednesday Dinner",
+            chef: "Lauren Zerfas",
+            menu: "TBD",
+            location: "TBD",
+            time: "TBD",
+            crew: []
         ),
         FestDinner(
             id: "d-thu",
             day: "Thursday",
-            title: "The Cousins' Grand Potluck Banquet",
-            chef: "Goodwife Maren of House Hollowbrook",
-            menu: "A long table of dishes from every house (see the Crew board), with the Goodwife's grill lit at 5.",
-            location: "Pavilion",
-            time: "5:30 PM",
-            crew: ["House Hollowbrook", "The Stagleigh Kin", "House Marrowin"]
+            title: "Thursday Dinner",
+            chef: "Rob & Joe",
+            menu: "TBD",
+            location: "TBD",
+            time: "TBD",
+            crew: []
         ),
         FestDinner(
             id: "d-fri",
             day: "Friday",
-            title: "The Farewell Pig Roast",
-            chef: "Sir Reginald of House Pemberlye",
-            menu: "A smoked feast to send us off — slow brisket, herbed chicken, honeyed beans, and berry cobbler before the fireworks.",
-            location: "Lakeside Pavilion",
-            time: "6:00 PM",
-            crew: ["House Pemberlye", "The Brightwater Family", "House Thornwood"]
+            title: "Friday Dinner",
+            chef: "TBD",
+            menu: "TBD",
+            location: "TBD",
+            time: "TBD",
+            crew: []
         ),
     ]
 }

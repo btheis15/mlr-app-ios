@@ -33,12 +33,12 @@ struct WelcomeIntroView: View {
 
     var body: some View {
         TabView(selection: $currentStep) {
-            // ── Step 1 ──────────────────────────────────────────────
-            step1View
+            // ── Step 1: notifications first ─────────────────────────
+            pushStepView
                 .tag(0)
 
-            // ── Step 2 ──────────────────────────────────────────────
-            step2View
+            // ── Step 2: profile basics ──────────────────────────────
+            basicsStepView
                 .tag(1)
         }
         .tabViewStyle(.page(indexDisplayMode: .never))
@@ -61,7 +61,7 @@ struct WelcomeIntroView: View {
 
     // MARK: - Step 1: Welcome + collect basics
 
-    private var step1View: some View {
+    private var basicsStepView: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 28) {
                 // Hero
@@ -72,11 +72,11 @@ struct WelcomeIntroView: View {
                         .frame(height: 64)
                         .frame(maxWidth: .infinity)
 
-                    Text("Welcome to MLR!")
+                    Text("A few details about you")
                         .font(.title.bold())
                         .frame(maxWidth: .infinity)
 
-                    Text("Tell us a little about yourself so the family can reach you.")
+                    Text("So the family can reach you — your phone, birthday, and how you like to get paid back. All optional.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
@@ -149,63 +149,9 @@ struct WelcomeIntroView: View {
                     }
                 }
 
-                // Continue button
+                // Done — save basics and finish onboarding
                 Button {
-                    Task { await saveStep1() }
-                } label: {
-                    Text("Continue")
-                        .font(.body.bold())
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                }
-                .background(Color("primary"))
-                .foregroundStyle(.white)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
-                .padding(.top, 8)
-
-                stepIndicator(active: 0)
-            }
-            .padding(.horizontal, 24)
-            .padding(.bottom, 40)
-        }
-    }
-
-    // MARK: - Step 2: Push notification explanation + prefs
-
-    private var step2View: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
-                VStack(spacing: 8) {
-                    Image(systemName: "bell.badge.fill")
-                        .font(.system(size: 48))
-                        .foregroundStyle(Color("primary"))
-                        .frame(maxWidth: .infinity)
-
-                    Text("Stay in the loop")
-                        .font(.title.bold())
-                        .frame(maxWidth: .infinity)
-
-                    Text("Turn on the things you'd like to hear about. You can change these anytime in Profile → Notifications.")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.center)
-                        .frame(maxWidth: .infinity)
-                }
-                .padding(.top, 8)
-
-                // Embedded push prefs — uses the real PushToggleView
-                PushToggleView()
-
-                if let saveError {
-                    Text(saveError)
-                        .font(.footnote)
-                        .foregroundStyle(.red)
-                        .padding(.top, 4)
-                }
-
-                // Done button
-                Button {
-                    Task { await finishIntro() }
+                    Task { await finishOnboarding() }
                 } label: {
                     Group {
                         if isSaving {
@@ -222,8 +168,80 @@ struct WelcomeIntroView: View {
                 .foregroundStyle(.white)
                 .clipShape(RoundedRectangle(cornerRadius: 14))
                 .disabled(isSaving)
+                .padding(.top, 8)
+
+                Button {
+                    withAnimation { currentStep = 0 }
+                } label: {
+                    Text("← Back")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+
+                if let saveError {
+                    Text(saveError)
+                        .font(.footnote)
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity)
+                }
 
                 stepIndicator(active: 1)
+            }
+            .padding(.horizontal, 24)
+            .padding(.bottom, 40)
+        }
+    }
+
+    // MARK: - Step 2: Push notification explanation + prefs
+
+    private var pushStepView: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 28) {
+                VStack(spacing: 8) {
+                    Image(systemName: "bell.badge.fill")
+                        .font(.system(size: 48))
+                        .foregroundStyle(Color("primary"))
+                        .frame(maxWidth: .infinity)
+
+                    Text("Welcome to MLR!")
+                        .font(.title.bold())
+                        .frame(maxWidth: .infinity)
+
+                    Text("First, turn on notifications so you get a heads-up on your phone for what matters at the lake — event RSVPs, dinners, help requests, and emergencies. You can change these anytime in Profile → Notifications.")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                        .frame(maxWidth: .infinity)
+                }
+                .padding(.top, 8)
+
+                // Embedded push prefs — uses the real PushToggleView
+                PushToggleView()
+
+                // Continue to profile basics
+                Button {
+                    withAnimation { currentStep = 1 }
+                } label: {
+                    Text("Continue")
+                        .font(.body.bold())
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                }
+                .background(Color("primary"))
+                .foregroundStyle(.white)
+                .clipShape(RoundedRectangle(cornerRadius: 14))
+
+                Button {
+                    withAnimation { currentStep = 1 }
+                } label: {
+                    Text("Skip for now")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .frame(maxWidth: .infinity)
+                }
+
+                stepIndicator(active: 0)
             }
             .padding(.horizontal, 24)
             .padding(.bottom, 40)
@@ -281,8 +299,17 @@ struct WelcomeIntroView: View {
 
     // MARK: - Actions
 
-    private func saveStep1() async {
-        // Persist the collected info to the profile row
+    /// Final step: persist the collected basics, then mark the intro seen so the
+    /// sheet dismisses. Both are non-blocking — the user is never stuck.
+    private func finishOnboarding() async {
+        isSaving = true
+        saveError = nil
+        defer { isSaving = false }
+        await saveBasics()
+        await markIntroSeen()
+    }
+
+    private func saveBasics() async {
         guard let userId = await env.authService.userId else { return }
 
         let birthdayStr = birthdaySet
@@ -303,38 +330,24 @@ struct WelcomeIntroView: View {
                 .update(params)
                 .eq("id", value: userId.uuidString)
                 .execute()
-
-            // Refresh local profile
             await env.loadProfile()
-
-            withAnimation {
-                currentStep = 1
-            }
         } catch {
-            // Non-blocking — let them proceed even if the update fails
-            withAnimation { currentStep = 1 }
-            print("[WelcomeIntroView] saveStep1 error: \(error)")
+            // Non-blocking — let them proceed even if the update fails.
+            print("[WelcomeIntroView] saveBasics error: \(error)")
         }
     }
 
-    private func finishIntro() async {
-        isSaving = true
-        saveError = nil
-        defer { isSaving = false }
-
+    private func markIntroSeen() async {
         do {
-            // Call the mark_intro_seen RPC
             try await supabase
                 .rpc("mark_intro_seen")
                 .execute()
-
-            // Update local state so the sheet dismisses immediately
             env.currentProfile?.introSeen = true
         } catch {
             saveError = "Couldn't save — you can finish setup in Profile."
-            // Still dismiss so the user isn't stuck
+            // Still dismiss so the user isn't stuck.
             env.currentProfile?.introSeen = true
-            print("[WelcomeIntroView] finishIntro error: \(error)")
+            print("[WelcomeIntroView] markIntroSeen error: \(error)")
         }
     }
 }

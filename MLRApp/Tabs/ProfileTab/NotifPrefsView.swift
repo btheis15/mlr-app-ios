@@ -66,6 +66,11 @@ struct NotifPrefsView: View {
             Section("Help Requests") {
                 toggle(for: .helpRequest,  label: "Help requests near you", icon: "hand.raised.fill")
                 toggle(for: .helpResponse, label: "Someone's on their way",  icon: "figure.walk")
+                lockedRow(
+                    label: "Urgent help (emergencies)",
+                    desc: "When someone marks a request Urgent — goes to everyone. Always on; the only way to silence it is your phone's notification permission.",
+                    icon: "exclamationmark.octagon.fill"
+                )
             }
         }
         .navigationTitle("Activity Notifications")
@@ -105,6 +110,31 @@ struct NotifPrefsView: View {
             }
         }
         .tint(Color.mlrPrimary)
+    }
+
+    // A non-toggle row for a notification type that's always on (server-enforced,
+    // migration 0047). The only off-switch is the device's push permission.
+    private func lockedRow(label: String, desc: String, icon: String) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 3) {
+                Label {
+                    Text(label).font(.system(size: 15))
+                } icon: {
+                    Image(systemName: icon).foregroundStyle(Color.mlrPrimary)
+                }
+                Text(desc)
+                    .font(.caption)
+                    .foregroundStyle(Color.mlrTextMuted)
+            }
+            Spacer(minLength: 8)
+            Text("🔒 Always on")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(Color.mlrPrimary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(Color.mlrPrimary.opacity(0.15))
+                .clipShape(Capsule())
+        }
     }
 
     // MARK: - Helpers

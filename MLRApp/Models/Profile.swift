@@ -32,6 +32,7 @@ enum NotifType: String, Codable, CaseIterable {
     case eventRsvp = "event_rsvp"
     case helpRequest = "help_request"
     case helpResponse = "help_response"
+    case helpUrgent = "help_urgent"
     case broadcast
 }
 

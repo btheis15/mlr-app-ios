@@ -145,6 +145,7 @@ struct NotificationRow: View {
         switch notification.kind {
         case .broadcast:            return "megaphone.fill"
         case .helpRequest:          return "hand.raised.fill"
+        case .helpUrgent:           return "exclamationmark.octagon.fill"
         case .helpResponse:         return "figure.walk"
         case .cabinRequest:         return "house.lodge.fill"
         case .cabinDecision:        return "house.lodge.fill"
@@ -181,6 +182,7 @@ struct NotificationRow: View {
         switch notification.kind {
         case .broadcast:            return "Announcement"
         case .helpRequest:          return "Help Request"
+        case .helpUrgent:           return "🚨 Urgent"
         case .helpResponse:         return "Help Response"
         case .cabinRequest:         return "Cabin Request"
         case .cabinDecision:        return "Cabin"
