@@ -34,7 +34,7 @@ private struct OffSeasonCard: View {
                 Text("Family Fest 2026")
                     .font(.festSerif(15, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
-                Text("Aug 2–8 · Tomahawk, WI")
+                Text("\(FamilyFestConfig.dateRangeLabel) · Tomahawk, WI")
                     .font(.festSerif(12))
                     .foregroundStyle(Color.mlrFest.opacity(0.65))
             }

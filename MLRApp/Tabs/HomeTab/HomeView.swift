@@ -24,6 +24,10 @@ struct HomeView: View {
                         // ── 1. MLR logo hero ──────────────────────────────
                         logoHero(geometry: geometry)
 
+                        // First-visit welcome (guests only; self-dismisses)
+                        WelcomeCard()
+                            .padding(.bottom, 4)
+
                         VStack(alignment: .leading, spacing: 20) {
 
                             // ── 2. Announcement banner ────────────────────

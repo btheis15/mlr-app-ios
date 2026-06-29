@@ -19,7 +19,7 @@ private struct PaymentMethod: Identifiable {
 struct FestPayView: View {
     @Environment(AppEnvironment.self) private var env
 
-    private let dueAmount = 150
+    @State private var dueAmount = 150
     private let note = "FamilyFest2026"
 
     private var paymentMethods: [PaymentMethod] {
@@ -91,6 +91,25 @@ struct FestPayView: View {
                         .font(.system(size: 13))
                         .foregroundStyle(Color.mlrFest.opacity(0.65))
                         .fixedSize(horizontal: false, vertical: true)
+
+                    // Custom amount — paying for more than one household, etc.
+                    HStack(spacing: 8) {
+                        Text("Amount")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.mlrFest.opacity(0.8))
+                        Spacer()
+                        Text("$")
+                            .foregroundStyle(Color.mlrFest)
+                        TextField("150", value: $dueAmount, format: .number)
+                            .keyboardType(.numberPad)
+                            .multilineTextAlignment(.trailing)
+                            .frame(width: 70)
+                            .padding(.horizontal, 8).padding(.vertical, 6)
+                            .background(Color.mlrFest.opacity(0.08))
+                            .clipShape(RoundedRectangle(cornerRadius: 8))
+                            .foregroundStyle(Color.mlrFest)
+                    }
+                    .padding(.top, 4)
                 }
                 .padding(16)
                 .background(

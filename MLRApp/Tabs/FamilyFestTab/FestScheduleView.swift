@@ -22,9 +22,13 @@ struct FestScheduleView: View {
     /// ISO date (yyyy-MM-dd) for a fest day name, derived from the fest start
     /// date + the day's offset in `festDays`. Returns nil for "Anytime" / unknowns.
     private func isoDate(forDay day: String) -> String? {
-        guard let offset = festDays.firstIndex(of: day),
-              let start = WeatherService.isoFormatter.date(from: FamilyFestConfig.startDate),
-              let date = Calendar.current.date(byAdding: .day, value: offset, to: start)
+        guard let dayIdx = festDays.firstIndex(of: day),
+              let start = WeatherService.isoFormatter.date(from: FamilyFestConfig.startDate)
+        else { return nil }
+        // Offset the day name from the fest's START weekday (it begins Monday, not
+        // Sunday) so each weekday maps to its real date instead of being a day off.
+        let startIdx = Calendar.current.component(.weekday, from: start) - 1  // 0=Sun…6=Sat
+        guard let date = Calendar.current.date(byAdding: .day, value: dayIdx - startIdx, to: start)
         else { return nil }
         return WeatherService.isoFormatter.string(from: date)
     }
