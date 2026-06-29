@@ -21,14 +21,26 @@ struct CabinRequestSheet: View {
     @State private var didSubmit = false
     @State private var loadingCabins = true
 
+    // Live availability for the selected date range (cabinId → rooms free).
+    @State private var availability: [UUID: Int] = [:]
+    @State private var loadingAvailability = false
+
     private var cabins: [Cabin] { env.cabinService.cabins }
 
     private var nightCount: Int {
         max(0, Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 0)
     }
 
+    private var availabilityKey: String { "\(checkIn.isoDateString)|\(checkOut.isoDateString)" }
+
+    /// Rooms free in the selected cabin for the chosen dates (nil until loaded).
+    private var selectedAvailable: Int? {
+        guard let id = selectedCabin?.id else { return nil }
+        return availability[id]
+    }
+
     private var canSubmit: Bool {
-        selectedCabin != nil && nightCount > 0 && !isSubmitting
+        selectedCabin != nil && nightCount > 0 && !isSubmitting && (selectedAvailable ?? 1) > 0
     }
 
     var body: some View {
@@ -60,6 +72,7 @@ struct CabinRequestSheet: View {
                 }
             }
             .task { await loadCabins() }
+            .task(id: availabilityKey) { await loadAvailability() }
         }
     }
 
@@ -83,7 +96,8 @@ struct CabinRequestSheet: View {
                                 ForEach(cabins) { cabin in
                                     CabinPickCard(
                                         cabin: cabin,
-                                        isSelected: selectedCabin?.id == cabin.id
+                                        isSelected: selectedCabin?.id == cabin.id,
+                                        available: availability[cabin.id]
                                     ) { selectedCabin = cabin }
                                 }
                             }
@@ -103,10 +117,27 @@ struct CabinRequestSheet: View {
                         }
                     DatePicker("Check-out", selection: $checkOut,
                                in: checkIn..., displayedComponents: .date)
-                    if nightCount > 0 {
-                        Text("\(nightCount) night\(nightCount == 1 ? "" : "s")")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(Color.mlrPrimary)
+                    HStack {
+                        if nightCount > 0 {
+                            Text("\(nightCount) night\(nightCount == 1 ? "" : "s")")
+                                .font(.system(size: 13, weight: .medium))
+                                .foregroundStyle(Color.mlrPrimary)
+                        }
+                        Spacer()
+                        Button("All Family Fest days") { pickFamilyFestDates() }
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(Color.mlrFest)
+                    }
+                    if let available = selectedAvailable {
+                        Text(available > 0
+                             ? "\(available) room\(available == 1 ? "" : "s") left for these dates"
+                             : "No rooms left for these dates")
+                            .font(.mlrCaption)
+                            .foregroundStyle(available > 0 ? Color.mlrTextMuted : Color.mlrDanger)
+                    } else if loadingAvailability {
+                        Text("Checking availability…")
+                            .font(.mlrCaption)
+                            .foregroundStyle(Color.mlrTextMuted)
                     }
                 }
                 .padding(16)
@@ -120,7 +151,7 @@ struct CabinRequestSheet: View {
                             .foregroundStyle(Color.mlrText)
                     }
                     if let cabin = selectedCabin {
-                        Text("Sleeps up to \(cabin.maxGuests).")
+                        Text("Sleeps up to \(cabin.maxGuests ?? 12).")
                             .font(.mlrCaption)
                             .foregroundStyle(Color.mlrTextMuted)
                     }
@@ -187,6 +218,30 @@ struct CabinRequestSheet: View {
         loadingCabins = false
     }
 
+    private func loadAvailability() async {
+        guard nightCount > 0 else { availability = [:]; return }
+        loadingAvailability = true
+        defer { loadingAvailability = false }
+        let rows = await env.cabinService.fetchAvailability(
+            checkIn: checkIn.isoDateString, checkOut: checkOut.isoDateString
+        )
+        availability = Dictionary(rows.map { ($0.cabinId, $0.available) }, uniquingKeysWith: { a, _ in a })
+    }
+
+    private func pickFamilyFestDates() {
+        let iso = DateFormatter()
+        iso.dateFormat = "yyyy-MM-dd"
+        iso.timeZone = TimeZone(identifier: "America/Chicago")
+        guard let start = iso.date(from: FamilyFestConfig.startDate),
+              let end = iso.date(from: FamilyFestConfig.endDate),
+              let checkoutDay = Calendar.current.date(byAdding: .day, value: 1, to: end)
+        else { return }
+        withAnimation {
+            checkIn = start
+            checkOut = checkoutDay
+        }
+    }
+
     private func submit() async {
         guard env.isSignedIn else { env.authService.promptSignIn(); return }
         guard let cabin = selectedCabin else { return }
@@ -219,6 +274,7 @@ struct CabinRequestSheet: View {
 private struct CabinPickCard: View {
     let cabin: Cabin
     let isSelected: Bool
+    var available: Int? = nil
     let onTap: () -> Void
 
     var body: some View {
@@ -245,9 +301,14 @@ private struct CabinPickCard: View {
                     Text(cabin.name)
                         .font(.system(size: 15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
-                    Text("\(cabin.roomCount) rooms · sleeps \(cabin.maxGuests)")
+                    Text("\(cabin.roomCount) rooms · sleeps \(cabin.maxGuests ?? 12)")
                         .font(.system(size: 12))
                         .foregroundStyle(Color.mlrTextMuted)
+                    if let available {
+                        Text(available > 0 ? "\(available) left" : "Full")
+                            .font(.system(size: 11, weight: .semibold))
+                            .foregroundStyle(available > 0 ? Color.mlrSuccess : Color.mlrDanger)
+                    }
                 }
                 .frame(width: 180, alignment: .leading)
                 .padding(10)

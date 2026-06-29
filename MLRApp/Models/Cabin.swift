@@ -21,6 +21,25 @@ struct Cabin: Codable, Identifiable, Equatable {
     }
 }
 
+// MARK: - Cabin Availability (cabin_availability RPC, migration 0032)
+
+struct CabinAvailability: Codable, Identifiable, Equatable {
+    let cabinId: UUID
+    let slug: String
+    let name: String
+    let roomCount: Int
+    let available: Int
+
+    var id: UUID { cabinId }
+
+    enum CodingKeys: String, CodingKey {
+        case cabinId = "cabin_id"
+        case slug, name
+        case roomCount = "room_count"
+        case available
+    }
+}
+
 // MARK: - Cabin Booking
 
 struct CabinBooking: Codable, Identifiable, Equatable {

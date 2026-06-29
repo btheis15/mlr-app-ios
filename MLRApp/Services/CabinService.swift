@@ -33,6 +33,24 @@ final class CabinService {
         }
     }
 
+    /// How many rooms are free in each cabin over a date range (migration 0032).
+    func fetchAvailability(checkIn: String, checkOut: String) async -> [CabinAvailability] {
+        struct AvailParams: Encodable {
+            let p_check_in: String
+            let p_check_out: String
+        }
+        do {
+            let rows: [CabinAvailability] = try await supabase
+                .rpc("cabin_availability", params: AvailParams(p_check_in: checkIn, p_check_out: checkOut))
+                .execute()
+                .value
+            return rows
+        } catch {
+            print("[CabinService] fetchAvailability error: \(error)")
+            return []
+        }
+    }
+
     // MARK: - Bookings
 
     func requestStay(
