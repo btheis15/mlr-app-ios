@@ -129,6 +129,11 @@ struct MemberSheetView: View {
                         contactRow("Email", member.email, "envelope.fill",
                                    url: "mailto:\(member.email)")
                     }
+                    if let address = member.address, !address.isEmpty {
+                        let q = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
+                        contactRow("Get directions", address, "mappin.and.ellipse",
+                                   url: "http://maps.apple.com/?q=\(q)")
+                    }
 
                     let hasPhone = !(member.phone?.isEmpty ?? true)
                     if hasPhone || !member.email.isEmpty {
@@ -172,6 +177,9 @@ struct MemberSheetView: View {
                         }
                         if let cash = member.appleCashHandle, !cash.isEmpty {
                             contactRow("Apple Cash", cash, "applelogo", url: nil)
+                        }
+                        if let paypal = member.paypalHandle, !paypal.isEmpty {
+                            contactRow("PayPal", paypal, "p.circle.fill", url: nil)
                         }
                     }
                 }

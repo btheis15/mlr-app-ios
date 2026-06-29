@@ -19,8 +19,11 @@ struct ProfileView: View {
     @State private var venmo: String = ""
     @State private var zelle: String = ""
     @State private var appleCash: String = ""
+    @State private var paypal: String = ""
+    @State private var address: String = ""
 
     // UI state
+    @State private var showEmailChange = false
     @State private var isSaving = false
     @State private var saveError: String? = nil
     @State private var showSaveConfirmation = false
@@ -38,6 +41,8 @@ struct ProfileView: View {
             || venmo != (p.venmoHandle ?? "")
             || zelle != (p.zelleHandle ?? "")
             || appleCash != (p.appleCashHandle ?? "")
+            || paypal != (p.paypalHandle ?? "")
+            || address != (p.address ?? "")
             || birthdayChanged(p)
     }
 
@@ -103,6 +108,9 @@ struct ProfileView: View {
 
             // 4. Notifications
             notificationsSection
+
+            // 4a. Account (email alerts + change login email)
+            accountSection
 
             // 4b. Appearance (light / dark / system)
             appearanceSection
@@ -196,6 +204,12 @@ struct ProfileView: View {
                     .textContentType(.telephoneNumber)
             }
 
+            LabeledContent("Address") {
+                TextField("Street, City, ST", text: $address)
+                    .multilineTextAlignment(.trailing)
+                    .textContentType(.fullStreetAddress)
+            }
+
             // Birthday picker
             Toggle(isOn: $hasBirthday) {
                 Text("Birthday")
@@ -265,6 +279,16 @@ struct ProfileView: View {
                 Label("Apple Cash", systemImage: "applelogo")
                     .foregroundStyle(Color.mlrText)
             }
+
+            LabeledContent {
+                TextField("Email or @handle", text: $paypal)
+                    .multilineTextAlignment(.trailing)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+            } label: {
+                Label("PayPal", systemImage: "p.circle.fill")
+                    .foregroundStyle(Color.mlrInfo)
+            }
         }
     }
 
@@ -285,6 +309,38 @@ struct ProfileView: View {
                 Label("Push notifications", systemImage: "app.badge.fill")
                     .foregroundStyle(Color.mlrText)
             }
+        }
+    }
+
+    // MARK: - Account section
+
+    private var accountSection: some View {
+        Section("Account") {
+            Toggle(isOn: Binding(
+                get: { profile?.emailAlerts ?? true },
+                set: { on in Task { await saveEmailAlerts(on) } }
+            )) {
+                Label {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Email me alerts").font(.system(size: 15))
+                        Text("Admin announcements sent to your email")
+                            .font(.caption).foregroundStyle(Color.mlrTextMuted)
+                    }
+                } icon: {
+                    Image(systemName: "envelope.fill").foregroundStyle(Color.mlrPrimary)
+                }
+            }
+            .tint(Color.mlrPrimary)
+
+            Button {
+                showEmailChange = true
+            } label: {
+                Label("Change login email", systemImage: "at")
+                    .foregroundStyle(Color.mlrText)
+            }
+        }
+        .sheet(isPresented: $showEmailChange) {
+            ChangeEmailSheet()
         }
     }
 
@@ -456,6 +512,8 @@ struct ProfileView: View {
         venmo = p.venmoHandle ?? ""
         zelle = p.zelleHandle ?? ""
         appleCash = p.appleCashHandle ?? ""
+        paypal = p.paypalHandle ?? ""
+        address = p.address ?? ""
 
         if let bdStr = p.birthday,
            let bd = ISO8601DateFormatter().date(from: bdStr) {
@@ -491,7 +549,9 @@ struct ProfileView: View {
             "bio": .string(bio.trimmingCharacters(in: .whitespaces)),
             "venmo": .string(venmo.trimmingCharacters(in: .whitespaces)),
             "zelle": .string(zelle.trimmingCharacters(in: .whitespaces)),
-            "cashapp": .string(appleCash.trimmingCharacters(in: .whitespaces))
+            "cashapp": .string(appleCash.trimmingCharacters(in: .whitespaces)),
+            "paypal": .string(paypal.trimmingCharacters(in: .whitespaces)),
+            "address": .string(address.trimmingCharacters(in: .whitespaces))
         ]
 
         if hasBirthday {
@@ -515,6 +575,21 @@ struct ProfileView: View {
             }
         } catch {
             saveError = "Couldn't save profile. Please try again."
+        }
+    }
+
+    @MainActor
+    private func saveEmailAlerts(_ on: Bool) async {
+        guard let userId = profile?.id else { return }
+        do {
+            try await supabase
+                .from("profiles")
+                .update(["email_alerts": on])
+                .eq("id", value: userId.uuidString)
+                .execute()
+            await env.loadProfile()
+        } catch {
+            print("[ProfileView] saveEmailAlerts error: \(error)")
         }
     }
 
@@ -635,6 +710,77 @@ private struct WillingToHelpRow: View {
         defer { isUpdating = false }
         try? await env.helpService.setWillingToHelp(userId: profile.id, willing: !profile.willingToHelp)
         await env.loadProfile()
+    }
+}
+
+// MARK: - ChangeEmailSheet
+
+private struct ChangeEmailSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var newEmail = ""
+    @State private var sending = false
+    @State private var sent = false
+    @State private var error: String?
+
+    private var valid: Bool {
+        let e = newEmail.trimmingCharacters(in: .whitespaces)
+        return e.contains("@") && e.contains(".") && !sending
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                if sent {
+                    Section {
+                        Label("Check your inbox", systemImage: "envelope.badge")
+                            .foregroundStyle(Color.mlrSuccess)
+                        Text("We sent a confirmation link to \(newEmail). Your login email changes once you confirm it.")
+                            .font(.mlrCaption)
+                            .foregroundStyle(Color.mlrTextMuted)
+                    }
+                } else {
+                    Section {
+                        TextField("New email address", text: $newEmail)
+                            .keyboardType(.emailAddress)
+                            .textContentType(.emailAddress)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                    } footer: {
+                        Text("Supabase sends a confirmation link to the new address; the change takes effect once you tap it.")
+                    }
+                    if let error {
+                        Section { Text(error).font(.mlrCaption).foregroundStyle(Color.mlrDanger) }
+                    }
+                }
+            }
+            .navigationTitle("Change Email")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(sent ? "Done" : "Cancel") { dismiss() }
+                }
+                if !sent {
+                    ToolbarItem(placement: .confirmationAction) {
+                        if sending { ProgressView() }
+                        else { Button("Send") { Task { await send() } }.fontWeight(.semibold).disabled(!valid) }
+                    }
+                }
+            }
+        }
+    }
+
+    private func send() async {
+        sending = true
+        error = nil
+        defer { sending = false }
+        do {
+            try await env.authService.changeEmail(to: newEmail.trimmingCharacters(in: .whitespaces))
+            sent = true
+        } catch {
+            self.error = "Couldn't start the email change. Please try again."
+        }
     }
 }
 

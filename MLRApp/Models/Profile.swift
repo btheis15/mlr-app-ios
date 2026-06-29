@@ -49,6 +49,14 @@ struct Profile: Codable, Identifiable, Equatable {
     var venmoHandle: String?
     var zelleHandle: String?
     var appleCashHandle: String?
+    var paypalHandle: String? = nil
+    var contactPreferred: String? = nil
+    var payPreferred: String? = nil
+    var address: String? = nil
+    var fullName: String? = nil
+    var household: String? = nil
+    var includeInDirectory: Bool = true
+    var notifyNewMembers: Bool = true
     var emailAlerts: Bool
     var pushLevel: String?
     var pushTypes: [PushType]
@@ -69,6 +77,14 @@ struct Profile: Codable, Identifiable, Equatable {
         case venmoHandle = "venmo"
         case zelleHandle = "zelle"
         case appleCashHandle = "cashapp"
+        case paypalHandle = "paypal"
+        case contactPreferred = "contact_preferred"
+        case payPreferred = "pay_preferred"
+        case address
+        case fullName = "full_name"
+        case household
+        case includeInDirectory = "include_in_directory"
+        case notifyNewMembers = "notify_new_members"
         case emailAlerts = "email_alerts"
         case pushLevel = "push_level"
         case pushTypes = "push_types"
@@ -84,7 +100,7 @@ struct Profile: Codable, Identifiable, Equatable {
     var displayName: String { name }
 
     var hasPaymentHandle: Bool {
-        venmoHandle != nil || zelleHandle != nil || appleCashHandle != nil
+        venmoHandle != nil || zelleHandle != nil || appleCashHandle != nil || paypalHandle != nil
     }
 
     static let guest = Profile(
@@ -127,6 +143,14 @@ extension Profile {
         venmoHandle     = try? c.decodeIfPresent(String.self, forKey: .venmoHandle)
         zelleHandle     = try? c.decodeIfPresent(String.self, forKey: .zelleHandle)
         appleCashHandle = try? c.decodeIfPresent(String.self, forKey: .appleCashHandle)
+        paypalHandle      = try? c.decodeIfPresent(String.self, forKey: .paypalHandle)
+        contactPreferred  = try? c.decodeIfPresent(String.self, forKey: .contactPreferred)
+        payPreferred      = try? c.decodeIfPresent(String.self, forKey: .payPreferred)
+        address           = try? c.decodeIfPresent(String.self, forKey: .address)
+        fullName          = try? c.decodeIfPresent(String.self, forKey: .fullName)
+        household         = try? c.decodeIfPresent(String.self, forKey: .household)
+        includeInDirectory = (try? c.decode(Bool.self, forKey: .includeInDirectory)) ?? true
+        notifyNewMembers   = (try? c.decode(Bool.self, forKey: .notifyNewMembers)) ?? true
         emailAlerts     = (try? c.decode(Bool.self, forKey: .emailAlerts)) ?? true
         pushLevel       = try? c.decodeIfPresent(String.self, forKey: .pushLevel)
         pushTypes       = (try? c.decode([PushType].self, forKey: .pushTypes)) ?? []

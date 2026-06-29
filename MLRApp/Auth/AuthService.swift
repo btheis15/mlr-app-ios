@@ -88,6 +88,14 @@ final class AuthService {
         }
     }
 
+    // MARK: - Change login email
+
+    /// Start a self-serve login-email change. Supabase sends a confirmation link
+    /// to the new address; the change takes effect once confirmed.
+    func changeEmail(to newEmail: String) async throws {
+        try await supabase.auth.update(user: UserAttributes(email: newEmail))
+    }
+
     // MARK: - Sign out
 
     func signOut() async {
