@@ -53,13 +53,10 @@ struct HomeView: View {
                                 )
                             }
 
-                            // ── 6. Get Involved ───────────────────────────
-                            getInvolvedSection
+                            // ── 6. Communication ──────────────────────────
+                            communicationSection
 
-                            // ── 7. Ask for Help + People ──────────────────
-                            helpPeopleRow
-
-                            // ── 8. Around the Resort ─────────────────────
+                            // ── 7. Around the Resort ─────────────────────
                             aroundResortSection
 
                             // ── 9. Heritage footer ────────────────────────
@@ -108,10 +105,52 @@ struct HomeView: View {
         }
     }
 
-    // "Get Involved" — Events & Work Weekends, Committees
-    private var getInvolvedSection: some View {
+    // "Communication" — People · Committees · Ask for Help · Work Checklist
+    private var communicationSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Get Involved")
+            SectionLabel(text: "Communication")
+            HStack(spacing: 12) {
+                NavigationLink(destination: PeopleDirectoryView()) {
+                    HomeTile(
+                        icon: "person.2.fill",
+                        title: "People",
+                        subtitle: "Find & contact everyone at the resort.",
+                        tint: Color.mlrInfo
+                    )
+                }
+                .frame(maxWidth: .infinity)
+
+                NavigationLink(destination: CommitteesView()) {
+                    HomeTile(
+                        icon: "person.3.fill",
+                        title: "Committees",
+                        subtitle: "Join a crew and pitch in — there's a spot for everyone.",
+                        tint: Color.mlrPrimary
+                    )
+                }
+                .frame(maxWidth: .infinity)
+            }
+            .fixedSize(horizontal: false, vertical: true)
+
+            NavigationLink(destination: HelpRequestsView()) {
+                HomeTile(
+                    icon: "hand.raised.fill",
+                    title: "Ask for Help",
+                    subtitle: "Need a hand at the resort? Ask — or help out.",
+                    tint: Color.mlrPrimary,
+                    fullWidth: true
+                )
+            }
+
+            // The interactive work checklist card.
+            WorkChecklistCard()
+        }
+    }
+
+    // "Around the Resort" — Events & Work Weekends · Cabin Stay · Local Places
+    private var aroundResortSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Around the Resort")
             NavigationLink(destination: EventsView()) {
                 HomeTile(
                     icon: "calendar",
@@ -121,48 +160,6 @@ struct HomeView: View {
                     fullWidth: true
                 )
             }
-            NavigationLink(destination: CommitteesView()) {
-                HomeTile(
-                    icon: "person.3.fill",
-                    title: "Committees",
-                    subtitle: "Join a crew and help make the resort & Family Fest happen — there's a spot for everyone.",
-                    tint: Color.mlrPrimary,
-                    fullWidth: true
-                )
-            }
-        }
-    }
-
-    // "Ask for Help + People" — side-by-side square tiles for everyone
-    private var helpPeopleRow: some View {
-        HStack(spacing: 12) {
-            NavigationLink(destination: HelpRequestsView()) {
-                HomeTile(
-                    icon: "hand.raised.fill",
-                    title: "Ask for Help",
-                    subtitle: "Need a hand at the resort? Ask — or help out.",
-                    tint: Color.mlrPrimary
-                )
-            }
-            .frame(maxWidth: .infinity)
-
-            NavigationLink(destination: PeopleDirectoryView()) {
-                HomeTile(
-                    icon: "person.2.fill",
-                    title: "People",
-                    subtitle: "Find & contact everyone at the resort.",
-                    tint: Color.mlrInfo
-                )
-            }
-            .frame(maxWidth: .infinity)
-        }
-        .fixedSize(horizontal: false, vertical: true)
-    }
-
-    // "Around the Resort" — Cabin Stay · Local Places
-    private var aroundResortSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Around the Resort")
             HStack(spacing: 12) {
                 NavigationLink(destination: CabinBookingsView()) {
                     HomeTile(
