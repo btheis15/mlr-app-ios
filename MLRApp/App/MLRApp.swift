@@ -22,17 +22,11 @@ struct MLRApp: App {
                 // override (System / Light / Dark) from Profile → Appearance.
                 .preferredColorScheme(appearance.appearance.colorScheme)
                 .task {
-                    #if DEBUG
-                    // Start signed out in development so the sign-in flow is always testable.
-                    // Remove this block (or flip to the else branch) before shipping.
-                    await env.signOut()
-                    #else
                     await env.authService.restoreSession()
                     if env.authService.isSignedIn {
                         await env.loadProfile()
                         await env.pushService.reconcileToken()
                     }
-                    #endif
                 }
                 .onChange(of: env.authService.isSignedIn) { _, signedIn in
                     if signedIn {
