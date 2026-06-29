@@ -111,8 +111,11 @@ struct HomeView: View {
 
     // "Communication" — People · Committees · Ask for Help · Work Checklist
     private var communicationSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Communication")
+        CollapsibleHomeSection(
+            title: "Communication",
+            emoji: "💬",
+            subtitle: "People · Committees · Ask for Help · Work Checklist"
+        ) {
             HStack(spacing: 12) {
                 NavigationLink(destination: PeopleDirectoryView()) {
                     HomeTile(
@@ -153,8 +156,11 @@ struct HomeView: View {
 
     // "Around the Resort" — Events & Work Weekends · Cabin Stay · Local Places
     private var aroundResortSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Around the Resort")
+        CollapsibleHomeSection(
+            title: "Around the Resort",
+            emoji: "🧭",
+            subtitle: "Events · Cabin Stay · Local Places"
+        ) {
             NavigationLink(destination: EventsView()) {
                 HomeTile(
                     icon: "calendar",
@@ -271,6 +277,62 @@ struct HomeTile: View {
         .padding(14)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
         .cardStyle()
+    }
+}
+
+// MARK: - CollapsibleHomeSection
+// A tappable header card (emoji + title + subtitle + rotating chevron) that
+// reveals its content when open. Mirrors the web app's CollapsibleSection —
+// both Home groups start collapsed.
+
+private struct CollapsibleHomeSection<Content: View>: View {
+    let title: String
+    let emoji: String
+    let subtitle: String
+    let content: Content
+
+    @State private var isOpen = false
+
+    init(title: String, emoji: String, subtitle: String, @ViewBuilder content: () -> Content) {
+        self.title = title
+        self.emoji = emoji
+        self.subtitle = subtitle
+        self.content = content()
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.2)) { isOpen.toggle() }
+            } label: {
+                HStack(spacing: 12) {
+                    Text(emoji).font(.system(size: 20))
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(title)
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundStyle(Color.mlrText)
+                        Text(subtitle)
+                            .font(.caption)
+                            .foregroundStyle(Color.mlrTextMuted)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(Color.mlrTextSubtle)
+                        .rotationEffect(.degrees(isOpen ? 90 : 0))
+                }
+                .padding(14)
+                .frame(maxWidth: .infinity)
+                .cardStyle()
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+
+            if isOpen {
+                content
+            }
+        }
     }
 }
 
