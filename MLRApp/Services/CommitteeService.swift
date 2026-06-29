@@ -188,7 +188,7 @@ final class CommitteeService {
         return rows.map(\.toChatMessage)
     }
 
-    func sendMessage(committeeId: UUID, text: String, authorId: UUID) async throws -> CommitteeChatMessage {
+    func sendMessage(committeeId: UUID, text: String, authorId: UUID, mentionedIds: [UUID] = []) async throws -> CommitteeChatMessage {
         let params: [String: AnyJSON] = [
             "committee_id": .string(committeeId.uuidString),
             "author_id":    .string(authorId.uuidString),
@@ -204,6 +204,14 @@ final class CommitteeService {
             .single()
             .execute()
             .value
+
+        // Record @mentions so the server can fire chat-mention notifications.
+        if !mentionedIds.isEmpty {
+            let rows: [[String: AnyJSON]] = mentionedIds.map {
+                ["message_id": .string(row.id.uuidString), "mentioned_user_id": .string($0.uuidString)]
+            }
+            try? await supabase.from("committee_message_mentions").insert(rows).execute()
+        }
         return row.toChatMessage
     }
 

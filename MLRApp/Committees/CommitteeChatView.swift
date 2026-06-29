@@ -243,8 +243,11 @@ struct CommitteeChatView: View {
                 }
                 cancelEdit()
             } else {
+                let mentioned = rosterProfiles
+                    .filter { !$0.name.isEmpty && text.lowercased().contains("@\($0.name.lowercased())") }
+                    .map(\.id)
                 let msg = try await env.committeeService.sendMessage(
-                    committeeId: committee.id, text: text, authorId: userId)
+                    committeeId: committee.id, text: text, authorId: userId, mentionedIds: mentioned)
                 if !messages.contains(where: { $0.id == msg.id }) {
                     messages.append(msg)
                 }
