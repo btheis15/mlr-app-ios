@@ -242,7 +242,8 @@ struct CommentsView: View {
             let comment = try await env.postsService.addComment(
                 postId: post.id,
                 text: trimmed,
-                authorId: profile.id
+                authorId: profile.id,
+                mentionedIds: mentionedUserIds(in: trimmed)
             )
             comments.append(comment)
             commentText = ""
@@ -265,6 +266,18 @@ struct CommentsView: View {
     private func insertMention(_ profile: Profile) {
         commentText = applyMention(profile, to: commentText)
         mentionQuery = nil
+    }
+
+    /// Resolve "@First Last" tokens in the text to member ids (so the server can
+    /// fire post_mention notifications). Matches the loaded member list by name.
+    private func mentionedUserIds(in text: String) -> [UUID] {
+        guard !allProfiles.isEmpty else { return [] }
+        let lower = text.lowercased()
+        var ids: [UUID] = []
+        for p in allProfiles where !p.name.isEmpty {
+            if lower.contains("@\(p.name.lowercased())") { ids.append(p.id) }
+        }
+        return Array(Set(ids))
     }
 
     // Fetch the member list via Supabase for @mention autocomplete.

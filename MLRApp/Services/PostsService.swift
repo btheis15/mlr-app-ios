@@ -14,6 +14,14 @@ final class PostsService {
 
     private var realtimeChannel: RealtimeChannelV2? = nil
 
+    /// Posts select with author, media, and tags joins (matches web PostsView).
+    static let postSelect = """
+        id, author_id, text, image_path, status, created_at, occurred_at,
+        profiles!author_id(display_name, avatar_url),
+        post_media(storage_path, media_type, position),
+        post_tags(tagged_user_id, profiles!tagged_user_id(display_name))
+        """
+
     // MARK: - Fetch
 
     /// Load posts joined with author name/avatar.
@@ -23,17 +31,12 @@ final class PostsService {
         error = nil
         defer { isLoading = false }
         do {
-            let query = supabase
+            let rows: [PostRow] = try await supabase
                 .from("posts")
-                .select("""
-                    id, author_id, text, image_path, status, created_at,
-                    profiles!author_id(display_name, avatar_url),
-                    post_media(storage_path, media_type, position)
-                """)
-                .order("created_at", ascending: false)
-
-            // RLS handles filtering: visible to all, or author sees their own
-            let rows: [PostRow] = try await query.execute().value
+                .select(Self.postSelect)
+                .order("occurred_at", ascending: false)
+                .execute()
+                .value
             posts = rows.map(\.toPost)
         } catch {
             self.error = "Couldn't load posts."
@@ -43,25 +46,69 @@ final class PostsService {
 
     // MARK: - Create
 
-    func createPost(text: String?, imageUrl: String?, authorId: UUID) async throws {
+    /// Create a post with optional media (in order), tagged members, and a
+    /// backdated timeline anchor. `media` entries are (storagePath, mediaType).
+    func createPost(
+        text: String?,
+        authorId: UUID,
+        media: [(path: String, type: String)] = [],
+        tagIds: [UUID] = [],
+        occurredAt: Date? = nil
+    ) async throws {
+        struct NewPostId: Decodable { let id: UUID }
         var params: [String: AnyJSON] = [
             "author_id": .string(authorId.uuidString),
             "status":    .string("visible")
         ]
         if let text, !text.isEmpty { params["text"] = .string(text) }
-        if let imageUrl             { params["image_path"] = .string(imageUrl) }
+        if let occurredAt {
+            params["occurred_at"] = .string(ISO8601DateFormatter().string(from: occurredAt))
+        }
 
-        let row: PostRow = try await supabase
+        let created: NewPostId = try await supabase
             .from("posts")
             .insert(params)
-            .select("""
-                id, author_id, text, image_path, status, created_at,
-                profiles!author_id(display_name, avatar_url)
-            """)
+            .select("id")
             .single()
             .execute()
             .value
-        posts.insert(row.toPost, at: 0)
+
+        if !media.isEmpty {
+            let rows: [[String: AnyJSON]] = media.enumerated().map { idx, m in
+                [
+                    "post_id": .string(created.id.uuidString),
+                    "storage_path": .string(m.path),
+                    "media_type": .string(m.type),
+                    "position": .integer(idx)
+                ]
+            }
+            try await supabase.from("post_media").insert(rows).execute()
+        }
+
+        if !tagIds.isEmpty {
+            let rows: [[String: AnyJSON]] = tagIds.map {
+                ["post_id": .string(created.id.uuidString), "tagged_user_id": .string($0.uuidString)]
+            }
+            try await supabase.from("post_tags").insert(rows).execute()
+        }
+
+        await fetchPosts(userId: authorId)
+    }
+
+    /// Edit a post's caption + timeline date (author or admin; RLS enforces).
+    func updatePost(id: UUID, text: String?, occurredAt: Date?) async throws {
+        var params: [String: AnyJSON] = [
+            "text": text.flatMap { $0.isEmpty ? nil : $0 }.map(AnyJSON.string) ?? .null
+        ]
+        if let occurredAt {
+            params["occurred_at"] = .string(ISO8601DateFormatter().string(from: occurredAt))
+        }
+        try await supabase
+            .from("posts")
+            .update(params)
+            .eq("id", value: id.uuidString)
+            .execute()
+        await fetchPosts(userId: nil)
     }
 
     // MARK: - Comments
@@ -80,7 +127,7 @@ final class PostsService {
         return rows.map(\.toComment)
     }
 
-    func addComment(postId: UUID, text: String, authorId: UUID) async throws -> PostComment {
+    func addComment(postId: UUID, text: String, authorId: UUID, mentionedIds: [UUID] = []) async throws -> PostComment {
         let params: [String: AnyJSON] = [
             "post_id":   .string(postId.uuidString),
             "author_id": .string(authorId.uuidString),
@@ -97,6 +144,14 @@ final class PostsService {
             .single()
             .execute()
             .value
+
+        // Record who was @mentioned so the server can notify them (post_comment_mentions).
+        if !mentionedIds.isEmpty {
+            let rows: [[String: AnyJSON]] = mentionedIds.map {
+                ["comment_id": .string(row.id.uuidString), "mentioned_user_id": .string($0.uuidString)]
+            }
+            try? await supabase.from("post_comment_mentions").insert(rows).execute()
+        }
         return row.toComment
     }
 
@@ -170,10 +225,7 @@ final class PostsService {
                     else { return }
                     if let row: PostRow = try? await supabase
                         .from("posts")
-                        .select("""
-                            id, author_id, text, image_path, status, created_at,
-                            profiles!author_id(display_name, avatar_url)
-                        """)
+                        .select(Self.postSelect)
                         .eq("id", value: id.uuidString)
                         .single()
                         .execute()
@@ -241,8 +293,10 @@ private struct PostRow: Decodable {
     let imageUrl: String?
     let status: ContentStatus
     let createdAt: Date
+    let occurredAt: Date?
     let profiles: AuthorInfo?
     let postMedia: [PostMediaRow]?
+    let postTags: [PostTagRow]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -251,8 +305,10 @@ private struct PostRow: Decodable {
         case imageUrl = "image_path"
         case status
         case createdAt = "created_at"
+        case occurredAt = "occurred_at"
         case profiles
         case postMedia = "post_media"
+        case postTags = "post_tags"
     }
 
     struct AuthorInfo: Decodable {
@@ -261,6 +317,15 @@ private struct PostRow: Decodable {
         enum CodingKeys: String, CodingKey {
             case name = "display_name"
             case avatarUrl = "avatar_url"
+        }
+    }
+
+    struct PostTagRow: Decodable {
+        let taggedUserId: UUID
+        let profiles: AuthorInfo?
+        enum CodingKeys: String, CodingKey {
+            case taggedUserId = "tagged_user_id"
+            case profiles
         }
     }
 
@@ -280,24 +345,28 @@ private struct PostRow: Decodable {
         }
     }
 
-    var resolvedImageUrl: String? {
-        // Prefer the first post_media image over the legacy image_path column.
+    /// All media URLs in position order (legacy image_path as a fallback).
+    var resolvedMediaUrls: [String] {
         if let media = postMedia, !media.isEmpty {
-            let sorted = media.sorted { ($0.position ?? 0) < ($1.position ?? 0) }
-            return sorted.first?.resolvedUrl
+            return media.sorted { ($0.position ?? 0) < ($1.position ?? 0) }.map(\.resolvedUrl)
         }
-        return imageUrl
+        if let imageUrl { return [imageUrl] }
+        return []
     }
 
     var toPost: Post {
-        Post(
+        let urls = resolvedMediaUrls
+        return Post(
             id: id,
             authorId: authorId,
             authorName: profiles?.name ?? "Member",
             authorAvatarUrl: profiles?.avatarUrl,
             text: text,
-            imageUrl: resolvedImageUrl,
+            imageUrl: urls.first,
+            mediaUrls: urls,
+            tags: (postTags ?? []).map { PostTag(id: $0.taggedUserId, name: $0.profiles?.name ?? "Member") },
             status: status,
+            occurredAt: occurredAt,
             createdAt: createdAt
         )
     }

@@ -20,10 +20,15 @@ struct PostCard: View {
 
     @Environment(AppEnvironment.self) private var env
     @State private var showComments = false
-    @State private var showLightbox = false
+    @State private var lightboxUrl: String?
+    @State private var showEdit = false
     @State private var comments: [PostComment] = []
     @State private var commentsLoaded = false
     @State private var shareState: ShareState?
+
+    private var canEdit: Bool {
+        env.isAdmin || env.currentProfile?.id == post.authorId
+    }
 
     // Standard reaction emojis
     private let reactionEmojis = ["❤️", "👍", "😂", "🙌", "🎉"]
@@ -31,13 +36,16 @@ struct PostCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             authorRow
-            if let imageUrl = post.imageUrl {
-                postImage(url: imageUrl)
-            }
+            mediaContent
             if let text = post.text, !text.isEmpty {
                 MentionText(text)
                     .font(.body)
                     .foregroundStyle(Color.mlrText)
+            }
+            if !post.tags.isEmpty {
+                Label("With \(post.tags.map(\.name).joined(separator: ", "))", systemImage: "person.2.fill")
+                    .font(.system(size: 12))
+                    .foregroundStyle(Color.mlrTextMuted)
             }
             reactionRow
             actionRow
@@ -45,10 +53,12 @@ struct PostCard: View {
         .sheet(isPresented: $showComments) {
             CommentsView(post: post)
         }
-        .sheet(isPresented: $showLightbox) {
-            if let url = post.imageUrl {
-                LightboxView(imageUrl: url)
-            }
+        .sheet(item: Binding(get: { lightboxUrl.map(IdentifiableURL.init) },
+                             set: { lightboxUrl = $0?.url })) { item in
+            LightboxView(imageUrl: item.url)
+        }
+        .sheet(isPresented: $showEdit) {
+            PostComposer(editing: post)
         }
         .shareSheet($shareState)
         .task {
@@ -71,7 +81,7 @@ struct PostCard: View {
                 Text(displayName)
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
-                Text(MLRFormat.relativeTime(post.createdAt))
+                Text(MLRFormat.relativeTime(post.timelineDate))
                     .font(.caption)
                     .foregroundStyle(Color.mlrTextMuted)
             }
@@ -84,6 +94,14 @@ struct PostCard: View {
                     shareState = ShareState(items: shareItems)
                 } label: {
                     Label("Share", systemImage: "square.and.arrow.up")
+                }
+                if canEdit {
+                    Divider()
+                    Button {
+                        showEdit = true
+                    } label: {
+                        Label("Edit post", systemImage: "pencil")
+                    }
                 }
                 if env.isSignedIn {
                     Divider()
@@ -111,6 +129,24 @@ struct PostCard: View {
         }
     }
 
+    // MARK: - Media (single image or swipeable carousel)
+
+    @ViewBuilder
+    private var mediaContent: some View {
+        let urls = post.mediaUrls
+        if urls.count > 1 {
+            TabView {
+                ForEach(urls, id: \.self) { url in
+                    postImage(url: url)
+                }
+            }
+            .tabViewStyle(.page(indexDisplayMode: .always))
+            .frame(height: 240)
+        } else if let first = urls.first {
+            postImage(url: first)
+        }
+    }
+
     // MARK: - Post image
 
     @ViewBuilder
@@ -133,7 +169,7 @@ struct PostCard: View {
                         .frame(height: 220)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .contentShape(RoundedRectangle(cornerRadius: 12))
-                        .onTapGesture { showLightbox = true }
+                        .onTapGesture { lightboxUrl = url }
                 case .failure:
                     Rectangle()
                         .fill(Color.mlrCard)
@@ -300,6 +336,12 @@ struct PostCardSkeleton: View {
             }
         }
     }
+}
+
+// Wraps a URL string so it can drive an item-based .sheet (Lightbox per image).
+private struct IdentifiableURL: Identifiable {
+    let url: String
+    var id: String { url }
 }
 
 // AvatarView — Shared/Components/AvatarView.swift

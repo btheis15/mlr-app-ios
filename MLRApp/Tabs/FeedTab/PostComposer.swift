@@ -2,78 +2,79 @@ import SwiftUI
 import PhotosUI
 
 // MARK: - PostComposer
-// Sheet for writing and publishing a new Feed post.
-// Mirrors the compose flow in the web app's PostsView.
-//
-// Features:
-//   • TextEditor with 140-char soft limit + remaining count
-//   • PhotosPicker image attachment (preview thumbnail + ✕ to remove)
-//   • @mention autocomplete overlay (MentionAutocomplete)
-//   • Post button (disabled while empty or uploading)
-//   • Upload progress indicator
-//   • Calls env.postsService.createPost after optional media upload
+// Sheet for writing/publishing a Feed post (or editing an existing one).
+// Mirrors the web PostsView composer: caption with @mention autocomplete,
+// up to 5 photos, tag members, and an optional backdated timeline date.
+// (Native video capture/playback is not yet supported — images only.)
 
 struct PostComposer: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
 
+    /// Pass an existing post to edit (caption + date only); omit to create.
+    var editing: Post? = nil
+
     @State private var text: String = ""
-    @State private var selectedPhoto: PhotosPickerItem? = nil
-    @State private var selectedImage: UIImage? = nil
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var images: [UIImage] = []
+    @State private var tagIds: Set<UUID> = []
+    @State private var hasBackdate = false
+    @State private var occurredAt: Date = .now
     @State private var isUploading = false
-    @State private var uploadProgress: Double = 0
     @State private var isPosting = false
     @State private var errorMessage: String? = nil
     @State private var mentionQuery: String = ""
     @State private var showMentionSuggestions = false
+    @State private var showTagPicker = false
     @State private var allProfiles: [Profile] = []
 
     private let softLimit = 140
+    private let maxPhotos = 5
+    private var isEditing: Bool { editing != nil }
 
     var body: some View {
         NavigationStack {
             ZStack(alignment: .top) {
                 VStack(spacing: 0) {
                     composeArea
-                    Divider()
-                    toolbar
+                    if !isEditing {
+                        Divider()
+                        toolbar
+                    }
                 }
-
-                // @mention autocomplete overlay
                 if showMentionSuggestions && !mentionQuery.isEmpty {
                     VStack {
-                        Spacer().frame(height: 56) // below the compose header
-                        MentionAutocomplete(
-                            members: allProfiles,
-                            query: mentionQuery,
-                            onSelect: { profile in
-                                insertMention(profile)
-                            }
-                        )
+                        Spacer().frame(height: 56)
+                        MentionAutocomplete(members: allProfiles, query: mentionQuery) { insertMention($0) }
                         Spacer()
                     }
                     .zIndex(10)
                 }
             }
-            .navigationTitle("New Post")
+            .navigationTitle(isEditing ? "Edit Post" : "New Post")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .disabled(isPosting || isUploading)
+                    Button("Cancel") { dismiss() }.disabled(isPosting || isUploading)
                 }
-                ToolbarItem(placement: .confirmationAction) {
-                    postButton
-                }
+                ToolbarItem(placement: .confirmationAction) { postButton }
             }
             .interactiveDismissDisabled(isPosting || isUploading)
+            .sheet(isPresented: $showTagPicker) {
+                TagPicker(members: allProfiles.filter { $0.id != env.currentProfile?.id },
+                          selected: $tagIds)
+            }
         }
         .task {
-            // Pre-load member list for @mention autocomplete
             allProfiles = (try? await fetchMemberList()) ?? []
+            if let editing {
+                text = editing.text ?? ""
+                tagIds = Set(editing.tags.map(\.id))
+                if let occurred = editing.occurredAt { occurredAt = occurred; hasBackdate = true }
+            }
         }
-        .onChange(of: selectedPhoto) { _, newValue in
-            Task { await loadSelectedPhoto(newValue) }
+        .onChange(of: selectedPhotos) { _, items in
+            Task { await loadPhotos(items) }
         }
     }
 
@@ -82,7 +83,6 @@ struct PostComposer: View {
     private var composeArea: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 12) {
-                // Author identity
                 HStack(spacing: 10) {
                     AvatarView(url: env.currentProfile?.avatarUrl, size: .medium)
                     Text(env.currentProfile?.name ?? "")
@@ -90,131 +90,123 @@ struct PostComposer: View {
                         .foregroundStyle(Color.mlrText)
                 }
 
-                // TextEditor
                 ZStack(alignment: .topLeading) {
                     if text.isEmpty {
                         Text("What's on your mind?")
-                            .foregroundStyle(Color.mlrTextSubtle)
-                            .padding(.top, 2)
+                            .foregroundStyle(Color.mlrTextSubtle).padding(.top, 2)
                     }
                     TextEditor(text: $text)
                         .frame(minHeight: 120)
-                        .onChange(of: text) { _, newValue in
-                            detectMentionTrigger(in: newValue)
-                        }
+                        .onChange(of: text) { _, v in detectMentionTrigger(in: v) }
                 }
 
-                // Character count
                 HStack {
                     Spacer()
                     Text("\(softLimit - text.count)")
                         .font(.caption)
-                        .foregroundStyle(text.count > softLimit
-                                         ? Color.mlrDanger
-                                         : text.count > softLimit - 20
-                                           ? Color.mlrWarning
-                                           : Color.mlrTextMuted)
+                        .foregroundStyle(text.count > softLimit ? Color.mlrDanger
+                                         : text.count > softLimit - 20 ? Color.mlrWarning : Color.mlrTextMuted)
                 }
 
-                // Image preview
-                if let image = selectedImage {
-                    imagePreview(image: image)
+                if !images.isEmpty { imageStrip }
+
+                if !tagIds.isEmpty { taggedSummary }
+
+                if hasBackdate {
+                    DatePicker("Posted on", selection: $occurredAt,
+                               in: ...Date.now, displayedComponents: .date)
+                        .font(.system(size: 14))
                 }
 
-                // Upload progress
                 if isUploading {
-                    VStack(alignment: .leading, spacing: 4) {
-                        ProgressView(value: uploadProgress)
-                            .tint(Color.mlrPrimary)
-                        Text("Uploading image…")
-                            .font(.caption)
-                            .foregroundStyle(Color.mlrTextMuted)
-                    }
+                    ProgressView("Uploading…").font(.caption).tint(Color.mlrPrimary)
                 }
-
-                // Error
                 if let err = errorMessage {
-                    Text(err)
-                        .font(.caption)
-                        .foregroundStyle(Color.mlrDanger)
+                    Text(err).font(.caption).foregroundStyle(Color.mlrDanger)
                 }
             }
             .padding(16)
         }
     }
 
-    // MARK: - Image preview
-
-    @ViewBuilder
-    private func imagePreview(image: UIImage) -> some View {
-        ZStack(alignment: .topTrailing) {
-            Image(uiImage: image)
-                .resizable()
-                .scaledToFit()
-                .frame(maxHeight: 220)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-
-            Button {
-                selectedImage = nil
-                selectedPhoto = nil
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(.white)
-                    .shadow(radius: 2)
-                    .padding(6)
+    private var imageStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(images.enumerated()), id: \.offset) { idx, image in
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: image)
+                            .resizable().scaledToFill()
+                            .frame(width: 120, height: 120)
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                        Button {
+                            images.remove(at: idx)
+                            if idx < selectedPhotos.count { selectedPhotos.remove(at: idx) }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.system(size: 20)).foregroundStyle(.white).shadow(radius: 2).padding(4)
+                        }
+                    }
+                }
             }
         }
     }
 
-    // MARK: - Bottom toolbar (photo picker)
+    private var taggedSummary: some View {
+        let names = allProfiles.filter { tagIds.contains($0.id) }.map(\.name)
+        return Label("With \(names.joined(separator: ", "))", systemImage: "person.2.fill")
+            .font(.system(size: 13))
+            .foregroundStyle(Color.mlrPrimary)
+    }
 
     private var toolbar: some View {
-        HStack {
-            PhotosPicker(selection: $selectedPhoto, matching: .images) {
-                Label("Add photo", systemImage: "photo")
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.mlrPrimary)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 10)
+        HStack(spacing: 4) {
+            PhotosPicker(selection: $selectedPhotos, maxSelectionCount: maxPhotos, matching: .images) {
+                Label("Photos", systemImage: "photo.on.rectangle").font(.system(size: 14, weight: .medium))
             }
             .disabled(isPosting || isUploading)
 
+            Button { showTagPicker = true } label: {
+                Label("Tag", systemImage: "person.crop.circle.badge.plus").font(.system(size: 14, weight: .medium))
+            }
+            Button { withAnimation { hasBackdate.toggle() } } label: {
+                Label("Date", systemImage: "calendar").font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(hasBackdate ? Color.mlrPrimary : Color.mlrTextMuted)
+            }
             Spacer()
         }
-        .padding(.horizontal, 8)
+        .tint(Color.mlrPrimary)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 6)
         .background(Color.mlrSurface)
     }
-
-    // MARK: - Post button
 
     private var postButton: some View {
         Button {
             Task { await post() }
         } label: {
-            if isPosting || isUploading {
-                ProgressView()
-                    .tint(Color.mlrPrimary)
-            } else {
-                Text("Post")
-                    .fontWeight(.semibold)
-            }
+            if isPosting || isUploading { ProgressView().tint(Color.mlrPrimary) }
+            else { Text(isEditing ? "Save" : "Post").fontWeight(.semibold) }
         }
-        .disabled(
-            text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-            || text.count > softLimit
-            || isPosting
-            || isUploading
-        )
+        .disabled(submitDisabled)
+    }
+
+    private var submitDisabled: Bool {
+        let emptyText = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        // A new post needs text or at least one photo; an edit needs text.
+        let nothingToPost = isEditing ? emptyText : (emptyText && images.isEmpty)
+        return nothingToPost || text.count > softLimit || isPosting || isUploading
     }
 
     // MARK: - Actions
 
-    private func loadSelectedPhoto(_ item: PhotosPickerItem?) async {
-        guard let item else { return }
-        guard let data = try? await item.loadTransferable(type: Data.self),
-              let image = UIImage(data: data) else { return }
-        await MainActor.run { selectedImage = image }
+    private func loadPhotos(_ items: [PhotosPickerItem]) async {
+        var loaded: [UIImage] = []
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                loaded.append(img)
+            }
+        }
+        await MainActor.run { images = loaded }
     }
 
     @MainActor
@@ -222,44 +214,44 @@ struct PostComposer: View {
         guard let profile = env.currentProfile else { return }
         isPosting = true
         errorMessage = nil
+        defer { isPosting = false }
 
-        var imageUrl: String? = nil
+        let caption = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        let date = hasBackdate ? occurredAt : nil
 
-        // Upload image if attached — MediaService.uploadPostImage(image:userId:)
-        if let image = selectedImage {
-            isUploading = true
-            // Simulate progress: Supabase SDK doesn't surface byte-level progress,
-            // so set it to 0.5 while the upload is in flight.
-            uploadProgress = 0.5
-            do {
-                imageUrl = try await env.mediaService.uploadPostImage(image: image, userId: profile.id)
-                uploadProgress = 1.0
-            } catch {
-                errorMessage = "Couldn't upload image. Please try again."
-                isUploading = false
-                isPosting = false
+        do {
+            if let editing {
+                try await env.postsService.updatePost(id: editing.id, text: caption, occurredAt: date)
+                dismiss()
                 return
             }
-            isUploading = false
-        }
 
-        // Create post — PostsService.createPost(text:imageUrl:authorId:)
-        do {
+            // Upload photos → media tuples.
+            var media: [(path: String, type: String)] = []
+            if !images.isEmpty {
+                isUploading = true
+                for image in images {
+                    let url = try await env.mediaService.uploadPostImage(image: image, userId: profile.id)
+                    media.append((path: url, type: "image"))
+                }
+                isUploading = false
+            }
+
             try await env.postsService.createPost(
-                text: text.trimmingCharacters(in: .whitespacesAndNewlines),
-                imageUrl: imageUrl,
-                authorId: profile.id
+                text: caption,
+                authorId: profile.id,
+                media: media,
+                tagIds: Array(tagIds),
+                occurredAt: date
             )
             dismiss()
         } catch {
-            errorMessage = "Couldn't publish your post. Please try again."
+            isUploading = false
+            errorMessage = isEditing ? "Couldn't save your changes." : "Couldn't publish your post. Please try again."
         }
-
-        isPosting = false
     }
 
     // MARK: - @mention detection
-    // Uses the shared helpers detectMentionQuery() and applyMention() from MentionText.swift.
 
     private func detectMentionTrigger(in value: String) {
         mentionQuery = detectMentionQuery(in: value) ?? ""
@@ -272,8 +264,6 @@ struct PostComposer: View {
         showMentionSuggestions = false
     }
 
-    // MARK: - Member list for autocomplete
-
     private func fetchMemberList() async throws -> [Profile] {
         try await supabase
             .from("profiles")
@@ -284,4 +274,44 @@ struct PostComposer: View {
     }
 }
 
-// MentionAutocomplete is defined in Shared/Components/MentionText.swift.
+// MARK: - TagPicker
+
+private struct TagPicker: View {
+    @Environment(\.dismiss) private var dismiss
+    let members: [Profile]
+    @Binding var selected: Set<UUID>
+    @State private var query = ""
+
+    private var shown: [Profile] {
+        let q = query.trimmingCharacters(in: .whitespaces).lowercased()
+        guard !q.isEmpty else { return members }
+        return members.filter { $0.name.lowercased().contains(q) }
+    }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                ForEach(shown) { m in
+                    Button {
+                        if selected.contains(m.id) { selected.remove(m.id) } else { selected.insert(m.id) }
+                    } label: {
+                        HStack {
+                            AvatarView(profile: m, size: .small)
+                            Text(m.name).foregroundStyle(Color.mlrText)
+                            Spacer()
+                            if selected.contains(m.id) {
+                                Image(systemName: "checkmark").foregroundStyle(Color.mlrPrimary)
+                            }
+                        }
+                    }
+                }
+            }
+            .searchable(text: $query)
+            .navigationTitle("Tag people")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+    }
+}

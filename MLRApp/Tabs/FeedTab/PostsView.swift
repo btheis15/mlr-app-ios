@@ -16,7 +16,13 @@ struct PostsView: View {
 
     @State private var showComposer = false
     @State private var showSignIn = false
+    @State private var showTaggedOnly = false
     @State private var reactionMap: [UUID: [PostReaction]] = [:]
+
+    private var displayedPosts: [Post] {
+        guard showTaggedOnly, let myId = env.currentProfile?.id else { return env.postsService.posts }
+        return env.postsService.posts.filter { post in post.tags.contains { $0.id == myId } }
+    }
 
     var body: some View {
         NavigationStack {
@@ -30,6 +36,17 @@ struct PostsView: View {
             .navigationTitle("Feed")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                ToolbarItem(placement: .navigationBarLeading) {
+                    if env.isSignedIn {
+                        Button {
+                            withAnimation { showTaggedOnly.toggle() }
+                        } label: {
+                            Label("Tagged me", systemImage: showTaggedOnly ? "tag.fill" : "tag")
+                                .font(.system(size: 14, weight: .medium))
+                                .foregroundStyle(showTaggedOnly ? Color.mlrPrimary : Color.mlrTextMuted)
+                        }
+                    }
+                }
                 ToolbarItem(placement: .navigationBarTrailing) {
                     if !env.isSignedIn {
                         Button("Sign in") { showSignIn = true }
@@ -73,7 +90,7 @@ struct PostsView: View {
     private var feedList: some View {
         ScrollView(showsIndicators: false) {
             LazyVStack(spacing: 1) {
-                ForEach(env.postsService.posts) { post in
+                ForEach(displayedPosts) { post in
                     postRow(for: post)
                 }
             }

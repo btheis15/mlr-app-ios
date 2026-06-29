@@ -2,26 +2,27 @@ import Foundation
 
 // MARK: - Post
 
-struct Post: Codable, Identifiable, Equatable {
+struct Post: Identifiable, Equatable {
     let id: UUID
     let authorId: UUID
     var authorName: String
     var authorAvatarUrl: String?
     var text: String?
-    var imageUrl: String?
+    var imageUrl: String?          // first media / legacy image_path
+    var mediaUrls: [String]        // all media, in order (carousel)
+    var tags: [PostTag]            // tagged members
     var status: ContentStatus
+    var occurredAt: Date?          // timeline anchor (backdated); falls back to createdAt
     var createdAt: Date
 
-    enum CodingKeys: String, CodingKey {
-        case id
-        case authorId = "author_id"
-        case authorName = "author_name"
-        case authorAvatarUrl = "author_avatar_url"
-        case text
-        case imageUrl = "image_path"
-        case status
-        case createdAt = "created_at"
-    }
+    /// The date the post sits at in the timeline.
+    var timelineDate: Date { occurredAt ?? createdAt }
+}
+
+// A member tagged in a post (post_tags).
+struct PostTag: Identifiable, Equatable {
+    let id: UUID        // tagged_user_id
+    let name: String
 }
 
 // MARK: - Post Comment
