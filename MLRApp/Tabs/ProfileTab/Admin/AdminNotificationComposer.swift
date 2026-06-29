@@ -5,12 +5,13 @@ import SwiftUI
 // Add CaseIterable + Identifiable conformances and UI helpers here.
 
 extension BroadcastAudience: CaseIterable, Identifiable {
-    public static var allCases: [BroadcastAudience] { [.everyone, .admins] }
+    public static var allCases: [BroadcastAudience] { [.everyone, .beta, .admins] }
     public var id: String { rawValue }
 
     var label: String {
         switch self {
         case .everyone: return "Everyone"
+        case .beta:     return "Beta testers"
         case .admins:   return "Admins"
         }
     }
@@ -18,6 +19,7 @@ extension BroadcastAudience: CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .everyone: return "person.3.fill"
+        case .beta:     return "testtube.2"
         case .admins:   return "shield.fill"
         }
     }
@@ -31,6 +33,7 @@ struct AdminNotificationComposer: View {
 
     @State private var title: String = ""
     @State private var messageBody: String = ""
+    @State private var linkUrl: String = ""
     @State private var audience: BroadcastAudience = .everyone
     @State private var alsoBanner: Bool = false
     @State private var bannerExpiry: ExpiryWindow = .sixHours
@@ -60,6 +63,11 @@ struct AdminNotificationComposer: View {
                         TextEditor(text: $messageBody)
                             .frame(minHeight: 80)
                     }
+
+                    TextField("Link URL (optional)", text: $linkUrl)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .keyboardType(.URL)
                 }
 
                 // Audience picker
@@ -220,31 +228,18 @@ struct AdminNotificationComposer: View {
         let trimmedBody  = messageBody.trimmingCharacters(in: .whitespaces)
         let postBanner   = audience == .everyone && alsoBanner
 
+        let trimmedUrl = linkUrl.trimmingCharacters(in: .whitespaces)
         do {
-            // Use the existing service method
+            // sendBroadcast also inserts the banner (announcements) when mirrorBanner
+            // is set, using expiresAt — no separate insert needed here.
             try await env.notificationsService.sendBroadcast(
                 title: trimmedTitle,
                 body: trimmedBody.isEmpty ? nil : trimmedBody,
                 audience: audience,
-                mirrorBanner: postBanner
+                mirrorBanner: postBanner,
+                url: trimmedUrl.isEmpty ? nil : trimmedUrl,
+                expiresAt: postBanner ? bannerExpiry.expiresAt : nil
             )
-
-            // If mirroring a banner, also insert directly into announcements
-            // (sendBroadcast with mirrorBanner may handle this server-side;
-            //  insert here only if we need a custom expiry)
-            if postBanner {
-                let fmt = ISO8601DateFormatter()
-                try await supabase
-                    .from("announcements")
-                    .insert([
-                        "title": trimmedTitle,
-                        "body": trimmedBody,
-                        "kind": AnnouncementKind.info.rawValue,
-                        "expires_at": fmt.string(from: bannerExpiry.expiresAt)
-                    ])
-                    .execute()
-            }
-
             sent = true
         } catch {
             self.error = "Couldn't send notification. Please try again."

@@ -66,6 +66,7 @@ struct AdminMembersView: View {
                     member: member,
                     currentUserId: currentUserId,
                     onToggleAdmin: { Task { await toggleAdmin(member) } },
+                    onToggleBeta: { Task { await toggleBeta(member) } },
                     onRemove: {
                         memberToRemove = member
                         showRemoveAlert = true
@@ -141,9 +142,9 @@ struct AdminMembersView: View {
         guard member.id != currentUserId else { return }
         let newValue = !member.isAdmin
         do {
-            struct P: Encodable { let target_user_id: String; let admin_value: Bool }
+            struct P: Encodable { let target: String; let value: Bool }
             try await supabase
-                .rpc("set_admin", params: P(target_user_id: member.id.uuidString, admin_value: newValue))
+                .rpc("set_admin", params: P(target: member.id.uuidString, value: newValue))
                 .execute()
             if let idx = members.firstIndex(of: member) {
                 members[idx].isAdmin = newValue
@@ -154,11 +155,27 @@ struct AdminMembersView: View {
     }
 
     @MainActor
+    private func toggleBeta(_ member: AdminMember) async {
+        let newValue = !member.betaTester
+        do {
+            struct P: Encodable { let target: String; let value: Bool }
+            try await supabase
+                .rpc("set_beta_tester", params: P(target: member.id.uuidString, value: newValue))
+                .execute()
+            if let idx = members.firstIndex(of: member) {
+                members[idx].betaTester = newValue
+            }
+        } catch {
+            self.error = "Couldn't update beta-tester status."
+        }
+    }
+
+    @MainActor
     private func removeMember(_ member: AdminMember) async {
         guard !member.isAdmin, member.id != currentUserId else { return }
         do {
             try await supabase
-                .rpc("delete_member", params: ["target_user_id": member.id.uuidString])
+                .rpc("delete_member", params: ["target": member.id.uuidString])
                 .execute()
             members.removeAll { $0.id == member.id }
         } catch {
@@ -173,6 +190,7 @@ private struct MemberRow: View {
     let member: AdminMember
     let currentUserId: UUID?
     let onToggleAdmin: () -> Void
+    let onToggleBeta: () -> Void
     let onRemove: () -> Void
 
     private var isSelf: Bool { member.id == currentUserId }
@@ -190,6 +208,9 @@ private struct MemberRow: View {
 
                     if member.isAdmin {
                         badge("Admin", color: Color.mlrPrimary)
+                    }
+                    if member.betaTester {
+                        badge("Beta", color: Color.mlrAccent)
                     }
                     if isSelf {
                         badge("You", color: Color.mlrInfo)
@@ -214,6 +235,15 @@ private struct MemberRow: View {
                         systemImage: member.isAdmin ? "shield.slash" : "shield.fill"
                     )
                 }
+            }
+
+            Button {
+                onToggleBeta()
+            } label: {
+                Label(
+                    member.betaTester ? "Remove beta tester" : "Make beta tester",
+                    systemImage: member.betaTester ? "testtube.2" : "testtube.2"
+                )
             }
 
             if canRemove {
