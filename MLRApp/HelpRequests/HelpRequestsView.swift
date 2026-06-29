@@ -82,7 +82,8 @@ struct HelpRequestsView: View {
                                 isWorking: actionInFlight.contains(request.id),
                                 onRespond: { Task { await respond(request) } },
                                 onWithdraw: { Task { await withdraw(request) } },
-                                onCancel: { Task { await cancel(request) } }
+                                onCancel: { Task { await cancel(request) } },
+                                onToggleItem: { item in Task { await toggleItem(item) } }
                             )
                         }
                     }
@@ -153,6 +154,18 @@ struct HelpRequestsView: View {
             actionError = "Couldn't cancel the request. Try again."
         }
     }
+
+    private func toggleItem(_ item: BringItem) async {
+        guard env.isSignedIn else { env.authService.promptSignIn(); return }
+        do {
+            // Claim if unclaimed or claimed by someone else; release only your own claim.
+            let claim = !(item.claimedBy == myId)
+            try await env.helpService.claimHelpItem(itemId: item.id, claim: claim)
+            Haptics.tap()
+        } catch {
+            actionError = "Couldn't update that item. Try again."
+        }
+    }
 }
 
 // MARK: - Help Request Card
@@ -165,8 +178,12 @@ private struct HelpRequestCard: View {
     let onRespond: () -> Void
     let onWithdraw: () -> Void
     let onCancel: () -> Void
+    var onToggleItem: (BringItem) -> Void = { _ in }
+
+    @Environment(AppEnvironment.self) private var env
 
     private var isUrgent: Bool { request.category == .urgent }
+    private var coveredItems: Int { request.items.filter(\.isClaimed).count }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -212,6 +229,10 @@ private struct HelpRequestCard: View {
                     .foregroundStyle(Color.mlrTextMuted)
             }
 
+            if !request.items.isEmpty {
+                bringItemsSection
+            }
+
             actionRow
         }
         .padding(16)
@@ -221,6 +242,38 @@ private struct HelpRequestCard: View {
             RoundedRectangle(cornerRadius: 16)
                 .stroke(isUrgent ? Color.mlrDanger.opacity(0.3) : .clear, lineWidth: 1)
         )
+    }
+
+    private var bringItemsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text("What to bring — \(coveredItems)/\(request.items.count) covered")
+                .font(.system(size: 12, weight: .semibold))
+                .foregroundStyle(Color.mlrTextMuted)
+            ForEach(request.items) { item in
+                Button {
+                    onToggleItem(item)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: item.isClaimed ? "checkmark.circle.fill" : "circle")
+                            .foregroundStyle(item.isClaimed ? Color.mlrSuccess : Color.mlrTextSubtle)
+                        Text(item.label)
+                            .font(.system(size: 14))
+                            .strikethrough(item.isClaimed)
+                            .foregroundStyle(item.isClaimed ? Color.mlrTextMuted : Color.mlrText)
+                        Spacer()
+                        if let who = item.claimedByName {
+                            Text(who)
+                                .font(.system(size: 11))
+                                .foregroundStyle(Color.mlrTextMuted)
+                        }
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(10)
+        .background(Color.mlrSurface)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
     private var coveredBadge: some View {

@@ -18,6 +18,8 @@ struct AskForHelpSheet: View {
     @State private var hasSchedule = false
     @State private var scheduledFor: Date = .now
     @State private var notifyAll = false
+    @State private var bringItems: [String] = []
+    @State private var newItem = ""
 
     @State private var pinnedCoordinate: CLLocationCoordinate2D?
     @State private var isSubmitting = false
@@ -40,6 +42,7 @@ struct AskForHelpSheet: View {
                     peopleSection
                     whereSection
                     scheduleSection
+                    itemsSection
                     notifyAllSection
 
                     if let submitError {
@@ -197,6 +200,45 @@ struct AskForHelpSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    // MARK: - What to bring
+
+    private var itemsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "What to bring? (optional)")
+            ForEach(Array(bringItems.enumerated()), id: \.offset) { index, item in
+                HStack {
+                    Text("• \(item)")
+                        .font(.system(size: 14))
+                        .foregroundStyle(Color.mlrText)
+                    Spacer()
+                    Button {
+                        bringItems.remove(at: index)
+                    } label: {
+                        Image(systemName: "minus.circle.fill").foregroundStyle(Color.mlrDanger)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            HStack {
+                TextField("Add an item (e.g. \"a folding table\")", text: $newItem)
+                    .fieldStyle()
+                Button("Add") { addItem() }
+                    .font(.system(size: 14, weight: .semibold))
+                    .disabled(newItem.trimmingCharacters(in: .whitespaces).isEmpty)
+            }
+            Text("Helpers can check off the items they're bringing.")
+                .font(.mlrCaption)
+                .foregroundStyle(Color.mlrTextMuted)
+        }
+    }
+
+    private func addItem() {
+        let v = newItem.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !v.isEmpty else { return }
+        bringItems.append(v)
+        newItem = ""
+    }
+
     // MARK: - Notify all
 
     private var notifyAllSection: some View {
@@ -234,7 +276,8 @@ struct AskForHelpSheet: View {
                 latitude: pinnedCoordinate?.latitude,
                 longitude: pinnedCoordinate?.longitude,
                 scheduledFor: hasSchedule ? scheduledFor : nil,
-                notifyAll: notifyAll
+                notifyAll: notifyAll,
+                items: bringItems
             )
             Haptics.success()
             dismiss()
