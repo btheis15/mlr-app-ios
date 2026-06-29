@@ -2,40 +2,31 @@ import Foundation
 import CoreLocation
 
 // MARK: - Help Request
+//
+// Mirrors the web `HelpRequest` (lib/types.ts / lib/helpRequests.ts) and the
+// `help_requests` table (migrations 0037 + 0046). Built by HelpService's row
+// mapper from the DB join, so property names here are app-internal — the wire
+// column names live in HelpService.
 
-struct HelpRequest: Codable, Identifiable, Equatable {
+struct HelpRequest: Identifiable, Equatable {
     let id: UUID
-    let requesterId: UUID
-    var requesterName: String
-    var category: HelpCategory
-    var what: String
+    let requesterId: UUID            // user_id
+    var requesterName: String        // from profiles join
+    var requesterAvatarUrl: String?  // from profiles join
+    var category: HelpCategory       // free-text key in DB; unknown/null → .hand
+    var what: String                 // description
     var neededCount: Int
-    var whereDescription: String?
-    var latitude: Double?
-    var longitude: Double?
-    var scheduledFor: Date?
-    var notifyAll: Bool
+    var whereDescription: String?    // where_text
+    var latitude: Double?            // lat
+    var longitude: Double?           // lng
+    var scheduledFor: Date?          // needed_at
     var status: HelpRequestStatus
     var fulfilledAt: Date?
+    var notifiedCount: Int
     var createdAt: Date
+    var expiresAt: Date?
     var responses: [HelpResponse]
-
-    enum CodingKeys: String, CodingKey {
-        case id
-        case requesterId = "requester_id"
-        case requesterName = "requester_name"
-        case category
-        case what
-        case neededCount = "needed_count"
-        case whereDescription = "where_description"
-        case latitude, longitude
-        case scheduledFor = "scheduled_for"
-        case notifyAll = "notify_all"
-        case status
-        case fulfilledAt = "fulfilled_at"
-        case createdAt = "created_at"
-        case responses = "help_responses"
-    }
+    var items: [BringItem]
 
     var isCovered: Bool { fulfilledAt != nil }
 
@@ -47,30 +38,43 @@ struct HelpRequest: Codable, Identifiable, Equatable {
     }
 }
 
+// Stored as the free-text `key` in help_requests.category. Keys match the web
+// HELP_TYPES (lib/helpRequests.ts); unknown/null collapses to `.hand`.
 enum HelpCategory: String, Codable, CaseIterable {
-    case moving
+    case hand
+    case move
     case setup
     case ride
     case supplies
     case urgent
 
+    /// The default request type — a friendly "lend a hand", never urgent.
+    static let `default`: HelpCategory = .hand
+
+    /// Lenient lookup from the stored key (nil/unknown → default).
+    init(key: String?) {
+        self = key.flatMap(HelpCategory.init(rawValue:)) ?? .default
+    }
+
     var label: String {
         switch self {
-        case .moving: return "Moving something"
-        case .setup: return "Setting up"
-        case .ride: return "Ride / pickup"
-        case .supplies: return "Supplies run"
-        case .urgent: return "🚨 Urgent"
+        case .hand:     return "Lend a hand"
+        case .move:     return "Move / haul"
+        case .setup:    return "Set up / project"
+        case .ride:     return "Ride"
+        case .supplies: return "Supplies"
+        case .urgent:   return "Urgent"
         }
     }
 
     var emoji: String {
         switch self {
-        case .moving: return "📦"
-        case .setup: return "🔧"
-        case .ride: return "🚗"
+        case .hand:     return "🙌"
+        case .move:     return "🪵"
+        case .setup:    return "🔧"
+        case .ride:     return "🚗"
         case .supplies: return "🛒"
-        case .urgent: return "🚨"
+        case .urgent:   return "🚨"
         }
     }
 }
@@ -79,26 +83,30 @@ enum HelpRequestStatus: String, Codable {
     case open
     case resolved
     case cancelled
-    case withdrawn
 }
 
 // MARK: - Help Response
 
-struct HelpResponse: Codable, Identifiable, Equatable {
+struct HelpResponse: Identifiable, Equatable {
     let requestId: UUID
-    let responderId: UUID   // maps to user_id in DB
+    let responderId: UUID   // user_id
     var responderName: String
+    var responderAvatarUrl: String?
     var note: String?
     var createdAt: Date
 
     // help_responses has a composite PK (request_id, user_id) — no id column.
     var id: String { "\(requestId.uuidString)-\(responderId.uuidString)" }
+}
 
-    enum CodingKeys: String, CodingKey {
-        case requestId = "request_id"
-        case responderId = "user_id"
-        case responderName = "responder_name"   // populated from profiles join
-        case note
-        case createdAt = "created_at"
-    }
+// MARK: - Bring Item ("what to bring" checklist, migration 0046)
+
+struct BringItem: Identifiable, Equatable {
+    let id: UUID
+    var label: String
+    var claimedBy: UUID?
+    var claimedByName: String?
+    var claimedAt: Date?
+
+    var isClaimed: Bool { claimedBy != nil }
 }

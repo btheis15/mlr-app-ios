@@ -181,25 +181,28 @@ final class EventsService {
         startDate: String,
         endDate: String?,
         location: String?,
-        dayRsvp: Bool
+        dayRsvp: Bool,
+        emoji: String? = nil
     ) async throws {
         struct CreateParams: Encodable {
             let p_title: String
-            let p_description: String?
-            let p_kind: String
             let p_start_date: String
             let p_end_date: String?
+            let p_kind: String
+            let p_emoji: String?
             let p_location: String?
+            let p_description: String?
             let p_day_rsvp: Bool
         }
         try await supabase
             .rpc("create_event", params: CreateParams(
                 p_title: title,
-                p_description: description,
-                p_kind: kind.rawValue,
                 p_start_date: startDate,
                 p_end_date: endDate,
+                p_kind: kind.rawValue,
+                p_emoji: emoji,
                 p_location: location,
+                p_description: description,
                 p_day_rsvp: dayRsvp
             ))
             .execute()
@@ -210,24 +213,38 @@ final class EventsService {
         id: String,
         title: String,
         description: String?,
+        kind: EventKind,
         startDate: String,
         endDate: String?,
         location: String?,
-        dayRsvp: Bool
+        dayRsvp: Bool,
+        emoji: String? = nil
     ) async throws {
-        var params: [String: AnyJSON] = [
-            "title":      .string(title),
-            "start_date": .string(startDate),
-            "day_rsvp":   .bool(dayRsvp)
-        ]
-        if let description { params["description"] = .string(description) }
-        if let endDate      { params["end_date"]    = .string(endDate) }
-        if let location     { params["location"]    = .string(location) }
-
+        // Use the SECURITY DEFINER RPC (matches web) instead of a direct table
+        // write, so authorization + notification triggers run server-side.
+        struct UpdateParams: Encodable {
+            let p_id: String
+            let p_title: String
+            let p_start_date: String
+            let p_end_date: String?
+            let p_kind: String
+            let p_emoji: String?
+            let p_location: String?
+            let p_description: String?
+            let p_day_rsvp: Bool
+        }
         try await supabase
-            .from("events")
-            .update(params)
-            .eq("id", value: id)
+            .rpc("update_event", params: UpdateParams(
+                p_id: id,
+                p_title: title,
+                p_start_date: startDate,
+                p_end_date: endDate,
+                p_kind: kind.rawValue,
+                p_emoji: emoji,
+                p_location: location,
+                p_description: description,
+                p_day_rsvp: dayRsvp
+            ))
             .execute()
         await fetchEvents()
     }

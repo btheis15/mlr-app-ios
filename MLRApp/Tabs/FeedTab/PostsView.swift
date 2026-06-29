@@ -171,21 +171,25 @@ struct PostsView: View {
     private func toggleReaction(post: Post, emoji: String) async {
         guard let userId = env.currentProfile?.id else { return }
         let existing = reactionMap[post.id] ?? []
-        let myReaction = existing.first(where: { $0.userId == userId && $0.emoji == emoji })
+        // One reaction per user per post (composite PK): tapping the current
+        // emoji removes it; tapping a different one switches it.
+        let myReaction = existing.first(where: { $0.userId == userId })
+        let isRemoving = myReaction?.emoji == emoji
+        let withoutMine = existing.filter { $0.userId != userId }
 
         // Optimistic update
-        if let r = myReaction {
-            reactionMap[post.id] = existing.filter { $0.id != r.id }
+        if isRemoving {
+            reactionMap[post.id] = withoutMine
         } else {
             let optimistic = PostReaction(
-                id: UUID(), postId: post.id, userId: userId,
+                postId: post.id, userId: userId,
                 emoji: emoji, createdAt: .now
             )
-            reactionMap[post.id] = existing + [optimistic]
+            reactionMap[post.id] = withoutMine + [optimistic]
         }
 
         do {
-            if myReaction != nil {
+            if isRemoving {
                 try await env.postsService.removeReaction(postId: post.id, emoji: emoji, userId: userId)
             } else {
                 try await env.postsService.addReaction(postId: post.id, emoji: emoji, userId: userId)

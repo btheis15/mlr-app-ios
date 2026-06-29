@@ -62,9 +62,9 @@ final class NotificationsService {
     /// Mark all unseen notifications seen — clears the badge.
     func markAllSeen(userId: UUID) async {
         do {
-            struct MarkSeenParams: Encodable { let p_user_id: String }
+            // mark_notifications_seen() takes no args — it resolves the caller via auth.uid().
             try await supabase
-                .rpc("mark_notifications_seen", params: MarkSeenParams(p_user_id: userId.uuidString))
+                .rpc("mark_notifications_seen")
                 .execute()
 
             // Optimistic update
@@ -83,9 +83,9 @@ final class NotificationsService {
     /// Mark an individual notification read — removes bold styling.
     func markRead(notificationId: UUID) async {
         do {
-            struct MarkReadParams: Encodable { let p_notification_id: String }
+            struct MarkReadParams: Encodable { let p_id: String }
             try await supabase
-                .rpc("mark_notification_read", params: MarkReadParams(p_notification_id: notificationId.uuidString))
+                .rpc("mark_notification_read", params: MarkReadParams(p_id: notificationId.uuidString))
                 .execute()
 
             // Optimistic update
@@ -104,22 +104,48 @@ final class NotificationsService {
         title: String,
         body: String?,
         audience: BroadcastAudience,
-        mirrorBanner: Bool
+        mirrorBanner: Bool,
+        url: String? = nil,
+        expiresAt: Date? = nil
     ) async throws {
         struct BroadcastParams: Encodable {
             let p_title: String
             let p_body: String?
+            let p_url: String?
             let p_audience: String
-            let p_mirror_banner: Bool
+            let p_expires_at: String?
         }
+        let iso = ISO8601DateFormatter()
+        let expiresStr = expiresAt.map { iso.string(from: $0) }
         try await supabase
             .rpc("send_broadcast_notification", params: BroadcastParams(
                 p_title: title,
                 p_body: body,
+                p_url: url,
                 p_audience: audience.rawValue,
-                p_mirror_banner: mirrorBanner
+                p_expires_at: expiresStr
             ))
             .execute()
+
+        // Banner mirror is a separate announcements insert (banner is everyone-only),
+        // matching the web AdminNotificationComposer.
+        if mirrorBanner && audience == .everyone {
+            let uid = try? await supabase.auth.session.user.id
+            // Default the banner to a 6-hour life if no explicit expiry was set.
+            let bannerExpiry = expiresAt ?? Date.now.addingTimeInterval(6 * 3600)
+            var params: [String: AnyJSON] = [
+                "title": .string(title),
+                "body": body.map(AnyJSON.string) ?? .null,
+                "severity": .string("alert"),
+                "notify_email": .bool(false),
+                "expires_at": .string(iso.string(from: bannerExpiry))
+            ]
+            if let uid { params["author_id"] = .string(uid.uuidString) }
+            try await supabase
+                .from("announcements")
+                .insert(params)
+                .execute()
+        }
     }
 
     // MARK: - Realtime

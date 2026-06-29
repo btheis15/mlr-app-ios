@@ -108,9 +108,11 @@ final class PostsService {
             "user_id": .string(userId.uuidString),
             "emoji":   .string(emoji)
         ]
+        // PK is (post_id, user_id) — one reaction per user per post; upserting
+        // switches the emoji rather than adding a second row.
         try await supabase
             .from("post_reactions")
-            .upsert(params, onConflict: "post_id,user_id,emoji")
+            .upsert(params, onConflict: "post_id,user_id")
             .execute()
     }
 
@@ -138,15 +140,15 @@ final class PostsService {
 
     func reportContent(targetType: String, targetId: UUID, reason: String?) async throws {
         struct ReportParams: Encodable {
-            let target_type: String
-            let target_id: String
-            let reason: String?
+            let p_entity_type: String
+            let p_entity_id: String
+            let p_reason: String?
         }
         try await supabase
             .rpc("report_content", params: ReportParams(
-                target_type: targetType,
-                target_id: targetId.uuidString,
-                reason: reason
+                p_entity_type: targetType,
+                p_entity_id: targetId.uuidString,
+                p_reason: reason
             ))
             .execute()
     }

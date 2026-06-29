@@ -138,6 +138,7 @@ struct EventComposer: View {
                     id: existing.id,
                     title: title,
                     description: descParam,
+                    kind: kind,
                     startDate: startISO,
                     endDate: endISO,
                     location: locParam,

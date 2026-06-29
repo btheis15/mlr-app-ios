@@ -71,34 +71,39 @@ final class CommitteeService {
 
     // MARK: - Join requests
 
-    func requestJoin(committeeId: UUID, note: String?) async throws {
+    func requestJoin(committeeId: UUID, note: String?, requestedArea: String? = nil) async throws {
         struct JoinParams: Encodable {
-            let p_committee_id: String
-            let p_note: String?
+            let cid: String
+            let msg: String?
+            let requested_area: String?
         }
         try await supabase
-            .rpc("request_committee_join", params: JoinParams(
-                p_committee_id: committeeId.uuidString,
-                p_note: note
+            .rpc("request_to_join", params: JoinParams(
+                cid: committeeId.uuidString,
+                msg: note,
+                requested_area: requestedArea
             ))
             .execute()
     }
 
     func approveJoin(requestId: UUID) async throws {
-        struct ApproveParams: Encodable { let p_request_id: String }
-        try await supabase
-            .rpc("approve_committee_join", params: ApproveParams(
-                p_request_id: requestId.uuidString
-            ))
-            .execute()
-        pendingRequests.removeAll { $0.id == requestId }
+        try await reviewJoin(requestId: requestId, approve: true)
     }
 
     func declineJoin(requestId: UUID) async throws {
-        struct DeclineParams: Encodable { let p_request_id: String }
+        try await reviewJoin(requestId: requestId, approve: false)
+    }
+
+    /// Approve or reject a join request — one RPC (migrations 0015/0051).
+    private func reviewJoin(requestId: UUID, approve: Bool) async throws {
+        struct ReviewParams: Encodable {
+            let req_id: String
+            let approve: Bool
+        }
         try await supabase
-            .rpc("decline_committee_join", params: DeclineParams(
-                p_request_id: requestId.uuidString
+            .rpc("review_join_request", params: ReviewParams(
+                req_id: requestId.uuidString,
+                approve: approve
             ))
             .execute()
         pendingRequests.removeAll { $0.id == requestId }
@@ -108,7 +113,7 @@ final class CommitteeService {
         let rows: [CommitteeJoinRequest] = try await supabase
             .from("committee_join_requests")
             .select("""
-                id, committee_id, user_id, status, note, created_at,
+                id, committee_id, user_id, status, message, created_at,
                 profiles!user_id(id, display_name, contact_email, avatar_url, phone, is_admin,
                                  beta_tester, willing_to_help, intro_seen,
                                  email_alerts, push_level, push_types,
@@ -125,7 +130,7 @@ final class CommitteeService {
 
     func fetchMessages(committeeId: UUID) async throws -> [CommitteeChatMessage] {
         let rows: [CommitteeChatRow] = try await supabase
-            .from("committee_chat_messages")
+            .from("committee_messages")
             .select("""
                 id, committee_id, author_id, text, edited_at, deleted_at, created_at,
                 profiles!author_id(display_name, avatar_url)
@@ -144,7 +149,7 @@ final class CommitteeService {
             "text":         .string(text)
         ]
         let row: CommitteeChatRow = try await supabase
-            .from("committee_chat_messages")
+            .from("committee_messages")
             .insert(params)
             .select("""
                 id, committee_id, author_id, text, edited_at, deleted_at, created_at,
@@ -157,24 +162,25 @@ final class CommitteeService {
     }
 
     func editMessage(messageId: UUID, text: String) async throws {
-        struct EditParams: Encodable {
-            let p_message_id: String
-            let p_text: String
-        }
+        // Editing is a direct update (stamps edited_at); RLS gates who may edit.
+        let now = ISO8601DateFormatter().string(from: .now)
         try await supabase
-            .rpc("edit_committee_message", params: EditParams(
-                p_message_id: messageId.uuidString,
-                p_text: text
-            ))
+            .from("committee_messages")
+            .update([
+                "text": AnyJSON.string(text),
+                "edited_at": AnyJSON.string(now)
+            ])
+            .eq("id", value: messageId.uuidString)
             .execute()
     }
 
     func deleteMessage(messageId: UUID) async throws {
-        struct DeleteParams: Encodable { let p_message_id: String }
+        // Soft delete: stamp deleted_at so the bubble becomes "message deleted".
+        let now = ISO8601DateFormatter().string(from: .now)
         try await supabase
-            .rpc("delete_committee_message", params: DeleteParams(
-                p_message_id: messageId.uuidString
-            ))
+            .from("committee_messages")
+            .update(["deleted_at": AnyJSON.string(now)])
+            .eq("id", value: messageId.uuidString)
             .execute()
     }
 
@@ -195,7 +201,7 @@ final class CommitteeService {
             channel.onPostgresChange(
                 AnyAction.self,
                 schema: "public",
-                table: "committee_chat_messages",
+                table: "committee_messages",
                 filter: "committee_id=eq.\(committeeId.uuidString)"
             ) { action in
                 Task { @MainActor in
@@ -210,7 +216,7 @@ final class CommitteeService {
                           let id = UUID(uuidString: idStr)
                     else { return }
                     if let row: CommitteeChatRow = try? await supabase
-                        .from("committee_chat_messages")
+                        .from("committee_messages")
                         .select("""
                             id, committee_id, author_id, text, edited_at, deleted_at, created_at,
                             profiles!author_id(display_name, avatar_url)
@@ -239,14 +245,14 @@ final class CommitteeService {
 }
 
 // MARK: - Private row type for committee chat messages
-// committee_chat_messages has no flat author_name/author_avatar_url columns;
+// committee_messages has no flat author_name/author_avatar_url columns;
 // author info comes from the profiles!author_id join.
 
 private struct CommitteeChatRow: Decodable {
     let id: UUID
     let committeeId: UUID
     let authorId: UUID
-    let text: String
+    let text: String?
     let editedAt: Date?
     let deletedAt: Date?
     let createdAt: Date
@@ -279,7 +285,7 @@ private struct CommitteeChatRow: Decodable {
             authorId: authorId,
             authorName: profiles?.name ?? "Member",
             authorAvatarUrl: profiles?.avatarUrl,
-            text: text,
+            text: text ?? "",
             editedAt: editedAt,
             deletedAt: deletedAt,
             createdAt: createdAt

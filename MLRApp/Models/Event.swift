@@ -6,6 +6,7 @@ struct ResortEvent: Codable, Identifiable, Equatable {
     let id: String
     var title: String
     var description: String?
+    var emoji: String? = nil
     var kind: EventKind
     var startDate: String
     var endDate: String?
@@ -14,7 +15,7 @@ struct ResortEvent: Codable, Identifiable, Equatable {
     var source: EventSource
 
     enum CodingKeys: String, CodingKey {
-        case id, title, description, kind
+        case id, title, description, emoji, kind
         case startDate = "start_date"
         case endDate = "end_date"
         case location
@@ -46,9 +47,16 @@ enum EventKind: String, Codable {
 }
 
 enum EventSource: String, Codable {
-    case seed
-    case db
-    case gcal
+    case seed   // synthesized in-app (Family Fest, 4th of July)
+    case admin  // created in the app by an admin (DB `source = 'admin'`)
+    case gcal   // imported from Google Calendar
+
+    // The DB `source` column is 'admin' | 'gcal'; decode leniently so an
+    // unknown value never throws (and admin events actually load).
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self)
+        self = EventSource(rawValue: raw) ?? .admin
+    }
 }
 
 // MARK: - Event Attendance

@@ -253,7 +253,7 @@ struct AdminAlertComposer: View {
         let params: [String: String] = [
             "title": title.trimmingCharacters(in: .whitespaces),
             "body": messageBody.trimmingCharacters(in: .whitespaces),
-            "kind": kind.rawValue,
+            "severity": kind.severity,
             "expires_at": fmt.string(from: expiry.expiresAt)
         ]
 

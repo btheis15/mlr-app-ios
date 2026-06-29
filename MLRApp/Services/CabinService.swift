@@ -22,6 +22,7 @@ final class CabinService {
             let rows: [Cabin] = try await supabase
                 .from("cabins")
                 .select("*")
+                .eq("active", value: true)   // hide archived cabins (matches web)
                 .order("sort_order", ascending: true)
                 .execute()
                 .value

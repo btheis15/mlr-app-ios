@@ -47,10 +47,6 @@ struct AnnouncementBannerStack: View {
 
     @MainActor
     private func loadFromDB() async {
-        guard isSupabaseConfigured else {
-            isLoading = false
-            return
-        }
         do {
             let rows: [Announcement] = try await supabase
                 .from("announcements")
@@ -63,12 +59,6 @@ struct AnnouncementBannerStack: View {
             print("[AnnouncementBanner] fetch error: \(error)")
         }
         isLoading = false
-    }
-
-    /// True when a real Supabase URL has been configured.
-    private var isSupabaseConfigured: Bool {
-        let url = ProcessInfo.processInfo.environment["SUPABASE_URL"] ?? ""
-        return !url.isEmpty && !url.contains("YOUR_PROJECT_ID")
     }
 }
 

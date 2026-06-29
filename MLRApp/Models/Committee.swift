@@ -43,6 +43,17 @@ enum CommitteeRole: String, Codable {
     case member
     case lead
     case admin
+
+    // The DB stores the role as free text — leads are 'Lead' (capitalized),
+    // regular members are null. Decode leniently so a present value never throws.
+    init(from decoder: Decoder) throws {
+        let raw = try decoder.singleValueContainer().decode(String.self).lowercased()
+        switch raw {
+        case "lead":  self = .lead
+        case "admin": self = .admin
+        default:      self = .member
+        }
+    }
 }
 
 // MARK: - Join Request
@@ -61,7 +72,7 @@ struct CommitteeJoinRequest: Codable, Identifiable, Equatable {
         case committeeId = "committee_id"
         case userId = "user_id"
         case status
-        case note
+        case note = "message"
         case createdAt = "created_at"
         case profile = "profiles"
     }
@@ -70,7 +81,7 @@ struct CommitteeJoinRequest: Codable, Identifiable, Equatable {
 enum JoinRequestStatus: String, Codable {
     case pending
     case approved
-    case declined
+    case rejected
 }
 
 // MARK: - Committee Chat Message

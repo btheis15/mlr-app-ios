@@ -51,14 +51,16 @@ struct PostComment: Codable, Identifiable, Equatable {
 // MARK: - Reaction
 
 struct PostReaction: Codable, Identifiable, Equatable {
-    let id: UUID
+    // post_reactions has a composite PK (post_id, user_id) and no `id` column,
+    // so identity is derived from those two — one reaction per user per post.
     let postId: UUID
     let userId: UUID
     var emoji: String
     var createdAt: Date
 
+    var id: String { "\(postId.uuidString)-\(userId.uuidString)" }
+
     enum CodingKeys: String, CodingKey {
-        case id
         case postId = "post_id"
         case userId = "user_id"
         case emoji

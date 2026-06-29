@@ -11,7 +11,7 @@ struct AskForHelpSheet: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
 
-    @State private var category: HelpCategory = .moving
+    @State private var category: HelpCategory = .hand
     @State private var what = ""
     @State private var neededCount = 1
     @State private var whereText = ""
