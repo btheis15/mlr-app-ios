@@ -115,6 +115,8 @@
 		D33F9ED52FF3175D00603CE7 /* WorkItemsSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9ED42FF3175D00603CE7 /* WorkItemsSection.swift */; };
 		D33F9ED72FF3178900603CE7 /* WorkItemComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9ED62FF3178900603CE7 /* WorkItemComposer.swift */; };
 		D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9ED82FF317A800603CE7 /* WorkChecklistCard.swift */; };
+		D33F9EDB2FF319D600603CE7 /* CommitteeEmailComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EDA2FF319D600603CE7 /* CommitteeEmailComposer.swift */; };
+		D33F9EDD2FF319F800603CE7 /* CommitteeMemberManageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */; };
 		D3533C0B2FE9EC60001AD887 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0A2FE9EC60001AD887 /* Auth */; };
 		D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0C2FE9EC60001AD887 /* Functions */; };
 		D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0E2FE9EC60001AD887 /* PostgREST */; };
@@ -234,6 +236,8 @@
 		D33F9ED42FF3175D00603CE7 /* WorkItemsSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemsSection.swift; sourceTree = "<group>"; };
 		D33F9ED62FF3178900603CE7 /* WorkItemComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemComposer.swift; sourceTree = "<group>"; };
 		D33F9ED82FF317A800603CE7 /* WorkChecklistCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkChecklistCard.swift; sourceTree = "<group>"; };
+		D33F9EDA2FF319D600603CE7 /* CommitteeEmailComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeEmailComposer.swift; sourceTree = "<group>"; };
+		D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeMemberManageSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -312,6 +316,8 @@
 				D33F9DEC2FEC086700603CE7 /* CommitteeChatView.swift */,
 				D33F9DED2FEC086700603CE7 /* CommitteeDetailView.swift */,
 				D33F9DEE2FEC086700603CE7 /* CommitteesView.swift */,
+				D33F9EDA2FF319D600603CE7 /* CommitteeEmailComposer.swift */,
+				D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */,
 			);
 			path = Committees;
 			sourceTree = "<group>";
@@ -719,6 +725,7 @@
 				D33F9E7E2FEC086700603CE7 /* FestCountdownIntent.swift in Sources */,
 				D33F9E7F2FEC086700603CE7 /* FestSeason.swift in Sources */,
 				D33F9E802FEC086700603CE7 /* Event.swift in Sources */,
+				D33F9EDD2FF319F800603CE7 /* CommitteeMemberManageSheet.swift in Sources */,
 				D33F9E812FEC086700603CE7 /* EventCard.swift in Sources */,
 				D33F9E822FEC086700603CE7 /* AdminSignInsView.swift in Sources */,
 				D33F9E832FEC086700603CE7 /* CommentsView.swift in Sources */,
@@ -767,6 +774,7 @@
 				D33F9EAC2FEC086700603CE7 /* AskForHelpIntent.swift in Sources */,
 				D33F9EAD2FEC086700603CE7 /* Notification.swift in Sources */,
 				D33F9EAE2FEC086700603CE7 /* MessageComposer.swift in Sources */,
+				D33F9EDB2FF319D600603CE7 /* CommitteeEmailComposer.swift in Sources */,
 				D33F9EAF2FEC086700603CE7 /* FestOverviewView.swift in Sources */,
 				D33F9EB02FEC086700603CE7 /* UpcomingEventCard.swift in Sources */,
 				D33F9EB12FEC086700603CE7 /* HapticsAndShare.swift in Sources */,

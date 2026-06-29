@@ -16,6 +16,9 @@ struct CommitteeDetailView: View {
     @State private var actionInFlight: Set<UUID> = []
     @State private var joining = false
     @State private var requested = false
+    @State private var selectedJoinArea: String?
+    @State private var managingMember: CommitteeMember?
+    @State private var showEmail = false
 
     private var myMembership: CommitteeMember? {
         env.committeeService.myMemberships.first { $0.committeeId == committee.id }
@@ -25,6 +28,14 @@ struct CommitteeDetailView: View {
 
     private var canManage: Bool {
         env.isAdmin || myMembership?.role == .lead || myMembership?.role == .admin
+    }
+
+    /// Any member of this committee (or an app admin) can email the roster.
+    private var canEmail: Bool { isMember || env.isAdmin }
+
+    /// Areas in use on this committee — drives the join picker + manage suggestions.
+    private var committeeAreas: [String] {
+        Array(Set(members.flatMap(\.areas))).sorted()
     }
 
     var body: some View {
@@ -43,6 +54,21 @@ struct CommitteeDetailView: View {
                 }
 
                 membersSection
+
+                if canEmail && !members.isEmpty {
+                    Button {
+                        showEmail = true
+                    } label: {
+                        Label("Email these members", systemImage: "envelope.fill")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.mlrPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.mlrPrimary.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             .padding(20)
         }
@@ -50,6 +76,18 @@ struct CommitteeDetailView: View {
         .navigationTitle(committee.name)
         .navigationBarTitleDisplayMode(.inline)
         .task { await load() }
+        .sheet(isPresented: $showEmail) {
+            CommitteeEmailComposer(committee: committee, members: members)
+        }
+        .sheet(item: $managingMember) { member in
+            CommitteeMemberManageSheet(
+                committee: committee,
+                member: member,
+                suggestedAreas: committeeAreas
+            ) {
+                Task { members = (try? await env.committeeService.fetchMembers(committeeId: committee.id)) ?? members }
+            }
+        }
     }
 
     // MARK: - Header
@@ -97,6 +135,16 @@ struct CommitteeDetailView: View {
                 .font(.mlrCaption)
                 .foregroundStyle(Color.mlrTextMuted)
 
+            // Area picker — optional preference for which area you'd help with.
+            if !requested && !committeeAreas.isEmpty {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Which area are you interested in? (optional)")
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.mlrTextMuted)
+                    FlowChips(options: committeeAreas, selection: $selectedJoinArea)
+                }
+            }
+
             Button {
                 Task { await requestJoin() }
             } label: {
@@ -126,10 +174,18 @@ struct CommitteeDetailView: View {
                     HStack(spacing: 12) {
                         if let profile = request.profile {
                             AvatarView(profile: profile, size: .small)
-                            VStack(alignment: .leading, spacing: 1) {
+                            VStack(alignment: .leading, spacing: 2) {
                                 Text(profile.name)
                                     .font(.system(size: 15, weight: .medium))
                                     .foregroundStyle(Color.mlrText)
+                                if let area = request.requestedArea, !area.isEmpty {
+                                    Text(area)
+                                        .font(.system(size: 11, weight: .medium))
+                                        .foregroundStyle(Color.mlrPrimary)
+                                        .padding(.horizontal, 6).padding(.vertical, 2)
+                                        .background(Color.mlrPrimaryLight)
+                                        .clipShape(Capsule())
+                                }
                                 if let note = request.note, !note.isEmpty {
                                     Text(note)
                                         .font(.system(size: 12))
@@ -207,10 +263,27 @@ struct CommitteeDetailView: View {
         HStack(spacing: 12) {
             if let profile = member.profile {
                 AvatarView(profile: profile, size: .medium)
-                PrivateName(profile: profile, font: .system(size: 16, weight: .medium))
             } else {
                 AvatarView(url: nil, size: .medium)
-                Text("Member").foregroundStyle(Color.mlrText)
+            }
+            VStack(alignment: .leading, spacing: 4) {
+                if let profile = member.profile {
+                    PrivateName(profile: profile, font: .system(size: 16, weight: .medium))
+                } else {
+                    Text("Member").foregroundStyle(Color.mlrText)
+                }
+                if !member.areas.isEmpty {
+                    HStack(spacing: 4) {
+                        ForEach(member.areas, id: \.self) { area in
+                            Text(area)
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundStyle(Color.mlrPrimary)
+                                .padding(.horizontal, 6).padding(.vertical, 2)
+                                .background(Color.mlrPrimaryLight)
+                                .clipShape(Capsule())
+                        }
+                    }
+                }
             }
             Spacer()
             if member.role == .lead {
@@ -222,9 +295,16 @@ struct CommitteeDetailView: View {
                     .background(Color.mlrPrimaryLight)
                     .clipShape(Capsule())
             }
+            if canManage {
+                Image(systemName: "ellipsis.circle")
+                    .font(.system(size: 16))
+                    .foregroundStyle(Color.mlrTextSubtle)
+            }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
+        .contentShape(Rectangle())
+        .onTapGesture { if canManage { managingMember = member } }
     }
 
     // MARK: - Data
@@ -248,8 +328,8 @@ struct CommitteeDetailView: View {
         try await supabase
             .from("committee_join_requests")
             .select("""
-                id, committee_id, user_id, status, note, created_at,
-                profiles!user_id(id, name, email, avatar_url, phone, is_admin,
+                id, committee_id, user_id, status, message, requested_area, created_at,
+                profiles!user_id(id, display_name, contact_email, avatar_url, phone, is_admin,
                                  beta_tester, willing_to_help, intro_seen,
                                  email_alerts, push_level, push_types,
                                  notif_types, push_prompted, created_at)
@@ -266,7 +346,9 @@ struct CommitteeDetailView: View {
         joining = true
         defer { joining = false }
         do {
-            try await env.committeeService.requestJoin(committeeId: committee.id, note: nil)
+            try await env.committeeService.requestJoin(
+                committeeId: committee.id, note: nil, requestedArea: selectedJoinArea
+            )
             requested = true
         } catch {
             print("[CommitteeDetail] requestJoin error: \(error)")
@@ -288,6 +370,37 @@ struct CommitteeDetailView: View {
             }
         } catch {
             print("[CommitteeDetail] decide error: \(error)")
+        }
+    }
+}
+
+// MARK: - FlowChips
+// A simple single-select chip row (horizontally scrollable). Tapping the
+// selected chip clears the selection.
+
+private struct FlowChips: View {
+    let options: [String]
+    @Binding var selection: String?
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(options, id: \.self) { option in
+                    let on = selection == option
+                    Button {
+                        selection = on ? nil : option
+                    } label: {
+                        Text(option)
+                            .font(.system(size: 12, weight: .medium))
+                            .foregroundStyle(on ? .white : Color.mlrText)
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(on ? Color.mlrPrimary : Color.mlrCard)
+                            .clipShape(Capsule())
+                            .overlay(Capsule().stroke(on ? Color.mlrPrimary : Color.mlrBorder, lineWidth: 1))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
         }
     }
 }

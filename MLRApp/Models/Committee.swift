@@ -24,6 +24,7 @@ struct CommitteeMember: Codable, Identifiable, Equatable {
     let committeeId: UUID
     let userId: UUID
     var role: CommitteeRole?   // null in DB = regular member
+    var areas: [String]        // committee_members.areas (text[], migration 0051)
     var joinedAt: Date?
     var profile: Profile?
 
@@ -34,6 +35,7 @@ struct CommitteeMember: Codable, Identifiable, Equatable {
         case committeeId = "committee_id"
         case userId = "user_id"
         case role
+        case areas
         case joinedAt = "joined_at"
         case profile = "profiles"
     }
@@ -64,6 +66,7 @@ struct CommitteeJoinRequest: Codable, Identifiable, Equatable {
     let userId: UUID
     var status: JoinRequestStatus
     var note: String?
+    var requestedArea: String?   // committee_join_requests.requested_area (migration 0051)
     var createdAt: Date?
     var profile: Profile?
 
@@ -73,6 +76,7 @@ struct CommitteeJoinRequest: Codable, Identifiable, Equatable {
         case userId = "user_id"
         case status
         case note = "message"
+        case requestedArea = "requested_area"
         case createdAt = "created_at"
         case profile = "profiles"
     }
@@ -82,6 +86,14 @@ enum JoinRequestStatus: String, Codable {
     case pending
     case approved
     case rejected
+}
+
+// MARK: - Email recipient (committee_member_recipients RPC, migration 0031)
+
+struct CommitteeRecipient: Codable, Identifiable, Equatable {
+    let id: UUID
+    let name: String
+    let email: String
 }
 
 // MARK: - Committee Chat Message

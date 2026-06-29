@@ -42,7 +42,7 @@ final class CommitteeService {
         let rows: [CommitteeMember] = try await supabase
             .from("committee_members")
             .select("""
-                committee_id, user_id, role, joined_at,
+                committee_id, user_id, role, areas, joined_at,
                 profiles!user_id(id, display_name, contact_email, avatar_url, phone, is_admin,
                                  beta_tester, willing_to_help, intro_seen,
                                  email_alerts, push_level, push_types,
@@ -59,7 +59,7 @@ final class CommitteeService {
         do {
             let rows: [CommitteeMember] = try await supabase
                 .from("committee_members")
-                .select("committee_id, user_id, role, joined_at")
+                .select("committee_id, user_id, role, areas, joined_at")
                 .eq("user_id", value: userId.uuidString)
                 .execute()
                 .value
@@ -109,11 +109,57 @@ final class CommitteeService {
         pendingRequests.removeAll { $0.id == requestId }
     }
 
+    // MARK: - Lead / area management (committee leads + app admins, migration 0051)
+
+    /// Promote or demote a member to/from Lead.
+    func setCommitteeLead(committeeId: UUID, targetUserId: UUID, isLead: Bool) async throws {
+        struct LeadParams: Encodable {
+            let cid: String
+            let target: String
+            let is_lead: Bool
+        }
+        try await supabase
+            .rpc("set_committee_lead", params: LeadParams(
+                cid: committeeId.uuidString,
+                target: targetUserId.uuidString,
+                is_lead: isLead
+            ))
+            .execute()
+    }
+
+    /// Assign the set of areas a member works in.
+    func setCommitteeAreas(committeeId: UUID, targetUserId: UUID, areas: [String]) async throws {
+        struct AreasParams: Encodable {
+            let cid: String
+            let target: String
+            let areas: [String]
+        }
+        try await supabase
+            .rpc("set_committee_areas", params: AreasParams(
+                cid: committeeId.uuidString,
+                target: targetUserId.uuidString,
+                areas: areas
+            ))
+            .execute()
+    }
+
+    // MARK: - Email recipients (committee member or admin, migration 0031)
+
+    /// The committee's emailable roster ({id, name, email}), gated server-side.
+    func fetchCommitteeRecipients(committeeId: UUID) async throws -> [CommitteeRecipient] {
+        struct RecipientParams: Encodable { let cid: String }
+        let rows: [CommitteeRecipient] = try await supabase
+            .rpc("committee_member_recipients", params: RecipientParams(cid: committeeId.uuidString))
+            .execute()
+            .value
+        return rows
+    }
+
     func fetchPendingRequests() async throws {
         let rows: [CommitteeJoinRequest] = try await supabase
             .from("committee_join_requests")
             .select("""
-                id, committee_id, user_id, status, message, created_at,
+                id, committee_id, user_id, status, message, requested_area, created_at,
                 profiles!user_id(id, display_name, contact_email, avatar_url, phone, is_admin,
                                  beta_tester, willing_to_help, intro_seen,
                                  email_alerts, push_level, push_types,
