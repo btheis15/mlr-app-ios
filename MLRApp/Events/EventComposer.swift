@@ -22,6 +22,10 @@ struct EventComposer: View {
     @State private var isSaving = false
     @State private var saveError: String?
 
+    // Work items that can be linked to this event (open items), + current selection.
+    @State private var openWorkItems: [WorkItem] = []
+    @State private var selectedItemIds: Set<UUID> = []
+
     init(existing: ResortEvent? = nil) {
         self.existing = existing
         let iso = DateFormatter()
@@ -92,6 +96,32 @@ struct EventComposer: View {
                     Text("Lets members pick which days they're coming (used for Family Fest).")
                 }
 
+                if !openWorkItems.isEmpty {
+                    Section {
+                        ForEach(openWorkItems) { item in
+                            Button {
+                                if selectedItemIds.contains(item.id) {
+                                    selectedItemIds.remove(item.id)
+                                } else {
+                                    selectedItemIds.insert(item.id)
+                                }
+                            } label: {
+                                HStack {
+                                    Image(systemName: selectedItemIds.contains(item.id) ? "checkmark.square.fill" : "square")
+                                        .foregroundStyle(selectedItemIds.contains(item.id) ? Color.mlrPrimary : Color.mlrTextSubtle)
+                                    Text(item.title)
+                                        .foregroundStyle(Color.mlrText)
+                                    Spacer()
+                                }
+                            }
+                        }
+                    } header: {
+                        Text("Work items")
+                    } footer: {
+                        Text("Check off tasks from the work checklist to plan them for this event.")
+                    }
+                }
+
                 if let saveError {
                     Section {
                         Text(saveError)
@@ -117,6 +147,16 @@ struct EventComposer: View {
                     }
                 }
             }
+            .task { await loadWorkItems() }
+        }
+    }
+
+    private func loadWorkItems() async {
+        await env.workItemsService.fetchItems()
+        openWorkItems = env.workItemsService.openItems
+        if let existing {
+            let linked = await env.workItemsService.fetchEventItems(eventId: existing.id)
+            selectedItemIds = Set(linked.map(\.id))
         }
     }
 
@@ -133,6 +173,7 @@ struct EventComposer: View {
         let locParam = trimmedLoc.isEmpty ? nil : trimmedLoc
 
         do {
+            let eventId: String
             if let existing {
                 try await env.eventsService.updateEvent(
                     id: existing.id,
@@ -144,8 +185,9 @@ struct EventComposer: View {
                     location: locParam,
                     dayRsvp: dayRsvp
                 )
+                eventId = existing.id
             } else {
-                try await env.eventsService.createEvent(
+                eventId = try await env.eventsService.createEvent(
                     title: title,
                     description: descParam,
                     kind: kind,
@@ -155,6 +197,8 @@ struct EventComposer: View {
                     dayRsvp: dayRsvp
                 )
             }
+            // Replace the event's linked work items with the current selection.
+            try await env.workItemsService.syncEventItems(eventId: eventId, itemIds: Array(selectedItemIds))
             dismiss()
         } catch {
             saveError = "Couldn't save the event. Check your connection and try again."

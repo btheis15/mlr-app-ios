@@ -174,6 +174,8 @@ final class EventsService {
 
     // MARK: - Admin: create / update / delete
 
+    /// Create an event; returns the new event's id (so callers can link work items).
+    @discardableResult
     func createEvent(
         title: String,
         description: String?,
@@ -183,7 +185,7 @@ final class EventsService {
         location: String?,
         dayRsvp: Bool,
         emoji: String? = nil
-    ) async throws {
+    ) async throws -> String {
         struct CreateParams: Encodable {
             let p_title: String
             let p_start_date: String
@@ -194,7 +196,7 @@ final class EventsService {
             let p_description: String?
             let p_day_rsvp: Bool
         }
-        try await supabase
+        let newId: UUID = try await supabase
             .rpc("create_event", params: CreateParams(
                 p_title: title,
                 p_start_date: startDate,
@@ -206,7 +208,9 @@ final class EventsService {
                 p_day_rsvp: dayRsvp
             ))
             .execute()
+            .value
         await fetchEvents()
+        return newId.uuidString
     }
 
     func updateEvent(

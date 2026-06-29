@@ -52,6 +52,8 @@ struct EventSheet: View {
                     rsvpSection
                     whoIsGoingSection
 
+                    EventWorkItemsSection(event: event)
+
                     if env.isAdmin {
                         adminActions
                     }
