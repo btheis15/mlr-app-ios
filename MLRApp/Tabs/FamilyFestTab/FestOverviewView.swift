@@ -217,18 +217,28 @@ private struct FestCoverImage: View {
 
 // MARK: - Cover Caption
 
-/// A slim dates + venue line under the cover art — replaces the old, redundant
-/// text poster box (the cover image already shows the "Family Fest 2026" title).
+/// The festive title block under the cover art — mirrors the web fest page
+/// header: the ⚜ "Ye Olde Family Feste" theme line, then the dates and venue.
+/// The cover image already carries the big "Family Fest 2026", so this is the
+/// theme + when/where, not a repeated title.
 private struct FestCoverCaption: View {
     var body: some View {
-        VStack(spacing: 3) {
-            Text(FamilyFestConfig.dateRangeLabel)
-                .font(.festSerif(16, weight: .bold))
+        VStack(spacing: 6) {
+            Text("⚜ Ye Olde Family Feste ⚜")
+                .font(.festSerif(14, weight: .bold))
+                .tracking(2)
+                .textCase(.uppercase)
                 .foregroundStyle(Color.mlrFest)
+
+            Text("\(FamilyFestConfig.dateRangeLabel), \(String(FamilyFestConfig.year))")
+                .font(.festSerif(15, weight: .bold))
+                .foregroundStyle(Color.mlrFest.opacity(0.85))
+
             Text("Muskellunge Lake Resort · Tomahawk, WI")
                 .font(.festSerif(12))
-                .foregroundStyle(Color.mlrFest.opacity(0.65))
+                .foregroundStyle(Color.mlrFest.opacity(0.6))
         }
+        .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
     }
 }
