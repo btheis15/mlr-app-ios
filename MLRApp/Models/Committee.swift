@@ -41,6 +41,49 @@ struct CommitteeMember: Codable, Identifiable, Equatable {
     }
 }
 
+// MARK: - Committee Roster Entry
+// A roster slot (migration 0055): a named person with roles, which links to a
+// real account (linked_user_id + joined profile) once they verify with the
+// matching email. Unlinked slots with an email are "pending verification".
+
+struct CommitteeRosterEntry: Codable, Identifiable, Equatable {
+    let id: UUID
+    var name: String
+    var email: String?
+    var phone: String?
+    var roles: [String]
+    var position: Int
+    var linkedUserId: UUID?
+    var profile: LinkedProfile?
+
+    /// Whether a real account has claimed this slot.
+    var isLinked: Bool { linkedUserId != nil }
+    /// Invited (has an email) but not yet claimed by a verified account.
+    var isPending: Bool { linkedUserId == nil && (email?.isEmpty == false) }
+    /// The name to show — the linked account's current display name wins.
+    var displayName: String {
+        if let n = profile?.displayName, !n.isEmpty { return n }
+        return name
+    }
+    /// True when this slot is a Lead of any area.
+    var isLead: Bool { roles.contains { $0.hasSuffix("· Lead") } }
+
+    struct LinkedProfile: Codable, Equatable {
+        var displayName: String?
+        var avatarUrl: String?
+        enum CodingKeys: String, CodingKey {
+            case displayName = "display_name"
+            case avatarUrl = "avatar_url"
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, name, email, phone, roles, position
+        case linkedUserId = "linked_user_id"
+        case profile = "profiles"
+    }
+}
+
 enum CommitteeRole: String, Codable {
     case member
     case lead

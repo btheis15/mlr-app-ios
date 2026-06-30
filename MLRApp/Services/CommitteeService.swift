@@ -55,6 +55,22 @@ final class CommitteeService {
         return rows
     }
 
+    /// The committee's roster (migration 0055): everyone listed, with their
+    /// roles, each slot auto-linked to a real account (linked_user_id) once the
+    /// person verifies with the matching email. Public read.
+    func fetchRoster(slug: String) async throws -> [CommitteeRosterEntry] {
+        try await supabase
+            .from("committee_roster")
+            .select("""
+                id, name, email, phone, roles, position, linked_user_id,
+                profiles:linked_user_id(display_name, avatar_url)
+            """)
+            .eq("committee_slug", value: slug)
+            .order("position", ascending: true)
+            .execute()
+            .value
+    }
+
     func fetchMyMemberships(userId: UUID) async {
         do {
             let rows: [CommitteeMember] = try await supabase

@@ -10,6 +10,7 @@ struct CommitteeDetailView: View {
     let committee: Committee
 
     @State private var members: [CommitteeMember] = []
+    @State private var roster: [CommitteeRosterEntry] = []
     @State private var pending: [CommitteeJoinRequest] = []
     @State private var isLoading = true
     @State private var loadError: String?
@@ -43,9 +44,11 @@ struct CommitteeDetailView: View {
             VStack(alignment: .leading, spacing: 24) {
                 header
 
-                if isMember {
-                    chatLink
-                } else {
+                // Chat is always reachable (the chat view itself handles
+                // non-members); a request-to-join prompt shows below for guests.
+                chatLink
+
+                if !isMember {
                     joinPrompt
                 }
 
@@ -53,7 +56,13 @@ struct CommitteeDetailView: View {
                     pendingSection
                 }
 
-                membersSection
+                // The full roster — everyone on the committee, grouped by area.
+                rosterSection
+
+                // Chat-access management (leads/admins only).
+                if canManage {
+                    membersSection
+                }
 
                 if canEmail && !members.isEmpty {
                     Button {
@@ -224,11 +233,134 @@ struct CommitteeDetailView: View {
         }
     }
 
+    // MARK: - Roster (everyone on the committee, grouped by area)
+
+    /// Canonical area order for role-based committees (matches the web).
+    private let festAreas = [
+        "Meals",
+        "Entertainment & Games",
+        "Art & Decorating",
+        "Merchandise, Fundraising & Polling",
+        "Logistics, Scheduling & Finance",
+    ]
+
+    private var isRoleBased: Bool { roster.contains { !$0.roles.isEmpty } }
+
+    @ViewBuilder
+    private var rosterSection: some View {
+        if isLoading && roster.isEmpty {
+            SkeletonRow()
+        } else if !roster.isEmpty {
+            if isRoleBased {
+                VStack(alignment: .leading, spacing: 14) {
+                    SectionLabel(text: "Roles & who's on them")
+                    ForEach(festAreas, id: \.self) { area in
+                        let inArea = roster
+                            .filter { $0.roles.contains(area) || $0.roles.contains("\(area) · Lead") }
+                            .sorted { a, b in
+                                a.roles.contains("\(area) · Lead") && !b.roles.contains("\(area) · Lead")
+                            }
+                        if !inArea.isEmpty {
+                            areaCard(area: area, entries: inArea)
+                        }
+                    }
+                }
+            } else {
+                VStack(alignment: .leading, spacing: 12) {
+                    SectionLabel(text: "Members (\(roster.count))")
+                    VStack(spacing: 0) {
+                        ForEach(roster) { entry in
+                            rosterRow(entry, showLead: entry.isLead)
+                            if entry.id != roster.last?.id { Divider().padding(.leading, 52) }
+                        }
+                    }
+                    .background(Color.mlrCard)
+                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                }
+            }
+        }
+    }
+
+    private func areaCard(area: String, entries: [CommitteeRosterEntry]) -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(area)
+                .font(.system(size: 15, weight: .semibold))
+                .foregroundStyle(Color.mlrText)
+            VStack(spacing: 0) {
+                ForEach(entries) { entry in
+                    rosterRow(entry, showLead: entry.roles.contains("\(area) · Lead"))
+                    if entry.id != entries.last?.id { Divider().padding(.leading, 52) }
+                }
+            }
+        }
+        .padding(14)
+        .background(Color.mlrCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    @ViewBuilder
+    private func rosterRow(_ entry: CommitteeRosterEntry, showLead: Bool) -> some View {
+        HStack(spacing: 12) {
+            AvatarView(url: entry.isLinked ? entry.profile?.avatarUrl : nil, size: .small)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(entry.displayName)
+                    .font(.system(size: 15, weight: .medium))
+                    .foregroundStyle(Color.mlrText)
+                if entry.isPending {
+                    Text("Pending verification")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.mlrTextMuted.opacity(0.12))
+                        .clipShape(Capsule())
+                }
+            }
+            Spacer()
+            if showLead {
+                Text("Lead")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(Color.mlrPrimary)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Color.mlrPrimaryLight)
+                    .clipShape(Capsule())
+            }
+            rosterContact(entry)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    /// Tap-to-call / text / email for a roster slot (signed-in members only).
+    @ViewBuilder
+    private func rosterContact(_ entry: CommitteeRosterEntry) -> some View {
+        if env.isSignedIn {
+            HStack(spacing: 10) {
+                if let phone = entry.phone, !phone.isEmpty,
+                   let url = URL(string: "tel:\(phone)") {
+                    Link(destination: url) {
+                        Image(systemName: "phone.fill").font(.system(size: 13)).foregroundStyle(Color.mlrPrimary)
+                    }
+                    if let sms = URL(string: "sms:\(phone)") {
+                        Link(destination: sms) {
+                            Image(systemName: "message.fill").font(.system(size: 13)).foregroundStyle(Color.mlrInfo)
+                        }
+                    }
+                }
+                if let email = entry.email, !email.isEmpty,
+                   let url = URL(string: "mailto:\(email)") {
+                    Link(destination: url) {
+                        Image(systemName: "envelope.fill").font(.system(size: 13)).foregroundStyle(Color.mlrTextMuted)
+                    }
+                }
+            }
+        }
+    }
+
     // MARK: - Members
 
     private var membersSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "Members (\(members.count))")
+            SectionLabel(text: "Chat members (\(members.count))")
             if isLoading {
                 SkeletonRow()
             } else if members.isEmpty {
@@ -312,6 +444,9 @@ struct CommitteeDetailView: View {
     private func load() async {
         isLoading = true
         loadError = nil
+        // The roster (everyone) is the public display; committee_members backs
+        // chat access + management. Load both; the roster is the headline list.
+        roster = (try? await env.committeeService.fetchRoster(slug: committee.slug)) ?? roster
         do {
             members = try await env.committeeService.fetchMembers(committeeId: committee.id)
         } catch {
