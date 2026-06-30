@@ -119,6 +119,7 @@
 		D33F9EDD2FF319F800603CE7 /* CommitteeMemberManageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */; };
 		D33F9EE02FF3FC7500603CE7 /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EDF2FF3FC7500603CE7 /* HelpView.swift */; };
 		D33F9EE22FF3FC8600603CE7 /* GuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE12FF3FC8600603CE7 /* GuideView.swift */; };
+		D33F9EE42FF4075B00603CE7 /* FestContentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE32FF4075B00603CE7 /* FestContentService.swift */; };
 		D3533C0B2FE9EC60001AD887 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0A2FE9EC60001AD887 /* Auth */; };
 		D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0C2FE9EC60001AD887 /* Functions */; };
 		D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0E2FE9EC60001AD887 /* PostgREST */; };
@@ -242,6 +243,7 @@
 		D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeMemberManageSheet.swift; sourceTree = "<group>"; };
 		D33F9EDF2FF3FC7500603CE7 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		D33F9EE12FF3FC8600603CE7 /* GuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideView.swift; sourceTree = "<group>"; };
+		D33F9EE32FF4075B00603CE7 /* FestContentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestContentService.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -417,6 +419,7 @@
 				D33F9E1A2FEC086700603CE7 /* PostsService.swift */,
 				D33F9E1B2FEC086700603CE7 /* PushService.swift */,
 				D33F9ED12FF3172100603CE7 /* WorkItemsService.swift */,
+				D33F9EE32FF4075B00603CE7 /* FestContentService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -714,6 +717,7 @@
 				D33F9E662FEC086700603CE7 /* CommitteesView.swift in Sources */,
 				D33F9E672FEC086700603CE7 /* AppearanceManager.swift in Sources */,
 				D33F9E682FEC086700603CE7 /* MemberSheetView.swift in Sources */,
+				D33F9EE42FF4075B00603CE7 /* FestContentService.swift in Sources */,
 				D33F9E692FEC086700603CE7 /* EventWeatherBadge.swift in Sources */,
 				D33F9E6A2FEC086700603CE7 /* PeopleDirectoryView.swift in Sources */,
 				D33F9E6B2FEC086700603CE7 /* AttendanceControl.swift in Sources */,

@@ -5,6 +5,7 @@ import SwiftUI
 // Mirrors the FestStatus component from the web app.
 
 struct FestStatus: View {
+    @Environment(AppEnvironment.self) private var env
     let season: FestSeason
 
     var body: some View {
@@ -98,6 +99,7 @@ private struct PlanningCard: View {
 // MARK: - Live
 
 private struct LiveCard: View {
+    @Environment(AppEnvironment.self) private var env
     let season: FestSeason
     @State private var dotPulse = false
 
@@ -171,12 +173,13 @@ private struct LiveCard: View {
     }
 
     private func todayScheduleItems() -> [ScheduleItem] {
-        guard let dayNum = season.dayNumber else { return [] }
-        let days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-        // dayNumber is 1-based; fest starts Sunday (index 0)
-        guard dayNum >= 1 && dayNum <= days.count else { return [] }
-        let dayName = days[dayNum - 1]
-        return ScheduleItem.seed.filter { $0.day == dayName }
+        // Today's weekday name (resort-local) — schedule items are keyed by weekday.
+        let fmt = DateFormatter()
+        fmt.dateFormat = "EEEE"
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.timeZone = TimeZone(identifier: "America/Chicago")
+        let todayName = fmt.string(from: .now)
+        return env.festContentService.schedule.filter { $0.day == todayName }
     }
 }
 

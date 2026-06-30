@@ -1,68 +1,20 @@
 import SwiftUI
 
-// MARK: - Payment Method Model
-
-private struct PaymentMethod: Identifiable {
-    let id: String
-    let name: String
-    let icon: String
-    let iconColor: Color
-    let handle: String
-    let amount: Int
-    let description: String
-    let deepLink: URL?
-    let displayHandle: String
-}
-
 // MARK: - FestPayView
+// Family Fest dues + who to pay — driven by the editable DB content
+// (FestContentService): a set of dues tiers (Adult / Kid / per-day / without
+// food, etc., each amount TBD until set) and the list of payees with their
+// handles. Edited in the Family Fest Planner; shown identically on web + iOS.
 
 struct FestPayView: View {
     @Environment(AppEnvironment.self) private var env
 
-    @State private var dueAmount = 150
-    private let note = "FamilyFest2026"
-
-    private var paymentMethods: [PaymentMethod] {
-        [
-            PaymentMethod(
-                id: "venmo",
-                name: "Venmo",
-                icon: "v.circle.fill",
-                iconColor: Color(hex: "#3d95ce"),
-                handle: "MLRFamilyFest",
-                amount: dueAmount,
-                description: "Send via Venmo",
-                deepLink: URL(string: "venmo://paycharge?txn=pay&recipients=MLRFamilyFest&amount=\(dueAmount)&note=\(note)"),
-                displayHandle: "@MLRFamilyFest"
-            ),
-            PaymentMethod(
-                id: "applepay",
-                name: "Apple Cash",
-                icon: "applelogo",
-                iconColor: Color.mlrText, // adaptive: black in light, white in dark
-                handle: "cash.app/$MLRFamilyFest",
-                amount: dueAmount,
-                description: "Send with Apple Cash",
-                deepLink: URL(string: "https://cash.app/$MLRFamilyFest"),
-                displayHandle: "$MLRFamilyFest"
-            ),
-            PaymentMethod(
-                id: "zelle",
-                name: "Zelle",
-                icon: "z.circle.fill",
-                iconColor: Color(hex: "#6d1ed4"),
-                handle: "familyfest@muskellungelake.com",
-                amount: dueAmount,
-                description: "Send to email via Zelle",
-                deepLink: nil,
-                displayHandle: "familyfest@muskellungelake.com"
-            ),
-        ]
-    }
+    private var dues: [FestDuesTier] { env.festContentService.dues }
+    private var payees: [Payee] { env.festContentService.payees }
 
     var body: some View {
         if !env.isSignedIn {
-            FestSignInNotice(message: "Sign in to see payment details and handles.")
+            FestSignInNotice(message: "Sign in to see dues and payment details.")
         } else {
             payContent
         }
@@ -71,186 +23,186 @@ struct FestPayView: View {
     private var payContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
-
-                // Dues explanation card
-                VStack(alignment: .leading, spacing: 8) {
-                    HStack(spacing: 8) {
-                        Image(systemName: "dollarsign.circle.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(Color.mlrFest)
-                        Text("Household Dues")
-                            .font(.festSerif(16, weight: .bold))
-                            .foregroundStyle(Color.mlrFest)
-                    }
-
-                    Text("$\(dueAmount) per household · Family Fest 2026")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.mlrFest.opacity(0.8))
-
-                    Text("Dues cover shared meals, activities, and resort costs for the week. Pay with any method below — note \u{201C}Family Fest 2026\u{201D} with your payment.")
-                        .font(.system(size: 13))
-                        .foregroundStyle(Color.mlrFest.opacity(0.65))
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    // Custom amount — paying for more than one household, etc.
-                    HStack(spacing: 8) {
-                        Text("Amount")
-                            .font(.system(size: 13, weight: .semibold))
-                            .foregroundStyle(Color.mlrFest.opacity(0.8))
-                        Spacer()
-                        Text("$")
-                            .foregroundStyle(Color.mlrFest)
-                        TextField("150", value: $dueAmount, format: .number)
-                            .keyboardType(.numberPad)
-                            .multilineTextAlignment(.trailing)
-                            .frame(width: 70)
-                            .padding(.horizontal, 8).padding(.vertical, 6)
-                            .background(Color.mlrFest.opacity(0.08))
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                            .foregroundStyle(Color.mlrFest)
-                    }
-                    .padding(.top, 4)
+                duesCard
+                if !payees.isEmpty {
+                    payeesSection
                 }
-                .padding(16)
-                .background(
-                    RoundedRectangle(cornerRadius: 14)
-                        .fill(Color.mlrFest.opacity(0.07))
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 14)
-                                .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1.5)
-                        )
-                )
-                .padding(.horizontal, 16)
-                .padding(.top, 12)
-
-                // Apple Pay dues button — self-hides until a merchant + processor
-                // is configured (PaymentsConfig.applePayEnabled).
-                ApplePayDuesButton(amount: Decimal(dueAmount), label: "Family Fest Dues")
-                    .padding(.horizontal, 16)
-
-                // Payment methods
-                VStack(spacing: 10) {
-                    ForEach(paymentMethods) { method in
-                        PaymentMethodCard(method: method)
-                    }
-                }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 32)
             }
+            .padding(.horizontal, 16)
+            .padding(.top, 12)
+            .padding(.bottom, 32)
         }
         .background(Color.mlrFestParchment)
     }
-}
 
-// MARK: - Payment Method Card
+    // MARK: - Dues
 
-private struct PaymentMethodCard: View {
-    let method: PaymentMethod
-    @State private var copied = false
-    @State private var composeState: MessageComposeState?
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-
-            // Header
-            HStack(spacing: 10) {
-                Image(systemName: method.icon)
-                    .font(.system(size: 22))
-                    .foregroundStyle(method.iconColor)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(method.name)
-                        .font(.system(size: 15, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
-                    Text(method.description)
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.mlrFest.opacity(0.6))
-                }
-                Spacer()
-                Text("$\(method.amount)")
-                    .font(.festSerif(18, weight: .bold))
+    private var duesCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 8) {
+                Image(systemName: "dollarsign.circle.fill")
+                    .font(.system(size: 20))
+                    .foregroundStyle(Color.mlrFest)
+                Text("Household Dues")
+                    .font(.festSerif(16, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
             }
 
-            // Handle display + copy
-            HStack(spacing: 8) {
-                Text(method.displayHandle)
-                    .font(.system(size: 13, design: .monospaced))
-                    .foregroundStyle(Color.mlrFest.opacity(0.75))
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(Color.mlrFest.opacity(0.08))
-                    .clipShape(RoundedRectangle(cornerRadius: 7))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                Button {
-                    UIPasteboard.general.string = method.displayHandle
-                    copied = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
-                        copied = false
-                    }
-                } label: {
-                    Label(copied ? "Copied!" : "Copy", systemImage: copied ? "checkmark" : "doc.on.doc")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(copied ? Color.mlrSuccess : Color.mlrFest.opacity(0.7))
-                }
-                .buttonStyle(.plain)
-                .animation(.easeInOut(duration: 0.2), value: copied)
-            }
-
-            // Apple Cash → hand off to Messages (Apple Cash has no programmatic
-            // send API; the sender attaches the cash in the Messages thread).
-            if method.id == "applepay" {
-                Button {
-                    composeState = ApplePayHandoff.appleCashHandoff(
-                        recipient: method.handle,
-                        amount: "$\(method.amount)",
-                        note: "Family Fest dues"
-                    )
-                } label: {
-                    HStack(spacing: 6) {
-                        Image(systemName: "applelogo")
-                            .font(.system(size: 14))
-                        Text("Send with Apple Cash")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(Color.mlrFest)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-                .buttonStyle(.plain)
-            }
-
-            // Deep link button (Venmo / Cash App)
-            if let deepLink = method.deepLink {
-                Link(destination: deepLink) {
-                    HStack(spacing: 6) {
-                        Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 14))
-                        Text("Open \(method.name)")
-                            .font(.system(size: 14, weight: .semibold))
-                    }
-                    .foregroundStyle(Color.white)
-                    .frame(maxWidth: .infinity)
-                    .padding(.vertical, 10)
-                    .background(method.iconColor)
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
+            if dues.isEmpty {
+                Text("Dues amounts are still being set — check back soon.")
+                    .font(.system(size: 13))
+                    .foregroundStyle(Color.mlrFest.opacity(0.65))
             } else {
-                // Zelle — no deep link, just instructions
-                Text("Open your bank app → Zelle → send to the address above")
+                VStack(spacing: 0) {
+                    ForEach(dues) { tier in
+                        HStack(alignment: .firstTextBaseline) {
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(tier.label)
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(Color.mlrFest)
+                                if let note = tier.note, !note.isEmpty {
+                                    Text(note)
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(Color.mlrFest.opacity(0.55))
+                                }
+                            }
+                            Spacer()
+                            Text(tier.amount.map { "$\($0)" } ?? "TBD")
+                                .font(.festSerif(16, weight: .bold))
+                                .foregroundStyle(tier.amount == nil ? Color.mlrFest.opacity(0.5) : Color.mlrFest)
+                        }
+                        .padding(.vertical, 9)
+                        if tier.id != dues.last?.id {
+                            Divider().background(Color.mlrFest.opacity(0.12))
+                        }
+                    }
+                }
+            }
+
+            Text("Dues cover shared meals, activities, and resort costs for the week. Note \u{201C}Family Fest 2026\u{201D} with your payment.")
+                .font(.system(size: 13))
+                .foregroundStyle(Color.mlrFest.opacity(0.65))
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 14)
+                .fill(Color.mlrFest.opacity(0.07))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1.5))
+        )
+    }
+
+    // MARK: - Payees
+
+    private var payeesSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Who to pay")
+                .font(.festSerif(15, weight: .bold))
+                .foregroundStyle(Color.mlrFest)
+            ForEach(payees) { payee in
+                PayeeCard(payee: payee)
+            }
+        }
+    }
+}
+
+// MARK: - Payee Card
+
+private struct PayeeCard: View {
+    let payee: Payee
+    @State private var copied: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(payee.name)
+                    .font(.system(size: 15, weight: .bold))
+                    .foregroundStyle(Color.mlrFest)
+                if let role = payee.role, !role.isEmpty {
+                    Text(role)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.mlrFest.opacity(0.6))
+                }
+                if let amount = payee.amount {
+                    Text("$\(amount)")
+                        .font(.festSerif(15, weight: .bold))
+                        .foregroundStyle(Color.mlrFest)
+                }
+            }
+
+            if let venmo = payee.venmo?.trimmedNonEmpty {
+                let handle = venmo.replacingOccurrences(of: "@", with: "")
+                handleRow(label: "Venmo", value: "@\(handle)", icon: "v.circle.fill",
+                          openURL: URL(string: "venmo://users/\(handle)"))
+            }
+            if let zelle = payee.zelle?.trimmedNonEmpty {
+                handleRow(label: "Zelle", value: zelle, icon: "z.circle.fill", openURL: nil)
+            }
+            if let cash = payee.appleCash?.trimmedNonEmpty {
+                handleRow(label: "Apple Cash", value: cash, icon: "applelogo", openURL: nil)
+            }
+            if let paypal = payee.paypal?.trimmedNonEmpty {
+                handleRow(label: "PayPal", value: paypal, icon: "p.circle.fill",
+                          openURL: URL(string: "https://www.paypal.com/paypalme/\(paypal.replacingOccurrences(of: "@", with: ""))"))
+            }
+            if let note = payee.note?.trimmedNonEmpty {
+                Text(note)
                     .font(.system(size: 12))
-                    .foregroundStyle(Color.mlrFest.opacity(0.55))
+                    .foregroundStyle(Color.mlrFest.opacity(0.6))
             }
         }
         .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.mlrFestParchment)
         .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
-        )
-        .messageComposer($composeState)
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1))
+    }
+
+    @ViewBuilder
+    private func handleRow(label: String, value: String, icon: String, openURL: URL?) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: icon)
+                .font(.system(size: 18))
+                .foregroundStyle(Color.mlrFest)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(label)
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.mlrFest.opacity(0.6))
+                Text(value)
+                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                    .foregroundStyle(Color.mlrFest)
+                    .lineLimit(1)
+            }
+            Spacer()
+            Button {
+                UIPasteboard.general.string = value
+                copied = label
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { if copied == label { copied = nil } }
+            } label: {
+                Image(systemName: copied == label ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(copied == label ? Color.mlrSuccess : Color.mlrFest.opacity(0.7))
+            }
+            .buttonStyle(.plain)
+            if let openURL {
+                Link(destination: openURL) {
+                    Image(systemName: "arrow.up.right.square")
+                        .font(.system(size: 15))
+                        .foregroundStyle(Color.mlrFest)
+                }
+            }
+        }
+        .padding(10)
+        .background(Color.mlrFest.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+}
+
+private extension String {
+    var trimmedNonEmpty: String? {
+        let t = trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
     }
 }

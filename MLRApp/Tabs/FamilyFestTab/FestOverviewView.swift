@@ -101,6 +101,7 @@ struct FestOverviewView: View {
         .onAppear {
             festSeason = .current()
         }
+        .task { await env.festContentService.load() }
     }
 }
 
@@ -231,7 +232,8 @@ private struct FestInfoCard<Content: View>: View {
 
 /// The week's headline activity per day (titles real; times/locations TBD).
 private struct FestScheduleGlanceCard: View {
-    private var days: [ScheduleItem] { ScheduleItem.seed.filter { $0.day != "Anytime" } }
+    @Environment(AppEnvironment.self) private var env
+    private var days: [ScheduleItem] { env.festContentService.schedule.filter { $0.day != "Anytime" } }
 
     var body: some View {
         FestInfoCard(title: "The week at a glance") {
@@ -258,7 +260,8 @@ private struct FestScheduleGlanceCard: View {
 
 /// Each night's dinner + head chef.
 private struct FestDinnersGlanceCard: View {
-    private var dinners: [FestDinner] { FestDinner.seed }
+    @Environment(AppEnvironment.self) private var env
+    private var dinners: [FestDinner] { env.festContentService.dinners }
 
     var body: some View {
         FestInfoCard(title: "Dinners") {
@@ -286,7 +289,8 @@ private struct FestDinnersGlanceCard: View {
 
 /// All-week, no-set-time activities (the scavenger hunt).
 private struct FestAnytimeCard: View {
-    private var items: [ScheduleItem] { ScheduleItem.seed.filter { $0.day == "Anytime" } }
+    @Environment(AppEnvironment.self) private var env
+    private var items: [ScheduleItem] { env.festContentService.schedule.filter { $0.day == "Anytime" } }
 
     var body: some View {
         if !items.isEmpty {

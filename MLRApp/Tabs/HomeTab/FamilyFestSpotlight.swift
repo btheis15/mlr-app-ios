@@ -11,12 +11,13 @@ import SwiftUI
 //   .wrap      — photo upload nudge
 
 struct FamilyFestSpotlight: View {
+    @Environment(AppEnvironment.self) private var env
     let season: FestSeason
 
     /// One headline activity per day (the timed schedule, excluding the
     /// "anytime" items) — previewed on the planning card.
     private var scheduleHeadlines: [ScheduleItem] {
-        ScheduleItem.seed.filter { $0.day != "Anytime" }
+        env.festContentService.schedule.filter { $0.day != "Anytime" }
     }
 
     private static let festDayOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]

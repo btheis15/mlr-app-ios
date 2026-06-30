@@ -9,14 +9,14 @@ struct FestScheduleView: View {
 
     private var itemsByDay: [(day: String, items: [ScheduleItem])] {
         festDays.compactMap { day in
-            let items = ScheduleItem.seed.filter { $0.day == day }
+            let items = env.festContentService.schedule.filter { $0.day == day }
             guard !items.isEmpty else { return nil }
             return (day: day, items: items)
         }
     }
 
     private var thingsToDo: [ScheduleItem] {
-        ScheduleItem.seed.filter { $0.day == "Anytime" }
+        env.festContentService.schedule.filter { $0.day == "Anytime" }
     }
 
     /// ISO date (yyyy-MM-dd) for a fest day name, derived from the fest start

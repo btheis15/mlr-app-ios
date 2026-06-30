@@ -3,10 +3,12 @@ import SwiftUI
 // MARK: - FestDinnersView
 
 struct FestDinnersView: View {
+    @Environment(AppEnvironment.self) private var env
+
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
-                ForEach(FestDinner.seed) { dinner in
+                ForEach(env.festContentService.dinners) { dinner in
                     NavigationLink(destination: FestDinnersDetailView(dinner: dinner)) {
                         DinnerCard(dinner: dinner)
                     }

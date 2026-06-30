@@ -92,6 +92,7 @@ struct HomeView: View {
         .onChange(of: spotlightEvent?.id) { _, _ in nearestEventStatus = nil }
         .task {
             festSeason = FestSeason.current()
+            await env.festContentService.load()
             await env.eventsService.fetchEvents()
             if let userId = env.currentProfile?.id {
                 await env.eventsService.fetchAttendance(userId: userId)

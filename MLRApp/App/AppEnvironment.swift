@@ -37,6 +37,7 @@ final class AppEnvironment {
     var pushService: PushService
     var mediaService: MediaService
     var workItemsService: WorkItemsService
+    var festContentService: FestContentService
 
     // Resolved once per session
     var currentProfile: Profile?
@@ -71,6 +72,7 @@ final class AppEnvironment {
         pushService          = PushService()
         mediaService         = MediaService()
         workItemsService     = WorkItemsService()
+        festContentService   = FestContentService()
 
         AppEnvironment.activeEventsService    = eventsService
         AppEnvironment.activeHelpService      = helpService
