@@ -58,21 +58,7 @@ struct CommitteeDetailView: View {
                     chatLink
                 }
 
-                if canManage {
-                    Button { addingNew = true } label: {
-                        Label("Add a member", systemImage: "person.badge.plus")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.mlrPrimary.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.plain)
-                }
-
-                rosterSection
-
+                // Email sits right under the chat entry.
                 if env.isSignedIn && !allEmails.isEmpty {
                     Button {
                         showEmail = true
@@ -87,6 +73,21 @@ struct CommitteeDetailView: View {
                     }
                     .buttonStyle(.plain)
                 }
+
+                if canManage {
+                    Button { addingNew = true } label: {
+                        Label("Add a member", systemImage: "person.badge.plus")
+                            .font(.system(size: 15, weight: .semibold))
+                            .foregroundStyle(Color.mlrPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.mlrPrimary.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
+                }
+
+                rosterSection
             }
             .padding(20)
         }
