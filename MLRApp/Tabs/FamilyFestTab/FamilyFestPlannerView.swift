@@ -7,6 +7,10 @@ import SwiftUI
 
 struct FamilyFestPlannerView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.openURL) private var openURL
+    @State private var openingWeb = false
+
+    private static let masterBase = "https://mlr-app-omega.vercel.app/family-fest/master"
 
     var body: some View {
         List {
@@ -24,19 +28,44 @@ struct FamilyFestPlannerView: View {
                 Text("Changes show up for everyone on both the app and the website.")
             }
 
-            // Bulk editing is easier on a big screen — hand off to the web Planner.
+            // Bulk editing is easier on a big screen — hand off to the web master
+            // editor, carrying your session so there's no second sign-in.
             Section {
-                if let url = URL(string: "https://mlr-app-omega.vercel.app/family-fest/master") {
-                    Link(destination: url) {
+                Button { Task { await openMasterEditor() } } label: {
+                    HStack {
                         Label("Open the master editor on the web", systemImage: "macbook.and.iphone")
+                        if openingWeb { Spacer(); ProgressView() }
                     }
                 }
+                .disabled(openingWeb)
             } footer: {
-                Text("Editing a lot at once? The web master editor puts everything on one desktop-friendly page.")
+                Text("Editing a lot at once? The web master editor puts everything on one desktop-friendly page — it opens already signed in as you.")
             }
         }
         .navigationTitle("Family Fest Planner")
         .navigationBarTitleDisplayMode(.inline)
+    }
+
+    /// Open the web master editor, passing the current Supabase session in the URL
+    /// fragment so the website signs in as the same person automatically (no
+    /// re-sign-in). The fragment isn't sent to any server; the web strips it from
+    /// history immediately after reading it.
+    private func openMasterEditor() async {
+        openingWeb = true
+        defer { openingWeb = false }
+        var urlString = Self.masterBase
+        if let session = try? await supabase.auth.session {
+            let allowed = CharacterSet(charactersIn:
+                "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+            let at = session.accessToken.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+            let rt = session.refreshToken.addingPercentEncoding(withAllowedCharacters: allowed) ?? ""
+            if !at.isEmpty, !rt.isEmpty {
+                urlString += "#mlr_at=\(at)&mlr_rt=\(rt)"
+            }
+        }
+        if let url = URL(string: urlString) {
+            openURL(url)
+        }
     }
 }
 
