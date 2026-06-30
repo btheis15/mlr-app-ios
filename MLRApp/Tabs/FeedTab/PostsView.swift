@@ -143,11 +143,11 @@ struct PostsView: View {
         if env.committeeService.committees.isEmpty {
             await env.committeeService.fetchCommittees()
         }
-        await env.committeeService.fetchMyMemberships(userId: uid)
-        let ids = Set(env.committeeService.myMemberships.map(\.committeeId))
-        myCommittees = env.committeeService.committees.filter { ids.contains($0.id) }
+        // Membership lives in the roster now (migration 0057).
+        let mySlugs = await env.committeeService.fetchMyCommitteeSlugs(userId: uid)
+        myCommittees = env.committeeService.committees.filter { mySlugs.contains($0.slug) }
         committeeUnread = await env.committeeService.fetchUnreadByCommittee(
-            userId: uid, committeeIds: Array(ids)
+            userId: uid, committeeIds: myCommittees.map(\.id)
         )
     }
 

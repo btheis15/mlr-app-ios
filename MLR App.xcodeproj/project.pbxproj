@@ -123,6 +123,7 @@
 		D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */; };
 		D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE72FF419F700603CE7 /* AppImagesService.swift */; };
 		D33F9EEA2FF41A0A00603CE7 /* AppImagesAdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */; };
+		D33F9EEC2FF4502100603CE7 /* RosterEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EEB2FF4502100603CE7 /* RosterEditSheet.swift */; };
 		D3533C0B2FE9EC60001AD887 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0A2FE9EC60001AD887 /* Auth */; };
 		D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0C2FE9EC60001AD887 /* Functions */; };
 		D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0E2FE9EC60001AD887 /* PostgREST */; };
@@ -250,6 +251,7 @@
 		D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyFestPlannerView.swift; sourceTree = "<group>"; };
 		D33F9EE72FF419F700603CE7 /* AppImagesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppImagesService.swift; sourceTree = "<group>"; };
 		D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppImagesAdminView.swift; sourceTree = "<group>"; };
+		D33F9EEB2FF4502100603CE7 /* RosterEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RosterEditSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -330,6 +332,7 @@
 				D33F9DEE2FEC086700603CE7 /* CommitteesView.swift */,
 				D33F9EDA2FF319D600603CE7 /* CommitteeEmailComposer.swift */,
 				D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */,
+				D33F9EEB2FF4502100603CE7 /* RosterEditSheet.swift */,
 			);
 			path = Committees;
 			sourceTree = "<group>";
@@ -739,6 +742,7 @@
 				D33F9E702FEC086700603CE7 /* FestScheduleDetailView.swift in Sources */,
 				D33F9E712FEC086700603CE7 /* NotificationRow.swift in Sources */,
 				D33F9E722FEC086700603CE7 /* AuthService.swift in Sources */,
+				D33F9EEC2FF4502100603CE7 /* RosterEditSheet.swift in Sources */,
 				D33F9E732FEC086700603CE7 /* NotificationActions.swift in Sources */,
 				D33F9E742FEC086700603CE7 /* EventSheet.swift in Sources */,
 				D33F9E752FEC086700603CE7 /* PushToggleView.swift in Sources */,

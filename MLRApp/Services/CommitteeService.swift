@@ -71,6 +71,49 @@ final class CommitteeService {
             .value
     }
 
+    /// Committee slugs the member belongs to (roster-linked) — drives the Feed
+    /// chat pills now that the roster is the membership source.
+    func fetchMyCommitteeSlugs(userId: UUID) async -> Set<String> {
+        struct Row: Decodable { let committeeSlug: String
+            enum CodingKeys: String, CodingKey { case committeeSlug = "committee_slug" } }
+        let rows: [Row] = (try? await supabase
+            .from("committee_roster")
+            .select("committee_slug")
+            .eq("linked_user_id", value: userId.uuidString)
+            .execute()
+            .value) ?? []
+        return Set(rows.map(\.committeeSlug))
+    }
+
+    // MARK: - Roster management (app admins; migration 0055/0057)
+
+    /// Create or update a roster entry (admin-gated by RLS).
+    func saveRosterEntry(
+        id: UUID?, committeeSlug: String, name: String,
+        email: String?, phone: String?, roles: [String], linkedUserId: UUID?
+    ) async throws {
+        let uid = try? await supabase.auth.session.user.id
+        var row: [String: AnyJSON] = [
+            "committee_slug": .string(committeeSlug),
+            "name": .string(name),
+            "email": email.map { AnyJSON.string($0) } ?? .null,
+            "phone": phone.map { AnyJSON.string($0) } ?? .null,
+            "roles": .array(roles.map { AnyJSON.string($0) }),
+            "linked_user_id": linkedUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
+            "updated_at": .string(ISO8601DateFormatter().string(from: Date())),
+        ]
+        row["updated_by"] = uid.map { AnyJSON.string($0.uuidString) } ?? .null
+        if let id {
+            try await supabase.from("committee_roster").update(row).eq("id", value: id.uuidString).execute()
+        } else {
+            try await supabase.from("committee_roster").insert(row).execute()
+        }
+    }
+
+    func deleteRosterEntry(id: UUID) async throws {
+        try await supabase.from("committee_roster").delete().eq("id", value: id.uuidString).execute()
+    }
+
     func fetchMyMemberships(userId: UUID) async {
         do {
             let rows: [CommitteeMember] = try await supabase

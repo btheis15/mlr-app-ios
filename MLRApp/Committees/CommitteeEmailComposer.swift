@@ -13,7 +13,11 @@ struct CommitteeEmailComposer: View {
 
     let committee: Committee
     /// Loaded committee members — used to enrich recipients with their areas.
-    let members: [CommitteeMember]
+    var members: [CommitteeMember] = []
+    /// Recipients supplied directly (e.g. from the roster). When set, we use these
+    /// instead of loading committee_members — areas come from each person's roles,
+    /// so the "By Role" filter works off the roster.
+    var presetRecipients: [Recipient]? = nil
 
     enum Mode: String, CaseIterable { case everyone, byRole, pick }
 
@@ -202,6 +206,12 @@ struct CommitteeEmailComposer: View {
     private func load() async {
         loading = true
         defer { loading = false }
+        // Roster-supplied recipients: use them directly (membership lives in the
+        // roster now, not committee_members).
+        if let presetRecipients {
+            recipients = presetRecipients
+            return
+        }
         let areaByUser = Dictionary(members.map { ($0.userId, $0.areas) }, uniquingKeysWith: { a, _ in a })
         do {
             let rows = try await env.committeeService.fetchCommitteeRecipients(committeeId: committee.id)
