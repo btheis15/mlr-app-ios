@@ -1,50 +1,47 @@
 import SwiftUI
 
-// MARK: - Crew Signup Model
-
-struct CrewSignup: Identifiable {
-    let id: UUID
-    let householdName: String
-    let daysAttending: Set<String>
-    let lodging: String
-}
-
 // MARK: - FestCrewView
+// Who's coming to Family Fest — driven by the real per-day RSVPs on the
+// family-fest-2026 event (no placeholder households). Each member shows the
+// days they're making it. Tap "RSVP your days" to set your own.
 
 struct FestCrewView: View {
     @Environment(AppEnvironment.self) private var env
-    @State private var showSignupSheet = false
 
-    // Placeholder households — real data would come from Supabase
-    private let households: [CrewSignup] = [
-        CrewSignup(id: UUID(), householdName: "The Hendersons", daysAttending: ["Sunday", "Monday", "Tuesday", "Wednesday"], lodging: "Cabin 3"),
-        CrewSignup(id: UUID(), householdName: "The Petersons", daysAttending: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"], lodging: "Cabin 7"),
-        CrewSignup(id: UUID(), householdName: "The Murphys", daysAttending: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"], lodging: "Own place"),
-        CrewSignup(id: UUID(), householdName: "The Garcias", daysAttending: ["Tuesday", "Wednesday", "Thursday"], lodging: "Cabin 5"),
-    ]
+    @State private var attendees: [FestAttendee] = []
+    @State private var loading = true
+    @State private var festEvent: ResortEvent?
+    @State private var showRSVP = false
+
+    // The fest runs Mon–Fri (Jul 27–31). Day pills use these in order.
+    private let festDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
 
     var body: some View {
-        if !env.isSignedIn {
-            FestSignInNotice(message: "Sign in to see the crew and sign up your household.")
-        } else {
-            crewContent
+        Group {
+            if !env.isSignedIn {
+                FestSignInNotice(message: "Sign in to see who's coming and RSVP your days.")
+            } else {
+                crewContent
+            }
+        }
+        .task { await load() }
+        .sheet(isPresented: $showRSVP, onDismiss: { Task { await load() } }) {
+            if let festEvent { EventSheet(event: festEvent) }
         }
     }
 
     private var crewContent: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
-
-                // Header count
                 HStack {
-                    Text("\(households.count) households coming")
+                    Text(headerText)
                         .font(.festSerif(14))
                         .foregroundStyle(Color.mlrFest.opacity(0.7))
                     Spacer()
                     Button {
-                        showSignupSheet = true
+                        showRSVP = true
                     } label: {
-                        Label("Sign Up", systemImage: "plus")
+                        Label("RSVP your days", systemImage: "calendar.badge.plus")
                             .font(.system(size: 14, weight: .semibold))
                             .foregroundStyle(Color.white)
                             .padding(.horizontal, 14)
@@ -53,221 +50,107 @@ struct FestCrewView: View {
                             .clipShape(Capsule())
                     }
                     .buttonStyle(.plain)
+                    .disabled(festEvent == nil)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 12)
 
-                // Household list
-                VStack(spacing: 10) {
-                    ForEach(households) { signup in
-                        HouseholdCard(signup: signup)
+                if loading {
+                    ProgressView().tint(Color.mlrFest)
+                        .frame(maxWidth: .infinity)
+                        .padding(.top, 24)
+                } else if attendees.isEmpty {
+                    Text("No RSVPs yet — be the first! Tap \u{201C}RSVP your days.\u{201D}")
+                        .font(.festSerif(14))
+                        .foregroundStyle(Color.mlrFest.opacity(0.6))
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                } else {
+                    VStack(spacing: 10) {
+                        ForEach(attendees) { attendee in
+                            AttendeeCard(attendee: attendee, festDays: festDays)
+                        }
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 32)
                 }
-                .padding(.horizontal, 16)
-                .padding(.bottom, 32)
             }
         }
         .background(Color.mlrFestParchment)
-        .sheet(isPresented: $showSignupSheet) {
-            CrewSignupSheet()
-        }
+    }
+
+    private var headerText: String {
+        let n = attendees.count
+        return loading ? "Loading the crew…" : "\(n) \(n == 1 ? "person" : "people") coming"
+    }
+
+    private func load() async {
+        loading = true
+        if env.eventsService.events.isEmpty { await env.eventsService.fetchEvents() }
+        festEvent = env.eventsService.events.first(where: { $0.isFamilyFest })
+        attendees = await env.eventsService.fetchAttendeesWithDays(eventId: FamilyFestConfig.id)
+            .sorted { $0.profile.name < $1.profile.name }
+        loading = false
     }
 }
 
-// MARK: - Household Card
+// MARK: - Attendee Card
 
-private struct HouseholdCard: View {
-    let signup: CrewSignup
+private struct AttendeeCard: View {
+    let attendee: FestAttendee
+    let festDays: [String]
 
-    private let allDays = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"]
-    private let fullToShort: [String: String] = [
-        "Sunday": "Sun", "Monday": "Mon", "Tuesday": "Tue",
-        "Wednesday": "Wed", "Thursday": "Thu", "Friday": "Fri", "Saturday": "Sat"
+    private let shortDay: [String: String] = [
+        "Monday": "Mon", "Tuesday": "Tue", "Wednesday": "Wed",
+        "Thursday": "Thu", "Friday": "Fri"
     ]
 
     var body: some View {
+        let going = attendee.goingDays(allDays: festDays)
         VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text(signup.householdName)
-                    .font(.festSerif(15, weight: .bold))
+            HStack(spacing: 10) {
+                AvatarView(profile: attendee.profile, size: .small)
+                PrivateName(profile: attendee.profile, font: .festSerif(15, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                 Spacer()
-                Label(signup.lodging, systemImage: "house.fill")
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.mlrFest.opacity(0.6))
+                if attendee.isWholeWeek {
+                    Text("All week")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.mlrFest)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color.mlrFest.opacity(0.12))
+                        .clipShape(Capsule())
+                } else if attendee.status == .maybe {
+                    Text("Maybe")
+                        .font(.system(size: 11, weight: .semibold))
+                        .foregroundStyle(Color.mlrFest.opacity(0.7))
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color.mlrFest.opacity(0.08))
+                        .clipShape(Capsule())
+                }
             }
 
-            // Day pills
             HStack(spacing: 5) {
-                ForEach(allDays, id: \.self) { day in
-                    let isAttending = signup.daysAttending.contains(where: { fullToShort[$0] == day })
-                    Text(day)
+                ForEach(festDays, id: \.self) { day in
+                    let on = going.contains(day)
+                    Text(shortDay[day] ?? day)
                         .font(.system(size: 11, weight: .semibold))
-                        .foregroundStyle(isAttending ? Color.white : Color.mlrFest.opacity(0.35))
-                        .padding(.horizontal, 7)
+                        .foregroundStyle(on ? Color.white : Color.mlrFest.opacity(0.35))
+                        .padding(.horizontal, 9)
                         .padding(.vertical, 4)
-                        .background(
-                            isAttending
-                                ? Color.mlrFest
-                                : Color.mlrFest.opacity(0.08)
-                        )
+                        .background(on ? Color.mlrFest : Color.mlrFest.opacity(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 5))
                 }
             }
         }
         .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
         .background(Color.mlrFestParchment)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.mlrFest.opacity(0.18), lineWidth: 1)
         )
-    }
-}
-
-// MARK: - Crew Signup Sheet
-
-private struct CrewSignupSheet: View {
-    @Environment(\.dismiss) private var dismiss
-    @State private var daysAttending: Set<String> = []
-    @State private var lodgingPreference = ""
-    @State private var isSaving = false
-
-    private let days = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
-    private let lodgingOptions = ["Cabin", "Own place nearby", "Day trips only"]
-
-    var body: some View {
-        NavigationStack {
-            ScrollView {
-                VStack(alignment: .leading, spacing: 24) {
-
-                    // Days section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Days You're Attending")
-                            .font(.festSerif(16, weight: .bold))
-                            .foregroundStyle(Color.mlrFest)
-
-                        Text("Aug 2–8, 2026 · Select all that apply")
-                            .font(.system(size: 13))
-                            .foregroundStyle(Color.mlrFest.opacity(0.6))
-
-                        ForEach(days, id: \.self) { day in
-                            Button {
-                                if daysAttending.contains(day) {
-                                    daysAttending.remove(day)
-                                } else {
-                                    daysAttending.insert(day)
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: daysAttending.contains(day)
-                                          ? "checkmark.square.fill"
-                                          : "square")
-                                        .font(.system(size: 20))
-                                        .foregroundStyle(daysAttending.contains(day)
-                                                         ? Color.mlrFest
-                                                         : Color.mlrFest.opacity(0.3))
-                                    Text(day)
-                                        .font(.system(size: 15))
-                                        .foregroundStyle(Color.mlrFest)
-                                    Spacer()
-                                }
-                                .padding(.vertical, 6)
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.mlrFestParchment)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .strokeBorder(Color.mlrFest.opacity(0.18), lineWidth: 1)
-                            )
-                    )
-
-                    // Lodging section
-                    VStack(alignment: .leading, spacing: 12) {
-                        Text("Lodging")
-                            .font(.festSerif(16, weight: .bold))
-                            .foregroundStyle(Color.mlrFest)
-
-                        VStack(spacing: 8) {
-                            ForEach(lodgingOptions, id: \.self) { option in
-                                Button {
-                                    lodgingPreference = option
-                                } label: {
-                                    HStack {
-                                        Image(systemName: lodgingPreference == option
-                                              ? "largecircle.fill.circle"
-                                              : "circle")
-                                            .font(.system(size: 20))
-                                            .foregroundStyle(lodgingPreference == option
-                                                             ? Color.mlrFest
-                                                             : Color.mlrFest.opacity(0.3))
-                                        Text(option)
-                                            .font(.system(size: 15))
-                                            .foregroundStyle(Color.mlrFest)
-                                        Spacer()
-                                    }
-                                    .padding(.vertical, 4)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
-                    }
-                    .padding(16)
-                    .background(
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.mlrFestParchment)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .strokeBorder(Color.mlrFest.opacity(0.18), lineWidth: 1)
-                            )
-                    )
-
-                    // Submit button
-                    Button {
-                        Task {
-                            isSaving = true
-                            // TODO: save to Supabase via env.eventsService or a dedicated crew RPC
-                            try? await Task.sleep(nanoseconds: 800_000_000)
-                            isSaving = false
-                            dismiss()
-                        }
-                    } label: {
-                        HStack {
-                            if isSaving {
-                                ProgressView()
-                                    .tint(.white)
-                                    .padding(.trailing, 4)
-                            }
-                            Text(isSaving ? "Saving…" : "Sign Up My Household")
-                        }
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.white)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                        .background(daysAttending.isEmpty ? Color.mlrFest.opacity(0.4) : Color.mlrFest)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(daysAttending.isEmpty || isSaving)
-                }
-                .padding(20)
-            }
-            .background(Color.mlrFestParchment.ignoresSafeArea())
-            .navigationTitle("Sign Up Your Household")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.mlrFest)
-                }
-            }
-        }
     }
 }
 

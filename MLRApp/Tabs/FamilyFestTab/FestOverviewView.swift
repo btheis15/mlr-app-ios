@@ -150,8 +150,14 @@ private struct FestOverviewSectionView: View {
                 // Poster / hero card
                 FestPosterCard()
 
-                // Next-up preview
-                FestNextUpCard(season: season)
+                // The week at a glance — every day's headline
+                FestScheduleGlanceCard()
+
+                // Dinners — each night's head chef
+                FestDinnersGlanceCard()
+
+                // Anytime activities (e.g. the scavenger hunt)
+                FestAnytimeCard()
 
                 // Heritage footnote
                 Text("Leo & Dorothy Theis · Est. 1987 · Tomahawk, WI")
@@ -196,44 +202,111 @@ private struct FestPosterCard: View {
     }
 }
 
-// MARK: - Next Up Card
+// MARK: - Summary cards (Overview)
 
-private struct FestNextUpCard: View {
-    let season: FestSeason
+/// A parchment section card with a serif title, used across the overview.
+private struct FestInfoCard<Content: View>: View {
+    let title: String
+    @ViewBuilder var content: Content
 
     var body: some View {
-        if let nextItem = ScheduleItem.seed.first {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("First Up")
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.6))
-                    .tracking(0.8)
-                    .textCase(.uppercase)
+        VStack(alignment: .leading, spacing: 10) {
+            Text(title)
+                .font(.festSerif(15, weight: .bold))
+                .foregroundStyle(Color.mlrFest)
+            content
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12)
+                .fill(Color.mlrFest.opacity(0.06))
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .strokeBorder(Color.mlrFest.opacity(0.18), lineWidth: 1)
+                )
+        )
+    }
+}
 
-                HStack {
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text(nextItem.title)
-                            .font(.festSerif(16, weight: .bold))
+/// The week's headline activity per day (titles real; times/locations TBD).
+private struct FestScheduleGlanceCard: View {
+    private var days: [ScheduleItem] { ScheduleItem.seed.filter { $0.day != "Anytime" } }
+
+    var body: some View {
+        FestInfoCard(title: "The week at a glance") {
+            VStack(spacing: 9) {
+                ForEach(days) { item in
+                    HStack(spacing: 8) {
+                        Text(item.title)
+                            .font(.festSerif(14))
                             .foregroundStyle(Color.mlrFest)
-                        Text("\(nextItem.day) · \(nextItem.time)")
-                            .font(.festSerif(13))
-                            .foregroundStyle(Color.mlrFest.opacity(0.7))
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
+                        Text(item.day)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(Color.mlrFest.opacity(0.55))
                     }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(Color.mlrFest.opacity(0.4))
+                    if item.id != days.last?.id {
+                        Divider().background(Color.mlrFest.opacity(0.12))
+                    }
                 }
             }
-            .padding(16)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.mlrFest.opacity(0.06))
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.mlrFest.opacity(0.18), lineWidth: 1)
-                    )
-            )
+        }
+    }
+}
+
+/// Each night's dinner + head chef.
+private struct FestDinnersGlanceCard: View {
+    private var dinners: [FestDinner] { FestDinner.seed }
+
+    var body: some View {
+        FestInfoCard(title: "Dinners") {
+            VStack(spacing: 9) {
+                ForEach(dinners) { dinner in
+                    HStack(spacing: 8) {
+                        Text("🍽️").font(.system(size: 13))
+                        Text(dinner.day)
+                            .font(.festSerif(14))
+                            .foregroundStyle(Color.mlrFest)
+                        Spacer(minLength: 8)
+                        Text(dinner.chef)
+                            .font(.system(size: 12))
+                            .foregroundStyle(Color.mlrFest.opacity(0.6))
+                            .lineLimit(1)
+                    }
+                    if dinner.id != dinners.last?.id {
+                        Divider().background(Color.mlrFest.opacity(0.12))
+                    }
+                }
+            }
+        }
+    }
+}
+
+/// All-week, no-set-time activities (the scavenger hunt).
+private struct FestAnytimeCard: View {
+    private var items: [ScheduleItem] { ScheduleItem.seed.filter { $0.day == "Anytime" } }
+
+    var body: some View {
+        if !items.isEmpty {
+            FestInfoCard(title: "All week — anytime") {
+                VStack(alignment: .leading, spacing: 8) {
+                    ForEach(items) { item in
+                        VStack(alignment: .leading, spacing: 3) {
+                            Text(item.title)
+                                .font(.festSerif(14, weight: .bold))
+                                .foregroundStyle(Color.mlrFest)
+                            if let desc = item.description {
+                                Text(desc)
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(Color.mlrFest.opacity(0.65))
+                                    .lineLimit(3)
+                            }
+                        }
+                    }
+                }
+            }
         }
     }
 }
