@@ -60,9 +60,16 @@ enum MLRFormat {
     }
 
     // MARK: Phone number display ("(715) 555-1234")
+    // Normalizes any stored shape — raw digits, E.164 "+1…", or partly formatted
+    // — to one consistent US display, so numbers entered before/after a format
+    // change all read the same. A leading US country code (11 digits starting
+    // with 1) is dropped so 10- and 11-digit numbers format identically.
 
     static func phone(_ raw: String) -> String {
-        let digits = raw.filter(\.isNumber)
+        var digits = raw.filter(\.isNumber)
+        if digits.count == 11, digits.hasPrefix("1") {
+            digits = String(digits.dropFirst())
+        }
         guard digits.count == 10 else { return raw }
         let area = digits.prefix(3)
         let prefix = digits.dropFirst(3).prefix(3)
