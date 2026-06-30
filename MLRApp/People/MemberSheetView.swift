@@ -160,26 +160,48 @@ struct MemberSheetView: View {
 
     // MARK: - Payment
 
+    /// One payable method, for the data-driven list (so the member's Preferred
+    /// one can float to the top + get a badge).
+    private struct PayMethod: Identifiable {
+        let key: String          // matches profiles.pay_preferred values
+        let label: String
+        let value: String
+        let icon: String
+        let url: String?
+        var id: String { key }
+    }
+
+    /// The member's filled handles, Preferred first.
+    private var payMethods: [PayMethod] {
+        var list: [PayMethod] = []
+        if let venmo = member.venmoHandle, !venmo.isEmpty {
+            let h = venmo.replacingOccurrences(of: "@", with: "")
+            list.append(.init(key: "Venmo", label: "Venmo", value: "@\(h)", icon: "dollarsign.circle.fill", url: "venmo://users/\(h)"))
+        }
+        if let zelle = member.zelleHandle, !zelle.isEmpty {
+            list.append(.init(key: "Zelle", label: "Zelle", value: zelle, icon: "z.circle.fill", url: nil))
+        }
+        if let cash = member.appleCashHandle, !cash.isEmpty {
+            list.append(.init(key: "Apple Cash", label: "Apple Cash", value: cash, icon: "applelogo", url: nil))
+        }
+        if let paypal = member.paypalHandle, !paypal.isEmpty {
+            list.append(.init(key: "PayPal", label: "PayPal", value: paypal, icon: "p.circle.fill", url: nil))
+        }
+        let pref = member.payPreferred?.trimmingCharacters(in: .whitespaces).lowercased()
+        return list.sorted { a, _ in a.key.lowercased() == pref }
+    }
+
     @ViewBuilder
     private var paymentSection: some View {
         if member.hasPaymentHandle {
+            let pref = member.payPreferred?.trimmingCharacters(in: .whitespaces).lowercased()
             VStack(alignment: .leading, spacing: 8) {
                 SectionLabel(text: "Send a payment")
                 Protected {
                     VStack(spacing: 10) {
-                        if let venmo = member.venmoHandle, !venmo.isEmpty {
-                            let handle = venmo.replacingOccurrences(of: "@", with: "")
-                            contactRow("Venmo", "@\(handle)", "dollarsign.circle.fill",
-                                       url: "venmo://users/\(handle)")
-                        }
-                        if let zelle = member.zelleHandle, !zelle.isEmpty {
-                            contactRow("Zelle", zelle, "z.circle.fill", url: nil)
-                        }
-                        if let cash = member.appleCashHandle, !cash.isEmpty {
-                            contactRow("Apple Cash", cash, "applelogo", url: nil)
-                        }
-                        if let paypal = member.paypalHandle, !paypal.isEmpty {
-                            contactRow("PayPal", paypal, "p.circle.fill", url: nil)
+                        ForEach(payMethods) { m in
+                            contactRow(m.label, m.value, m.icon, url: m.url,
+                                       preferred: m.key.lowercased() == pref)
                         }
                     }
                 }
@@ -230,8 +252,9 @@ struct MemberSheetView: View {
     // MARK: - Row helper
 
     @ViewBuilder
-    private func contactRow(_ label: String, _ value: String, _ icon: String, url: String?) -> some View {
-        let row = contactRowLabel(label, value, icon, showsChevron: url != nil)
+    private func contactRow(_ label: String, _ value: String, _ icon: String, url: String?,
+                            preferred: Bool = false) -> some View {
+        let row = contactRowLabel(label, value, icon, showsChevron: url != nil, preferred: preferred)
 
         if let url, let link = URL(string: url) {
             Link(destination: link) { row }
@@ -241,16 +264,27 @@ struct MemberSheetView: View {
     }
 
     private func contactRowLabel(_ label: String, _ value: String, _ icon: String,
-                                 showsChevron: Bool) -> some View {
+                                 showsChevron: Bool, preferred: Bool = false) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.system(size: 16))
                 .foregroundStyle(Color.mlrPrimary)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 1) {
-                Text(label)
-                    .font(.system(size: 12))
-                    .foregroundStyle(Color.mlrTextMuted)
+                HStack(spacing: 6) {
+                    Text(label)
+                        .font(.system(size: 12))
+                        .foregroundStyle(Color.mlrTextMuted)
+                    if preferred {
+                        Text("Preferred")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(Color.mlrPrimary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(Color.mlrPrimary.opacity(0.12))
+                            .clipShape(Capsule())
+                    }
+                }
                 Text(value)
                     .font(.system(size: 15, weight: .medium))
                     .foregroundStyle(Color.mlrText)
