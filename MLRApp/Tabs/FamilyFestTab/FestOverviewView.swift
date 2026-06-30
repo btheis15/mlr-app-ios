@@ -166,6 +166,9 @@ private struct FestOverviewSectionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
 
+                // Cover art (matches the web fest page header)
+                FestCoverImage()
+
                 // Poster / hero card
                 FestPosterCard()
 
@@ -189,6 +192,25 @@ private struct FestOverviewSectionView: View {
             .padding(.top, 16)
             .padding(.bottom, 32)
         }
+    }
+}
+
+// MARK: - Cover Art
+
+/// The Family Fest 2026 "Renaissance / Fantasy" cover, bundled in the asset
+/// catalog so it shows offline. Mirrors the web fest page's FestCover header.
+private struct FestCoverImage: View {
+    var body: some View {
+        Image("family-fest-cover")
+            .resizable()
+            .scaledToFit()
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .overlay(
+                RoundedRectangle(cornerRadius: 16)
+                    .strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1)
+            )
+            .accessibilityLabel("Family Fest 2026 — Ye Olde Family Feste")
     }
 }
 
