@@ -25,6 +25,9 @@ struct MLRApp: App {
                     await env.authService.restoreSession()
                     if env.authService.isSignedIn {
                         await env.loadProfile()
+                        // Re-register on launch when already authorized so the token
+                        // is refreshed/issued; the AppDelegate callback saves it.
+                        await env.pushService.registerIfAuthorized()
                         await env.pushService.reconcileToken()
                     }
                 }
@@ -32,9 +35,15 @@ struct MLRApp: App {
                     if signedIn {
                         Task {
                             await env.loadProfile()
+                            await env.pushService.registerIfAuthorized()
                             await env.pushService.reconcileToken()
                         }
                     }
+                }
+                // The APNs token arrives asynchronously after registration — save
+                // it as soon as the AppDelegate hands it over.
+                .onReceive(NotificationCenter.default.publisher(for: .apnsTokenReceived)) { _ in
+                    Task { await env.pushService.reconcileToken() }
                 }
         }
     }

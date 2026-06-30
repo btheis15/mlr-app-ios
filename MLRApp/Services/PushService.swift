@@ -30,6 +30,21 @@ final class PushService {
         }
     }
 
+    /// Re-register for remote notifications on launch if the user has already
+    /// granted permission, so an already-authorized device still gets a fresh
+    /// APNs token (the token can change, and `reconcileToken` needs one to save).
+    /// iOS issues the token via the AppDelegate callback, which then persists it.
+    @MainActor
+    func registerIfAuthorized() async {
+        let settings = await UNUserNotificationCenter.current().notificationSettings()
+        switch settings.authorizationStatus {
+        case .authorized, .provisional, .ephemeral:
+            UIApplication.shared.registerForRemoteNotifications()
+        default:
+            break
+        }
+    }
+
     // MARK: - Token persistence
 
     /// Upsert the APNs device token into `apns_subscriptions`.
