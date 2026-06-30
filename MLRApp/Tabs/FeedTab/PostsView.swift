@@ -19,6 +19,10 @@ struct PostsView: View {
     @State private var showTaggedOnly = false
     @State private var reactionMap: [UUID: [PostReaction]] = [:]
 
+    // Committee chats reachable from the Feed (pills), matching the web.
+    @State private var myCommittees: [Committee] = []
+    @State private var committeeUnread: [UUID: Int] = [:]
+
     private var displayedPosts: [Post] {
         guard showTaggedOnly, let myId = env.currentProfile?.id else { return env.postsService.posts }
         return env.postsService.posts.filter { post in post.tags.contains { $0.id == myId } }
@@ -26,11 +30,16 @@ struct PostsView: View {
 
     var body: some View {
         NavigationStack {
-            ZStack(alignment: .bottomTrailing) {
-                content
+            VStack(spacing: 0) {
+                if env.isSignedIn && !myCommittees.isEmpty {
+                    committeePills
+                }
+                ZStack(alignment: .bottomTrailing) {
+                    content
 
-                if env.isSignedIn {
-                    composeButton
+                    if env.isSignedIn {
+                        composeButton
+                    }
                 }
             }
             .navigationTitle("Feed")
@@ -68,10 +77,78 @@ struct PostsView: View {
             await env.postsService.fetchPosts(userId: env.currentProfile?.id)
             await fetchReactions(for: env.postsService.posts)
             env.postsService.subscribeToRealtime()
+            await loadCommittees()
         }
         .onChange(of: env.postsService.posts) { _, newPosts in
             Task { await fetchReactions(for: newPosts) }
         }
+    }
+
+    // MARK: - Committee chat pills
+
+    private var committeePills: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                // The Posts feed is the active tab here.
+                pill(label: "📰 Posts", active: true, unread: 0)
+
+                ForEach(myCommittees) { committee in
+                    NavigationLink {
+                        CommitteeChatLoader(committee: committee)
+                    } label: {
+                        pill(
+                            label: "\(committee.emoji ?? "💬") \(committee.name)",
+                            active: false,
+                            unread: committeeUnread[committee.id] ?? 0
+                        )
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 10)
+        }
+        .background(Color.mlrSurface)
+    }
+
+    private func pill(label: String, active: Bool, unread: Int) -> some View {
+        HStack(spacing: 5) {
+            Text(label)
+                .font(.system(size: 13, weight: .semibold))
+                .lineLimit(1)
+            if unread > 0 {
+                Text(unread > 99 ? "99+" : "\(unread)")
+                    .font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 1)
+                    .background(Color.mlrDanger)
+                    .clipShape(Capsule())
+            }
+        }
+        .foregroundStyle(active ? .white : Color.mlrPrimary)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(active ? Color.mlrPrimary : Color.mlrPrimary.opacity(0.1))
+        .clipShape(Capsule())
+        .overlay(Capsule().strokeBorder(Color.mlrPrimary.opacity(active ? 0 : 0.25), lineWidth: 1))
+    }
+
+    private func loadCommittees() async {
+        guard env.isSignedIn, let uid = env.currentProfile?.id else {
+            myCommittees = []
+            committeeUnread = [:]
+            return
+        }
+        if env.committeeService.committees.isEmpty {
+            await env.committeeService.fetchCommittees()
+        }
+        await env.committeeService.fetchMyMemberships(userId: uid)
+        let ids = Set(env.committeeService.myMemberships.map(\.committeeId))
+        myCommittees = env.committeeService.committees.filter { ids.contains($0.id) }
+        committeeUnread = await env.committeeService.fetchUnreadByCommittee(
+            userId: uid, committeeIds: Array(ids)
+        )
     }
 
     // MARK: - Content
@@ -247,5 +324,22 @@ struct PostsView: View {
             ))
             .execute()
         await env.postsService.fetchPosts(userId: env.currentProfile?.id)
+    }
+}
+
+// MARK: - Committee Chat Loader
+// Pushed from a Feed pill: loads the committee's members (for @mentions) then
+// shows the existing chat view. Keeps CommitteeChatView unchanged.
+
+private struct CommitteeChatLoader: View {
+    @Environment(AppEnvironment.self) private var env
+    let committee: Committee
+    @State private var members: [CommitteeMember] = []
+
+    var body: some View {
+        CommitteeChatView(committee: committee, members: members)
+            .task {
+                members = (try? await env.committeeService.fetchMembers(committeeId: committee.id)) ?? []
+            }
     }
 }

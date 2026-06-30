@@ -85,6 +85,38 @@ final class CommitteeService {
         }
     }
 
+    /// Unread message count per committee for the Feed pills: messages newer than
+    /// the member's last_read_at (committee_reads) and not authored by them.
+    func fetchUnreadByCommittee(userId: UUID, committeeIds: [UUID]) async -> [UUID: Int] {
+        guard !committeeIds.isEmpty else { return [:] }
+        struct ReadRow: Decodable { let committeeId: UUID; let lastReadAt: Date?
+            enum CodingKeys: String, CodingKey { case committeeId = "committee_id"; case lastReadAt = "last_read_at" } }
+        let reads: [ReadRow] = (try? await supabase
+            .from("committee_reads")
+            .select("committee_id, last_read_at")
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+            .value) ?? []
+        var lastRead: [UUID: Date] = [:]
+        for r in reads { if let d = r.lastReadAt { lastRead[r.committeeId] = d } }
+
+        let iso = ISO8601DateFormatter()
+        var out: [UUID: Int] = [:]
+        for cid in committeeIds {
+            var query = supabase
+                .from("committee_messages")
+                .select("id", head: true, count: .exact)
+                .eq("committee_id", value: cid.uuidString)
+                .neq("author_id", value: userId.uuidString)
+            if let since = lastRead[cid] {
+                query = query.gt("created_at", value: iso.string(from: since))
+            }
+            let count = (try? await query.execute().count) ?? 0
+            out[cid] = count
+        }
+        return out
+    }
+
     // MARK: - Join requests
 
     func requestJoin(committeeId: UUID, note: String?, requestedArea: String? = nil) async throws {
