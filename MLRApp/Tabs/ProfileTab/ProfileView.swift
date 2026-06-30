@@ -21,6 +21,8 @@ struct ProfileView: View {
     @State private var appleCash: String = ""
     @State private var paypal: String = ""
     @State private var address: String = ""
+    /// Member's preferred way to be paid (so others see it first). Empty = none.
+    @State private var payPreferred: String = ""
 
     // UI state
     @State private var showEmailChange = false
@@ -43,6 +45,7 @@ struct ProfileView: View {
             || appleCash != (p.appleCashHandle ?? "")
             || paypal != (p.paypalHandle ?? "")
             || address != (p.address ?? "")
+            || payPreferred != (p.payPreferred ?? "")
             || birthdayChanged(p)
     }
 
@@ -205,9 +208,22 @@ struct ProfileView: View {
             }
 
             LabeledContent("Address") {
-                TextField("Street, City, ST", text: $address)
-                    .multilineTextAlignment(.trailing)
-                    .textContentType(.fullStreetAddress)
+                HStack(spacing: 8) {
+                    TextField("Street, City, ST", text: $address)
+                        .multilineTextAlignment(.trailing)
+                        .textContentType(.fullStreetAddress)
+                    let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+                    if !trimmed.isEmpty {
+                        Button {
+                            MapsHelper.show(address: trimmed)
+                        } label: {
+                            Image(systemName: "map.fill")
+                                .foregroundStyle(Color.mlrPrimary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("Open address in Maps")
+                    }
+                }
             }
 
             // Birthday picker
@@ -249,7 +265,7 @@ struct ProfileView: View {
     // MARK: - Payment section
 
     private var paymentSection: some View {
-        Section("Payment Handles") {
+        Section {
             LabeledContent {
                 TextField("@username", text: $venmo)
                     .multilineTextAlignment(.trailing)
@@ -260,21 +276,29 @@ struct ProfileView: View {
                     .foregroundStyle(Color.mlrPrimary)
             }
 
+            // Zelle & Apple Cash are tied to a phone or email — offer to reuse
+            // the member's existing ones instead of retyping (the ⌄ menu).
             LabeledContent {
-                TextField("Phone or email", text: $zelle)
-                    .multilineTextAlignment(.trailing)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
+                HStack(spacing: 6) {
+                    TextField("Phone or email", text: $zelle)
+                        .multilineTextAlignment(.trailing)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    reuseMenu(into: $zelle)
+                }
             } label: {
                 Label("Zelle", systemImage: "z.circle.fill")
                     .foregroundStyle(Color.mlrInfo)
             }
 
             LabeledContent {
-                TextField("Phone or $Cashtag", text: $appleCash)
-                    .multilineTextAlignment(.trailing)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
+                HStack(spacing: 6) {
+                    TextField("Phone or email", text: $appleCash)
+                        .multilineTextAlignment(.trailing)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                    reuseMenu(into: $appleCash)
+                }
             } label: {
                 Label("Apple Cash", systemImage: "applelogo")
                     .foregroundStyle(Color.mlrText)
@@ -288,6 +312,56 @@ struct ProfileView: View {
             } label: {
                 Label("PayPal", systemImage: "p.circle.fill")
                     .foregroundStyle(Color.mlrInfo)
+            }
+
+            // Preferred — surfaced first when others go to pay this member.
+            Picker(selection: $payPreferred) {
+                Text("None").tag("")
+                ForEach(Self.preferredOptions, id: \.self) { opt in
+                    Text(opt).tag(opt)
+                }
+            } label: {
+                Label("Preferred", systemImage: "star.fill")
+                    .foregroundStyle(Color.mlrPrimary)
+            }
+            .tint(Color.mlrPrimary)
+        } header: {
+            Text("Payment Handles")
+        } footer: {
+            Text("Zelle & Apple Cash use a phone or email — tap ⌄ to reuse yours. Your Preferred method shows first when others pay you.")
+        }
+    }
+
+    /// The payment methods a member can mark "Preferred" — only the ones a
+    /// person can actually have a handle for.
+    private static let preferredOptions = ["Venmo", "Zelle", "Apple Cash", "PayPal"]
+
+    /// A small menu that drops the member's existing phone / account email into a
+    /// handle field (Zelle, Apple Cash) so they don't retype it. Hidden when
+    /// there's nothing to offer.
+    @ViewBuilder
+    private func reuseMenu(into field: Binding<String>) -> some View {
+        let phoneValue = phone.trimmingCharacters(in: .whitespacesAndNewlines)
+        let emailValue = (profile?.email ?? "").trimmingCharacters(in: .whitespacesAndNewlines)
+        if !phoneValue.isEmpty || !emailValue.isEmpty {
+            Menu {
+                if !phoneValue.isEmpty {
+                    Button {
+                        field.wrappedValue = phoneValue
+                    } label: {
+                        Label("Use my phone (\(phoneValue))", systemImage: "phone.fill")
+                    }
+                }
+                if !emailValue.isEmpty {
+                    Button {
+                        field.wrappedValue = emailValue
+                    } label: {
+                        Label("Use my email (\(emailValue))", systemImage: "envelope.fill")
+                    }
+                }
+            } label: {
+                Image(systemName: "chevron.down.circle.fill")
+                    .foregroundStyle(Color.mlrPrimary)
             }
         }
     }
@@ -514,6 +588,7 @@ struct ProfileView: View {
         appleCash = p.appleCashHandle ?? ""
         paypal = p.paypalHandle ?? ""
         address = p.address ?? ""
+        payPreferred = p.payPreferred ?? ""
 
         // Birthdays are stored date-only ("yyyy-MM-dd"); ISO8601DateFormatter
         // can't parse that, which made the toggle read "off" even when set.
@@ -559,7 +634,8 @@ struct ProfileView: View {
             "zelle": .string(zelle.trimmingCharacters(in: .whitespaces)),
             "cashapp": .string(appleCash.trimmingCharacters(in: .whitespaces)),
             "paypal": .string(paypal.trimmingCharacters(in: .whitespaces)),
-            "address": .string(address.trimmingCharacters(in: .whitespaces))
+            "address": .string(address.trimmingCharacters(in: .whitespaces)),
+            "pay_preferred": payPreferred.isEmpty ? .null : .string(payPreferred)
         ]
 
         if hasBirthday {

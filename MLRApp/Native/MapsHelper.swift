@@ -36,6 +36,15 @@ enum MapsHelper {
             UIApplication.shared.open(url)
         }
     }
+
+    /// Show an address as a place lookup (not directions). `http://maps.apple.com`
+    /// hands off to whichever map app the user set to handle these links.
+    static func show(address: String) {
+        let q = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? address
+        if let url = URL(string: "http://maps.apple.com/?q=\(q)") {
+            UIApplication.shared.open(url)
+        }
+    }
 }
 
 // MARK: - Help request map (navigate to the person who needs help)

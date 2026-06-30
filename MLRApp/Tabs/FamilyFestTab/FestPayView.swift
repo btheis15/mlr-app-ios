@@ -112,6 +112,24 @@ struct FestPayView: View {
 private struct PayeeCard: View {
     let payee: Payee
     @State private var copied: String?
+    // Apple Cash handoff: amount the payer chooses + the Messages composer.
+    @State private var appleCashAmount = ""
+    @State private var askAmount = false
+    @State private var showComposer = false
+
+    /// Apple Cash sends over iMessage, so it needs a phone or email recipient —
+    /// a bare $cashtag can't be messaged. nil ⇒ hide the native pay button.
+    private var appleCashHandle: String? {
+        guard let cash = payee.appleCash?.trimmedNonEmpty else { return nil }
+        let contactable = cash.contains("@") || cash.contains(where: { $0.isNumber })
+        return contactable ? cash : nil
+    }
+
+    private var appleCashMessageBody: String {
+        let amt = appleCashAmount.trimmingCharacters(in: .whitespaces)
+        let amountPart = amt.isEmpty ? "" : " \(amt.hasPrefix("$") ? amt : "$\(amt)")"
+        return "Family Fest 2026 — sending\(amountPart) via Apple Cash 🌲"
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -141,6 +159,21 @@ private struct PayeeCard: View {
             }
             if let cash = payee.appleCash?.trimmedNonEmpty {
                 handleRow(label: "Apple Cash", value: cash, icon: "applelogo", openURL: nil)
+                if appleCashHandle != nil, MessageComposeView.canSend {
+                    Button {
+                        appleCashAmount = payee.amount.map(String.init) ?? ""
+                        askAmount = true
+                    } label: {
+                        Label("Pay with Apple Cash", systemImage: "applelogo")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 10)
+                            .background(Color.black)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                    .buttonStyle(.plain)
+                }
             }
             if let paypal = payee.paypal?.trimmedNonEmpty {
                 handleRow(label: "PayPal", value: paypal, icon: "p.circle.fill",
@@ -157,6 +190,22 @@ private struct PayeeCard: View {
         .background(Color.mlrFestParchment)
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1))
+        .alert("Pay \(payee.name)", isPresented: $askAmount) {
+            TextField("Amount (optional)", text: $appleCashAmount)
+                .keyboardType(.decimalPad)
+            Button("Continue") { showComposer = true }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            // Apple Cash has no send-money API — the amount is attached in
+            // Messages (tap ⊕ → Apple Cash); we pre-fill the note for them.
+            Text("Opens Messages to \(payee.name). Tap the ⊕ in Messages, then Apple Cash, to send the amount.")
+        }
+        .sheet(isPresented: $showComposer) {
+            if let handle = appleCashHandle {
+                MessageComposeView(recipients: [handle], body: appleCashMessageBody)
+                    .ignoresSafeArea()
+            }
+        }
     }
 
     @ViewBuilder
