@@ -32,6 +32,8 @@ struct FestOverviewView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var selectedSection: FestSection = .overview
     @State private var festSeason: FestSeason = .current()
+    @State private var canEdit = false
+    @State private var showPlanner = false
 
     var body: some View {
         NavigationStack {
@@ -97,11 +99,27 @@ struct FestOverviewView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
             .toolbarColorScheme(.light, for: .navigationBar)
+            .toolbar {
+                if canEdit {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button { showPlanner = true } label: {
+                            Label("Planner", systemImage: "slider.horizontal.3")
+                                .foregroundStyle(Color.mlrFest)
+                        }
+                    }
+                }
+            }
+            .sheet(isPresented: $showPlanner, onDismiss: { Task { await env.festContentService.reload() } }) {
+                NavigationStack { FamilyFestPlannerView() }
+            }
         }
         .onAppear {
             festSeason = .current()
         }
-        .task { await env.festContentService.load() }
+        .task {
+            await env.festContentService.load()
+            canEdit = await env.festContentService.canEditFest()
+        }
     }
 }
 

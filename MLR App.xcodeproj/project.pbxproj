@@ -120,6 +120,7 @@
 		D33F9EE02FF3FC7500603CE7 /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EDF2FF3FC7500603CE7 /* HelpView.swift */; };
 		D33F9EE22FF3FC8600603CE7 /* GuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE12FF3FC8600603CE7 /* GuideView.swift */; };
 		D33F9EE42FF4075B00603CE7 /* FestContentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE32FF4075B00603CE7 /* FestContentService.swift */; };
+		D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */; };
 		D3533C0B2FE9EC60001AD887 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0A2FE9EC60001AD887 /* Auth */; };
 		D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0C2FE9EC60001AD887 /* Functions */; };
 		D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0E2FE9EC60001AD887 /* PostgREST */; };
@@ -244,6 +245,7 @@
 		D33F9EDF2FF3FC7500603CE7 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		D33F9EE12FF3FC8600603CE7 /* GuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideView.swift; sourceTree = "<group>"; };
 		D33F9EE32FF4075B00603CE7 /* FestContentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestContentService.swift; sourceTree = "<group>"; };
+		D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyFestPlannerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -492,6 +494,7 @@
 				D33F9E3A2FEC086700603CE7 /* FestScheduleView.swift */,
 				D33F9E3B2FEC086700603CE7 /* FestStatus.swift */,
 				D33F9E3C2FEC086700603CE7 /* ShirtVoteView.swift */,
+				D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */,
 			);
 			path = FamilyFestTab;
 			sourceTree = "<group>";
@@ -740,6 +743,7 @@
 				D33F9E7A2FEC086700603CE7 /* FestDinnersDetailView.swift in Sources */,
 				D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */,
 				D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */,
+				D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */,
 				D33F9E7D2FEC086700603CE7 /* FestDinnersView.swift in Sources */,
 				D33F9E7E2FEC086700603CE7 /* FestCountdownIntent.swift in Sources */,
 				D33F9E7F2FEC086700603CE7 /* FestSeason.swift in Sources */,

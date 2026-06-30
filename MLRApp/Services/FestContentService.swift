@@ -18,6 +18,44 @@ struct FestDuesTier: Identifiable, Equatable {
     var note: String?
 }
 
+// MARK: - Editable drafts (raw rows for the Planner)
+// The display arrays (ScheduleItem/FestDinner) flatten fields; the editor works
+// on these raw drafts (id nil = new row).
+
+struct FestScheduleDraft: Identifiable, Equatable {
+    var id: UUID?
+    var day: String           // yyyy-MM-dd
+    var startTime: String?
+    var endTime: String?
+    var title: String
+    var emoji: String?
+    var location: String?
+    var description: String?
+    var bring: String?
+    var isPrivate: Bool
+    var leadUserId: UUID?
+    var leadName: String?
+    var leadPhone: String?
+    var position: Int
+}
+
+struct FestDinnerDraft: Identifiable, Equatable {
+    var id: UUID?
+    var day: String
+    var title: String
+    var emoji: String?
+    var chefUserId: UUID?
+    var chefName: String?
+    var chefPhone: String?
+    var houses: [String]
+    var menu: String?
+    var servedTime: String?
+    var servedLocation: String?
+    var prepTime: String?
+    var prepLocation: String?
+    var position: Int
+}
+
 struct Payee: Identifiable, Equatable {
     let id: UUID
     var name: String
@@ -106,6 +144,100 @@ final class FestContentService {
             .order("position", ascending: true)
             .execute().value
         return rows.map { FestDuesTier(id: $0.id, label: $0.label, amount: $0.amount, note: $0.note) }
+    }
+
+    // MARK: - Editing (admin / fest committee; RLS enforces can_edit_fest)
+
+    /// True if the signed-in user may edit fest content (server-authoritative).
+    func canEditFest() async -> Bool {
+        (try? await supabase.rpc("can_edit_fest").execute().value) ?? false
+    }
+
+    /// Re-fetch everything after an edit so the display arrays update.
+    func reload() async { await load(force: true) }
+
+    private func currentUid() async -> String? {
+        (try? await supabase.auth.session.user.id)?.uuidString
+    }
+
+    private func j(_ s: String?) -> AnyJSON { s?.nilIfBlank.map(AnyJSON.string) ?? .null }
+    private func j(_ i: Int?) -> AnyJSON { i.map { AnyJSON.integer($0) } ?? .null }
+
+    // ── Raw fetches for the editor ────────────────────────────────────────────
+    func editableSchedule() async -> [FestScheduleDraft] {
+        let rows: [ScheduleRowFull] = (try? await supabase.from("fest_schedule_items").select("*")
+            .eq("fest_year", value: year).order("day").order("position").execute().value) ?? []
+        return rows.map { $0.draft }
+    }
+    func editableDinners() async -> [FestDinnerDraft] {
+        let rows: [DinnerRowFull] = (try? await supabase.from("fest_dinners").select("*")
+            .eq("fest_year", value: year).order("day").order("position").execute().value) ?? []
+        return rows.map { $0.draft }
+    }
+
+    // ── Upserts + deletes ─────────────────────────────────────────────────────
+    func saveSchedule(_ d: FestScheduleDraft) async throws {
+        var p: [String: AnyJSON] = [
+            "fest_year": .integer(year), "day": .string(d.day), "title": .string(d.title),
+            "start_time": j(d.startTime), "end_time": j(d.endTime), "emoji": j(d.emoji),
+            "location": j(d.location), "description": j(d.description), "bring": j(d.bring),
+            "is_private": .bool(d.isPrivate), "lead_name": j(d.leadName), "lead_phone": j(d.leadPhone),
+            "lead_user_id": d.leadUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
+            "position": .integer(d.position),
+        ]
+        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
+        try await upsert("fest_schedule_items", id: d.id, payload: p)
+    }
+    func saveDinner(_ d: FestDinnerDraft) async throws {
+        var p: [String: AnyJSON] = [
+            "fest_year": .integer(year), "day": .string(d.day), "title": .string(d.title),
+            "emoji": j(d.emoji), "chef_name": j(d.chefName), "chef_phone": j(d.chefPhone),
+            "chef_user_id": d.chefUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
+            "houses": .array(d.houses.map(AnyJSON.string)),
+            "menu": j(d.menu), "served_time": j(d.servedTime), "served_location": j(d.servedLocation),
+            "prep_time": j(d.prepTime), "prep_location": j(d.prepLocation), "position": .integer(d.position),
+        ]
+        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
+        try await upsert("fest_dinners", id: d.id, payload: p)
+    }
+    func saveDues(_ t: FestDuesTier, position: Int, isNew: Bool) async throws {
+        var p: [String: AnyJSON] = [
+            "fest_year": .integer(year), "label": .string(t.label),
+            "amount": j(t.amount), "note": j(t.note), "position": .integer(position),
+        ]
+        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
+        try await upsert("fest_dues", id: isNew ? nil : t.id, payload: p)
+    }
+    func savePayee(_ p0: Payee, position: Int, isNew: Bool) async throws {
+        var p: [String: AnyJSON] = [
+            "fest_year": .integer(year), "name": .string(p0.name), "role": j(p0.role),
+            "venmo": j(p0.venmo), "zelle": j(p0.zelle), "applecash": j(p0.appleCash),
+            "paypal": j(p0.paypal), "amount": j(p0.amount), "note": j(p0.note), "position": .integer(position),
+        ]
+        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
+        try await upsert("fest_payees", id: isNew ? nil : p0.id, payload: p)
+    }
+    func saveConfig(name: String, tagline: String?, startDate: String, endDate: String) async throws {
+        var p: [String: AnyJSON] = [
+            "fest_year": .integer(year), "name": .string(name), "tagline": j(tagline),
+            "start_date": .string(startDate), "end_date": .string(endDate),
+        ]
+        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
+        try await supabase.from("fest_config").upsert(p, onConflict: "fest_year").execute()
+    }
+
+    func deleteSchedule(id: UUID) async throws { try await delete("fest_schedule_items", id: id) }
+    func deleteDinner(id: UUID) async throws { try await delete("fest_dinners", id: id) }
+    func deleteDues(id: UUID) async throws { try await delete("fest_dues", id: id) }
+    func deletePayee(id: UUID) async throws { try await delete("fest_payees", id: id) }
+
+    private func upsert(_ table: String, id: UUID?, payload: [String: AnyJSON]) async throws {
+        var p = payload
+        if let id { p["id"] = .string(id.uuidString) }
+        try await supabase.from(table).upsert(p, onConflict: "id").execute()
+    }
+    private func delete(_ table: String, id: UUID) async throws {
+        try await supabase.from(table).delete().eq("id", value: id.uuidString).execute()
     }
 
     private func fetchSchedule() async throws -> [ScheduleItem] {
@@ -279,6 +411,53 @@ private struct PayeeRow: Decodable {
     let paypal: String?
     let amount: Int?
     let note: String?
+}
+
+// Full rows for the editor (all editable columns).
+private struct ScheduleRowFull: Decodable {
+    let id: UUID
+    let day: String
+    let start_time: String?
+    let end_time: String?
+    let title: String
+    let emoji: String?
+    let location: String?
+    let description: String?
+    let bring: String?
+    let is_private: Bool
+    let lead_user_id: UUID?
+    let lead_name: String?
+    let lead_phone: String?
+    let position: Int
+    var draft: FestScheduleDraft {
+        FestScheduleDraft(id: id, day: day, startTime: start_time, endTime: end_time, title: title,
+                          emoji: emoji, location: location, description: description, bring: bring,
+                          isPrivate: is_private, leadUserId: lead_user_id, leadName: lead_name,
+                          leadPhone: lead_phone, position: position)
+    }
+}
+
+private struct DinnerRowFull: Decodable {
+    let id: UUID
+    let day: String
+    let title: String
+    let emoji: String?
+    let chef_user_id: UUID?
+    let chef_name: String?
+    let chef_phone: String?
+    let houses: [String]?
+    let menu: String?
+    let served_time: String?
+    let served_location: String?
+    let prep_time: String?
+    let prep_location: String?
+    let position: Int
+    var draft: FestDinnerDraft {
+        FestDinnerDraft(id: id, day: day, title: title, emoji: emoji, chefUserId: chef_user_id,
+                        chefName: chef_name, chefPhone: chef_phone, houses: houses ?? [], menu: menu,
+                        servedTime: served_time, servedLocation: served_location, prepTime: prep_time,
+                        prepLocation: prep_location, position: position)
+    }
 }
 
 private extension String {
