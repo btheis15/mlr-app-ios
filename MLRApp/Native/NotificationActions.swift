@@ -19,6 +19,7 @@ enum NotifCategory: String {
     case helpRequest   = "HELP_REQUEST"
     case chatMention   = "CHAT_MENTION"
     case birthday      = "BIRTHDAY"
+    case workFollowup  = "WORK_FOLLOWUP"
 }
 
 enum NotifAction: String {
@@ -28,6 +29,8 @@ enum NotifAction: String {
     case reply       = "REPLY"
     case birthdayText = "BIRTHDAY_TEXT"
     case birthdayGift = "BIRTHDAY_GIFT"
+    case workDone     = "WORK_DONE"
+    case workNotYet   = "WORK_NOT_YET"
 }
 
 extension UNUserNotificationCenter {
@@ -63,7 +66,15 @@ extension UNUserNotificationCenter {
             identifier: NotifCategory.birthday.rawValue,
             actions: [wishes, gift], intentIdentifiers: [], options: [])
 
-        setNotificationCategories([eventReminder, helpRequest, chatMention, birthday])
+        let workDone = UNNotificationAction(identifier: NotifAction.workDone.rawValue,
+                                            title: "✅ Yes, it's done", options: [])
+        let workNotYet = UNNotificationAction(identifier: NotifAction.workNotYet.rawValue,
+                                              title: "Not yet", options: [])
+        let workFollowup = UNNotificationCategory(
+            identifier: NotifCategory.workFollowup.rawValue,
+            actions: [workDone, workNotYet], intentIdentifiers: [], options: [])
+
+        setNotificationCategories([eventReminder, helpRequest, chatMention, birthday, workFollowup])
     }
 }
 
@@ -99,6 +110,17 @@ enum NotificationActionHandler {
                 try? await AppEnvironment.activeCommitteeService?.sendMessage(
                     committeeId: uuid, text: text, authorId: authorId)
             }
+        case .workDone:
+            // "Yes, it's done" → check the linked Work Checklist task off.
+            if let workItemId = userInfo["work_item_id"] as? String,
+               let uuid = UUID(uuidString: workItemId) {
+                try? await AppEnvironment.activeWorkItemsService?.markDone(id: uuid)
+                await AppEnvironment.activeWorkItemsService?.fetchItems()
+            }
+        case .workNotYet:
+            // Nothing to do — the task stays open; a later cron run won't re-nudge
+            // because followup_sent is already set server-side.
+            break
         case .birthdayText, .birthdayGift:
             // Foreground actions — hand to the app to present the message composer
             // / Apple Cash handoff for the birthday person.

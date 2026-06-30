@@ -126,12 +126,12 @@ struct HomeView: View {
         }
     }
 
-    // "Communication" — People · Committees · Ask for Help · Work Checklist
+    // "Communication" — People · Committees · Ask for Help
     private var communicationSection: some View {
         CollapsibleHomeSection(
             title: "Communication",
             emoji: "💬",
-            subtitle: "People · Committees · Ask for Help · Work Checklist"
+            subtitle: "People · Committees · Ask for Help"
         ) {
             HStack(spacing: 12) {
                 NavigationLink(destination: PeopleDirectoryView()) {
@@ -165,18 +165,15 @@ struct HomeView: View {
                     fullWidth: true
                 )
             }
-
-            // The interactive work checklist card.
-            WorkChecklistCard()
         }
     }
 
-    // "Around the Resort" — Events & Work Weekends · Cabin Stay · Local Places
+    // "Around the Resort" — Events · Cabin Stay · Local Places · Work Checklist
     private var aroundResortSection: some View {
         CollapsibleHomeSection(
             title: "Around the Resort",
             emoji: "🧭",
-            subtitle: "Events · Cabin Stay · Local Places"
+            subtitle: "Events · Cabin Stay · Local Places · Work Checklist"
         ) {
             NavigationLink(destination: EventsView()) {
                 HomeTile(
@@ -209,6 +206,9 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .fixedSize(horizontal: false, vertical: true)
+
+            // The interactive work checklist card.
+            WorkChecklistCard()
         }
     }
 

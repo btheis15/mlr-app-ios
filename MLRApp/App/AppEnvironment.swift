@@ -61,6 +61,7 @@ final class AppEnvironment {
     static weak var activeEventsService: EventsService?
     static weak var activeHelpService: HelpService?
     static weak var activeCommitteeService: CommitteeService?
+    static weak var activeWorkItemsService: WorkItemsService?
 
     init() {
         authService          = AuthService()
@@ -79,6 +80,7 @@ final class AppEnvironment {
         AppEnvironment.activeEventsService    = eventsService
         AppEnvironment.activeHelpService      = helpService
         AppEnvironment.activeCommitteeService = committeeService
+        AppEnvironment.activeWorkItemsService = workItemsService
     }
 
     // Load the signed-in profile after auth

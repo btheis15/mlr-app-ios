@@ -20,6 +20,8 @@ struct AskForHelpSheet: View {
     @State private var notifyAll = false
     @State private var bringItems: [String] = []
     @State private var newItem = ""
+    @State private var linkedWorkItem: WorkItem?
+    @State private var showTaskPicker = false
 
     @State private var pinnedCoordinate: CLLocationCoordinate2D?
     @State private var isSubmitting = false
@@ -42,6 +44,7 @@ struct AskForHelpSheet: View {
                     peopleSection
                     whereSection
                     scheduleSection
+                    workItemSection
                     itemsSection
                     notifyAllSection
 
@@ -73,6 +76,21 @@ struct AskForHelpSheet: View {
             }
             .onChange(of: locationManager.coordinate) { _, coord in
                 if let coord { pinnedCoordinate = coord }
+            }
+            .task {
+                if env.workItemsService.items.isEmpty {
+                    await env.workItemsService.fetchItems()
+                }
+            }
+            .sheet(isPresented: $showTaskPicker) {
+                WorkItemPickerSheet(items: env.workItemsService.openItems) { item in
+                    linkedWorkItem = item
+                    // Prefill the request text with the task title if the user
+                    // hasn't typed anything yet.
+                    if what.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        what = item.title
+                    }
+                }
             }
         }
     }
@@ -200,6 +218,59 @@ struct AskForHelpSheet: View {
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 
+    // MARK: - Link a Work Checklist task
+
+    private var workItemSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Link a Work Checklist task (optional)")
+            Button {
+                showTaskPicker = true
+            } label: {
+                HStack(spacing: 10) {
+                    Image(systemName: linkedWorkItem == nil ? "checklist" : "checkmark.circle.fill")
+                        .foregroundStyle(Color.mlrFest)
+                    Text(linkedWorkItem?.title ?? "Choose a task…")
+                        .font(.system(size: 15))
+                        .foregroundStyle(linkedWorkItem == nil ? Color.mlrTextMuted : Color.mlrText)
+                        .lineLimit(1)
+                    Spacer()
+                    if linkedWorkItem != nil {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(Color.mlrTextSubtle)
+                            .onTapGesture { linkedWorkItem = nil }
+                    } else {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 13))
+                            .foregroundStyle(Color.mlrTextSubtle)
+                    }
+                }
+                .padding(14)
+                .background(Color.mlrCard)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            if linkedWorkItem != nil {
+                Text("Later today we'll ask if this got done — tapping “Yes” checks it off the list.")
+                    .font(.mlrCaption)
+                    .foregroundStyle(Color.mlrTextMuted)
+            }
+        }
+    }
+
+    /// When a task is linked, schedule the "did this get done?" nudge for 9 PM
+    /// resort-local today — or 8 AM the next morning if it's already past 6 PM.
+    private func followupTime() -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Chicago") ?? .current
+        let now = Date.now
+        let hour = cal.component(.hour, from: now)
+        if hour >= 18 {
+            let tomorrow = cal.date(byAdding: .day, value: 1, to: now) ?? now
+            return cal.date(bySettingHour: 8, minute: 0, second: 0, of: tomorrow) ?? now
+        }
+        return cal.date(bySettingHour: 21, minute: 0, second: 0, of: now) ?? now
+    }
+
     // MARK: - What to bring
 
     private var itemsSection: some View {
@@ -277,7 +348,9 @@ struct AskForHelpSheet: View {
                 longitude: pinnedCoordinate?.longitude,
                 scheduledFor: hasSchedule ? scheduledFor : nil,
                 notifyAll: notifyAll,
-                items: bringItems
+                items: bringItems,
+                workItemId: linkedWorkItem?.id,
+                followupAt: linkedWorkItem != nil ? followupTime() : nil
             )
             Haptics.success()
             dismiss()
@@ -345,6 +418,61 @@ final class LocationPinManager: NSObject, CLLocationManagerDelegate {
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
         isLocating = false
         errorMessage = "Couldn't get your location. Try again or type where you are."
+    }
+}
+
+// MARK: - Work Item Picker
+
+/// Pick an open task from the Work Checklist to link to a help request.
+private struct WorkItemPickerSheet: View {
+    @Environment(\.dismiss) private var dismiss
+
+    let items: [WorkItem]
+    let onPick: (WorkItem) -> Void
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if items.isEmpty {
+                    ContentUnavailableView(
+                        "No open tasks",
+                        systemImage: "checklist",
+                        description: Text("There are no open Work Checklist tasks to link right now.")
+                    )
+                } else {
+                    List(items) { item in
+                        Button {
+                            onPick(item)
+                            dismiss()
+                        } label: {
+                            HStack(spacing: 12) {
+                                Image(systemName: "circle")
+                                    .foregroundStyle(Color.mlrTextSubtle)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.title)
+                                        .font(.system(size: 15, weight: .medium))
+                                        .foregroundStyle(Color.mlrText)
+                                    if let notes = item.notes, !notes.isEmpty {
+                                        Text(notes)
+                                            .font(.mlrCaption)
+                                            .foregroundStyle(Color.mlrTextMuted)
+                                            .lineLimit(1)
+                                    }
+                                }
+                                Spacer()
+                            }
+                        }
+                    }
+                }
+            }
+            .navigationTitle("Link a task")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+            }
+        }
     }
 }
 

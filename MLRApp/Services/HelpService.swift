@@ -63,7 +63,9 @@ final class HelpService {
         longitude: Double?,
         scheduledFor: Date?,
         notifyAll: Bool,
-        items: [String] = []
+        items: [String] = [],
+        workItemId: UUID? = nil,
+        followupAt: Date? = nil
     ) async throws {
         let targeting = helpTargeting()
 
@@ -80,6 +82,8 @@ final class HelpService {
             let p_strict: [String]
             let p_today: String
             let p_items: [String]
+            let p_work_item_id: String?
+            let p_followup_at: String?
         }
 
         let iso = ISO8601DateFormatter()
@@ -98,7 +102,9 @@ final class HelpService {
                 p_eligible: targeting.eligible,
                 p_strict: targeting.strict,
                 p_today: targeting.today,
-                p_items: items
+                p_items: items,
+                p_work_item_id: workItemId?.uuidString,
+                p_followup_at: followupAt.map { iso.string(from: $0) }
             ))
             .execute()
 
