@@ -70,30 +70,29 @@ struct RosterEditSheet: View {
                 if roleBased {
                     Section {
                         ForEach(areas, id: \.self) { area in
-                            VStack(spacing: 6) {
-                                Toggle(area, isOn: Binding(
+                            HStack(spacing: 10) {
+                                Text(area)
+                                Spacer(minLength: 8)
+                                // The ★ Lead pill only appears once the area is on;
+                                // tap to toggle lead (a role can have many leads).
+                                if selectedAreas.contains(area) {
+                                    leadPill(for: area)
+                                }
+                                Toggle("", isOn: Binding(
                                     get: { selectedAreas.contains(area) },
                                     set: { on in
                                         if on { selectedAreas.insert(area) }
                                         else { selectedAreas.remove(area); leadAreas.remove(area) }
                                     }
                                 ))
+                                .labelsHidden()
                                 .tint(Color.mlrPrimary)
-                                if selectedAreas.contains(area) {
-                                    Toggle("Lead of \(area)", isOn: Binding(
-                                        get: { leadAreas.contains(area) },
-                                        set: { on in if on { leadAreas.insert(area) } else { leadAreas.remove(area) } }
-                                    ))
-                                    .tint(Color.mlrPrimary)
-                                    .font(.system(size: 13))
-                                    .padding(.leading, 12)
-                                }
                             }
                         }
                     } header: {
                         Text("Roles")
                     } footer: {
-                        Text("Pick the areas this person helps with. Mark any as Lead (a role can have more than one lead); everyone else is a volunteer.")
+                        Text("Turn on the areas this person helps with. Tap ★ Lead to make them a lead of that area (a role can have more than one lead); everyone else is a volunteer.")
                     }
                 }
 
@@ -135,6 +134,26 @@ struct RosterEditSheet: View {
             }
             .onAppear(perform: seed)
         }
+    }
+
+    /// Compact "★ Lead" toggle pill shown beside an active area.
+    private func leadPill(for area: String) -> some View {
+        let isLead = leadAreas.contains(area)
+        return Button {
+            if isLead { leadAreas.remove(area) } else { leadAreas.insert(area) }
+        } label: {
+            HStack(spacing: 3) {
+                Image(systemName: isLead ? "star.fill" : "star")
+                Text("Lead")
+            }
+            .font(.system(size: 12, weight: .semibold))
+            .foregroundStyle(isLead ? Color.mlrPrimary : Color.mlrTextMuted)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background((isLead ? Color.mlrPrimary : Color.mlrTextMuted).opacity(0.12))
+            .clipShape(Capsule())
+        }
+        .buttonStyle(.plain)
     }
 
     private func seed() {
