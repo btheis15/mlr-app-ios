@@ -317,25 +317,7 @@ struct SignInView: View {
     }
 }
 
-// MARK: - HelpView placeholder
-// Replace with the real Help screen once it is extracted into its own file.
-
-private struct HelpView: View {
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 16) {
-                Text("Signing in uses a one-time code sent to your email — no password needed.")
-                Text("**Didn't get the code?**\nCheck your Spam or Junk folder. The code is valid for 10 minutes.")
-                Text("**Wrong email?**\nGo back and re-enter your address.")
-                Text("**Still stuck?**")
-                Link("Text or email for help", destination: URL(string: "sms:+1XXXXXXXXXX")!)
-            }
-            .padding()
-        }
-        .navigationTitle("Help")
-        .navigationBarTitleDisplayMode(.inline)
-    }
-}
+// HelpView now lives in MLRApp/Help/HelpView.swift (full Help & how-to screen).
 
 #Preview {
     SignInView()

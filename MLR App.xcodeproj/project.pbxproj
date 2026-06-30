@@ -117,6 +117,8 @@
 		D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9ED82FF317A800603CE7 /* WorkChecklistCard.swift */; };
 		D33F9EDB2FF319D600603CE7 /* CommitteeEmailComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EDA2FF319D600603CE7 /* CommitteeEmailComposer.swift */; };
 		D33F9EDD2FF319F800603CE7 /* CommitteeMemberManageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */; };
+		D33F9EE02FF3FC7500603CE7 /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EDF2FF3FC7500603CE7 /* HelpView.swift */; };
+		D33F9EE22FF3FC8600603CE7 /* GuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE12FF3FC8600603CE7 /* GuideView.swift */; };
 		D3533C0B2FE9EC60001AD887 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0A2FE9EC60001AD887 /* Auth */; };
 		D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0C2FE9EC60001AD887 /* Functions */; };
 		D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0E2FE9EC60001AD887 /* PostgREST */; };
@@ -238,6 +240,8 @@
 		D33F9ED82FF317A800603CE7 /* WorkChecklistCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkChecklistCard.swift; sourceTree = "<group>"; };
 		D33F9EDA2FF319D600603CE7 /* CommitteeEmailComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeEmailComposer.swift; sourceTree = "<group>"; };
 		D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeMemberManageSheet.swift; sourceTree = "<group>"; };
+		D33F9EDF2FF3FC7500603CE7 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
+		D33F9EE12FF3FC8600603CE7 /* GuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -582,6 +586,7 @@
 				D33F9E5A2FEC086700603CE7 /* Weather */,
 				D33F9ECD2FEC33AB00603CE7 /* Assets.xcassets */,
 				D33F9ED32FF3175D00603CE7 /* WorkItems */,
+				D33F9EDE2FF3FC7500603CE7 /* Help */,
 			);
 			path = MLRApp;
 			sourceTree = "<group>";
@@ -603,6 +608,15 @@
 				D33F9ED62FF3178900603CE7 /* WorkItemComposer.swift */,
 			);
 			path = WorkItems;
+			sourceTree = "<group>";
+		};
+		D33F9EDE2FF3FC7500603CE7 /* Help */ = {
+			isa = PBXGroup;
+			children = (
+				D33F9EDF2FF3FC7500603CE7 /* HelpView.swift */,
+				D33F9EE12FF3FC8600603CE7 /* GuideView.swift */,
+			);
+			path = Help;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -704,6 +718,7 @@
 				D33F9E6A2FEC086700603CE7 /* PeopleDirectoryView.swift in Sources */,
 				D33F9E6B2FEC086700603CE7 /* AttendanceControl.swift in Sources */,
 				D33F9E6C2FEC086700603CE7 /* HelpRequest.swift in Sources */,
+				D33F9EE22FF3FC8600603CE7 /* GuideView.swift in Sources */,
 				D33F9E6D2FEC086700603CE7 /* CommitteeService.swift in Sources */,
 				D33F9E6E2FEC086700603CE7 /* AvatarView.swift in Sources */,
 				D33F9E6F2FEC086700603CE7 /* CabinBookingsView.swift in Sources */,
@@ -776,6 +791,7 @@
 				D33F9EAE2FEC086700603CE7 /* MessageComposer.swift in Sources */,
 				D33F9EDB2FF319D600603CE7 /* CommitteeEmailComposer.swift in Sources */,
 				D33F9EAF2FEC086700603CE7 /* FestOverviewView.swift in Sources */,
+				D33F9EE02FF3FC7500603CE7 /* HelpView.swift in Sources */,
 				D33F9EB02FEC086700603CE7 /* UpcomingEventCard.swift in Sources */,
 				D33F9EB12FEC086700603CE7 /* HapticsAndShare.swift in Sources */,
 				D33F9EB22FEC086700603CE7 /* AdminModerationView.swift in Sources */,

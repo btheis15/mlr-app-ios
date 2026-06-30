@@ -63,6 +63,9 @@ struct HomeView: View {
                             // ── 7. Around the Resort ─────────────────────
                             aroundResortSection
 
+                            // ── 8. App & Help ────────────────────────────
+                            appHelpSection
+
                             // ── 9. Heritage footer ────────────────────────
                             heritageFooter
                                 .padding(.bottom, 32)
@@ -192,6 +195,46 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .fixedSize(horizontal: false, vertical: true)
+        }
+    }
+
+    // "App & Help" — guided tour, share the app, help & how-to
+    private var appHelpSection: some View {
+        CollapsibleHomeSection(
+            title: "App & Help",
+            emoji: "📲",
+            subtitle: "Take the tour · Share · Help"
+        ) {
+            NavigationLink(destination: GuideView()) {
+                HomeTile(
+                    icon: "map.fill",
+                    title: "Take a quick tour",
+                    subtitle: "See the app screen by screen.",
+                    tint: Color.mlrPrimary,
+                    fullWidth: true
+                )
+            }
+
+            ShareLink(item: MLRLinks.appURL) {
+                HomeTile(
+                    icon: "square.and.arrow.up",
+                    title: "Share this app",
+                    subtitle: "Send the link so anyone can join.",
+                    tint: Color.mlrInfo,
+                    fullWidth: true
+                )
+            }
+            .buttonStyle(.plain)
+
+            NavigationLink(destination: HelpView()) {
+                HomeTile(
+                    icon: "questionmark.circle.fill",
+                    title: "Help & how-to",
+                    subtitle: "FAQs, sign-in help, and contact.",
+                    tint: Color.mlrPrimary,
+                    fullWidth: true
+                )
+            }
         }
     }
 
