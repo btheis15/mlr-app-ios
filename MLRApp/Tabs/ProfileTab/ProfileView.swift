@@ -515,8 +515,9 @@ struct ProfileView: View {
         paypal = p.paypalHandle ?? ""
         address = p.address ?? ""
 
-        if let bdStr = p.birthday,
-           let bd = ISO8601DateFormatter().date(from: bdStr) {
+        // Birthdays are stored date-only ("yyyy-MM-dd"); ISO8601DateFormatter
+        // can't parse that, which made the toggle read "off" even when set.
+        if let bdStr = p.birthday, let bd = Self.birthdayFormatter.date(from: bdStr) {
             birthday = bd
             hasBirthday = true
         } else {
@@ -524,6 +525,13 @@ struct ProfileView: View {
             hasBirthday = false
         }
     }
+
+    private static let birthdayFormatter: DateFormatter = {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f
+    }()
 
     private func birthdayChanged(_ p: Profile) -> Bool {
         let stored = p.birthday ?? ""
