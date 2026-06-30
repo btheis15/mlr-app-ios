@@ -166,11 +166,12 @@ private struct FestOverviewSectionView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
 
-                // Cover art (matches the web fest page header)
-                FestCoverImage()
-
-                // Poster / hero card
-                FestPosterCard()
+                // Cover art + a slim caption (dates + venue) as one unit. The
+                // cover already carries the title, so there's no separate poster.
+                VStack(spacing: 10) {
+                    FestCoverImage()
+                    FestCoverCaption()
+                }
 
                 // The week at a glance — every day's headline
                 FestScheduleGlanceCard()
@@ -214,32 +215,21 @@ private struct FestCoverImage: View {
     }
 }
 
-// MARK: - Poster Card
+// MARK: - Cover Caption
 
-private struct FestPosterCard: View {
+/// A slim dates + venue line under the cover art — replaces the old, redundant
+/// text poster box (the cover image already shows the "Family Fest 2026" title).
+private struct FestCoverCaption: View {
     var body: some View {
-        VStack(spacing: 10) {
-            Text("Family Fest")
-                .font(.festSerif(30, weight: .bold))
+        VStack(spacing: 3) {
+            Text(FamilyFestConfig.dateRangeLabel)
+                .font(.festSerif(16, weight: .bold))
                 .foregroundStyle(Color.mlrFest)
-            Text("2026 · Muskellunge Lake Resort")
-                .font(.festSerif(14))
-                .foregroundStyle(Color.mlrFest.opacity(0.75))
-            Text("\(FamilyFestConfig.dateRangeLabel) · Tomahawk, Wisconsin")
-                .font(.festSerif(13))
-                .foregroundStyle(Color.mlrFest.opacity(0.6))
+            Text("Muskellunge Lake Resort · Tomahawk, WI")
+                .font(.festSerif(12))
+                .foregroundStyle(Color.mlrFest.opacity(0.65))
         }
         .frame(maxWidth: .infinity)
-        .padding(.vertical, 28)
-        .padding(.horizontal, 20)
-        .background(
-            RoundedRectangle(cornerRadius: 16)
-                .fill(Color.mlrFestParchment)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 16)
-                        .strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1.5)
-                )
-        )
     }
 }
 
