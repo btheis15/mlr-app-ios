@@ -36,29 +36,36 @@ struct RosterEditSheet: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Person") {
-                    TextField("Name", text: $name)
-                        .autocorrectionDisabled()
-
+                // Primary path: pick someone who already has an app account.
+                Section {
                     if linkedUserId != nil {
                         HStack {
-                            Label(linkedName ?? "Linked account", systemImage: "link")
+                            Label(linkedName ?? "Linked account", systemImage: "checkmark.circle.fill")
                                 .foregroundStyle(Color.mlrPrimary)
                             Spacer()
-                            Button("Unlink") {
+                            Button("Change") {
                                 linkedUserId = nil
                                 linkedName = nil
                             }
-                            .foregroundStyle(Color.mlrDanger)
                         }
                     } else {
                         Button {
                             showPicker = true
                         } label: {
-                            Label("Link a member account", systemImage: "person.crop.circle.badge.plus")
+                            Label("Choose a member", systemImage: "person.crop.circle.badge.checkmark")
+                                .font(.system(size: 16, weight: .semibold))
+                                .foregroundStyle(Color.mlrPrimary)
                         }
                     }
+                } header: {
+                    Text("Member")
+                } footer: {
+                    Text("Pick someone who has an account — their name, photo, and chat access come with it. Only type the fields below for someone not in the app yet (a one-off).")
+                }
 
+                Section("Details") {
+                    TextField("Name", text: $name)
+                        .autocorrectionDisabled()
                     TextField("Email (for invite / contact)", text: $email)
                         .keyboardType(.emailAddress)
                         .textInputAutocapitalization(.never)

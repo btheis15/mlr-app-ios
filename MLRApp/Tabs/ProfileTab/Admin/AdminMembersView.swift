@@ -10,14 +10,24 @@ struct AdminMember: Codable, Identifiable, Equatable {
     var isAdmin: Bool
     var betaTester: Bool  // kept for DB compat; not surfaced in UI
     var avatarUrl: String?
-    var createdAt: Date?
 
     enum CodingKeys: String, CodingKey {
         case id, name, email
         case isAdmin    = "is_admin"
         case betaTester = "beta_tester"
         case avatarUrl  = "avatar_url"
-        case createdAt  = "created_at"
+    }
+
+    // Lenient decode: a single member with a null email/name (or any missing
+    // optional) must not fail the whole list. created_at is ignored (unused).
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        name = (try? c.decode(String.self, forKey: .name)) ?? "Member"
+        email = (try? c.decode(String.self, forKey: .email)) ?? ""
+        isAdmin = (try? c.decode(Bool.self, forKey: .isAdmin)) ?? false
+        betaTester = (try? c.decode(Bool.self, forKey: .betaTester)) ?? false
+        avatarUrl = try? c.decode(String.self, forKey: .avatarUrl)
     }
 }
 
