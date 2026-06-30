@@ -15,6 +15,16 @@ struct HomeView: View {
     // Drive AttendanceControlStateless optimistically
     @State private var nearestEventStatus: AttendanceStatus? = nil
 
+    /// The next upcoming event to spotlight on Home: the nearest non–Family-Fest
+    /// event the member hasn't declined. Declined ("not going") events drop off
+    /// Home but stay findable in the Events list — matches the web.
+    private var spotlightEvent: ResortEvent? {
+        env.eventsService.upcomingEvents.first { event in
+            guard !event.isFamilyFest else { return false }
+            return env.eventsService.attendances[event.id]?.effectiveStatus() != .notGoing
+        }
+    }
+
     var body: some View {
         NavigationStack {
             GeometryReader { geometry in
@@ -45,8 +55,7 @@ struct HomeView: View {
                             }
 
                             // ── 5. Upcoming event ─────────────────────────
-                            if let event = env.eventsService.nearestEvent,
-                               !festSeason.isTakeover || !event.isFamilyFest {
+                            if let event = spotlightEvent {
                                 UpcomingEventCard(
                                     event: event,
                                     attendance: env.eventsService.attendances[event.id],
@@ -78,6 +87,9 @@ struct HomeView: View {
             .navigationBarHidden(true)
             .background(Color.mlrSurface)
         }
+        // When the spotlight switches events (e.g. after declining one), drop the
+        // stale optimistic override so it can't leak onto the next event's card.
+        .onChange(of: spotlightEvent?.id) { _, _ in nearestEventStatus = nil }
         .task {
             festSeason = FestSeason.current()
             await env.eventsService.fetchEvents()

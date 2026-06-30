@@ -141,11 +141,18 @@ final class EventsService {
             ))
             .execute()
 
-        // Optimistic local update
-        if let existing = attendances[eventId] {
+        // Optimistic local update — also create a row on first RSVP (so e.g.
+        // declining immediately hides the event from the Home spotlight).
+        let uid: UUID?
+        if let existing = attendances[eventId]?.userId {
+            uid = existing
+        } else {
+            uid = try? await supabase.auth.session.user.id
+        }
+        if let uid {
             attendances[eventId] = EventAttendance(
                 eventId: eventId,
-                userId: existing.userId,
+                userId: uid,
                 status: status,
                 days: days,
                 updatedAt: .now
