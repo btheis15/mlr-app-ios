@@ -65,15 +65,29 @@ struct CommitteeRosterEntry: Codable, Identifiable, Equatable {
         if let n = profile?.displayName, !n.isEmpty { return n }
         return name
     }
+    /// Phone to use: the linked account's profile phone wins, else the roster's.
+    var effectivePhone: String? {
+        if let p = profile?.phone, !p.isEmpty { return p }
+        return phone
+    }
+    /// Email to use: the linked account's contact email wins, else the roster's.
+    var effectiveEmail: String? {
+        if let e = profile?.contactEmail, !e.isEmpty { return e }
+        return email
+    }
     /// True when this slot is a Lead of any area.
     var isLead: Bool { roles.contains { $0.hasSuffix("· Lead") } }
 
     struct LinkedProfile: Codable, Equatable {
         var displayName: String?
         var avatarUrl: String?
+        var phone: String?
+        var contactEmail: String?
         enum CodingKeys: String, CodingKey {
             case displayName = "display_name"
             case avatarUrl = "avatar_url"
+            case phone
+            case contactEmail = "contact_email"
         }
     }
 

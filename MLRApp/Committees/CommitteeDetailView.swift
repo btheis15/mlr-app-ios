@@ -17,6 +17,7 @@ struct CommitteeDetailView: View {
     @State private var editing: CommitteeRosterEntry? = nil
     @State private var addingNew = false
     @State private var showEmail = false
+    @State private var selectedProfile: Profile?
 
     /// Canonical area order for role-based committees (matches the web).
     private let festAreas = [
@@ -36,14 +37,14 @@ struct CommitteeDetailView: View {
     }
 
     private var allEmails: [String] {
-        roster.compactMap { $0.email?.trimmedNonEmpty }
+        roster.compactMap { $0.effectiveEmail?.trimmedNonEmpty }
     }
 
     /// Roster people who have an email, mapped for the email composer. Areas come
     /// from their roles (lead suffix stripped) so the composer's "By Role" works.
     private var emailRecipients: [CommitteeEmailComposer.Recipient] {
         roster.compactMap { e in
-            guard let email = e.email?.trimmedNonEmpty else { return nil }
+            guard let email = e.effectiveEmail?.trimmedNonEmpty else { return nil }
             let areas = e.roles.map { $0.hasSuffix(" · Lead") ? String($0.dropLast(" · Lead".count)) : $0 }
             return CommitteeEmailComposer.Recipient(id: e.id, name: e.displayName, email: email, areas: Array(Set(areas)))
         }
@@ -107,6 +108,9 @@ struct CommitteeDetailView: View {
         }
         .sheet(isPresented: $showEmail) {
             CommitteeEmailComposer(committee: committee, presetRecipients: emailRecipients)
+        }
+        .sheet(item: $selectedProfile) { profile in
+            MemberSheetView(member: profile)
         }
     }
 
@@ -214,11 +218,25 @@ struct CommitteeDetailView: View {
     @ViewBuilder
     private func rosterRow(_ entry: CommitteeRosterEntry, showLead: Bool) -> some View {
         HStack(spacing: 12) {
-            AvatarView(url: entry.isLinked ? entry.profile?.avatarUrl : nil, size: .small)
+            // Linked members open their full profile on tap.
+            Button {
+                if let uid = entry.linkedUserId { openProfile(uid) }
+            } label: {
+                AvatarView(url: entry.isLinked ? entry.profile?.avatarUrl : nil, size: .small)
+            }
+            .buttonStyle(.plain)
+            .disabled(!entry.isLinked)
+
             VStack(alignment: .leading, spacing: 3) {
-                Text(entry.displayName)
-                    .font(.system(size: 15, weight: .medium))
-                    .foregroundStyle(Color.mlrText)
+                Button {
+                    if let uid = entry.linkedUserId { openProfile(uid) }
+                } label: {
+                    Text(entry.displayName)
+                        .font(.system(size: 15, weight: .medium))
+                        .foregroundStyle(Color.mlrText)
+                }
+                .buttonStyle(.plain)
+                .disabled(!entry.isLinked)
                 if entry.isPending {
                     Text("Pending verification")
                         .font(.system(size: 10, weight: .medium))
@@ -255,7 +273,7 @@ struct CommitteeDetailView: View {
     private func rosterContact(_ entry: CommitteeRosterEntry) -> some View {
         if env.isSignedIn {
             HStack(spacing: 10) {
-                if let phone = entry.phone?.trimmedNonEmpty {
+                if let phone = entry.effectivePhone?.trimmedNonEmpty {
                     if let url = URL(string: "tel:\(phone)") {
                         Link(destination: url) {
                             Image(systemName: "phone.fill").font(.system(size: 13)).foregroundStyle(Color.mlrPrimary)
@@ -267,7 +285,7 @@ struct CommitteeDetailView: View {
                         }
                     }
                 }
-                if let email = entry.email?.trimmedNonEmpty, let url = URL(string: "mailto:\(email)") {
+                if let email = entry.effectiveEmail?.trimmedNonEmpty, let url = URL(string: "mailto:\(email)") {
                     Link(destination: url) {
                         Image(systemName: "envelope.fill").font(.system(size: 13)).foregroundStyle(Color.mlrTextMuted)
                     }
@@ -282,6 +300,20 @@ struct CommitteeDetailView: View {
         isLoading = true
         roster = (try? await env.committeeService.fetchRoster(slug: committee.slug)) ?? roster
         isLoading = false
+    }
+
+    /// Fetch a linked member's full profile and open the member sheet.
+    private func openProfile(_ userId: UUID) {
+        Task {
+            let profile: Profile? = try? await supabase
+                .from("profiles")
+                .select()
+                .eq("id", value: userId.uuidString)
+                .single()
+                .execute()
+                .value
+            if let profile { selectedProfile = profile }
+        }
     }
 }
 

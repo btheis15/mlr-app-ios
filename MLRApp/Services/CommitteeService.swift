@@ -63,7 +63,7 @@ final class CommitteeService {
             .from("committee_roster")
             .select("""
                 id, name, email, phone, roles, position, linked_user_id,
-                profiles:linked_user_id(display_name, avatar_url)
+                profiles:linked_user_id(display_name, avatar_url, phone, contact_email)
             """)
             .eq("committee_slug", value: slug)
             .order("position", ascending: true)
