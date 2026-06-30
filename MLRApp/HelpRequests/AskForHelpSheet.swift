@@ -40,11 +40,11 @@ struct AskForHelpSheet: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: 24) {
                     categorySection
+                    workItemSection
                     whatSection
                     peopleSection
                     whereSection
                     scheduleSection
-                    workItemSection
                     itemsSection
                     notifyAllSection
 
