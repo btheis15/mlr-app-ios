@@ -92,6 +92,7 @@ struct HomeView: View {
         .onChange(of: spotlightEvent?.id) { _, _ in nearestEventStatus = nil }
         .task {
             festSeason = FestSeason.current()
+            await env.appImagesService.load()
             await env.festContentService.load()
             await env.eventsService.fetchEvents()
             if let userId = env.currentProfile?.id {
@@ -116,8 +117,7 @@ struct HomeView: View {
         let logoWidth = min(geometry.size.width * 0.46, 180.0)
         HStack {
             Spacer()
-            Image("brand-logo-green")
-                .resizable()
+            SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
                 .scaledToFit()
                 .frame(maxWidth: logoWidth)
                 .padding(.top, 10)

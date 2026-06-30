@@ -38,6 +38,23 @@ final class MediaService {
         return try publicURL(bucket: "post-photos", path: path)
     }
 
+    // MARK: - Site images (admin-managed: logo, fest cover, …)
+
+    /// Upload an admin-managed site image to the public `site-assets` bucket and
+    /// return its public URL. A fresh filename per upload busts any CDN/AsyncImage
+    /// cache so the new image shows immediately. Resized to a reasonable max.
+    func uploadSiteImage(image: UIImage, key: String) async throws -> String {
+        let resized = resize(image: image, maxDimension: 2048)
+        guard let data = resized.jpegData(compressionQuality: 0.85) else {
+            throw MediaError.encodingFailed
+        }
+        let path = "\(key)/\(UUID().uuidString).jpg"
+        _ = try await supabase.storage
+            .from("site-assets")
+            .upload(path, data: data, options: FileOptions(contentType: "image/jpeg"))
+        return try publicURL(bucket: "site-assets", path: path)
+    }
+
     // MARK: - Mac mini upload
 
     /// POST multipart/form-data to the Mac mini's /upload endpoint.

@@ -121,6 +121,8 @@
 		D33F9EE22FF3FC8600603CE7 /* GuideView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE12FF3FC8600603CE7 /* GuideView.swift */; };
 		D33F9EE42FF4075B00603CE7 /* FestContentService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE32FF4075B00603CE7 /* FestContentService.swift */; };
 		D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */; };
+		D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE72FF419F700603CE7 /* AppImagesService.swift */; };
+		D33F9EEA2FF41A0A00603CE7 /* AppImagesAdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */; };
 		D3533C0B2FE9EC60001AD887 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0A2FE9EC60001AD887 /* Auth */; };
 		D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0C2FE9EC60001AD887 /* Functions */; };
 		D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0E2FE9EC60001AD887 /* PostgREST */; };
@@ -246,6 +248,8 @@
 		D33F9EE12FF3FC8600603CE7 /* GuideView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuideView.swift; sourceTree = "<group>"; };
 		D33F9EE32FF4075B00603CE7 /* FestContentService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestContentService.swift; sourceTree = "<group>"; };
 		D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyFestPlannerView.swift; sourceTree = "<group>"; };
+		D33F9EE72FF419F700603CE7 /* AppImagesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppImagesService.swift; sourceTree = "<group>"; };
+		D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppImagesAdminView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -422,6 +426,7 @@
 				D33F9E1B2FEC086700603CE7 /* PushService.swift */,
 				D33F9ED12FF3172100603CE7 /* WorkItemsService.swift */,
 				D33F9EE32FF4075B00603CE7 /* FestContentService.swift */,
+				D33F9EE72FF419F700603CE7 /* AppImagesService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -535,6 +540,7 @@
 				D33F9E4F2FEC086700603CE7 /* AdminNotificationComposer.swift */,
 				D33F9E502FEC086700603CE7 /* AdminSignInsView.swift */,
 				D33F9E512FEC086700603CE7 /* AdminView.swift */,
+				D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */,
 			);
 			path = Admin;
 			sourceTree = "<group>";
@@ -708,6 +714,7 @@
 				D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */,
 				D33F9E5F2FEC086700603CE7 /* ShirtVoteView.swift in Sources */,
 				D33F9E602FEC086700603CE7 /* FestLiveActivityController.swift in Sources */,
+				D33F9EEA2FF41A0A00603CE7 /* AppImagesAdminView.swift in Sources */,
 				D33F9ECA2FEC184500603CE7 /* FestActivityAttributes.swift in Sources */,
 				D33F9ECB2FEC184500603CE7 /* PulsingLiveDot.swift in Sources */,
 				D33F9ECC2FEC184500603CE7 /* SharedStore.swift in Sources */,
@@ -808,6 +815,7 @@
 				D33F9EB52FEC086700603CE7 /* NotificationsView.swift in Sources */,
 				D33F9EB62FEC086700603CE7 /* NotificationsService.swift in Sources */,
 				D33F9EB72FEC086700603CE7 /* PostComposer.swift in Sources */,
+				D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */,
 				D33F9EB82FEC086700603CE7 /* PushService.swift in Sources */,
 				D33F9EB92FEC086700603CE7 /* PostsView.swift in Sources */,
 				D33F9EBA2FEC086700603CE7 /* ProfileView.swift in Sources */,

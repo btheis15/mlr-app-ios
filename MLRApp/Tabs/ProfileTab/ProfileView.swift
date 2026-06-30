@@ -456,6 +456,13 @@ struct ProfileView: View {
                 Label("Admin tools", systemImage: "shield.fill")
                     .foregroundStyle(Color.mlrPrimary)
             }
+
+            NavigationLink {
+                AppImagesAdminView()
+            } label: {
+                Label("App images", systemImage: "photo.stack.fill")
+                    .foregroundStyle(Color.mlrPrimary)
+            }
         }
     }
 

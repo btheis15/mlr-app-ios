@@ -117,6 +117,7 @@ struct FestOverviewView: View {
             festSeason = .current()
         }
         .task {
+            await env.appImagesService.load()
             await env.festContentService.load()
             canEdit = await env.festContentService.canEditFest()
         }
@@ -202,8 +203,7 @@ private struct FestOverviewSectionView: View {
 /// catalog so it shows offline. Mirrors the web fest page's FestCover header.
 private struct FestCoverImage: View {
     var body: some View {
-        Image("family-fest-cover")
-            .resizable()
+        SiteImage(key: SiteImageKey.festCover, fallback: "family-fest-cover")
             .scaledToFit()
             .frame(maxWidth: .infinity)
             .clipShape(RoundedRectangle(cornerRadius: 16))

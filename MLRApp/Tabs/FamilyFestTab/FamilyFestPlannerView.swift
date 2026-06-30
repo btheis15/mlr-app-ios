@@ -23,6 +23,17 @@ struct FamilyFestPlannerView: View {
             } footer: {
                 Text("Changes show up for everyone on both the app and the website.")
             }
+
+            // Bulk editing is easier on a big screen — hand off to the web Planner.
+            Section {
+                if let url = URL(string: "https://mlr-app-omega.vercel.app/family-fest/planner") {
+                    Link(destination: url) {
+                        Label("Open the full editor on the web", systemImage: "macbook.and.iphone")
+                    }
+                }
+            } footer: {
+                Text("Editing a lot at once? The website Planner is the same content with a desktop-friendly layout.")
+            }
         }
         .navigationTitle("Family Fest Planner")
         .navigationBarTitleDisplayMode(.inline)
