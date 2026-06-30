@@ -13,6 +13,25 @@ import SwiftUI
 struct FamilyFestSpotlight: View {
     let season: FestSeason
 
+    /// One headline activity per day (the timed schedule, excluding the
+    /// "anytime" items) — previewed on the planning card.
+    private var scheduleHeadlines: [ScheduleItem] {
+        ScheduleItem.seed.filter { $0.day != "Anytime" }
+    }
+
+    private static let festDayOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+
+    /// "Mon, Jul 27" for a fest weekday name, derived from the fest start date.
+    private func dayDateLabel(_ day: String) -> String? {
+        guard let dayIdx = Self.festDayOrder.firstIndex(of: day),
+              let start = WeatherService.isoFormatter.date(from: FamilyFestConfig.startDate)
+        else { return nil }
+        let startIdx = Calendar.current.component(.weekday, from: start) - 1  // 0=Sun…6=Sat
+        guard let date = Calendar.current.date(byAdding: .day, value: dayIdx - startIdx, to: start)
+        else { return nil }
+        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    }
+
     var body: some View {
         switch season.phase {
         case .offSeason:
@@ -76,16 +95,47 @@ struct FamilyFestSpotlight: View {
                     }
                 }
 
+                // Headline — matches the web's "taking shape" framing.
+                Text(season.isSoon
+                     ? "Almost here — final plans coming together"
+                     : "\(season.daysUntilStart) days out — here's what's taking shape")
+                    .font(.system(size: 15, weight: .semibold))
+                    .foregroundStyle(Color.mlrFest)
+                    .fixedSize(horizontal: false, vertical: true)
+
                 Divider()
                     .background(Color.mlrFest.opacity(0.2))
 
-                HStack {
+                // What's planned so far — one headline activity per day.
+                if !scheduleHeadlines.isEmpty {
+                    VStack(spacing: 9) {
+                        ForEach(scheduleHeadlines) { item in
+                            HStack(spacing: 8) {
+                                Text(item.title)
+                                    .font(.system(size: 14, weight: .medium))
+                                    .foregroundStyle(Color.mlrFest)
+                                    .lineLimit(1)
+                                Spacer(minLength: 8)
+                                if let label = dayDateLabel(item.day) {
+                                    Text(label)
+                                        .font(.system(size: 11))
+                                        .foregroundStyle(Color.mlrFest.opacity(0.55))
+                                }
+                            }
+                        }
+                    }
+                    Divider()
+                        .background(Color.mlrFest.opacity(0.2))
+                }
+
+                HStack(spacing: 6) {
                     Image(systemName: "hand.raised.fill")
                         .font(.caption)
                         .foregroundStyle(Color.mlrFest)
-                    Text("Volunteers needed — see what's being planned")
+                    Text("Volunteers welcome — see the plans & pitch in")
                         .font(.subheadline)
                         .foregroundStyle(Color.mlrFest.opacity(0.9))
+                        .fixedSize(horizontal: false, vertical: true)
                 }
 
                 Text("View Family Fest →")
@@ -96,6 +146,7 @@ struct FamilyFestSpotlight: View {
                     .background(Color.mlrFest)
                     .clipShape(Capsule())
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
             .padding(16)
             .background(Color.mlrFestParchment)
             .clipShape(RoundedRectangle(cornerRadius: 16))

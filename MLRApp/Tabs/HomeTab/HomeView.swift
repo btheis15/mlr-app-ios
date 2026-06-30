@@ -80,7 +80,7 @@ struct HomeView: View {
                                 .padding(.bottom, 32)
                         }
                         .padding(.horizontal, 16)
-                        .padding(.top, 12)
+                        .padding(.top, 2)
                     }
                 }
             }
@@ -112,14 +112,15 @@ struct HomeView: View {
 
     @ViewBuilder
     private func logoHero(geometry: GeometryProxy) -> some View {
-        let logoWidth = min(geometry.size.width * 0.55, 220.0)
+        let logoWidth = min(geometry.size.width * 0.46, 180.0)
         HStack {
             Spacer()
             Image("brand-logo-green")
                 .resizable()
                 .scaledToFit()
                 .frame(maxWidth: logoWidth)
-                .padding(.vertical, 24)
+                .padding(.top, 10)
+                .padding(.bottom, 4)
             Spacer()
         }
     }
