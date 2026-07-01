@@ -9,7 +9,6 @@ enum FestSection: String, CaseIterable, Identifiable {
     case crew      = "Crew"
     case photos    = "Photos"
     case pay       = "Pay"
-    case shirts    = "Shirts"
 
     var id: String { rawValue }
 
@@ -21,7 +20,6 @@ enum FestSection: String, CaseIterable, Identifiable {
         case .crew:      return "person.3.fill"
         case .photos:    return "photo.fill"
         case .pay:       return "dollarsign.circle.fill"
-        case .shirts:    return "tshirt.fill"
         }
     }
 }
@@ -51,18 +49,13 @@ struct FestOverviewView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                         HStack(spacing: 8) {
                             ForEach(FestSection.allCases) { section in
-                                // Hide Shirts outside planning phase
-                                if section == .shirts && !festSeason.isPlanning {
-                                    EmptyView()
-                                } else {
-                                    FestNavChip(
-                                        label: section.rawValue,
-                                        icon: section.icon,
-                                        isSelected: selectedSection == section
-                                    ) {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            selectedSection = section
-                                        }
+                                FestNavChip(
+                                    label: section.rawValue,
+                                    icon: section.icon,
+                                    isSelected: selectedSection == section
+                                ) {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        selectedSection = section
                                     }
                                 }
                             }
@@ -89,8 +82,6 @@ struct FestOverviewView: View {
                             FestPhotosView()
                         case .pay:
                             FestPayView()
-                        case .shirts:
-                            ShirtVoteView(season: festSeason)
                         }
                     }
                 }
