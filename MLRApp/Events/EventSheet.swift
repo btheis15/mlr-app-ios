@@ -23,8 +23,8 @@ struct EventSheet: View {
     @State private var calendarAdded = false
     @State private var calendarError: String?
 
-    // Family Fest day labels (Mon–Sat across the fest window)
-    private let festDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    // Family Fest day labels (Sun–Sat across the fest window)
+    private let festDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
     private var accent: Color {
         EventKindStyle.color(for: event.kind)

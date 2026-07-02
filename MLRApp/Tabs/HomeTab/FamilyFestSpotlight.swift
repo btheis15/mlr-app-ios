@@ -22,7 +22,7 @@ struct FamilyFestSpotlight: View {
 
     private static let festDayOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
-    /// "Mon, Jul 27" for a fest weekday name, derived from the fest start date.
+    /// "Sun, Jul 26" for a fest weekday name, derived from the fest start date.
     private func dayDateLabel(_ day: String) -> String? {
         guard let dayIdx = Self.festDayOrder.firstIndex(of: day),
               let start = WeatherService.isoFormatter.date(from: FamilyFestConfig.startDate)

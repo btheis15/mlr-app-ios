@@ -13,8 +13,8 @@ struct FestCrewView: View {
     @State private var festEvent: ResortEvent?
     @State private var showRSVP = false
 
-    // The fest runs Mon–Fri (Jul 27–31). Day pills use these in order.
-    private let festDays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"]
+    // The fest runs Sun–Sat (Jul 26–Aug 1). Day pills use these in order.
+    private let festDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
 
     var body: some View {
         Group {
@@ -101,8 +101,8 @@ private struct AttendeeCard: View {
     let festDays: [String]
 
     private let shortDay: [String: String] = [
-        "Monday": "Mon", "Tuesday": "Tue", "Wednesday": "Wed",
-        "Thursday": "Thu", "Friday": "Fri"
+        "Sunday": "Sun", "Monday": "Mon", "Tuesday": "Tue", "Wednesday": "Wed",
+        "Thursday": "Thu", "Friday": "Fri", "Saturday": "Sat"
     ]
 
     var body: some View {
