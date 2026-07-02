@@ -3,12 +3,13 @@ import Foundation
 // MARK: - Family Fest Config
 
 struct FamilyFestConfig {
-    static let startDate = "2026-07-27"
-    static let endDate   = "2026-07-31"
+    static let startDate = "2026-07-26"
+    static let endDate   = "2026-08-01"
     static let id        = "family-fest-2026"
     static let year      = 2026
 
-    // "July 27 – 31" — auto-derived so the poster card never gets stale
+    // "July 26 – August 1" — auto-derived so the poster card never gets stale,
+    // and repeats the month name when the window crosses a month boundary.
     static var dateRangeLabel: String {
         let iso = DateFormatter()
         iso.dateFormat = "yyyy-MM-dd"
@@ -18,7 +19,11 @@ struct FamilyFestConfig {
         monthFmt.dateFormat = "MMMM"
         let dayFmt = DateFormatter()
         dayFmt.dateFormat = "d"
-        return "\(monthFmt.string(from: s)) \(dayFmt.string(from: s)) – \(dayFmt.string(from: e))"
+        let startMonth = monthFmt.string(from: s)
+        let endMonth = monthFmt.string(from: e)
+        let startLabel = "\(startMonth) \(dayFmt.string(from: s))"
+        let endLabel = startMonth == endMonth ? dayFmt.string(from: e) : "\(endMonth) \(dayFmt.string(from: e))"
+        return "\(startLabel) – \(endLabel)"
     }
 }
 
@@ -139,18 +144,40 @@ extension LocalPlace {
 }
 
 // MARK: - Schedule Item Seed Data
-// Jul 27 = Monday · Jul 28 = Tuesday · Jul 29 = Wednesday · Jul 30 = Thursday · Jul 31 = Friday
+// Jul 26 = Sunday · Jul 27 = Monday · Jul 28 = Tuesday · Jul 29 = Wednesday ·
+// Jul 30 = Thursday · Jul 31 = Friday · Aug 1 = Saturday
 
 extension ScheduleItem {
-    // One headline activity per day so far. Titles are real; times, locations,
+    // The full Sunday-to-Saturday lineup. Titles are real; times, locations,
     // and details are still being set, so they read "TBD" (no placeholders).
-    // Emoji is prepended to the title (ScheduleItem has no emoji field).
+    // Emoji is prepended to the title (ScheduleItem has no emoji field). Each
+    // night's dinner is its own FestDinner entry below, not repeated here.
     static let seed: [ScheduleItem] = [
         ScheduleItem(
-            id: "games-up-top",
+            id: "setup-decorate",
+            day: "Sunday",
+            time: "TBD",
+            title: "🎨 Set Up & Decorate",
+            location: "TBD",
+            description: "Details TBD.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "ye-olde-family-faire",
             day: "Monday",
             time: "TBD",
-            title: "🏅 Games Up Top",
+            title: "🏰 “Ye Olde Family Faire” (Costumes!)",
+            location: "Up top",
+            description: "Costumes encouraged! Details TBD.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "gene-pool-concert",
+            day: "Monday",
+            time: "TBD",
+            title: "🎸 Gene Pool Concert",
             location: "TBD",
             description: "Details TBD.",
             isPrivate: false,
@@ -167,10 +194,40 @@ extension ScheduleItem {
             leads: []
         ),
         ScheduleItem(
-            id: "golf-outing",
+            id: "cookout-by-the-lake",
+            day: "Tuesday",
+            time: "TBD",
+            title: "🍔 Cook Out by the Lake",
+            location: "By the lake",
+            description: "Details TBD.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "golf-day",
             day: "Wednesday",
             time: "TBD",
-            title: "⛳ Golf Outing",
+            title: "⛳ Golf Day (Costumes Welcome)",
+            location: "TBD",
+            description: "Costumes welcome. Details TBD.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "trivia-night",
+            day: "Wednesday",
+            time: "TBD",
+            title: "🧠 Trivia Night",
+            location: "TBD",
+            description: "Details TBD.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "bags-tournament",
+            day: "Thursday",
+            time: "TBD",
+            title: "🎯 Bags Tournament",
             location: "TBD",
             description: "Details TBD.",
             isPrivate: false,
@@ -187,10 +244,40 @@ extension ScheduleItem {
             leads: ["Michelle Birkholz"]
         ),
         ScheduleItem(
-            id: "friday-tbd",
+            id: "breakfast",
             day: "Friday",
             time: "TBD",
-            title: "🗓️ TBD",
+            title: "🥞 Breakfast",
+            location: "TBD",
+            description: "Details TBD.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "family-meeting",
+            day: "Friday",
+            time: "TBD",
+            title: "🗣️ Family Meeting",
+            location: "TBD",
+            description: "Details TBD.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "karaoke",
+            day: "Friday",
+            time: "TBD",
+            title: "🎤 Karaoke",
+            location: "TBD",
+            description: "Details TBD.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "teardown-cleanup",
+            day: "Saturday",
+            time: "TBD",
+            title: "🧹 Tear Down & Clean Up",
             location: "TBD",
             description: "Details TBD.",
             isPrivate: false,
@@ -204,6 +291,26 @@ extension ScheduleItem {
             title: "🗺️ Family Fest scavenger hunt",
             location: "Pick up your card at the Main Lodge",
             description: "Track down hidden landmarks & oddities around the lake — any time, all week. Pick up a hunt card at the lodge, then find each spot around Muskellunge Lake at your own pace — solo, as a family, or as a house. Finish the list any day and turn it in at the lodge for a prize at the farewell BBQ.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "merch",
+            day: "Anytime",
+            time: "Any time",
+            title: "👕 Family Fest merch",
+            location: "TBD",
+            description: "Grab this year's Family Fest gear — any time, all week. Details TBD.",
+            isPrivate: false,
+            leads: []
+        ),
+        ScheduleItem(
+            id: "kids-activities",
+            day: "Anytime",
+            time: "Any time",
+            title: "🧒 Kid-focused activities",
+            location: "TBD",
+            description: "Games and crafts for the youngest crew — any time, all week. Details TBD.",
             isPrivate: false,
             leads: []
         ),
