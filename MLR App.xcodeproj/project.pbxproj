@@ -10,7 +10,6 @@
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
-		D33F9E5F2FEC086700603CE7 /* ShirtVoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E3C2FEC086700603CE7 /* ShirtVoteView.swift */; };
 		D33F9E602FEC086700603CE7 /* FestLiveActivityController.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFD2FEC086700603CE7 /* FestLiveActivityController.swift */; };
 		D33F9E612FEC086700603CE7 /* WelcomeIntroView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE72FEC086700603CE7 /* WelcomeIntroView.swift */; };
 		D33F9E622FEC086700603CE7 /* EventsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E162FEC086700603CE7 /* EventsService.swift */; };
@@ -76,7 +75,6 @@
 		D33F9E9E2FEC086700603CE7 /* CabinService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E142FEC086700603CE7 /* CabinService.swift */; };
 		D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E042FEC086700603CE7 /* Post.swift */; };
 		D33F9EA02FEC086700603CE7 /* AdminNotificationComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4F2FEC086700603CE7 /* AdminNotificationComposer.swift */; };
-		D33F9EA12FEC086700603CE7 /* TshirtCallout.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E482FEC086700603CE7 /* TshirtCallout.swift */; };
 		D33F9EA22FEC086700603CE7 /* NotifPrefsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E532FEC086700603CE7 /* NotifPrefsView.swift */; };
 		D33F9EA32FEC086700603CE7 /* GuardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E202FEC086700603CE7 /* GuardView.swift */; };
 		D33F9EA42FEC086700603CE7 /* HelpService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E172FEC086700603CE7 /* HelpService.swift */; };
@@ -248,7 +246,6 @@
 		D33F9E392FEC086700603CE7 /* FestScheduleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestScheduleDetailView.swift; sourceTree = "<group>"; };
 		D33F9E3A2FEC086700603CE7 /* FestScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestScheduleView.swift; sourceTree = "<group>"; };
 		D33F9E3B2FEC086700603CE7 /* FestStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestStatus.swift; sourceTree = "<group>"; };
-		D33F9E3C2FEC086700603CE7 /* ShirtVoteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShirtVoteView.swift; sourceTree = "<group>"; };
 		D33F9E3E2FEC086700603CE7 /* CommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentsView.swift; sourceTree = "<group>"; };
 		D33F9E3F2FEC086700603CE7 /* LightboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightboxView.swift; sourceTree = "<group>"; };
 		D33F9E402FEC086700603CE7 /* PostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostCard.swift; sourceTree = "<group>"; };
@@ -258,7 +255,6 @@
 		D33F9E452FEC086700603CE7 /* FamilyFestSpotlight.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyFestSpotlight.swift; sourceTree = "<group>"; };
 		D33F9E462FEC086700603CE7 /* HomeNavigationStubs.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeNavigationStubs.swift; sourceTree = "<group>"; };
 		D33F9E472FEC086700603CE7 /* HomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeView.swift; sourceTree = "<group>"; };
-		D33F9E482FEC086700603CE7 /* TshirtCallout.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TshirtCallout.swift; sourceTree = "<group>"; };
 		D33F9E492FEC086700603CE7 /* UpcomingEventCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingEventCard.swift; sourceTree = "<group>"; };
 		D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminAlertComposer.swift; sourceTree = "<group>"; };
 		D33F9E4C2FEC086700603CE7 /* AdminCabinBookings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCabinBookings.swift; sourceTree = "<group>"; };
@@ -588,7 +584,6 @@
 				D33F9E392FEC086700603CE7 /* FestScheduleDetailView.swift */,
 				D33F9E3A2FEC086700603CE7 /* FestScheduleView.swift */,
 				D33F9E3B2FEC086700603CE7 /* FestStatus.swift */,
-				D33F9E3C2FEC086700603CE7 /* ShirtVoteView.swift */,
 				D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */,
 			);
 			path = FamilyFestTab;
@@ -613,7 +608,6 @@
 				D33F9E452FEC086700603CE7 /* FamilyFestSpotlight.swift */,
 				D33F9E462FEC086700603CE7 /* HomeNavigationStubs.swift */,
 				D33F9E472FEC086700603CE7 /* HomeView.swift */,
-				D33F9E482FEC086700603CE7 /* TshirtCallout.swift */,
 				D33F9E492FEC086700603CE7 /* UpcomingEventCard.swift */,
 				D33F9ED82FF317A800603CE7 /* WorkChecklistCard.swift */,
 			);
@@ -854,7 +848,6 @@
 				D33F9F272FF84C6100603CE7 /* BrowseIntents.swift in Sources */,
 				D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */,
 				D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */,
-				D33F9E5F2FEC086700603CE7 /* ShirtVoteView.swift in Sources */,
 				D33F9E602FEC086700603CE7 /* FestLiveActivityController.swift in Sources */,
 				D33F9EEA2FF41A0A00603CE7 /* AppImagesAdminView.swift in Sources */,
 				D33F9ECA2FEC184500603CE7 /* FestActivityAttributes.swift in Sources */,
@@ -937,7 +930,6 @@
 				D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */,
 				D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */,
 				D33F9EA02FEC086700603CE7 /* AdminNotificationComposer.swift in Sources */,
-				D33F9EA12FEC086700603CE7 /* TshirtCallout.swift in Sources */,
 				D33F9EA22FEC086700603CE7 /* NotifPrefsView.swift in Sources */,
 				D33F9EA32FEC086700603CE7 /* GuardView.swift in Sources */,
 				D33F9EA42FEC086700603CE7 /* HelpService.swift in Sources */,

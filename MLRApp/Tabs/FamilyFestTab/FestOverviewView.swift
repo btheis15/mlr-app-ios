@@ -133,9 +133,6 @@ struct FestOverviewView: View {
             FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
             FestUtilityLink(label: "Dinner details", icon: "fork.knife") { FestDinnersView() }
             FestUtilityLink(label: "Dues & payments", icon: "dollarsign.circle.fill") { FestPayView() }
-            if festSeason.isPlanning {
-                FestUtilityLink(label: "T-shirt vote", icon: "tshirt.fill") { ShirtVoteView(season: festSeason) }
-            }
             FestUtilityLink(label: "Photos", icon: "photo.fill") { FestPhotosView() }
         }
     }

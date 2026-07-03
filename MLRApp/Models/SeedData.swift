@@ -266,53 +266,6 @@ extension FestDinner {
     ]
 }
 
-// MARK: - T-Shirt Vote
-
-struct TshirtVoteConfig {
-    static let formUrl = "https://forms.gle/8aVV4b7vtkpKUm7N7"
-    static let deadline = "2026-06-27"
-    static let rankedChoice = true
-    static let minVoterAge = 6
-    static let designs: [TshirtDesign] = [
-        TshirtDesign(
-            id: "olde-fantasy",
-            name: "Olde Fantasy",
-            artist: "Rick G",
-            imageName: "ff-shirt-olde-fantasy",
-            blurb: "A hand-inked treasure map of Ye Olde Family Feste — sea serpent, castle, and a compass-rose crest, in heritage navy. Front pocket mark with the full map across the back."
-        ),
-        TshirtDesign(
-            id: "swordstone",
-            name: "SwordStone",
-            artist: "Rick G",
-            imageName: "ff-shirt-swordstone",
-            blurb: "Woodcut-style sword in the stone, a hoarding dragon, and a knight riding out on the quest, under a smiling sun. Shown on maroon and forest green."
-        ),
-        TshirtDesign(
-            id: "tomahawk-quest",
-            name: "Tomahawk Quest",
-            artist: "Abbie",
-            imageName: "ff-shirt-tomahawk-quest",
-            blurb: "An ornate dragon crest up front and a detailed Muskellunge Lake quest map — with a numbered key — across the back. Inky black line art."
-        ),
-        TshirtDesign(
-            id: "toon-knight",
-            name: "ToonKnight",
-            artist: "Evan",
-            imageName: "ff-shirt-toon-knight",
-            blurb: "A friendly cartoon knight raising sword and banner in hand-lettered script — the playful, kid-favorite option. Comes in a red and a grey knight."
-        ),
-    ]
-}
-
-struct TshirtDesign: Identifiable {
-    let id: String
-    let name: String
-    let artist: String
-    let imageName: String
-    let blurb: String
-}
-
 // MARK: - Seed Events
 
 extension ResortEvent {

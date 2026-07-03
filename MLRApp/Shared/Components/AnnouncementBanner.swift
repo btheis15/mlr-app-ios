@@ -192,8 +192,8 @@ struct AnnouncementBanner_Previews: PreviewProvider {
             AnnouncementBannerRow(
                 announcement: Announcement(
                     id: "p2",
-                    title: "Family Fest starts July 27!",
-                    body: "Pack your bags — five days on the lake.",
+                    title: "Family Fest starts July 26!",
+                    body: "Pack your bags — a week on the lake.",
                     kind: .fest,
                     expiresAt: nil,
                     createdAt: nil

@@ -2,7 +2,7 @@ import SwiftUI
 
 // MARK: - HomeView
 // The main home screen. Mirrors the layout priority of app/page.tsx:
-//   logo hero → announcement banner → fest spotlight → tshirt callout →
+//   logo hero → announcement banner → fest spotlight →
 //   upcoming event → get involved → ask for help / people →
 //   around the resort → heritage footer
 
@@ -10,7 +10,6 @@ struct HomeView: View {
     @Environment(AppEnvironment.self) private var env
 
     @State private var festSeason: FestSeason = .current()
-    @State private var tshirtDismissed = false
 
     // Drive AttendanceControlStateless optimistically
     @State private var nearestEventStatus: AttendanceStatus? = nil
@@ -44,17 +43,10 @@ struct HomeView: View {
                             // AnnouncementBannerStack manages its own fetch + dismiss via env
                             AnnouncementBannerStack()
 
-                            // ── 3 & 4. Fest spotlight + T-shirt callout overlay ──
-                            // TshirtCallout sits on top (like the web app's CalloutStack):
-                            // swipe/✕ dismisses it and reveals the base spotlight below.
-                            ZStack(alignment: .top) {
-                                FamilyFestSpotlight(season: festSeason)
-                                if festSeason.isPlanning && !tshirtDismissed {
-                                    TshirtCallout(onDismiss: { tshirtDismissed = true })
-                                }
-                            }
+                            // ── 3. Fest spotlight ─────────────────────────
+                            FamilyFestSpotlight(season: festSeason)
 
-                            // ── 5. Upcoming event ─────────────────────────
+                            // ── 4. Upcoming event ─────────────────────────
                             if let event = spotlightEvent {
                                 UpcomingEventCard(
                                     event: event,
@@ -66,19 +58,19 @@ struct HomeView: View {
                                 )
                             }
 
-                            // ── 5b. Work Checklist (standalone collapsible card) ──
+                            // ── 5. Work Checklist (standalone collapsible card) ──
                             WorkChecklistCard()
 
                             // ── 6. Communication ──────────────────────────
                             communicationSection
 
-                            // ── 7. Around the Resort ─────────────────────
+                            // ── 6. Around the Resort ─────────────────────
                             aroundResortSection
 
-                            // ── 8. App & Help ────────────────────────────
+                            // ── 7. App & Help ────────────────────────────
                             appHelpSection
 
-                            // ── 9. Heritage footer ────────────────────────
+                            // ── 8. Heritage footer ────────────────────────
                             heritageFooter
                                 .padding(.bottom, 32)
                         }

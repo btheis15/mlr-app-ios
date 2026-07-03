@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - Haptics
 //
 // Light, tasteful haptic feedback for the moments that feel good: RSVP'ing,
-// reacting to a post, responding to a help request, casting a shirt vote.
+// reacting to a post, responding to a help request.
 
 enum Haptics {
     static func tap()      { UIImpactFeedbackGenerator(style: .light).impactOccurred() }
