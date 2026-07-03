@@ -101,7 +101,6 @@ struct PushToggleView: View {
                     pushToggle(for: .workItemCreated, label: "New work items",     icon: "wrench.and.screwdriver.fill")
 
                     if env.isAdmin {
-                        Divider()
                         pushToggle(for: .committeeJoinRequest, label: "Committee join requests (admin)", icon: "person.badge.clock")
                         newMemberToggle
                     }
