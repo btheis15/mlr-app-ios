@@ -35,6 +35,7 @@ enum NotifType: String, Codable, CaseIterable {
     case helpUrgent = "help_urgent"
     case workItemComment = "work_item_comment"
     case workItemMention = "work_item_mention"
+    case workItemCreated = "work_item_created"
     case broadcast
 }
 

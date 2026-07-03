@@ -161,6 +161,7 @@ struct NotificationRow: View {
         case .eventRsvp:            return "calendar.badge.checkmark"
         case .workItemComment:      return "bubble.left.fill"
         case .workItemMention:      return "at"
+        case .workItemCreated:      return "wrench.and.screwdriver.fill"
         }
     }
 
@@ -200,6 +201,7 @@ struct NotificationRow: View {
         case .eventRsvp:            return "RSVP"
         case .workItemComment:      return "Work Item"
         case .workItemMention:      return "Mention"
+        case .workItemCreated:      return "New Task"
         }
     }
 }
