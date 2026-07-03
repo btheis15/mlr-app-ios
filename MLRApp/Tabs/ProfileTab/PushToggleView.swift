@@ -12,6 +12,7 @@ struct PushToggleView: View {
     @State private var permissionStatus: UNAuthorizationStatus = .notDetermined
     @State private var masterEnabled: Bool = false
     @State private var enabledTypes: Set<PushType> = []
+    @State private var notifyNewMembers: Bool = true
     @State private var isRequesting = false
     @State private var isSaving = false
     @State private var saved = false
@@ -102,6 +103,7 @@ struct PushToggleView: View {
                     if env.isAdmin {
                         Divider()
                         pushToggle(for: .committeeJoinRequest, label: "Committee join requests (admin)", icon: "person.badge.clock")
+                        newMemberToggle
                     }
                 }
             }
@@ -146,6 +148,33 @@ struct PushToggleView: View {
                     .font(.mlrScaled(15))
             } icon: {
                 Image(systemName: icon)
+                    .foregroundStyle(Color.mlrPrimary)
+            }
+        }
+        .tint(Color.mlrPrimary)
+        .disabled(isSaving)
+    }
+
+    // Admin-only, independent of push_types (mirrors PushToggle.tsx's "🆕 New
+    // member joins" checkbox) — bound directly to profiles.notify_new_members.
+    private var newMemberToggle: some View {
+        Toggle(isOn: Binding(
+            get: { notifyNewMembers },
+            set: { enabled in
+                notifyNewMembers = enabled
+                Task { await saveNotifyNewMembers() }
+            }
+        )) {
+            Label {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("New member joins")
+                        .font(.mlrScaled(15))
+                    Text("Admins only: get a push when someone new joins")
+                        .font(.caption)
+                        .foregroundStyle(Color.mlrTextMuted)
+                }
+            } icon: {
+                Image(systemName: "person.badge.plus.fill")
                     .foregroundStyle(Color.mlrPrimary)
             }
         }
@@ -274,6 +303,20 @@ struct PushToggleView: View {
         guard let p = profile else { return }
         masterEnabled = (p.pushLevel != nil && p.pushLevel != "off")
         enabledTypes = Set(p.pushTypes)
+        notifyNewMembers = p.notifyNewMembers
+    }
+
+    @MainActor
+    private func saveNotifyNewMembers() async {
+        guard let userId = profile?.id else { return }
+        isSaving = true
+        defer { isSaving = false }
+        try? await supabase
+            .from("profiles")
+            .update(["notify_new_members": notifyNewMembers])
+            .eq("id", value: userId.uuidString)
+            .execute()
+        await env.loadProfile()
     }
 
     private func refreshPermissionStatus() async {
