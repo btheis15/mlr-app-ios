@@ -64,6 +64,7 @@ struct NotifPrefsView: View {
 
             // Work Checklist
             Section("Work Checklist") {
+                toggle(for: .workItemCreated, label: "New work items",        icon: "wrench.and.screwdriver.fill")
                 toggle(for: .workItemComment, label: "Comments on work items", icon: "bubble.left.fill")
                 toggle(for: .workItemMention, label: "Work item @mentions",    icon: "at")
             }
