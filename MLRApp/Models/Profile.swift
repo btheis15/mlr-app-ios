@@ -15,6 +15,7 @@ enum PushType: String, Codable, CaseIterable {
     case eventRsvp = "event_rsvp"
     case helpRequest = "help_request"
     case helpResponse = "help_response"
+    case workItemCreated = "work_item_created"
 }
 
 enum NotifType: String, Codable, CaseIterable {

@@ -94,6 +94,7 @@ struct PushToggleView: View {
                     pushToggle(for: .committeeJoin, label: "Committee joins",      icon: "person.badge.plus")
                     pushToggle(for: .helpRequest,  label: "Help requests",         icon: "hand.raised.fill")
                     pushToggle(for: .helpResponse, label: "Help responses",        icon: "figure.walk")
+                    pushToggle(for: .workItemCreated, label: "New work items",     icon: "wrench.and.screwdriver.fill")
 
                     if env.isAdmin {
                         Divider()
