@@ -66,6 +66,9 @@ struct HomeView: View {
                                 )
                             }
 
+                            // ── 5b. Work Checklist (standalone collapsible card) ──
+                            WorkChecklistCard()
+
                             // ── 6. Communication ──────────────────────────
                             communicationSection
 
@@ -173,7 +176,7 @@ struct HomeView: View {
         CollapsibleHomeSection(
             title: "Around the Resort",
             emoji: "🧭",
-            subtitle: "Events · Cabin Stay · Local Places · Work Checklist"
+            subtitle: "Events · Cabin Stay · Local Places"
         ) {
             NavigationLink(destination: EventsView()) {
                 HomeTile(
@@ -206,9 +209,6 @@ struct HomeView: View {
                 .frame(maxWidth: .infinity)
             }
             .fixedSize(horizontal: false, vertical: true)
-
-            // The interactive work checklist card.
-            WorkChecklistCard()
         }
     }
 
