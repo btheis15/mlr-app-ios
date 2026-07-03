@@ -11,6 +11,7 @@ struct CommitteesView: View {
     @State private var pendingRequestIds: Set<UUID> = []
     @State private var joiningIds: Set<UUID> = []
     @State private var actionError: String?
+    @State private var joinSheetCommittee: Committee?
 
     private var committees: [Committee] { env.committeeService.committees }
     private var myMemberships: [CommitteeMember] { env.committeeService.myMemberships }
@@ -51,6 +52,11 @@ struct CommitteesView: View {
                 Button("OK") { actionError = nil }
             } message: {
                 Text(actionError ?? "")
+            }
+            .sheet(item: $joinSheetCommittee) { committee in
+                CommitteeJoinSheet(committee: committee) {
+                    pendingRequestIds.insert(committee.id)
+                }
             }
             .task {
                 guard !hasLoaded else { return }
@@ -98,7 +104,10 @@ struct CommitteesView: View {
                         isMember: isMember,
                         isPending: pendingRequestIds.contains(committee.id),
                         isJoining: joiningIds.contains(committee.id),
-                        onJoin: { Task { await join(committee) } }
+                        onJoin: {
+                            guard env.isSignedIn else { env.authService.promptSignIn(); return }
+                            joinSheetCommittee = committee
+                        }
                     )
                 }
             }
@@ -117,31 +126,8 @@ struct CommitteesView: View {
     }
 
     private func errorState(_ message: String) -> some View {
-        ContentUnavailableView {
-            Label("Couldn't load committees", systemImage: "exclamationmark.triangle")
-        } description: {
-            Text(message)
-        } actions: {
-            Button("Try Again") {
-                Task { await env.committeeService.fetchCommittees() }
-            }
-            .buttonStyle(.borderedProminent)
-            .tint(Color.mlrPrimary)
-        }
-    }
-
-    // MARK: - Join
-
-    private func join(_ committee: Committee) async {
-        guard env.isSignedIn else { env.authService.promptSignIn(); return }
-        joiningIds.insert(committee.id)
-        defer { joiningIds.remove(committee.id) }
-        do {
-            try await env.committeeService.requestJoin(committeeId: committee.id, note: nil)
-            pendingRequestIds.insert(committee.id)
-        } catch {
-            actionError = "Couldn't send your request. Try again."
-            print("[Committees] join error: \(error)")
+        ErrorStateView(title: "Couldn't load committees", message: message) {
+            Task { await env.committeeService.fetchCommittees() }
         }
     }
 }
@@ -161,7 +147,7 @@ private struct CommitteeRowCard: View {
         } label: {
             HStack(spacing: 14) {
                 Text(committee.emoji ?? "📋")
-                    .font(.system(size: 30))
+                    .font(.mlrScaled(30))
                     .frame(width: 48, height: 48)
                     .background(Color.mlrPrimaryLight)
                     .clipShape(RoundedRectangle(cornerRadius: 12))
@@ -169,17 +155,17 @@ private struct CommitteeRowCard: View {
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(committee.name)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.mlrScaled(16, weight: .semibold))
                             .foregroundStyle(Color.mlrText)
                         if committee.isPrivate == true {
                             Image(systemName: "lock.fill")
-                                .font(.system(size: 10))
+                                .font(.mlrScaled(10))
                                 .foregroundStyle(Color.mlrTextMuted)
                         }
                     }
                     if let desc = committee.description, !desc.isEmpty {
                         Text(desc)
-                            .font(.system(size: 13))
+                            .font(.mlrScaled(13))
                             .foregroundStyle(Color.mlrTextMuted)
                             .lineLimit(2)
                             .multilineTextAlignment(.leading)
@@ -202,11 +188,11 @@ private struct CommitteeRowCard: View {
     private var trailing: some View {
         if isMember {
             Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.mlrScaled(13, weight: .semibold))
                 .foregroundStyle(Color.mlrTextSubtle)
         } else if isPending {
             Text("Pending")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.mlrScaled(12, weight: .semibold))
                 .foregroundStyle(Color.mlrWarning)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
@@ -219,7 +205,7 @@ private struct CommitteeRowCard: View {
                         .frame(width: 54)
                 } else {
                     Text("Join")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.mlrScaled(13, weight: .semibold))
                         .foregroundStyle(.white)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 7)
@@ -229,6 +215,118 @@ private struct CommitteeRowCard: View {
             }
             .buttonStyle(.plain)
             .disabled(isJoining)
+        }
+    }
+}
+
+// MARK: - Committee Join Sheet
+// Requesting to join. For role-based committees (areas derived from the roster,
+// e.g. Family Fest) the requester can pick the area(s) they'd like to help with;
+// those are applied when an admin/lead approves. Committees with no roles just
+// show a plain request button.
+
+struct CommitteeJoinSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+
+    let committee: Committee
+    let onRequested: () -> Void
+
+    @State private var areaOptions: [String] = []
+    @State private var selected: Set<String> = []
+    @State private var note: String = ""
+    @State private var isLoading = true
+    @State private var isSubmitting = false
+    @State private var error: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section {
+                    Text("Request to join \(committee.name). A committee lead or admin will review it.")
+                        .font(.mlrCaption)
+                        .foregroundStyle(Color.mlrTextMuted)
+                }
+
+                if isLoading {
+                    HStack { Spacer(); ProgressView(); Spacer() }
+                } else if !areaOptions.isEmpty {
+                    Section("Which areas do you want to help with? (optional)") {
+                        ForEach(areaOptions, id: \.self) { area in
+                            Button {
+                                if selected.contains(area) { selected.remove(area) }
+                                else { selected.insert(area) }
+                            } label: {
+                                HStack {
+                                    Text(area).foregroundStyle(Color.mlrText)
+                                    Spacer()
+                                    if selected.contains(area) {
+                                        Image(systemName: "checkmark")
+                                            .font(.mlrScaled(14, weight: .semibold))
+                                            .foregroundStyle(Color.mlrPrimary)
+                                    }
+                                }
+                                .contentShape(Rectangle())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
+                }
+
+                Section("Add a note (optional)") {
+                    TextField("Anything the leads should know?", text: $note, axis: .vertical)
+                        .lineLimit(1...4)
+                }
+
+                if let error {
+                    Text(error).font(.mlrCaption).foregroundStyle(Color.mlrDanger)
+                }
+            }
+            .navigationTitle("Join \(committee.name)")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Request") { Task { await submit() } }
+                        .disabled(isSubmitting)
+                }
+            }
+            .task { await loadAreas() }
+        }
+    }
+
+    private func loadAreas() async {
+        isLoading = true
+        let roster = (try? await env.committeeService.fetchRoster(slug: committee.slug)) ?? []
+        // Areas = the committee's roles with the " · Lead" suffix stripped, deduped
+        // in first-seen order (mirrors the web join UI).
+        var seen = Set<String>()
+        var ordered: [String] = []
+        for role in roster.flatMap(\.roles) {
+            let area = role.hasSuffix(" · Lead") ? String(role.dropLast(" · Lead".count)) : role
+            if !area.isEmpty && !seen.contains(area) { seen.insert(area); ordered.append(area) }
+        }
+        areaOptions = ordered
+        isLoading = false
+    }
+
+    private func submit() async {
+        isSubmitting = true
+        defer { isSubmitting = false }
+        do {
+            let trimmed = note.trimmingCharacters(in: .whitespacesAndNewlines)
+            try await env.committeeService.requestJoin(
+                committeeId: committee.id,
+                note: trimmed.isEmpty ? nil : trimmed,
+                requestedAreas: Array(selected)
+            )
+            onRequested()
+            dismiss()
+        } catch {
+            self.error = "Couldn't send your request. Try again."
+            print("[CommitteeJoinSheet] request error: \(error)")
         }
     }
 }

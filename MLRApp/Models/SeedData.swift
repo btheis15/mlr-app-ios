@@ -1,32 +1,14 @@
 import Foundation
 
-// MARK: - Family Fest Config
-
-struct FamilyFestConfig {
-    static let startDate = "2026-07-27"
-    static let endDate   = "2026-07-31"
-    static let id        = "family-fest-2026"
-    static let year      = 2026
-
-    // "July 27 – 31" — auto-derived so the poster card never gets stale
-    static var dateRangeLabel: String {
-        let iso = DateFormatter()
-        iso.dateFormat = "yyyy-MM-dd"
-        guard let s = iso.date(from: startDate),
-              let e = iso.date(from: endDate) else { return "\(startDate) – \(endDate)" }
-        let monthFmt = DateFormatter()
-        monthFmt.dateFormat = "MMMM"
-        let dayFmt = DateFormatter()
-        dayFmt.dateFormat = "d"
-        return "\(monthFmt.string(from: s)) \(dayFmt.string(from: s)) – \(dayFmt.string(from: e))"
-    }
-}
+// FamilyFestConfig moved to Shared/Utilities/FestSeason.swift (shared with the
+// widget target without pulling in the model layer).
 
 // MARK: - Schedule Item
 
 struct ScheduleItem: Identifiable {
     let id: String
-    let day: String
+    let day: String            // weekday name ("Monday"…) or "Anytime"
+    let isoDate: String?       // yyyy-MM-dd for real ordering + weather; nil for Anytime/seed
     let time: String
     let title: String
     let location: String?
@@ -46,6 +28,14 @@ struct FestDinner: Identifiable {
     let location: String?
     let time: String
     let crew: [String]
+
+    /// The menu split into individual lines (blank lines dropped) — shared by the
+    /// dinner detail view and the inline expandable dinner row.
+    var menuLines: [String] {
+        menu.split(separator: "\n")
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .filter { !$0.isEmpty }
+    }
 }
 
 // MARK: - Local Place
@@ -149,6 +139,7 @@ extension ScheduleItem {
         ScheduleItem(
             id: "games-up-top",
             day: "Monday",
+            isoDate: "2026-07-27",
             time: "TBD",
             title: "🏅 Games Up Top",
             location: "TBD",
@@ -159,6 +150,7 @@ extension ScheduleItem {
         ScheduleItem(
             id: "lake-day",
             day: "Tuesday",
+            isoDate: "2026-07-28",
             time: "TBD",
             title: "🏖️ Lake Day",
             location: "TBD",
@@ -169,6 +161,7 @@ extension ScheduleItem {
         ScheduleItem(
             id: "golf-outing",
             day: "Wednesday",
+            isoDate: "2026-07-29",
             time: "TBD",
             title: "⛳ Golf Outing",
             location: "TBD",
@@ -179,6 +172,7 @@ extension ScheduleItem {
         ScheduleItem(
             id: "variety-show",
             day: "Thursday",
+            isoDate: "2026-07-30",
             time: "TBD",
             title: "🎭 Variety Show",
             location: "TBD",
@@ -189,6 +183,7 @@ extension ScheduleItem {
         ScheduleItem(
             id: "friday-tbd",
             day: "Friday",
+            isoDate: "2026-07-31",
             time: "TBD",
             title: "🗓️ TBD",
             location: "TBD",
@@ -200,6 +195,7 @@ extension ScheduleItem {
         ScheduleItem(
             id: "scavenger-hunt",
             day: "Anytime",
+            isoDate: nil,
             time: "Any time",
             title: "🗺️ Family Fest scavenger hunt",
             location: "Pick up your card at the Main Lodge",

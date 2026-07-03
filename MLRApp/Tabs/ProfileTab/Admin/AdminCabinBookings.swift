@@ -88,7 +88,7 @@ struct AdminCabinBookings: View {
                 .fill(statusColor(status))
                 .frame(width: 7, height: 7)
             Text(status.label)
-                .font(.system(size: 12, weight: .semibold))
+                .font(.mlrScaled(12, weight: .semibold))
                 .foregroundStyle(statusColor(status))
                 .textCase(nil)
         }
@@ -100,7 +100,7 @@ struct AdminCabinBookings: View {
         Section {
             VStack(spacing: 16) {
                 Image(systemName: "house.lodge")
-                    .font(.system(size: 44, weight: .light))
+                    .font(.mlrScaled(44, weight: .light))
                     .foregroundStyle(Color.mlrTextSubtle)
                 Text("No booking requests")
                     .font(.headline)
@@ -238,10 +238,10 @@ private struct BookingRow: View {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(booking.requesterName ?? "Member")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.mlrScaled(15, weight: .semibold))
                     if let cabin {
                         Text(cabin.name)
-                            .font(.system(size: 13))
+                            .font(.mlrScaled(13))
                             .foregroundStyle(Color.mlrTextMuted)
                     }
                     Text(dateRange)
@@ -287,7 +287,7 @@ private struct BookingRow: View {
                 if isExpanded {
                     VStack(alignment: .leading, spacing: 8) {
                         TextField("Admin note (optional)", text: $adminNote)
-                            .font(.system(size: 13))
+                            .font(.mlrScaled(13))
                             .padding(8)
                             .background(Color.mlrCard)
                             .clipShape(RoundedRectangle(cornerRadius: 6))
@@ -298,7 +298,7 @@ private struct BookingRow: View {
                                 isExpanded = false
                             } label: {
                                 Label("Approve", systemImage: "checkmark.circle.fill")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.mlrScaled(13, weight: .semibold))
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity, minHeight: 36)
                                     .background(Color.mlrSuccess)
@@ -310,7 +310,7 @@ private struct BookingRow: View {
                                 isExpanded = false
                             } label: {
                                 Label("Deny", systemImage: "xmark.circle.fill")
-                                    .font(.system(size: 13, weight: .semibold))
+                                    .font(.mlrScaled(13, weight: .semibold))
                                     .foregroundStyle(.white)
                                     .frame(maxWidth: .infinity, minHeight: 36)
                                     .background(Color.mlrDanger)
@@ -327,7 +327,7 @@ private struct BookingRow: View {
                         isExpanded = true
                     } label: {
                         Text("Review request")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.mlrScaled(13, weight: .semibold))
                             .foregroundStyle(Color.mlrPrimary)
                             .frame(maxWidth: .infinity, minHeight: 32)
                             .overlay(

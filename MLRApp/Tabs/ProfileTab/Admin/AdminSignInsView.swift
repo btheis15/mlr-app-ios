@@ -115,7 +115,7 @@ struct AdminSignInsView: View {
         Section {
             VStack(spacing: 16) {
                 Image(systemName: "clock.arrow.circlepath")
-                    .font(.system(size: 44, weight: .light))
+                    .font(.mlrScaled(44, weight: .light))
                     .foregroundStyle(Color.mlrTextSubtle)
                 Text("No sign-ins yet")
                     .font(.headline)
@@ -192,13 +192,13 @@ private struct SignInEntryRow: View {
                 .frame(width: 36, height: 36)
                 .overlay {
                     Text(entry.email.prefix(1).uppercased())
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(Color.mlrPrimary)
                 }
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(entry.email)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                     .lineLimit(1)
                     .truncationMode(.middle)
@@ -212,7 +212,7 @@ private struct SignInEntryRow: View {
                 if let ip = entry.ipAddress, !ip.isEmpty {
                     HStack(spacing: 4) {
                         Image(systemName: "network")
-                            .font(.system(size: 10))
+                            .font(.mlrScaled(10))
                         if let geo = row.geo {
                             Text("\(ip) · \(geo.display)")
                         } else {

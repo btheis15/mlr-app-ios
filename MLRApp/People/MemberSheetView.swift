@@ -76,10 +76,10 @@ struct MemberSheetView: View {
             VStack(spacing: 6) {
                 HStack(spacing: 8) {
                     PrivateName(profile: member,
-                                font: .system(size: 24, weight: .bold))
+                                font: .mlrScaled(24, weight: .bold))
                     if member.isAdmin {
                         Label("Admin", systemImage: "checkmark.seal.fill")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.mlrScaled(12, weight: .semibold))
                             .foregroundStyle(Color.mlrPrimary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
@@ -230,7 +230,7 @@ struct MemberSheetView: View {
                         } label: {
                             Label(birthdayAdded ? "Added to Calendar ✓" : "Add birthday to Calendar",
                                   systemImage: birthdayAdded ? "checkmark.circle.fill" : "calendar.badge.plus")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.mlrScaled(13, weight: .semibold))
                                 .foregroundStyle(birthdayAdded ? Color.mlrSuccess : Color.mlrPrimary)
                         }
                         .buttonStyle(.plain)
@@ -267,17 +267,17 @@ struct MemberSheetView: View {
                                  showsChevron: Bool, preferred: Bool = false) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 16))
+                .font(.mlrScaled(16))
                 .foregroundStyle(Color.mlrPrimary)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
                     Text(label)
-                        .font(.system(size: 12))
+                        .font(.mlrScaled(12))
                         .foregroundStyle(Color.mlrTextMuted)
                     if preferred {
                         Text("Preferred")
-                            .font(.system(size: 10, weight: .bold))
+                            .font(.mlrScaled(10, weight: .bold))
                             .foregroundStyle(Color.mlrPrimary)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
@@ -286,13 +286,13 @@ struct MemberSheetView: View {
                     }
                 }
                 Text(value)
-                    .font(.system(size: 15, weight: .medium))
+                    .font(.mlrScaled(15, weight: .medium))
                     .foregroundStyle(Color.mlrText)
             }
             Spacer()
             if showsChevron {
                 Image(systemName: "arrow.up.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.mlrScaled(12, weight: .semibold))
                     .foregroundStyle(Color.mlrTextSubtle)
             }
         }
@@ -348,7 +348,7 @@ private struct EditProfilePlaceholder: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "person.text.rectangle")
-                .font(.system(size: 36))
+                .font(.mlrScaled(36))
                 .foregroundStyle(Color.mlrPrimary)
             Text("Edit your profile from the Profile tab.")
                 .font(.mlrBody)

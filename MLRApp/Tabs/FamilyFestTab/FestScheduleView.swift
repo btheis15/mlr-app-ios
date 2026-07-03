@@ -100,7 +100,7 @@ private struct DayHeader: View {
     var body: some View {
         HStack {
             Text(day.uppercased())
-                .font(.system(size: 11, weight: .semibold))
+                .font(.mlrScaled(11, weight: .semibold))
                 .foregroundStyle(Color.mlrFest.opacity(0.65))
                 .tracking(1.2)
             Spacer()
@@ -126,7 +126,7 @@ private struct ScheduleRow: View {
         HStack(alignment: .top, spacing: 14) {
             // Time column
             Text(item.time)
-                .font(.system(size: 12, weight: .medium, design: .monospaced))
+                .font(.mlrScaled(12, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.mlrFest.opacity(0.6))
                 .frame(width: 62, alignment: .leading)
                 .padding(.top, 1)
@@ -141,11 +141,11 @@ private struct ScheduleRow: View {
                 if let location = item.location {
                     if isSignedIn {
                         Label(location, systemImage: "mappin.and.ellipse")
-                            .font(.system(size: 12))
+                            .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrFest.opacity(0.6))
                     } else {
                         Label("Sign in to see location", systemImage: "lock.fill")
-                            .font(.system(size: 12))
+                            .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrFest.opacity(0.4))
                     }
                 }
@@ -154,7 +154,7 @@ private struct ScheduleRow: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.mlrScaled(12, weight: .semibold))
                 .foregroundStyle(Color.mlrFest.opacity(0.3))
                 .padding(.top, 2)
         }

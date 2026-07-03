@@ -38,5 +38,69 @@ struct MLRAppShortcuts: AppShortcutsProvider {
             shortTitle: "Ask for Help",
             systemImageName: "hand.raised"
         )
+        AppShortcut(
+            intent: AddWorkItemIntent(),
+            phrases: [
+                "Add a work item in \(.applicationName)",
+                "Add a task in \(.applicationName)",
+                "Add a work item to \(.applicationName)"
+            ],
+            shortTitle: "Add Work Item",
+            systemImageName: "checklist"
+        )
+        AppShortcut(
+            intent: OpenAddWorkItemIntent(),
+            phrases: [
+                "Open the work item form in \(.applicationName)",
+                "New work item form in \(.applicationName)"
+            ],
+            shortTitle: "Work Item Form",
+            systemImageName: "square.and.pencil"
+        )
+        AppShortcut(
+            intent: ShowWorkItemsIntent(),
+            phrases: [
+                "Show my work items in \(.applicationName)",
+                "What's on the work checklist in \(.applicationName)"
+            ],
+            shortTitle: "Work Items",
+            systemImageName: "checklist"
+        )
+        AppShortcut(
+            intent: ShowUpcomingEventsIntent(),
+            phrases: [
+                "Show upcoming events in \(.applicationName)",
+                "What's coming up at the resort in \(.applicationName)"
+            ],
+            shortTitle: "Upcoming Events",
+            systemImageName: "calendar"
+        )
+        AppShortcut(
+            intent: WhosGoingIntent(),
+            phrases: [
+                "Who's going in \(.applicationName)",
+                "Who's coming to the event in \(.applicationName)"
+            ],
+            shortTitle: "Who's Going",
+            systemImageName: "person.2"
+        )
+        AppShortcut(
+            intent: OpenCommitteeChatIntent(),
+            phrases: [
+                "Open a committee chat in \(.applicationName)",
+                "Message a committee in \(.applicationName)"
+            ],
+            shortTitle: "Committee Chat",
+            systemImageName: "bubble.left.and.bubble.right"
+        )
+        AppShortcut(
+            intent: OpenHouseChatIntent(),
+            phrases: [
+                "Open my house chat in \(.applicationName)",
+                "Message my house in \(.applicationName)"
+            ],
+            shortTitle: "House Chat",
+            systemImageName: "house"
+        )
     }
 }

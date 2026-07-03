@@ -117,7 +117,7 @@ struct CommitteeEmailComposer: View {
                             } label: {
                                 HStack {
                                     Text(area)
-                                        .font(.system(size: 14, weight: .medium))
+                                        .font(.mlrScaled(14, weight: .medium))
                                         .foregroundStyle(selectedArea == area ? Color.mlrPrimary : Color.mlrText)
                                     Spacer()
                                     Text("\(selectedArea == area ? "✓ " : "")\(count) \(count == 1 ? "person" : "people")")
@@ -146,7 +146,7 @@ struct CommitteeEmailComposer: View {
                                     Image(systemName: selectedIds.contains(r.id) ? "checkmark.square.fill" : "square")
                                         .foregroundStyle(selectedIds.contains(r.id) ? Color.mlrPrimary : Color.mlrTextSubtle)
                                     VStack(alignment: .leading, spacing: 1) {
-                                        Text(r.name).font(.system(size: 14, weight: .medium)).foregroundStyle(Color.mlrText)
+                                        Text(r.name).font(.mlrScaled(14, weight: .medium)).foregroundStyle(Color.mlrText)
                                         Text(r.email).font(.caption).foregroundStyle(Color.mlrTextMuted)
                                     }
                                     Spacer()
@@ -182,7 +182,7 @@ struct CommitteeEmailComposer: View {
                     copyAddresses()
                 } label: {
                     Text(copied ? "Copied ✓" : "Copy addresses")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(Color.mlrPrimary)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)

@@ -120,12 +120,12 @@ struct CabinRequestSheet: View {
                     HStack {
                         if nightCount > 0 {
                             Text("\(nightCount) night\(nightCount == 1 ? "" : "s")")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.mlrScaled(13, weight: .medium))
                                 .foregroundStyle(Color.mlrPrimary)
                         }
                         Spacer()
                         Button("All Family Fest days") { pickFamilyFestDates() }
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.mlrScaled(13, weight: .semibold))
                             .foregroundStyle(Color.mlrFest)
                     }
                     if let available = selectedAvailable {
@@ -187,10 +187,10 @@ struct CabinRequestSheet: View {
         VStack(spacing: 18) {
             Spacer()
             Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 56))
+                .font(.mlrScaled(56))
                 .foregroundStyle(Color.mlrSuccess)
             Text("Request sent!")
-                .font(.system(size: 22, weight: .bold))
+                .font(.mlrScaled(22, weight: .bold))
                 .foregroundStyle(Color.mlrText)
             Text("An admin will review your stay and you'll get a notification when it's approved.")
                 .font(.mlrBody)
@@ -299,14 +299,14 @@ private struct CabinPickCard: View {
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(cabin.name)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.mlrScaled(15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
                     Text("\(cabin.roomCount) rooms · sleeps \(cabin.maxGuests ?? 12)")
-                        .font(.system(size: 12))
+                        .font(.mlrScaled(12))
                         .foregroundStyle(Color.mlrTextMuted)
                     if let available {
                         Text(available > 0 ? "\(available) left" : "Full")
-                            .font(.system(size: 11, weight: .semibold))
+                            .font(.mlrScaled(11, weight: .semibold))
                             .foregroundStyle(available > 0 ? Color.mlrSuccess : Color.mlrDanger)
                     }
                 }
@@ -327,7 +327,7 @@ private struct CabinPickCard: View {
         Color.mlrPrimaryLight
             .overlay(
                 Image(systemName: "house.fill")
-                    .font(.system(size: 30))
+                    .font(.mlrScaled(30))
                     .foregroundStyle(Color.mlrPrimary)
             )
     }

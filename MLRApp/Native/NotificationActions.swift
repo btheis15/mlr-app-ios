@@ -20,6 +20,7 @@ enum NotifCategory: String {
     case chatMention   = "CHAT_MENTION"
     case birthday      = "BIRTHDAY"
     case workFollowup  = "WORK_FOLLOWUP"
+    case committeeJoinRequest = "COMMITTEE_JOIN_REQUEST"
 }
 
 enum NotifAction: String {
@@ -31,6 +32,8 @@ enum NotifAction: String {
     case birthdayGift = "BIRTHDAY_GIFT"
     case workDone     = "WORK_DONE"
     case workNotYet   = "WORK_NOT_YET"
+    case approveJoin  = "APPROVE_JOIN"
+    case declineJoin  = "DECLINE_JOIN"
 }
 
 extension UNUserNotificationCenter {
@@ -74,7 +77,17 @@ extension UNUserNotificationCenter {
             identifier: NotifCategory.workFollowup.rawValue,
             actions: [workDone, workNotYet], intentIdentifiers: [], options: [])
 
-        setNotificationCategories([eventReminder, helpRequest, chatMention, birthday, workFollowup])
+        // Approve acts in place (one tap from the lock screen); Decline opens the
+        // app to the request so a mis-tap can't silently reject someone.
+        let approveJoin = UNNotificationAction(identifier: NotifAction.approveJoin.rawValue,
+                                               title: "✅ Approve", options: [])
+        let declineJoin = UNNotificationAction(identifier: NotifAction.declineJoin.rawValue,
+                                               title: "Decline", options: [.foreground])
+        let committeeJoin = UNNotificationCategory(
+            identifier: NotifCategory.committeeJoinRequest.rawValue,
+            actions: [approveJoin, declineJoin], intentIdentifiers: [], options: [])
+
+        setNotificationCategories([eventReminder, helpRequest, chatMention, birthday, workFollowup, committeeJoin])
     }
 }
 
@@ -128,6 +141,21 @@ enum NotificationActionHandler {
                 BirthdayActionQueue.shared.pending = .init(
                     memberId: memberId, gift: action == .birthdayGift)
             }
+        case .approveJoin:
+            // One-tap approve — applies the requester's chosen areas server-side.
+            if let requestId = userInfo["request_id"] as? String,
+               let uuid = UUID(uuidString: requestId) {
+                try? await AppEnvironment.activeCommitteeService?.approveJoin(requestId: uuid)
+            }
+        case .declineJoin:
+            // Foreground — open the app to the committee so the admin reviews first.
+            NotificationCenter.default.post(
+                name: .notificationTapped, object: nil,
+                userInfo: [
+                    "target_type": "committee_join_request",
+                    "target_id": (userInfo["request_id"] as? String) ?? "",
+                    "committee_id": (userInfo["committee_id"] as? String) ?? ""
+                ])
         }
     }
 }

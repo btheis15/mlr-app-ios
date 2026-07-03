@@ -1,4 +1,5 @@
 import SwiftUI
+import FoundationModels
 
 // MARK: - CommitteeChatView
 // Realtime committee chat. Own messages right (green), others left (gray).
@@ -12,22 +13,35 @@ struct CommitteeChatView: View {
 
     let committee: Committee
     let members: [CommitteeMember]
+    /// The role channel; nil = the committee's General channel.
+    var area: String? = nil
+    /// Display title for this channel (e.g. "Meals", "General"); defaults to the committee name.
+    var channelTitle: String? = nil
+    /// Set true when opened from a place that already knows membership (the Feed
+    /// conversation list / committee detail), so we don't gate on myMemberships.
+    var assumeMember: Bool = false
 
+    @State private var isMuted = false
+    @State private var showMembers = false
+    @State private var channelMembers: [CommitteeRosterEntry] = []
     @State private var messages: [CommitteeChatMessage] = []
     @State private var draft = ""
     @State private var isLoading = true
     @State private var loadError: String?
     @State private var sending = false
     @State private var editingMessage: CommitteeChatMessage?
-    @State private var showMentions = false
     @State private var subscribed = false
+    @State private var summary: String?
+    @State private var summarizing = false
+    @State private var showSummary = false
 
     private var rosterProfiles: [Profile] {
         members.compactMap(\.profile)
     }
 
     private var isMember: Bool {
-        env.committeeService.myMemberships.contains { $0.committeeId == committee.id }
+        assumeMember || env.isAdmin
+            || env.committeeService.myMemberships.contains { $0.committeeId == committee.id }
     }
 
     var body: some View {
@@ -40,11 +54,129 @@ struct CommitteeChatView: View {
                 chatScaffold
             }
         }
-        .navigationTitle(committee.name)
+        .navigationTitle(channelTitle ?? committee.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if isMember {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        Button {
+                            Task { await loadMembers() }
+                            showMembers = true
+                        } label: {
+                            Label("See members", systemImage: "person.2.fill")
+                        }
+                        Button {
+                            Task { await toggleMute() }
+                        } label: {
+                            Label(isMuted ? "Unmute" : "Mute", systemImage: isMuted ? "bell" : "bell.slash")
+                        }
+                        if ChatSummarizer.isAvailable && messages.count >= 3 {
+                            Button { Task { await catchUp() } } label: {
+                                Label("Catch me up", systemImage: "sparkles")
+                            }
+                            .disabled(summarizing)
+                        }
+                    } label: {
+                        Image(systemName: isMuted ? "bell.slash.fill" : "ellipsis.circle")
+                    }
+                }
+            }
+        }
+        .sheet(isPresented: $showSummary) { summarySheet }
+        .sheet(isPresented: $showMembers) { membersSheet }
         .task { await initialLoad() }
         .onDisappear {
-            env.committeeService.unsubscribeFromMessages(committeeId: committee.id)
+            env.committeeService.unsubscribeFromMessages(committeeId: committee.id, area: area)
+        }
+    }
+
+    private func toggleMute() async {
+        isMuted.toggle()
+        await env.committeeService.setAreaMute(committeeId: committee.id, area: area, muted: isMuted)
+        Haptics.tap()
+    }
+
+    // MARK: - Catch me up (on-device summary)
+
+    private var summarySheet: some View {
+        NavigationStack {
+            ScrollView {
+                Text(summary ?? "Nothing to summarize yet.")
+                    .font(.mlrBody)
+                    .foregroundStyle(Color.mlrText)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(20)
+            }
+            .navigationTitle("Catch me up")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showSummary = false }
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+
+    private func catchUp() async {
+        summarizing = true
+        defer { summarizing = false }
+        summary = await ChatSummarizer.summarize(committee: committee.name, messages: messages)
+        showSummary = summary != nil
+    }
+
+    // MARK: - Members ("who's in this chat")
+
+    private var membersSheet: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(channelMembers) { entry in
+                        HStack(spacing: 12) {
+                            AvatarView(url: entry.isLinked ? entry.profile?.avatarUrl : nil, size: .small)
+                            Text(entry.displayName)
+                                .font(.mlrScaled(15, weight: .medium))
+                                .foregroundStyle(Color.mlrText)
+                            Spacer()
+                            if entry.isLead {
+                                Text("Lead")
+                                    .font(.mlrScaled(11, weight: .bold))
+                                    .foregroundStyle(Color.mlrPrimary)
+                                    .padding(.horizontal, 8).padding(.vertical, 3)
+                                    .background(Color.mlrPrimaryLight)
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                    if channelMembers.isEmpty {
+                        Text("No one here yet.")
+                            .font(.mlrCaption)
+                            .foregroundStyle(Color.mlrTextMuted)
+                    }
+                } header: {
+                    Text("\(channelMembers.count) \(channelMembers.count == 1 ? "person" : "people")")
+                }
+            }
+            .navigationTitle(area ?? committee.name)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { showMembers = false }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+    }
+
+    /// The people in THIS channel: for a role channel, roster members who hold
+    /// that area; for General, everyone on the committee roster.
+    private func loadMembers() async {
+        let roster = (try? await env.committeeService.fetchRoster(slug: committee.slug)) ?? []
+        if let area {
+            channelMembers = roster.filter { $0.roles.contains(area) || $0.roles.contains("\(area) · Lead") }
+        } else {
+            channelMembers = roster
         }
     }
 
@@ -53,7 +185,14 @@ struct CommitteeChatView: View {
     private var chatScaffold: some View {
         VStack(spacing: 0) {
             messageScroll
-            inputBar
+            ChatComposer(
+                text: $draft,
+                roster: rosterProfiles,
+                isEditing: editingMessage != nil,
+                sending: sending,
+                onSend: { Task { await send() } },
+                onCancelEdit: { cancelEdit() }
+            )
         }
         .background(Color(.systemGroupedBackground))
     }
@@ -92,88 +231,13 @@ struct CommitteeChatView: View {
                 }
                 .padding(.vertical, 12)
             }
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: messages.count) {
                 if let last = messages.last {
                     withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
                 }
             }
         }
-    }
-
-    // MARK: - Input bar
-
-    private var inputBar: some View {
-        VStack(spacing: 0) {
-            if showMentions {
-                MentionAutocomplete(
-                    members: rosterProfiles,
-                    query: mentionQuery ?? "",
-                    onSelect: { profile in
-                        draft = applyMention(profile, to: draft)
-                        showMentions = false
-                    }
-                )
-                .padding(.horizontal, 12)
-                .padding(.bottom, 6)
-            }
-
-            if let editingMessage {
-                HStack {
-                    Label("Editing message", systemImage: "pencil")
-                        .font(.system(size: 12))
-                        .foregroundStyle(Color.mlrTextMuted)
-                    Spacer()
-                    Button("Cancel") { cancelEdit() }
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
-                }
-                .padding(.horizontal, 16)
-                .padding(.top, 6)
-                .id(editingMessage.id)
-            }
-
-            HStack(alignment: .bottom, spacing: 10) {
-                TextField("Message…", text: $draft, axis: .vertical)
-                    .lineLimit(1...4)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .background(Color.mlrSurface)
-                    .clipShape(RoundedRectangle(cornerRadius: 20))
-                    .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.mlrBorder, lineWidth: 1))
-                    .onChange(of: draft) { _, new in
-                        mentionQuery = detectMentionQuery(in: new)
-                        showMentions = mentionQuery != nil && !rosterProfiles.isEmpty
-                    }
-
-                Button {
-                    Task { await send() }
-                } label: {
-                    if sending {
-                        ProgressView().tint(.white)
-                            .frame(width: 38, height: 38)
-                            .background(Color.mlrPrimary).clipShape(Circle())
-                    } else {
-                        Image(systemName: editingMessage == nil ? "arrow.up" : "checkmark")
-                            .font(.system(size: 16, weight: .bold))
-                            .foregroundStyle(.white)
-                            .frame(width: 38, height: 38)
-                            .background(canSend ? Color.mlrPrimary : Color.mlrPrimary.opacity(0.4))
-                            .clipShape(Circle())
-                    }
-                }
-                .buttonStyle(.plain)
-                .disabled(!canSend || sending)
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color.mlrSurface)
-        }
-    }
-
-    @State private var mentionQuery: String?
-
-    private var canSend: Bool {
-        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     // MARK: - Not member
@@ -204,20 +268,25 @@ struct CommitteeChatView: View {
         isLoading = true
         loadError = nil
         do {
-            messages = try await env.committeeService.fetchMessages(committeeId: committee.id)
+            messages = try await env.committeeService.fetchMessages(committeeId: committee.id, area: area)
         } catch {
             loadError = "Couldn't load messages."
             print("[CommitteeChat] load error: \(error)")
         }
         isLoading = false
+        isMuted = await env.committeeService.isAreaMuted(committeeId: committee.id, area: area)
+        await env.committeeService.markAreaRead(committeeId: committee.id, area: area)
 
         guard !subscribed else { return }
         subscribed = true
         env.committeeService.subscribeToMessages(
             committeeId: committee.id,
+            area: area,
             onInsert: { msg in
                 if !messages.contains(where: { $0.id == msg.id }) {
                     messages.append(msg)
+                    // Keep this channel marked read while it's open.
+                    Task { await env.committeeService.markAreaRead(committeeId: committee.id, area: area) }
                 }
             },
             onUpdate: { msg in
@@ -247,13 +316,12 @@ struct CommitteeChatView: View {
                     .filter { !$0.name.isEmpty && text.lowercased().contains("@\($0.name.lowercased())") }
                     .map(\.id)
                 let msg = try await env.committeeService.sendMessage(
-                    committeeId: committee.id, text: text, authorId: userId, mentionedIds: mentioned)
+                    committeeId: committee.id, area: area, text: text, authorId: userId, mentionedIds: mentioned)
                 if !messages.contains(where: { $0.id == msg.id }) {
                     messages.append(msg)
                 }
                 draft = ""
             }
-            showMentions = false
         } catch {
             print("[CommitteeChat] send error: \(error)")
         }
@@ -281,6 +349,40 @@ struct CommitteeChatView: View {
     }
 }
 
+// MARK: - ChatSummarizer (on-device Apple Intelligence)
+// "Catch me up" — summarizes recent committee chat with the on-device model.
+// Availability-gated; the button only appears when the model is ready.
+
+enum ChatSummarizer {
+    static var isAvailable: Bool {
+        if case .available = SystemLanguageModel.default.availability { return true }
+        return false
+    }
+
+    static func summarize(committee: String, messages: [CommitteeChatMessage]) async -> String? {
+        guard isAvailable else { return nil }
+        let recent = messages.suffix(40).filter { !$0.isDeleted && !$0.text.isEmpty }
+        guard !recent.isEmpty else { return nil }
+        let transcript = recent.map { "\($0.authorName): \($0.text)" }.joined(separator: "\n")
+
+        let session = LanguageModelSession(instructions: """
+            You summarize a family committee group chat so someone can catch up fast.
+            Given the recent messages, write 2–4 short bullet points covering: decisions made,
+            open questions that still need answers, and anything actionable (who's doing what).
+            Warm and concise. No preamble, no restating that it's a summary.
+            """)
+        do {
+            let response = try await session.respond(
+                to: "Committee: \(committee)\nRecent messages:\n\(transcript)\n\nCatch me up.")
+            let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
+            return text.isEmpty ? nil : text
+        } catch {
+            print("[ChatSummarizer] error: \(error)")
+            return nil
+        }
+    }
+}
+
 // MARK: - Message Bubble
 
 private struct MessageBubble: View {
@@ -297,7 +399,7 @@ private struct MessageBubble: View {
             VStack(alignment: isOwn ? .trailing : .leading, spacing: 3) {
                 if !isOwn && !message.isDeleted {
                     Text(message.authorName)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.mlrScaled(11, weight: .semibold))
                         .foregroundStyle(Color.mlrTextMuted)
                         .padding(.horizontal, 4)
                 }
@@ -312,7 +414,7 @@ private struct MessageBubble: View {
     private var bubble: some View {
         if message.isDeleted {
             Label("Message deleted", systemImage: "trash")
-                .font(.system(size: 13, weight: .regular))
+                .font(.mlrScaled(13, weight: .regular))
                 .italic()
                 .foregroundStyle(Color.mlrTextMuted)
                 .padding(.horizontal, 12)
@@ -328,7 +430,7 @@ private struct MessageBubble: View {
                 )
                 if message.isEdited {
                     Text("edited")
-                        .font(.system(size: 10))
+                        .font(.mlrScaled(10))
                         .foregroundStyle(isOwn ? Color.white.opacity(0.7) : Color.mlrTextSubtle)
                 }
             }

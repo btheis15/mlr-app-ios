@@ -38,6 +38,25 @@ final class IntentRouter {
         case askForHelp
         case familyFest
         case events
+        case home
+        case addWorkItem
+        case committeeChat(slug: String)
+        case houseChat
+
+        /// Map a widget / Live Activity deep-link (`mlr://…`) to a route.
+        /// widgetURL hands the URL to the owning app's `onOpenURL`, so the
+        /// scheme doesn't need to be registered for our own surfaces.
+        init?(url: URL) {
+            guard url.scheme == "mlr" else { return nil }
+            switch url.host {
+            case "ask-for-help":  self = .askForHelp
+            case "family-fest":   self = .familyFest
+            case "events":        self = .events
+            case "home":          self = .home
+            case "add-work-item": self = .addWorkItem
+            default:              return nil
+            }
+        }
     }
 
     var pendingRoute: Route?

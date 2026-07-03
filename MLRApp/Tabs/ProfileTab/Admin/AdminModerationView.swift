@@ -88,7 +88,7 @@ struct AdminModerationView: View {
         Section {
             VStack(spacing: 16) {
                 Image(systemName: "checkmark.shield.fill")
-                    .font(.system(size: 44, weight: .light))
+                    .font(.mlrScaled(44, weight: .light))
                     .foregroundStyle(Color.mlrSuccess.opacity(0.6))
                 Text("No items in queue")
                     .font(.headline)
@@ -192,7 +192,7 @@ private struct ModerationItemRow: View {
 
             // Content preview
             Text(item.preview.isEmpty ? "(no content)" : item.preview)
-                .font(.system(size: 14))
+                .font(.mlrScaled(14))
                 .foregroundStyle(Color.mlrText)
                 .lineLimit(4)
                 .fixedSize(horizontal: false, vertical: true)
@@ -205,7 +205,7 @@ private struct ModerationItemRow: View {
             HStack(spacing: 10) {
                 Button(action: onApprove) {
                     Label("Approve", systemImage: "checkmark.circle.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 36)
                         .background(Color.mlrSuccess)
@@ -214,7 +214,7 @@ private struct ModerationItemRow: View {
 
                 Button(action: onRemove) {
                     Label("Remove", systemImage: "xmark.circle.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity, minHeight: 36)
                         .background(Color.mlrDanger)
@@ -229,7 +229,7 @@ private struct ModerationItemRow: View {
         let label = item.contentType == "post" ? "Post" : "Comment"
         let color = item.contentType == "post" ? Color.mlrInfo : Color.mlrAccent
         return Text(label)
-            .font(.system(size: 11, weight: .semibold))
+            .font(.mlrScaled(11, weight: .semibold))
             .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
@@ -240,9 +240,9 @@ private struct ModerationItemRow: View {
     private var reportBadge: some View {
         HStack(spacing: 3) {
             Image(systemName: "flag.fill")
-                .font(.system(size: 10))
+                .font(.mlrScaled(10))
             Text("\(item.reportCount) report\(item.reportCount == 1 ? "" : "s")")
-                .font(.system(size: 11, weight: .semibold))
+                .font(.mlrScaled(11, weight: .semibold))
         }
         .foregroundStyle(Color.mlrDanger)
         .padding(.horizontal, 8)

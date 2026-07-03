@@ -4,8 +4,7 @@ import PhotosUI
 // MARK: - PostComposer
 // Sheet for writing/publishing a Feed post (or editing an existing one).
 // Mirrors the web PostsView composer: caption with @mention autocomplete,
-// up to 5 photos, tag members, and an optional backdated timeline date.
-// (Native video capture/playback is not yet supported — images only.)
+// up to 5 photos and/or a video, tag members, and an optional backdated date.
 
 struct PostComposer: View {
     @Environment(AppEnvironment.self) private var env
@@ -17,6 +16,8 @@ struct PostComposer: View {
     @State private var text: String = ""
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var images: [UIImage] = []
+    @State private var selectedVideo: PhotosPickerItem?
+    @State private var videoData: Data?
     @State private var tagIds: Set<UUID> = []
     @State private var hasBackdate = false
     @State private var occurredAt: Date = .now
@@ -76,6 +77,12 @@ struct PostComposer: View {
         .onChange(of: selectedPhotos) { _, items in
             Task { await loadPhotos(items) }
         }
+        .onChange(of: selectedVideo) { _, item in
+            Task {
+                guard let item, let data = try? await item.loadTransferable(type: Data.self) else { return }
+                await MainActor.run { videoData = data }
+            }
+        }
     }
 
     // MARK: - Compose area
@@ -86,7 +93,7 @@ struct PostComposer: View {
                 HStack(spacing: 10) {
                     AvatarView(url: env.currentProfile?.avatarUrl, size: .medium)
                     Text(env.currentProfile?.name ?? "")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.mlrScaled(15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
                 }
 
@@ -110,12 +117,14 @@ struct PostComposer: View {
 
                 if !images.isEmpty { imageStrip }
 
+                if videoData != nil { videoChip }
+
                 if !tagIds.isEmpty { taggedSummary }
 
                 if hasBackdate {
                     DatePicker("Posted on", selection: $occurredAt,
                                in: ...Date.now, displayedComponents: .date)
-                        .font(.system(size: 14))
+                        .font(.mlrScaled(14))
                 }
 
                 if isUploading {
@@ -143,7 +152,7 @@ struct PostComposer: View {
                             if idx < selectedPhotos.count { selectedPhotos.remove(at: idx) }
                         } label: {
                             Image(systemName: "xmark.circle.fill")
-                                .font(.system(size: 20)).foregroundStyle(.white).shadow(radius: 2).padding(4)
+                                .font(.mlrScaled(20)).foregroundStyle(.white).shadow(radius: 2).padding(4)
                         }
                     }
                 }
@@ -151,25 +160,49 @@ struct PostComposer: View {
         }
     }
 
+    private var videoChip: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "film").foregroundStyle(Color.mlrPrimary)
+            Text("Video attached")
+                .font(.mlrScaled(14))
+                .foregroundStyle(Color.mlrText)
+            Spacer()
+            Button {
+                videoData = nil
+                selectedVideo = nil
+            } label: {
+                Image(systemName: "xmark.circle.fill").foregroundStyle(Color.mlrTextMuted)
+            }
+        }
+        .padding(10)
+        .background(Color.mlrCard)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
     private var taggedSummary: some View {
         let names = allProfiles.filter { tagIds.contains($0.id) }.map(\.name)
         return Label("With \(names.joined(separator: ", "))", systemImage: "person.2.fill")
-            .font(.system(size: 13))
+            .font(.mlrScaled(13))
             .foregroundStyle(Color.mlrPrimary)
     }
 
     private var toolbar: some View {
         HStack(spacing: 4) {
             PhotosPicker(selection: $selectedPhotos, maxSelectionCount: maxPhotos, matching: .images) {
-                Label("Photos", systemImage: "photo.on.rectangle").font(.system(size: 14, weight: .medium))
+                Label("Photos", systemImage: "photo.on.rectangle").font(.mlrScaled(14, weight: .medium))
+            }
+            .disabled(isPosting || isUploading)
+
+            PhotosPicker(selection: $selectedVideo, matching: .videos) {
+                Label("Video", systemImage: "video.badge.plus").font(.mlrScaled(14, weight: .medium))
             }
             .disabled(isPosting || isUploading)
 
             Button { showTagPicker = true } label: {
-                Label("Tag", systemImage: "person.crop.circle.badge.plus").font(.system(size: 14, weight: .medium))
+                Label("Tag", systemImage: "person.crop.circle.badge.plus").font(.mlrScaled(14, weight: .medium))
             }
             Button { withAnimation { hasBackdate.toggle() } } label: {
-                Label("Date", systemImage: "calendar").font(.system(size: 14, weight: .medium))
+                Label("Date", systemImage: "calendar").font(.mlrScaled(14, weight: .medium))
                     .foregroundStyle(hasBackdate ? Color.mlrPrimary : Color.mlrTextMuted)
             }
             Spacer()
@@ -193,7 +226,7 @@ struct PostComposer: View {
     private var submitDisabled: Bool {
         let emptyText = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         // A new post needs text or at least one photo; an edit needs text.
-        let nothingToPost = isEditing ? emptyText : (emptyText && images.isEmpty)
+        let nothingToPost = isEditing ? emptyText : (emptyText && images.isEmpty && videoData == nil)
         return nothingToPost || text.count > softLimit || isPosting || isUploading
     }
 
@@ -226,13 +259,17 @@ struct PostComposer: View {
                 return
             }
 
-            // Upload photos → media tuples.
+            // Upload photos + optional video → media tuples.
             var media: [(path: String, type: String)] = []
-            if !images.isEmpty {
+            if !images.isEmpty || videoData != nil {
                 isUploading = true
                 for image in images {
                     let url = try await env.mediaService.uploadPostImage(image: image, userId: profile.id)
                     media.append((path: url, type: "image"))
+                }
+                if let videoData {
+                    let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: profile.id)
+                    media.append((path: url, type: "video"))
                 }
                 isUploading = false
             }

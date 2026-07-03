@@ -43,7 +43,7 @@ struct HelpView: View {
                             showGuide = true
                         } label: {
                             Label("Open the guided tour", systemImage: "book.fill")
-                                .font(.system(size: 14, weight: .semibold))
+                                .font(.mlrScaled(14, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
@@ -88,7 +88,7 @@ struct HelpView: View {
     private var header: some View {
         VStack(alignment: .leading, spacing: 4) {
             Text("Help & how-to")
-                .font(.system(size: 24, weight: .bold))
+                .font(.mlrScaled(24, weight: .bold))
                 .foregroundStyle(Color.mlrText)
             Text("New here, or stuck on something? Start below — and you can always just text \(HelpContact.name).")
                 .font(.subheadline)
@@ -101,7 +101,7 @@ struct HelpView: View {
     private var contactCard: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Need a hand? Text \(HelpContact.name).")
-                .font(.system(size: 16, weight: .bold))
+                .font(.mlrScaled(16, weight: .bold))
                 .foregroundStyle(Color.mlrText)
             Text("If anything here doesn't work or doesn't make sense, send a quick text and \(HelpContact.name) will help you out.")
                 .font(.subheadline)
@@ -111,7 +111,7 @@ struct HelpView: View {
                     composeState = MessageComposeState(recipients: [HelpContact.phone], body: "")
                 } label: {
                     Label("Text \(HelpContact.name)", systemImage: "message.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
@@ -123,7 +123,7 @@ struct HelpView: View {
                 if let tel = URL(string: "tel://\(HelpContact.phone)") {
                     Link(destination: tel) {
                         Label("Call \(HelpContact.name)", systemImage: "phone.fill")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.mlrScaled(14, weight: .semibold))
                             .foregroundStyle(Color.mlrPrimary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -150,8 +150,8 @@ struct HelpView: View {
     private func helpCard<Content: View>(emoji: String, title: String, @ViewBuilder content: () -> Content) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                Text(emoji).font(.system(size: 18))
-                Text(title).font(.system(size: 16, weight: .bold)).foregroundStyle(Color.mlrText)
+                Text(emoji).font(.mlrScaled(18))
+                Text(title).font(.mlrScaled(16, weight: .bold)).foregroundStyle(Color.mlrText)
             }
             content()
                 .font(.subheadline)

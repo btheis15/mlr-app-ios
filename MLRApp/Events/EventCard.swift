@@ -24,25 +24,25 @@ struct EventCard: View {
                         Text(event.title)
                             .font(event.isFamilyFest
                                   ? .festSerif(20, weight: .bold)
-                                  : .system(size: 18, weight: .bold))
+                                  : .mlrScaled(18, weight: .bold))
                             .foregroundStyle(event.isFamilyFest ? Color.mlrFest : Color.mlrText)
                             .multilineTextAlignment(.leading)
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.mlrScaled(13, weight: .semibold))
                         .foregroundStyle(Color.mlrTextSubtle)
                 }
 
                 HStack(spacing: 14) {
                     Label(MLRFormat.dateRange(start: event.startDate, end: event.endDate),
                           systemImage: "calendar")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.mlrScaled(13, weight: .medium))
                         .foregroundStyle(Color.mlrTextMuted)
 
                     if let location = event.location, !location.isEmpty {
                         Label(location, systemImage: "mappin.and.ellipse")
-                            .font(.system(size: 13))
+                            .font(.mlrScaled(13))
                             .foregroundStyle(Color.mlrTextMuted)
                             .lineLimit(1)
                     }
@@ -54,16 +54,16 @@ struct EventCard: View {
                     if let summary, summary.going > 0 {
                         HStack(spacing: 4) {
                             Image(systemName: "person.2.fill")
-                                .font(.system(size: 11))
+                                .font(.mlrScaled(11))
                             Text("\(summary.going) going")
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.mlrScaled(13, weight: .medium))
                         }
                         .foregroundStyle(accent)
                     }
                     Spacer()
                     if let myStatus {
                         Text("\(myStatus.emoji) \(myStatus.label)")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.mlrScaled(12, weight: .semibold))
                             .foregroundStyle(accent)
                             .padding(.horizontal, 10)
                             .padding(.vertical, 5)
@@ -93,7 +93,7 @@ struct KindBadge: View {
 
     var body: some View {
         Text(EventKindStyle.label(for: kind))
-            .font(.system(size: 10, weight: .bold))
+            .font(.mlrScaled(10, weight: .bold))
             .tracking(0.6)
             .foregroundStyle(.white)
             .padding(.horizontal, 8)

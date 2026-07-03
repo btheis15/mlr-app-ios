@@ -56,21 +56,21 @@ private struct DinnerCard: View {
 
                 HStack(spacing: 4) {
                     Image(systemName: "person.fill")
-                        .font(.system(size: 11))
+                        .font(.mlrScaled(11))
                     Text(dinner.chef)
-                        .font(.system(size: 13))
+                        .font(.mlrScaled(13))
                 }
                 .foregroundStyle(Color.mlrFest.opacity(0.65))
 
                 Text(dinner.time)
-                    .font(.system(size: 12))
+                    .font(.mlrScaled(12))
                     .foregroundStyle(Color.mlrFest.opacity(0.5))
             }
 
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.mlrScaled(13, weight: .semibold))
                 .foregroundStyle(Color.mlrFest.opacity(0.3))
         }
         .padding(14)

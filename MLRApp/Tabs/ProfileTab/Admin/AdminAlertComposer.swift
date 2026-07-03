@@ -60,7 +60,7 @@ struct AdminAlertComposer: View {
                 // Compose fields
                 Section("Announcement") {
                     TextField("Title (required)", text: $title)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.mlrScaled(16, weight: .medium))
 
                     ZStack(alignment: .topLeading) {
                         if messageBody.isEmpty {
@@ -175,12 +175,12 @@ struct AdminAlertComposer: View {
     private var announcementPreview: some View {
         HStack(spacing: 10) {
             Image(systemName: kindIcon(kind))
-                .font(.system(size: 15))
+                .font(.mlrScaled(15))
                 .foregroundStyle(kindColor(kind))
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title.isEmpty ? "Title" : title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                     .lineLimit(2)
 

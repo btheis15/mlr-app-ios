@@ -97,13 +97,16 @@ struct EventsView: View {
                 EventComposer()
             }
             .task {
-                guard !hasLoaded else { return }
-                await env.eventsService.fetchEvents()
-                if let userId = await env.authService.userId {
-                    await env.eventsService.fetchAttendance(userId: userId)
+                if !hasLoaded {
+                    await env.eventsService.fetchEvents()
+                    if let userId = await env.authService.userId {
+                        await env.eventsService.fetchAttendance(userId: userId)
+                    }
+                    hasLoaded = true
                 }
-                hasLoaded = true
+                env.eventsService.subscribeToRealtime(userId: env.currentProfile?.id)
             }
+            .onDisappear { env.eventsService.unsubscribeFromRealtime() }
         }
     }
 
@@ -128,7 +131,7 @@ struct EventsView: View {
                         .padding(.horizontal, 16)
                     } header: {
                         Text(group.month)
-                            .font(.system(size: 13, weight: .bold))
+                            .font(.mlrScaled(13, weight: .bold))
                             .foregroundStyle(Color.mlrTextMuted)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 16)

@@ -68,9 +68,9 @@ struct TshirtCallout: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Text("🗳️")
-                    .font(.system(size: 18))
+                    .font(.mlrScaled(18))
                 Text("Vote · NEW")
-                    .font(.system(size: 13, weight: .bold))
+                    .font(.mlrScaled(13, weight: .bold))
                     .foregroundStyle(.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 3)
@@ -80,7 +80,7 @@ struct TshirtCallout: View {
             }
 
             Text("T-Shirt Design Vote")
-                .font(.system(size: 16, weight: .semibold))
+                .font(.mlrScaled(16, weight: .semibold))
                 .foregroundStyle(Color.mlrFest)
 
             Text("Pick your favorite design for this year's Family Fest shirt. Vote closes \(formattedDeadline).")
@@ -93,7 +93,7 @@ struct TshirtCallout: View {
             }
 
             Text("See the designs →")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.mlrScaled(13, weight: .semibold))
                 .foregroundStyle(.white)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 7)
@@ -115,7 +115,7 @@ struct TshirtCallout: View {
             flyOff()
         } label: {
             Image(systemName: "xmark")
-                .font(.system(size: 11, weight: .bold))
+                .font(.mlrScaled(11, weight: .bold))
                 .foregroundStyle(Color.mlrFest.opacity(0.6))
                 .padding(6)
                 .background(Color.mlrFest.opacity(0.08))

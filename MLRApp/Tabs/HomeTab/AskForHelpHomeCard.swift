@@ -20,10 +20,10 @@ struct AskForHelpHomeCard: View {
             // Header
             HStack(spacing: 6) {
                 Text("🤝")
-                    .font(.system(size: 18))
+                    .font(.mlrScaled(18))
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Ask for Help")
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.mlrScaled(15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
                     Text("Need a hand at the resort?")
                         .font(.caption)
@@ -34,7 +34,7 @@ struct AskForHelpHomeCard: View {
             // Post a request button
             Button(action: onAsk) {
                 Label("Post a request", systemImage: "plus.circle.fill")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 9)
@@ -49,7 +49,7 @@ struct AskForHelpHomeCard: View {
             HStack {
                 VStack(alignment: .leading, spacing: 1) {
                     Text("Willing to Help")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.mlrScaled(13, weight: .medium))
                         .foregroundStyle(Color.mlrText)
                     Text("Get pinged when someone nearby needs a hand")
                         .font(.caption2)

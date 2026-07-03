@@ -1,98 +1,93 @@
 import SwiftUI
 
-// MARK: - Fest Section Enum
-
-enum FestSection: String, CaseIterable, Identifiable {
-    case overview  = "Overview"
-    case schedule  = "Schedule"
-    case dinners   = "Dinners"
-    case crew      = "Crew"
-    case photos    = "Photos"
-    case pay       = "Pay"
-    case shirts    = "Shirts"
-
-    var id: String { rawValue }
-
-    var icon: String {
-        switch self {
-        case .overview:  return "star.fill"
-        case .schedule:  return "calendar"
-        case .dinners:   return "fork.knife"
-        case .crew:      return "person.3.fill"
-        case .photos:    return "photo.fill"
-        case .pay:       return "dollarsign.circle.fill"
-        case .shirts:    return "tshirt.fill"
-        }
-    }
-}
-
 // MARK: - FestOverviewView
+//
+// One consumable, scrollable view of the whole Fest week: a phase-aware status
+// header, the identity cover, then a day-by-day agenda where each day's
+// activities AND that night's dinner expand IN PLACE (glance first, tap for
+// detail). The utility sections (Crew / Dinners depth / Pay / Shirts / Photos)
+// are reachable but secondary, under "More". Content is live from
+// FestContentService (DB-backed), with a visible note when it falls back to the
+// offline seed.
 
 struct FestOverviewView: View {
     @Environment(AppEnvironment.self) private var env
-    @State private var selectedSection: FestSection = .overview
     @State private var festSeason: FestSeason = .current()
     @State private var canEdit = false
     @State private var showPlanner = false
+
+    private var content: FestContentService { env.festContentService }
+
+    /// Timed items grouped by day, ordered by real date (falls back to weekday
+    /// order when a day has no ISO date, e.g. the offline seed).
+    private var dayGroups: [(day: String, isoDate: String?, items: [ScheduleItem])] {
+        let timed = content.schedule.filter { $0.day != "Anytime" }
+        return Dictionary(grouping: timed, by: \.day)
+            .map { (day: $0.key, isoDate: $0.value.compactMap(\.isoDate).first, items: $0.value) }
+            .sorted { a, b in
+                switch (a.isoDate, b.isoDate) {
+                case let (l?, r?): return l < r
+                case (_?, nil):    return true
+                case (nil, _?):    return false
+                case (nil, nil):   return Self.weekdayIndex(a.day) < Self.weekdayIndex(b.day)
+                }
+            }
+    }
+
+    private func dinner(for day: String) -> FestDinner? {
+        content.dinners.first { $0.day == day }
+    }
+
+    static func weekdayIndex(_ day: String) -> Int {
+        ["Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3,
+         "Thursday": 4, "Friday": 5, "Saturday": 6][day] ?? 99
+    }
 
     var body: some View {
         NavigationStack {
             ZStack {
                 Color.mlrFestParchment.ignoresSafeArea()
 
-                VStack(spacing: 0) {
-                    // FestStatus at top
-                    FestStatus(season: festSeason)
-                        .padding(.horizontal, 16)
-                        .padding(.top, 12)
-                        .padding(.bottom, 8)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 20) {
 
-                    // Section sub-nav chips
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: 8) {
-                            ForEach(FestSection.allCases) { section in
-                                // Hide Shirts outside planning phase
-                                if section == .shirts && !festSeason.isPlanning {
-                                    EmptyView()
-                                } else {
-                                    FestNavChip(
-                                        label: section.rawValue,
-                                        icon: section.icon,
-                                        isSelected: selectedSection == section
-                                    ) {
-                                        withAnimation(.easeInOut(duration: 0.2)) {
-                                            selectedSection = section
-                                        }
-                                    }
-                                }
-                            }
+                        FestStatus(season: festSeason)
+
+                        // Identity: cover art + theme/dates/venue caption.
+                        VStack(spacing: 10) {
+                            FestCoverImage()
+                            FestCoverCaption()
                         }
-                        .padding(.horizontal, 16)
-                        .padding(.vertical, 10)
-                    }
 
-                    Divider()
-                        .background(Color.mlrFest.opacity(0.2))
-
-                    // Section content
-                    Group {
-                        switch selectedSection {
-                        case .overview:
-                            FestOverviewSectionView(season: festSeason)
-                        case .schedule:
-                            FestScheduleView()
-                        case .dinners:
-                            FestDinnersView()
-                        case .crew:
-                            FestCrewView()
-                        case .photos:
-                            FestPhotosView()
-                        case .pay:
-                            FestPayView()
-                        case .shirts:
-                            ShirtVoteView(season: festSeason)
+                        if content.usingSeedFallback {
+                            seedFallbackNote
                         }
+
+                        // The week, day by day — activities + that night's dinner.
+                        ForEach(dayGroups, id: \.day) { group in
+                            FestDaySection(
+                                day: group.day,
+                                isoDate: group.isoDate,
+                                items: group.items,
+                                dinner: dinner(for: group.day)
+                            )
+                        }
+
+                        // All-week, no-set-time activities (scavenger hunt, etc.)
+                        FestAnytimeCard()
+
+                        // Secondary sections.
+                        moreSection
+
+                        Text("Leo & Dorothy Theis · Est. 1987 · Tomahawk, WI")
+                            .font(.festSerif(11))
+                            .foregroundStyle(Color.mlrFest.opacity(0.6))
+                            .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 4)
                     }
+                    .padding(.horizontal, 16)
+                    .padding(.top, 12)
+                    .padding(.bottom, 32)
                 }
             }
             .navigationTitle("Family Fest")
@@ -120,80 +115,127 @@ struct FestOverviewView: View {
             await env.appImagesService.load()
             await env.festContentService.load()
             canEdit = await env.festContentService.canEditFest()
+            env.festContentService.subscribeToRealtime()
+        }
+        .onDisappear { env.festContentService.unsubscribeFromRealtime() }
+    }
+
+    // MARK: - Secondary sections
+
+    private var moreSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("More")
+                .font(.festSerif(15, weight: .bold))
+                .foregroundStyle(Color.mlrFest)
+                .padding(.horizontal, 4)
+                .padding(.top, 4)
+
+            FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
+            FestUtilityLink(label: "Dinner details", icon: "fork.knife") { FestDinnersView() }
+            FestUtilityLink(label: "Dues & payments", icon: "dollarsign.circle.fill") { FestPayView() }
+            if festSeason.isPlanning {
+                FestUtilityLink(label: "T-shirt vote", icon: "tshirt.fill") { ShirtVoteView(season: festSeason) }
+            }
+            FestUtilityLink(label: "Photos", icon: "photo.fill") { FestPhotosView() }
+        }
+    }
+
+    private var seedFallbackNote: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "wifi.slash")
+                .font(.mlrScaled(11))
+            Text("Showing offline defaults — the schedule may be out of date.")
+                .font(.mlrScaled(12))
+        }
+        .foregroundStyle(Color.mlrFest.opacity(0.6))
+        .frame(maxWidth: .infinity, alignment: .center)
+    }
+}
+
+// MARK: - Day section (activities + that night's dinner)
+
+private struct FestDaySection: View {
+    let day: String
+    let isoDate: String?
+    let items: [ScheduleItem]
+    let dinner: FestDinner?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            HStack {
+                Text(day.uppercased())
+                    .font(.mlrScaled(11, weight: .semibold))
+                    .foregroundStyle(Color.mlrFest.opacity(0.65))
+                    .tracking(1.2)
+                Spacer()
+                // Self-hides when WeatherKit has no forecast for the date.
+                if let isoDate {
+                    EventWeatherBadge(isoDate: isoDate)
+                }
+            }
+            .padding(.horizontal, 6)
+
+            VStack(spacing: 0) {
+                ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                    if index > 0 {
+                        Divider().background(Color.mlrFest.opacity(0.1))
+                    }
+                    ExpandableScheduleRow(item: item)
+                }
+                if let dinner {
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                    ExpandableDinnerRow(dinner: dinner)
+                }
+            }
+            .background(Color.mlrFestParchment)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(Color.mlrFest.opacity(0.15), lineWidth: 1)
+            )
         }
     }
 }
 
-// MARK: - Nav Chip
+// MARK: - Utility link (secondary sections)
 
-private struct FestNavChip: View {
+private struct FestUtilityLink<Destination: View>: View {
     let label: String
     let icon: String
-    let isSelected: Bool
-    let action: () -> Void
+    @ViewBuilder let destination: () -> Destination
 
     var body: some View {
-        Button(action: action) {
-            HStack(spacing: 5) {
+        NavigationLink {
+            destination()
+                .navigationTitle(label)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
+                .toolbarColorScheme(.light, for: .navigationBar)
+        } label: {
+            HStack(spacing: 10) {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
+                    .frame(width: 22)
                 Text(label)
-                    .font(.festSerif(13))
+                    .font(.festSerif(15, weight: .bold))
+                Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.mlrScaled(12, weight: .semibold))
+                    .foregroundStyle(Color.mlrFest.opacity(0.35))
             }
-            .foregroundStyle(isSelected ? Color.white : Color.mlrFest)
+            .foregroundStyle(Color.mlrFest)
             .padding(.horizontal, 14)
-            .padding(.vertical, 8)
+            .padding(.vertical, 13)
             .background(
-                isSelected
-                    ? Color.mlrFest
-                    : Color.mlrFest.opacity(0.1)
-            )
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .strokeBorder(Color.mlrFest.opacity(isSelected ? 0 : 0.3), lineWidth: 1)
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(Color.mlrFest.opacity(0.06))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 12)
+                            .strokeBorder(Color.mlrFest.opacity(0.18), lineWidth: 1)
+                    )
             )
         }
         .buttonStyle(.plain)
-    }
-}
-
-// MARK: - Overview Section (Home/Hub content)
-
-private struct FestOverviewSectionView: View {
-    let season: FestSeason
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-
-                // Cover art + a slim caption (dates + venue) as one unit. The
-                // cover already carries the title, so there's no separate poster.
-                VStack(spacing: 10) {
-                    FestCoverImage()
-                    FestCoverCaption()
-                }
-
-                // The week at a glance — every day's headline
-                FestScheduleGlanceCard()
-
-                // Dinners — each night's head chef
-                FestDinnersGlanceCard()
-
-                // Anytime activities (e.g. the scavenger hunt)
-                FestAnytimeCard()
-
-                // Heritage footnote
-                Text("Leo & Dorothy Theis · Est. 1987 · Tomahawk, WI")
-                    .font(.festSerif(11))
-                    .foregroundStyle(Color.mlrFest.opacity(0.6))
-                    .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.bottom, 4)
-            }
-            .padding(.horizontal, 16)
-            .padding(.top, 16)
-            .padding(.bottom, 32)
-        }
     }
 }
 
@@ -217,10 +259,8 @@ private struct FestCoverImage: View {
 
 // MARK: - Cover Caption
 
-/// The festive title block under the cover art — mirrors the web fest page
-/// header: the ⚜ "Ye Olde Family Feste" theme line, then the dates and venue.
-/// The cover image already carries the big "Family Fest 2026", so this is the
-/// theme + when/where, not a repeated title.
+/// The festive title block under the cover art — the ⚜ "Ye Olde Family Feste"
+/// theme line, then the dates and venue.
 private struct FestCoverCaption: View {
     var body: some View {
         VStack(spacing: 6) {
@@ -243,7 +283,7 @@ private struct FestCoverCaption: View {
     }
 }
 
-// MARK: - Summary cards (Overview)
+// MARK: - Summary card
 
 /// A parchment section card with a serif title, used across the overview.
 private struct FestInfoCard<Content: View>: View {
@@ -270,63 +310,6 @@ private struct FestInfoCard<Content: View>: View {
     }
 }
 
-/// The week's headline activity per day (titles real; times/locations TBD).
-private struct FestScheduleGlanceCard: View {
-    @Environment(AppEnvironment.self) private var env
-    private var days: [ScheduleItem] { env.festContentService.schedule.filter { $0.day != "Anytime" } }
-
-    var body: some View {
-        FestInfoCard(title: "The week at a glance") {
-            VStack(spacing: 9) {
-                ForEach(days) { item in
-                    HStack(spacing: 8) {
-                        Text(item.title)
-                            .font(.festSerif(14))
-                            .foregroundStyle(Color.mlrFest)
-                            .lineLimit(1)
-                        Spacer(minLength: 8)
-                        Text(item.day)
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(Color.mlrFest.opacity(0.55))
-                    }
-                    if item.id != days.last?.id {
-                        Divider().background(Color.mlrFest.opacity(0.12))
-                    }
-                }
-            }
-        }
-    }
-}
-
-/// Each night's dinner + head chef.
-private struct FestDinnersGlanceCard: View {
-    @Environment(AppEnvironment.self) private var env
-    private var dinners: [FestDinner] { env.festContentService.dinners }
-
-    var body: some View {
-        FestInfoCard(title: "Dinners") {
-            VStack(spacing: 9) {
-                ForEach(dinners) { dinner in
-                    HStack(spacing: 8) {
-                        Text("🍽️").font(.system(size: 13))
-                        Text(dinner.day)
-                            .font(.festSerif(14))
-                            .foregroundStyle(Color.mlrFest)
-                        Spacer(minLength: 8)
-                        Text(dinner.chef)
-                            .font(.system(size: 12))
-                            .foregroundStyle(Color.mlrFest.opacity(0.6))
-                            .lineLimit(1)
-                    }
-                    if dinner.id != dinners.last?.id {
-                        Divider().background(Color.mlrFest.opacity(0.12))
-                    }
-                }
-            }
-        }
-    }
-}
-
 /// All-week, no-set-time activities (the scavenger hunt).
 private struct FestAnytimeCard: View {
     @Environment(AppEnvironment.self) private var env
@@ -343,9 +326,9 @@ private struct FestAnytimeCard: View {
                                 .foregroundStyle(Color.mlrFest)
                             if let desc = item.description {
                                 Text(desc)
-                                    .font(.system(size: 12))
+                                    .font(.mlrScaled(12))
                                     .foregroundStyle(Color.mlrFest.opacity(0.65))
-                                    .lineLimit(3)
+                                    .fixedSize(horizontal: false, vertical: true)
                             }
                         }
                     }

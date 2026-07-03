@@ -173,10 +173,14 @@ final class HelpService {
         realtimeChannel = channel
 
         Task {
-            channel.onPostgresChange(AnyAction.self, schema: "public", table: "help_requests") { [weak self] _ in
-                guard let self else { return }
-                Task { @MainActor in
-                    await self.fetchOpenRequests()
+            // Watch the request, its responses ("on my way"), and its bring-items —
+            // matching the web app, which reloads on any of the three changing.
+            for table in ["help_requests", "help_responses", "help_request_items"] {
+                channel.onPostgresChange(AnyAction.self, schema: "public", table: table) { [weak self] _ in
+                    guard let self else { return }
+                    Task { @MainActor in
+                        await self.fetchOpenRequests()
+                    }
                 }
             }
             await channel.subscribe()

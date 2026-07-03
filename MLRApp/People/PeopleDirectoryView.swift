@@ -140,10 +140,10 @@ private struct MemberRow: View {
 
                     VStack(alignment: .leading, spacing: 2) {
                         HStack(spacing: 6) {
-                            PrivateName(profile: member, font: .system(size: 16, weight: .semibold))
+                            PrivateName(profile: member, font: .mlrScaled(16, weight: .semibold))
                             if member.isAdmin {
                                 Text("Admin")
-                                    .font(.system(size: 10, weight: .bold))
+                                    .font(.mlrScaled(10, weight: .bold))
                                     .foregroundStyle(Color.mlrPrimary)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
@@ -153,13 +153,13 @@ private struct MemberRow: View {
                         }
                         if env.isSignedIn, let phone = member.phone, !phone.isEmpty {
                             Text(MLRFormat.phone(phone))
-                                .font(.system(size: 13))
+                                .font(.mlrScaled(13))
                                 .foregroundStyle(Color.mlrTextMuted)
                         }
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.mlrScaled(13, weight: .semibold))
                         .foregroundStyle(Color.mlrTextSubtle)
                 }
                 .contentShape(Rectangle())
@@ -211,7 +211,7 @@ private struct QuickActionBar: View {
 
     private func chipLabel(_ label: String, _ icon: String) -> some View {
         Label(label, systemImage: icon)
-            .font(.system(size: 12, weight: .semibold))
+            .font(.mlrScaled(12, weight: .semibold))
             .foregroundStyle(Color.mlrPrimary)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)

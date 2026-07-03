@@ -1,27 +1,221 @@
 import SwiftUI
 
-// MARK: - PostsView
-// The main Feed tab. Mirrors components/PostsView.tsx.
+// MARK: - PostsView (Feed tab root)
 //
-// Layout:
-//   • Driven by env.postsService.posts (an @Observable array)
-//   • Pull-to-refresh (.refreshable)
-//   • Floating "new post" pencil button (signed-in only)
-//   • SignInWall is not used here — the feed is fully browsable;
-//     compose is conditionally shown when signed in
-//   • Realtime subscription fires in .task
+// A Messages-style router: if the member has committee chat channels, the Feed
+// tab shows a conversation LIST — "Main Feed" pinned on top, then one row per
+// role channel they're in (Family Fest → "General", "Meals", …). Tapping a row
+// opens that chat. If they have no channels (or aren't signed in), the Feed tab
+// drops straight into the Main Feed — no redundant one-row list.
 
 struct PostsView: View {
     @Environment(AppEnvironment.self) private var env
+
+    @State private var channels: [ChatChannel] = []
+    @State private var myHouse: House?
+    @State private var loadedChannels = false
+
+    private var showList: Bool { env.isSignedIn && (!channels.isEmpty || myHouse != nil) }
+
+    var body: some View {
+        NavigationStack {
+            Group {
+                if showList {
+                    ConversationsList(channels: channels, house: myHouse)
+                } else {
+                    MainFeedView(title: "Feed")
+                }
+            }
+        }
+        .task {
+            guard !loadedChannels else { return }
+            if let uid = env.currentProfile?.id, env.isSignedIn {
+                channels = await env.committeeService.fetchMyChannels(userId: uid)
+                myHouse = await env.housesService.house(withId: env.currentProfile?.houseId)
+            }
+            loadedChannels = true
+        }
+    }
+}
+
+// MARK: - Conversations list
+
+private struct ConversationsList: View {
+    @Environment(AppEnvironment.self) private var env
+    let channels: [ChatChannel]
+    let house: House?
+
+    @State private var summaries: [String: ChannelSummary] = [:]
+
+    private func houseKey(_ id: UUID) -> String { "house-\(id.uuidString)" }
+
+    var body: some View {
+        List {
+            // Main Feed pinned on top.
+            NavigationLink {
+                MainFeedView(title: "Main Feed")
+            } label: {
+                ConversationRow(
+                    emoji: "📰",
+                    title: "Main Feed",
+                    subtitle: "Everyone",
+                    summary: nil
+                )
+            }
+
+            if let house {
+                Section("Your house") {
+                    NavigationLink {
+                        HouseChatView(house: house, assumeMember: true)
+                    } label: {
+                        ConversationRow(
+                            emoji: house.emoji,
+                            title: house.name,
+                            subtitle: "Your house",
+                            summary: summaries[houseKey(house.id)]
+                        )
+                    }
+                }
+            }
+
+            if !channels.isEmpty {
+                Section("Committee chats") {
+                    ForEach(channels) { channel in
+                        NavigationLink {
+                            ChannelChatLoader(channel: channel)
+                        } label: {
+                            ConversationRow(
+                                emoji: channel.committee.emoji ?? "💬",
+                                title: channel.title,
+                                subtitle: channel.subtitle,
+                                summary: summaries[channel.id]
+                            )
+                        }
+                    }
+                }
+            }
+        }
+        .listStyle(.insetGrouped)
+        .navigationTitle("Chats")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { await loadSummaries() }
+        .refreshable { await loadSummaries() }
+    }
+
+    private func loadSummaries() async {
+        guard let uid = env.currentProfile?.id else { return }
+        if let house {
+            summaries[houseKey(house.id)] = await env.housesService.fetchChannelSummary(
+                houseId: house.id, userId: uid)
+        }
+        for channel in channels {
+            summaries[channel.id] = await env.committeeService.fetchChannelSummary(
+                committeeId: channel.committee.id, area: channel.area, userId: uid)
+        }
+    }
+}
+
+// MARK: - Conversation row
+
+private struct ConversationRow: View {
+    let emoji: String
+    let title: String
+    let subtitle: String?
+    let summary: ChannelSummary?
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Text(emoji)
+                .font(.mlrScaled(24))
+                .frame(width: 46, height: 46)
+                .background(Color.mlrPrimary.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 6) {
+                    Text(title)
+                        .font(.mlrScaled(16, weight: .semibold))
+                        .foregroundStyle(Color.mlrText)
+                    if summary?.muted == true {
+                        Image(systemName: "bell.slash.fill")
+                            .font(.mlrScaled(10))
+                            .foregroundStyle(Color.mlrTextSubtle)
+                    }
+                    Spacer()
+                    if let at = summary?.lastAt {
+                        Text(Self.relative(at))
+                            .font(.mlrScaled(11))
+                            .foregroundStyle(Color.mlrTextMuted)
+                    }
+                }
+                HStack(spacing: 6) {
+                    Text(summary?.lastText ?? subtitle ?? "")
+                        .font(.mlrScaled(13))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .lineLimit(1)
+                    Spacer()
+                    if let unread = summary?.unread, unread > 0 {
+                        Text(unread > 99 ? "99+" : "\(unread)")
+                            .font(.mlrScaled(11, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 7)
+                            .padding(.vertical, 2)
+                            .background(summary?.muted == true ? Color.mlrTextSubtle : Color.mlrDanger)
+                            .clipShape(Capsule())
+                    }
+                }
+            }
+        }
+        .padding(.vertical, 4)
+    }
+
+    /// Compact "when" label for the last message.
+    static func relative(_ date: Date) -> String {
+        let cal = Calendar.current
+        if cal.isDateInToday(date) {
+            return date.formatted(date: .omitted, time: .shortened)
+        }
+        if cal.isDateInYesterday(date) { return "Yesterday" }
+        return date.formatted(.dateTime.month(.abbreviated).day())
+    }
+}
+
+// MARK: - Channel chat loader
+// Loads the committee's members (for @mention autocomplete) then shows the
+// area-scoped chat. Membership is known (the channel came from the user's own
+// roster), so we skip the members-only gate.
+
+private struct ChannelChatLoader: View {
+    @Environment(AppEnvironment.self) private var env
+    let channel: ChatChannel
+    @State private var members: [CommitteeMember] = []
+
+    var body: some View {
+        CommitteeChatView(
+            committee: channel.committee,
+            members: members,
+            area: channel.area,
+            channelTitle: channel.title,
+            assumeMember: true
+        )
+        .task {
+            members = (try? await env.committeeService.fetchMembers(committeeId: channel.committee.id)) ?? []
+        }
+    }
+}
+
+// MARK: - MainFeedView (the multimedia posts feed)
+// The resort-wide feed: posts with photos/video, reactions, comments, tags.
+// Extracted from the old Feed tab so it can be the top "Main Feed" conversation.
+
+struct MainFeedView: View {
+    @Environment(AppEnvironment.self) private var env
+    var title: String = "Main Feed"
 
     @State private var showComposer = false
     @State private var showSignIn = false
     @State private var showTaggedOnly = false
     @State private var reactionMap: [UUID: [PostReaction]] = [:]
-
-    // Committee chats reachable from the Feed (pills), matching the web.
-    @State private var myCommittees: [Committee] = []
-    @State private var committeeUnread: [UUID: Int] = [:]
 
     private var displayedPosts: [Post] {
         guard showTaggedOnly, let myId = env.currentProfile?.id else { return env.postsService.posts }
@@ -29,39 +223,31 @@ struct PostsView: View {
     }
 
     var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-                if env.isSignedIn && !myCommittees.isEmpty {
-                    committeePills
-                }
-                ZStack(alignment: .bottomTrailing) {
-                    content
-
-                    if env.isSignedIn {
-                        composeButton
+        ZStack(alignment: .bottomTrailing) {
+            content
+            if env.isSignedIn {
+                composeButton
+            }
+        }
+        .navigationTitle(title)
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigationBarLeading) {
+                if env.isSignedIn {
+                    Button {
+                        withAnimation { showTaggedOnly.toggle() }
+                    } label: {
+                        Label("Tagged me", systemImage: showTaggedOnly ? "tag.fill" : "tag")
+                            .font(.mlrScaled(14, weight: .medium))
+                            .foregroundStyle(showTaggedOnly ? Color.mlrPrimary : Color.mlrTextMuted)
                     }
                 }
             }
-            .navigationTitle("Feed")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    if env.isSignedIn {
-                        Button {
-                            withAnimation { showTaggedOnly.toggle() }
-                        } label: {
-                            Label("Tagged me", systemImage: showTaggedOnly ? "tag.fill" : "tag")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(showTaggedOnly ? Color.mlrPrimary : Color.mlrTextMuted)
-                        }
-                    }
-                }
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    if !env.isSignedIn {
-                        Button("Sign in") { showSignIn = true }
-                            .font(.system(size: 15, weight: .medium))
-                            .foregroundStyle(Color.mlrPrimary)
-                    }
+            ToolbarItem(placement: .navigationBarTrailing) {
+                if !env.isSignedIn {
+                    Button("Sign in") { showSignIn = true }
+                        .font(.mlrScaled(15, weight: .medium))
+                        .foregroundStyle(Color.mlrPrimary)
                 }
             }
         }
@@ -77,78 +263,10 @@ struct PostsView: View {
             await env.postsService.fetchPosts(userId: env.currentProfile?.id)
             await fetchReactions(for: env.postsService.posts)
             env.postsService.subscribeToRealtime()
-            await loadCommittees()
         }
         .onChange(of: env.postsService.posts) { _, newPosts in
             Task { await fetchReactions(for: newPosts) }
         }
-    }
-
-    // MARK: - Committee chat pills
-
-    private var committeePills: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 8) {
-                // The Posts feed is the active tab here.
-                pill(label: "📰 Posts", active: true, unread: 0)
-
-                ForEach(myCommittees) { committee in
-                    NavigationLink {
-                        CommitteeChatLoader(committee: committee)
-                    } label: {
-                        pill(
-                            label: "\(committee.emoji ?? "💬") \(committee.name)",
-                            active: false,
-                            unread: committeeUnread[committee.id] ?? 0
-                        )
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 10)
-        }
-        .background(Color.mlrSurface)
-    }
-
-    private func pill(label: String, active: Bool, unread: Int) -> some View {
-        HStack(spacing: 5) {
-            Text(label)
-                .font(.system(size: 13, weight: .semibold))
-                .lineLimit(1)
-            if unread > 0 {
-                Text(unread > 99 ? "99+" : "\(unread)")
-                    .font(.system(size: 11, weight: .bold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 1)
-                    .background(Color.mlrDanger)
-                    .clipShape(Capsule())
-            }
-        }
-        .foregroundStyle(active ? .white : Color.mlrPrimary)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 8)
-        .background(active ? Color.mlrPrimary : Color.mlrPrimary.opacity(0.1))
-        .clipShape(Capsule())
-        .overlay(Capsule().strokeBorder(Color.mlrPrimary.opacity(active ? 0 : 0.25), lineWidth: 1))
-    }
-
-    private func loadCommittees() async {
-        guard env.isSignedIn, let uid = env.currentProfile?.id else {
-            myCommittees = []
-            committeeUnread = [:]
-            return
-        }
-        if env.committeeService.committees.isEmpty {
-            await env.committeeService.fetchCommittees()
-        }
-        // Membership lives in the roster now (migration 0057).
-        let mySlugs = await env.committeeService.fetchMyCommitteeSlugs(userId: uid)
-        myCommittees = env.committeeService.committees.filter { mySlugs.contains($0.slug) }
-        committeeUnread = await env.committeeService.fetchUnreadByCommittee(
-            userId: uid, committeeIds: myCommittees.map(\.id)
-        )
     }
 
     // MARK: - Content
@@ -217,7 +335,7 @@ struct PostsView: View {
         VStack(spacing: 16) {
             Spacer()
             Image(systemName: "rectangle.stack")
-                .font(.system(size: 44))
+                .font(.mlrScaled(44))
                 .foregroundStyle(Color.mlrTextSubtle)
             Text("Nothing here yet")
                 .font(.headline)
@@ -247,6 +365,7 @@ struct PostsView: View {
             Image(systemName: "square.and.pencil")
         }
         .buttonStyle(.glassCircle())
+        .accessibilityLabel("New post")
         .padding(.trailing, 20)
         .padding(.bottom, 24)
     }
@@ -265,13 +384,10 @@ struct PostsView: View {
     private func toggleReaction(post: Post, emoji: String) async {
         guard let userId = env.currentProfile?.id else { return }
         let existing = reactionMap[post.id] ?? []
-        // One reaction per user per post (composite PK): tapping the current
-        // emoji removes it; tapping a different one switches it.
         let myReaction = existing.first(where: { $0.userId == userId })
         let isRemoving = myReaction?.emoji == emoji
         let withoutMine = existing.filter { $0.userId != userId }
 
-        // Optimistic update
         if isRemoving {
             reactionMap[post.id] = withoutMine
         } else {
@@ -288,12 +404,10 @@ struct PostsView: View {
             } else {
                 try await env.postsService.addReaction(postId: post.id, emoji: emoji, userId: userId)
             }
-            // Refetch authoritative state
             if let fresh = try? await env.postsService.fetchReactions(postId: post.id) {
                 reactionMap[post.id] = fresh
             }
         } catch {
-            // Roll back optimistic update
             if let fresh = try? await env.postsService.fetchReactions(postId: post.id) {
                 reactionMap[post.id] = fresh
             }
@@ -309,8 +423,6 @@ struct PostsView: View {
     }
 
     private func adminRemove(_ post: Post) async {
-        // The web app uses set_content_status RPC; the iOS PostsService doesn't expose it yet.
-        // Call the Supabase RPC directly until PostsService gains this method.
         struct StatusParams: Encodable {
             let p_target_type: String
             let p_target_id: String
@@ -324,22 +436,5 @@ struct PostsView: View {
             ))
             .execute()
         await env.postsService.fetchPosts(userId: env.currentProfile?.id)
-    }
-}
-
-// MARK: - Committee Chat Loader
-// Pushed from a Feed pill: loads the committee's members (for @mentions) then
-// shows the existing chat view. Keeps CommitteeChatView unchanged.
-
-private struct CommitteeChatLoader: View {
-    @Environment(AppEnvironment.self) private var env
-    let committee: Committee
-    @State private var members: [CommitteeMember] = []
-
-    var body: some View {
-        CommitteeChatView(committee: committee, members: members)
-            .task {
-                members = (try? await env.committeeService.fetchMembers(committeeId: committee.id)) ?? []
-            }
     }
 }

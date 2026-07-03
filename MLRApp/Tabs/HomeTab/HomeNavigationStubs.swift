@@ -36,9 +36,9 @@ private struct PlacesSection: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
-                Text(emoji).font(.system(size: 22))
+                Text(emoji).font(.mlrScaled(22))
                 Text(title)
-                    .font(.system(size: 20, weight: .bold))
+                    .font(.mlrScaled(20, weight: .bold))
                     .foregroundStyle(Color.mlrText)
             }
             .padding(.horizontal, 16)
@@ -62,18 +62,18 @@ private struct LocalPlaceCard: View {
         VStack(alignment: .leading, spacing: 10) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(place.name)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.mlrScaled(16, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                 if let locality = place.address {
                     Text(locality)
-                        .font(.system(size: 12))
+                        .font(.mlrScaled(12))
                         .foregroundStyle(Color.mlrTextMuted)
                 }
             }
 
             if let blurb = place.description {
                 Text(blurb)
-                    .font(.system(size: 14))
+                    .font(.mlrScaled(14))
                     .foregroundStyle(Color.mlrTextMuted)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -117,9 +117,9 @@ private struct PlaceChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.system(size: 11, weight: .semibold))
+                .font(.mlrScaled(11, weight: .semibold))
             Text(label)
-                .font(.system(size: 13, weight: .semibold))
+                .font(.mlrScaled(13, weight: .semibold))
         }
         .foregroundStyle(Color.mlrPrimary)
         .padding(.horizontal, 12)

@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 // MARK: - AnnouncementBanner
 // Mirrors web app's components/AnnouncementBanner.tsx.
@@ -16,6 +17,7 @@ struct AnnouncementBannerStack: View {
     @Environment(AppEnvironment.self) private var env
     @State private var dbAnnouncements: [Announcement] = []
     @State private var isLoading = true
+    @State private var channel: RealtimeChannelV2? = nil
 
     private var visible: [Announcement] {
         let all = Announcement.seed + dbAnnouncements
@@ -34,7 +36,26 @@ struct AnnouncementBannerStack: View {
                 )
             }
         }
-        .task { await loadFromDB() }
+        .task {
+            await loadFromDB()
+            await subscribeRealtime()
+        }
+        .onDisappear {
+            if let channel { Task { await supabase.removeChannel(channel) } }
+            channel = nil
+        }
+    }
+
+    /// Live-update banners when an admin posts or expires an announcement —
+    /// matching the web `announcements-banner` channel.
+    private func subscribeRealtime() async {
+        guard channel == nil else { return }
+        let ch = supabase.channel("announcements-banner")
+        channel = ch
+        ch.onPostgresChange(AnyAction.self, schema: "public", table: "announcements") { _ in
+            Task { @MainActor in await loadFromDB() }
+        }
+        await ch.subscribe()
     }
 
     private func dismiss(_ announcement: Announcement) {
@@ -79,12 +100,12 @@ private struct AnnouncementBannerRow: View {
             // Text content
             VStack(alignment: .leading, spacing: 2) {
                 Text(announcement.title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(kindTextColor)
 
                 if let body = announcement.body, !body.isEmpty {
                     Text(body)
-                        .font(.system(size: 13))
+                        .font(.mlrScaled(13))
                         .foregroundStyle(kindTextColor.opacity(0.85))
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -94,7 +115,7 @@ private struct AnnouncementBannerRow: View {
             // Dismiss button
             Button(action: onDismiss) {
                 Image(systemName: "xmark")
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.mlrScaled(11, weight: .semibold))
                     .foregroundStyle(kindTextColor.opacity(0.6))
                     .padding(6)
             }

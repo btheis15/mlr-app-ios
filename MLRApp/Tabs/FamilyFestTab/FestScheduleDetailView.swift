@@ -19,10 +19,10 @@ struct FestScheduleDetailView: View {
 
                     HStack(spacing: 16) {
                         Label(item.day, systemImage: "calendar")
-                            .font(.system(size: 14))
+                            .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFest.opacity(0.7))
                         Label(item.time, systemImage: "clock")
-                            .font(.system(size: 14))
+                            .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFest.opacity(0.7))
                     }
                 }
@@ -38,7 +38,7 @@ struct FestScheduleDetailView: View {
                     DetailSection(icon: "mappin.and.ellipse", title: "Location") {
                         if env.isSignedIn {
                             Text(location)
-                                .font(.system(size: 15))
+                                .font(.mlrScaled(15))
                                 .foregroundStyle(Color.mlrFest.opacity(0.85))
                         } else {
                             ProtectedField(message: "Sign in to see location")
@@ -53,7 +53,7 @@ struct FestScheduleDetailView: View {
                 if let description = item.description {
                     DetailSection(icon: "text.alignleft", title: "About") {
                         Text(description)
-                            .font(.system(size: 15))
+                            .font(.mlrScaled(15))
                             .foregroundStyle(Color.mlrText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
@@ -89,7 +89,9 @@ struct FestScheduleDetailView: View {
 
 // MARK: - Detail Section Wrapper
 
-private struct DetailSection<Content: View>: View {
+/// Shared section wrapper (icon + uppercase label) used by the schedule/dinner
+/// detail views and the inline expandable Fest rows.
+struct DetailSection<Content: View>: View {
     let icon: String
     let title: String
     @ViewBuilder let content: () -> Content
@@ -98,10 +100,10 @@ private struct DetailSection<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 6) {
                 Image(systemName: icon)
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.mlrScaled(12, weight: .semibold))
                     .foregroundStyle(Color.mlrFest.opacity(0.6))
                 Text(title.uppercased())
-                    .font(.system(size: 11, weight: .semibold))
+                    .font(.mlrScaled(11, weight: .semibold))
                     .foregroundStyle(Color.mlrFest.opacity(0.6))
                     .tracking(0.8)
             }
@@ -114,7 +116,7 @@ private struct DetailSection<Content: View>: View {
 
 // MARK: - Lead Row
 
-private struct LeadRow: View {
+struct LeadRow: View {
     let name: String
 
     var body: some View {
@@ -125,12 +127,12 @@ private struct LeadRow: View {
                 .frame(width: 36, height: 36)
                 .overlay(
                     Text(String(name.prefix(1)).uppercased())
-                        .font(.system(size: 15, weight: .bold))
+                        .font(.mlrScaled(15, weight: .bold))
                         .foregroundStyle(Color.mlrFest)
                 )
 
             Text(name)
-                .font(.system(size: 15, weight: .medium))
+                .font(.mlrScaled(15, weight: .medium))
                 .foregroundStyle(Color.mlrFest)
 
             Spacer()
@@ -141,7 +143,7 @@ private struct LeadRow: View {
                     // Phone action — requires real phone data from profiles
                 } label: {
                     Image(systemName: "phone.fill")
-                        .font(.system(size: 13))
+                        .font(.mlrScaled(13))
                         .foregroundStyle(Color.mlrFest)
                         .padding(8)
                         .background(Color.mlrFest.opacity(0.1))
@@ -153,7 +155,7 @@ private struct LeadRow: View {
                     // Message action
                 } label: {
                     Image(systemName: "message.fill")
-                        .font(.system(size: 13))
+                        .font(.mlrScaled(13))
                         .foregroundStyle(Color.mlrFest)
                         .padding(8)
                         .background(Color.mlrFest.opacity(0.1))
@@ -173,14 +175,260 @@ struct ProtectedField: View {
     var body: some View {
         HStack(spacing: 6) {
             Image(systemName: "lock.fill")
-                .font(.system(size: 12))
+                .font(.mlrScaled(12))
             Text(message)
-                .font(.system(size: 14))
+                .font(.mlrScaled(14))
         }
         .foregroundStyle(Color.mlrFest.opacity(0.5))
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
         .background(Color.mlrFest.opacity(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - ExpandableScheduleRow
+//
+// A schedule item that shows its gist collapsed (time • title • location hint)
+// and expands IN PLACE to the full detail (location, about, leads) — reusing the
+// DetailSection / LeadRow / ProtectedField above so the inline and pushed views
+// never drift. Animation is gated on Reduce Motion and a selection haptic fires
+// on toggle, matching the app's AttendanceControl idiom.
+
+struct ExpandableScheduleRow: View {
+    let item: ScheduleItem
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isExpanded = false
+
+    private var hasDetail: Bool {
+        (item.description?.isEmpty == false) || item.location != nil || !item.leads.isEmpty
+    }
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button(action: toggle) { header }
+                .buttonStyle(.plain)
+                .disabled(!hasDetail)
+
+            if isExpanded { expanded }
+        }
+        .background(Color.mlrFestParchment)
+        .sensoryFeedback(.selection, trigger: isExpanded)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+        .accessibilityHint(hasDetail ? "Double tap to \(isExpanded ? "collapse" : "expand") details" : "")
+    }
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Text(item.time)
+                .font(.mlrScaled(12, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.mlrFest.opacity(0.6))
+                .frame(width: 62, alignment: .leading)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text(item.title)
+                    .font(.festSerif(14, weight: .bold))
+                    .foregroundStyle(Color.mlrFest)
+                    .multilineTextAlignment(.leading)
+
+                if let location = item.location, !isExpanded {
+                    if env.isSignedIn {
+                        Label(location, systemImage: "mappin.and.ellipse")
+                            .font(.mlrScaled(12))
+                            .foregroundStyle(Color.mlrFest.opacity(0.6))
+                            .lineLimit(1)
+                    } else {
+                        Label("Sign in to see location", systemImage: "lock.fill")
+                            .font(.mlrScaled(12))
+                            .foregroundStyle(Color.mlrFest.opacity(0.4))
+                    }
+                }
+            }
+
+            Spacer(minLength: 8)
+
+            if hasDetail {
+                Image(systemName: "chevron.right")
+                    .font(.mlrScaled(12, weight: .semibold))
+                    .foregroundStyle(Color.mlrFest.opacity(0.4))
+                    .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                    .padding(.top, 2)
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var expanded: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            if let location = item.location {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "mappin.and.ellipse", title: "Location") {
+                    if env.isSignedIn {
+                        Text(location)
+                            .font(.mlrScaled(15))
+                            .foregroundStyle(Color.mlrFest.opacity(0.85))
+                    } else {
+                        ProtectedField(message: "Sign in to see location")
+                    }
+                }
+            }
+
+            if let description = item.description, !description.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "text.alignleft", title: "About") {
+                    Text(description)
+                        .font(.mlrScaled(15))
+                        .foregroundStyle(Color.mlrText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if !item.leads.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "person.fill", title: "Leads") {
+                    if env.isSignedIn {
+                        VStack(alignment: .leading, spacing: 10) {
+                            ForEach(item.leads, id: \.self) { lead in
+                                LeadRow(name: lead)
+                            }
+                        }
+                    } else {
+                        ProtectedField(message: "Sign in to see leads & contacts")
+                    }
+                }
+            }
+        }
+    }
+
+    private func toggle() {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) { isExpanded.toggle() }
+    }
+}
+
+// MARK: - ExpandableDinnerRow
+//
+// That night's dinner, rendered inline at the bottom of a day. Collapsed shows
+// the chef + served time; expanded reveals chef, menu, location, and crew —
+// reusing the same DetailSection layout as FestDinnersDetailView.
+
+struct ExpandableDinnerRow: View {
+    let dinner: FestDinner
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var isExpanded = false
+
+    var body: some View {
+        VStack(spacing: 0) {
+            Button(action: toggle) { header }
+                .buttonStyle(.plain)
+
+            if isExpanded { expanded }
+        }
+        .background(Color.mlrFest.opacity(0.04))
+        .sensoryFeedback(.selection, trigger: isExpanded)
+        .accessibilityElement(children: .combine)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
+        .accessibilityHint("Double tap to \(isExpanded ? "collapse" : "expand") the dinner")
+    }
+
+    private var header: some View {
+        HStack(alignment: .top, spacing: 14) {
+            Image(systemName: "fork.knife")
+                .font(.mlrScaled(13, weight: .semibold))
+                .foregroundStyle(Color.mlrFest.opacity(0.7))
+                .frame(width: 62, alignment: .leading)
+                .padding(.top, 1)
+
+            VStack(alignment: .leading, spacing: 3) {
+                Text("Dinner")
+                    .font(.festSerif(14, weight: .bold))
+                    .foregroundStyle(Color.mlrFest)
+                Text("\(dinner.chef) · \(dinner.time)")
+                    .font(.mlrScaled(12))
+                    .foregroundStyle(Color.mlrFest.opacity(0.6))
+                    .lineLimit(1)
+            }
+
+            Spacer(minLength: 8)
+
+            Image(systemName: "chevron.right")
+                .font(.mlrScaled(12, weight: .semibold))
+                .foregroundStyle(Color.mlrFest.opacity(0.4))
+                .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                .padding(.top, 2)
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
+    }
+
+    @ViewBuilder
+    private var expanded: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Divider().background(Color.mlrFest.opacity(0.12))
+            DetailSection(icon: "person.fill", title: "Chef") {
+                Text(dinner.chef)
+                    .font(.mlrScaled(15, weight: .medium))
+                    .foregroundStyle(Color.mlrFest)
+            }
+
+            if !dinner.menuLines.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "fork.knife", title: "On the Menu") {
+                    VStack(alignment: .leading, spacing: 6) {
+                        ForEach(dinner.menuLines, id: \.self) { line in
+                            HStack(spacing: 8) {
+                                Circle()
+                                    .fill(Color.mlrFest.opacity(0.4))
+                                    .frame(width: 5, height: 5)
+                                Text(line)
+                                    .font(.mlrScaled(15))
+                                    .foregroundStyle(Color.mlrText)
+                            }
+                        }
+                    }
+                }
+            }
+
+            Divider().background(Color.mlrFest.opacity(0.12))
+            DetailSection(icon: "mappin.and.ellipse", title: "Location") {
+                if env.isSignedIn {
+                    Text(dinner.location ?? "TBD")
+                        .font(.mlrScaled(15))
+                        .foregroundStyle(Color.mlrFest.opacity(dinner.location == nil ? 0.5 : 0.85))
+                } else {
+                    ProtectedField(message: "Sign in to see location")
+                }
+            }
+
+            if !dinner.crew.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "person.3.fill", title: "Crew") {
+                    if env.isSignedIn {
+                        VStack(alignment: .leading, spacing: 6) {
+                            ForEach(dinner.crew, id: \.self) { member in
+                                Text(member)
+                                    .font(.mlrScaled(14, weight: .medium))
+                                    .foregroundStyle(Color.mlrFest)
+                            }
+                        }
+                    } else {
+                        ProtectedField(message: "Sign in to see crew")
+                    }
+                }
+            }
+        }
+    }
+
+    private func toggle() {
+        withAnimation(reduceMotion ? nil : .easeInOut(duration: 0.22)) { isExpanded.toggle() }
     }
 }

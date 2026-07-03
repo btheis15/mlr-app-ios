@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 // MARK: - CommentsView
 // Sheet presenting the comment thread for a post.
@@ -77,7 +78,7 @@ struct CommentsView: View {
                 Text(env.isSignedIn
                      ? post.authorName
                      : (post.authorName.components(separatedBy: " ").first ?? post.authorName))
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.mlrScaled(13, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                 if let text = post.text {
                     Text(text)
@@ -88,13 +89,15 @@ struct CommentsView: View {
             }
             Spacer()
             if let imageUrl = post.imageUrl, let url = URL(string: imageUrl) {
-                AsyncImage(url: url) { phase in
-                    if case .success(let img) = phase {
-                        img.resizable().scaledToFill()
-                            .frame(width: 44, height: 44)
-                            .clipShape(RoundedRectangle(cornerRadius: 8))
-                    }
-                }
+                KFImage(url)
+                    .placeholder { Color.mlrCard }
+                    .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 132, height: 132)))
+                    .scaleFactor(UIScreen.main.scale)
+                    .fade(duration: 0.2)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 44, height: 44)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
             }
         }
     }
@@ -113,7 +116,7 @@ struct CommentsView: View {
             VStack(spacing: 12) {
                 Spacer()
                 Image(systemName: "bubble.left")
-                    .font(.system(size: 36))
+                    .font(.mlrScaled(36))
                     .foregroundStyle(Color.mlrTextSubtle)
                 Text("Be the first to comment")
                     .font(.subheadline)
@@ -183,7 +186,7 @@ struct CommentsView: View {
                     Task { await sendComment() }
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
-                        .font(.system(size: 30))
+                        .font(.mlrScaled(30))
                         .foregroundStyle(canSend ? Color.mlrPrimary : Color.mlrTextSubtle)
                 }
                 .disabled(!canSend || isSending)
@@ -209,7 +212,7 @@ struct CommentsView: View {
                 .foregroundStyle(Color.mlrTextMuted)
             Spacer()
             Button("Sign in") { showSignIn = true }
-                .font(.system(size: 15, weight: .semibold))
+                .font(.mlrScaled(15, weight: .semibold))
                 .foregroundStyle(Color.mlrPrimary)
         }
         .padding(.horizontal, 16)
@@ -307,7 +310,7 @@ struct CommentRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
                     Text(displayName)
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.mlrScaled(13, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
                     Text(MLRFormat.relativeTime(comment.createdAt))
                         .font(.caption2)

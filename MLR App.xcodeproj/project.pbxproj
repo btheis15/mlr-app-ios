@@ -124,6 +124,22 @@
 		D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE72FF419F700603CE7 /* AppImagesService.swift */; };
 		D33F9EEA2FF41A0A00603CE7 /* AppImagesAdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */; };
 		D33F9EEC2FF4502100603CE7 /* RosterEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EEB2FF4502100603CE7 /* RosterEditSheet.swift */; };
+		D33F9EF42FF5BD4E00603CE7 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D33F9EF32FF5BD4E00603CE7 /* WidgetKit.framework */; };
+		D33F9EF62FF5BD4E00603CE7 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D33F9EF52FF5BD4E00603CE7 /* SwiftUI.framework */; };
+		D33F9F052FF5BD4F00603CE7 /* MLRWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D33F9EF12FF5BD4E00603CE7 /* MLRWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		D33F9F112FF5C32100603CE7 /* FestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EC62FEC184500603CE7 /* FestActivityAttributes.swift */; };
+		D33F9F122FF5C32A00603CE7 /* PulsingLiveDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EC72FEC184500603CE7 /* PulsingLiveDot.swift */; };
+		D33F9F132FF5C33000603CE7 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EC82FEC184500603CE7 /* SharedStore.swift */; };
+		D33F9F142FF5C37100603CE7 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E282FEC086700603CE7 /* Colors.swift */; };
+		D33F9F152FF5C38E00603CE7 /* FestSeason.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E2C2FEC086700603CE7 /* FestSeason.swift */; };
+		D33F9F182FF844AA00603CE7 /* House.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F172FF844AA00603CE7 /* House.swift */; };
+		D33F9F1A2FF8457100603CE7 /* HousesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F192FF8457100603CE7 /* HousesService.swift */; };
+		D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F1B2FF846D300603CE7 /* WorkItemDetailSheet.swift */; };
+		D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F1E2FF8475E00603CE7 /* HouseChatView.swift */; };
+		D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */; };
+		D33F9F232FF84B0500603CE7 /* WorkItemIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */; };
+		D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F242FF84C1C00603CE7 /* AppEntities.swift */; };
+		D33F9F272FF84C6100603CE7 /* BrowseIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */; };
 		D3533C0B2FE9EC60001AD887 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0A2FE9EC60001AD887 /* Auth */; };
 		D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0C2FE9EC60001AD887 /* Functions */; };
 		D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0E2FE9EC60001AD887 /* PostgREST */; };
@@ -132,6 +148,28 @@
 		D3533C152FE9EC60001AD887 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C142FE9EC60001AD887 /* Supabase */; };
 		D3533C182FE9EC81001AD887 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C172FE9EC81001AD887 /* Kingfisher */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		D33F9F032FF5BD4F00603CE7 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 000000000000000000000000 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D33F9EF02FF5BD4E00603CE7;
+			remoteInfo = MLRWidgetExtension;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		D33F9F062FF5BD4F00603CE7 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			dstPath = "";
+			dstSubfolder = PlugIns;
+			files = (
+				D33F9F052FF5BD4F00603CE7 /* MLRWidgetExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+		};
+/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* MLR App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MLR App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -252,7 +290,40 @@
 		D33F9EE72FF419F700603CE7 /* AppImagesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppImagesService.swift; sourceTree = "<group>"; };
 		D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppImagesAdminView.swift; sourceTree = "<group>"; };
 		D33F9EEB2FF4502100603CE7 /* RosterEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RosterEditSheet.swift; sourceTree = "<group>"; };
+		D33F9EF12FF5BD4E00603CE7 /* MLRWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MLRWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		D33F9EF32FF5BD4E00603CE7 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		D33F9EF52FF5BD4E00603CE7 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
+		D33F9F162FF5C83700603CE7 /* MLRWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MLRWidgetExtension.entitlements; sourceTree = "<group>"; };
+		D33F9F172FF844AA00603CE7 /* House.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = House.swift; sourceTree = "<group>"; };
+		D33F9F192FF8457100603CE7 /* HousesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HousesService.swift; sourceTree = "<group>"; };
+		D33F9F1B2FF846D300603CE7 /* WorkItemDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemDetailSheet.swift; sourceTree = "<group>"; };
+		D33F9F1E2FF8475E00603CE7 /* HouseChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseChatView.swift; sourceTree = "<group>"; };
+		D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminHousesView.swift; sourceTree = "<group>"; };
+		D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemIntents.swift; sourceTree = "<group>"; };
+		D33F9F242FF84C1C00603CE7 /* AppEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntities.swift; sourceTree = "<group>"; };
+		D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseIntents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		D33F9F092FF5BD4F00603CE7 /* Exceptions for "MLRWidget" folder in "MLRWidgetExtension" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = D33F9EF02FF5BD4E00603CE7 /* MLRWidgetExtension */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		D33F9EF72FF5BD4E00603CE7 /* MLRWidget */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				D33F9F092FF5BD4F00603CE7 /* Exceptions for "MLRWidget" folder in "MLRWidgetExtension" target */,
+			);
+			path = MLRWidget;
+			sourceTree = "<group>";
+		};
+/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
@@ -267,14 +338,24 @@
 				D3533C112FE9EC60001AD887 /* Realtime in Frameworks */,
 			);
 		};
+		D33F9EEE2FF5BD4E00603CE7 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			files = (
+				D33F9EF62FF5BD4E00603CE7 /* SwiftUI.framework in Frameworks */,
+				D33F9EF42FF5BD4E00603CE7 /* WidgetKit.framework in Frameworks */,
+			);
+		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				D33F9F162FF5C83700603CE7 /* MLRWidgetExtension.entitlements */,
 				D33F9EC92FEC184500603CE7 /* AppGroup */,
 				D33F9E5B2FEC086700603CE7 /* MLRApp */,
+				D33F9EF72FF5BD4E00603CE7 /* MLRWidget */,
+				D33F9EF22FF5BD4E00603CE7 /* Frameworks */,
 				000000000000000000000020 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -283,6 +364,7 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000120 /* MLR App.app */,
+				D33F9EF12FF5BD4E00603CE7 /* MLRWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -364,6 +446,9 @@
 				D33F9DF92FEC086700603CE7 /* FestCountdownIntent.swift */,
 				D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */,
 				D33F9DFB2FEC086700603CE7 /* NextEventIntent.swift */,
+				D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */,
+				D33F9F242FF84C1C00603CE7 /* AppEntities.swift */,
+				D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -388,6 +473,7 @@
 				D33F9E052FEC086700603CE7 /* Profile.swift */,
 				D33F9E062FEC086700603CE7 /* SeedData.swift */,
 				D33F9ECF2FF3170900603CE7 /* WorkItem.swift */,
+				D33F9F172FF844AA00603CE7 /* House.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -430,6 +516,7 @@
 				D33F9ED12FF3172100603CE7 /* WorkItemsService.swift */,
 				D33F9EE32FF4075B00603CE7 /* FestContentService.swift */,
 				D33F9EE72FF419F700603CE7 /* AppImagesService.swift */,
+				D33F9F192FF8457100603CE7 /* HousesService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -544,6 +631,7 @@
 				D33F9E502FEC086700603CE7 /* AdminSignInsView.swift */,
 				D33F9E512FEC086700603CE7 /* AdminView.swift */,
 				D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */,
+				D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */,
 			);
 			path = Admin;
 			sourceTree = "<group>";
@@ -602,6 +690,7 @@
 				D33F9ECD2FEC33AB00603CE7 /* Assets.xcassets */,
 				D33F9ED32FF3175D00603CE7 /* WorkItems */,
 				D33F9EDE2FF3FC7500603CE7 /* Help */,
+				D33F9F1D2FF8475E00603CE7 /* Houses */,
 			);
 			path = MLRApp;
 			sourceTree = "<group>";
@@ -621,6 +710,7 @@
 			children = (
 				D33F9ED42FF3175D00603CE7 /* WorkItemsSection.swift */,
 				D33F9ED62FF3178900603CE7 /* WorkItemComposer.swift */,
+				D33F9F1B2FF846D300603CE7 /* WorkItemDetailSheet.swift */,
 			);
 			path = WorkItems;
 			sourceTree = "<group>";
@@ -634,6 +724,23 @@
 			path = Help;
 			sourceTree = "<group>";
 		};
+		D33F9EF22FF5BD4E00603CE7 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				D33F9EF32FF5BD4E00603CE7 /* WidgetKit.framework */,
+				D33F9EF52FF5BD4E00603CE7 /* SwiftUI.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		D33F9F1D2FF8475E00603CE7 /* Houses */ = {
+			isa = PBXGroup;
+			children = (
+				D33F9F1E2FF8475E00603CE7 /* HouseChatView.swift */,
+			);
+			path = Houses;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -644,8 +751,12 @@
 				000000000000000120000000 /* Sources */,
 				000000000000000130000000 /* Frameworks */,
 				000000000000000140000000 /* Resources */,
+				D33F9F062FF5BD4F00603CE7 /* Embed Foundation Extensions */,
 			);
 			buildRules = (
+			);
+			dependencies = (
+				D33F9F042FF5BD4F00603CE7 /* PBXTargetDependency */,
 			);
 			name = "MLR App";
 			packageProductDependencies = (
@@ -661,6 +772,24 @@
 			productReference = 000000000000000000000120 /* MLR App.app */;
 			productType = "com.apple.product-type.application";
 		};
+		D33F9EF02FF5BD4E00603CE7 /* MLRWidgetExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = D33F9F0A2FF5BD4F00603CE7 /* Build configuration list for PBXNativeTarget "MLRWidgetExtension" */;
+			buildPhases = (
+				D33F9EED2FF5BD4E00603CE7 /* Sources */,
+				D33F9EEE2FF5BD4E00603CE7 /* Frameworks */,
+				D33F9EEF2FF5BD4E00603CE7 /* Resources */,
+			);
+			buildRules = (
+			);
+			fileSystemSynchronizedGroups = (
+				D33F9EF72FF5BD4E00603CE7 /* MLRWidget */,
+			);
+			name = MLRWidgetExtension;
+			productName = MLRWidgetExtension;
+			productReference = D33F9EF12FF5BD4E00603CE7 /* MLRWidgetExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -668,11 +797,14 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
-				LastSwiftUpdateCheck = 2630;
+				LastSwiftUpdateCheck = 2700;
 				LastUpgradeCheck = 2700;
 				TargetAttributes = {
 					000000000000000100000000 = {
 						CreatedOnToolsVersion = 26.3;
+					};
+					D33F9EF02FF5BD4E00603CE7 = {
+						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -695,6 +827,7 @@
 			projectRoot = "";
 			targets = (
 				000000000000000100000000 /* MLR App */,
+				D33F9EF02FF5BD4E00603CE7 /* MLRWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -706,6 +839,11 @@
 				D33F9ECE2FEC33AB00603CE7 /* Assets.xcassets in Resources */,
 			);
 		};
+		D33F9EEF2FF5BD4E00603CE7 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			files = (
+			);
+		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -713,6 +851,7 @@
 			isa = PBXSourcesBuildPhase;
 			files = (
 				D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */,
+				D33F9F272FF84C6100603CE7 /* BrowseIntents.swift in Sources */,
 				D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */,
 				D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */,
 				D33F9E5F2FEC086700603CE7 /* ShirtVoteView.swift in Sources */,
@@ -757,6 +896,7 @@
 				D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */,
 				D33F9E7D2FEC086700603CE7 /* FestDinnersView.swift in Sources */,
 				D33F9E7E2FEC086700603CE7 /* FestCountdownIntent.swift in Sources */,
+				D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */,
 				D33F9E7F2FEC086700603CE7 /* FestSeason.swift in Sources */,
 				D33F9E802FEC086700603CE7 /* Event.swift in Sources */,
 				D33F9EDD2FF319F800603CE7 /* CommitteeMemberManageSheet.swift in Sources */,
@@ -779,12 +919,14 @@
 				D33F9E902FEC086700603CE7 /* Committee.swift in Sources */,
 				D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */,
 				D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */,
+				D33F9F182FF844AA00603CE7 /* House.swift in Sources */,
 				D33F9E932FEC086700603CE7 /* AppEnvironment.swift in Sources */,
 				D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */,
 				D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */,
 				D33F9E952FEC086700603CE7 /* FestScheduleView.swift in Sources */,
 				D33F9E962FEC086700603CE7 /* SignInView.swift in Sources */,
 				D33F9E972FEC086700603CE7 /* WelcomeCard.swift in Sources */,
+				D33F9F232FF84B0500603CE7 /* WorkItemIntents.swift in Sources */,
 				D33F9E982FEC086700603CE7 /* FamilyFestSpotlight.swift in Sources */,
 				D33F9E992FEC086700603CE7 /* HomeView.swift in Sources */,
 				D33F9E9A2FEC086700603CE7 /* Formatters.swift in Sources */,
@@ -793,6 +935,7 @@
 				D33F9E9D2FEC086700603CE7 /* NextEventIntent.swift in Sources */,
 				D33F9E9E2FEC086700603CE7 /* CabinService.swift in Sources */,
 				D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */,
+				D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */,
 				D33F9EA02FEC086700603CE7 /* AdminNotificationComposer.swift in Sources */,
 				D33F9EA12FEC086700603CE7 /* TshirtCallout.swift in Sources */,
 				D33F9EA22FEC086700603CE7 /* NotifPrefsView.swift in Sources */,
@@ -822,7 +965,10 @@
 				D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */,
 				D33F9EB82FEC086700603CE7 /* PushService.swift in Sources */,
 				D33F9EB92FEC086700603CE7 /* PostsView.swift in Sources */,
+				D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */,
 				D33F9EBA2FEC086700603CE7 /* ProfileView.swift in Sources */,
+				D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */,
+				D33F9F1A2FF8457100603CE7 /* HousesService.swift in Sources */,
 				D33F9EBB2FEC086700603CE7 /* FestPhotosView.swift in Sources */,
 				D33F9EBC2FEC086700603CE7 /* AdminView.swift in Sources */,
 				D33F9ED72FF3178900603CE7 /* WorkItemComposer.swift in Sources */,
@@ -830,7 +976,25 @@
 				D33F9EBE2FEC086700603CE7 /* HelpRequestsView.swift in Sources */,
 			);
 		};
+		D33F9EED2FF5BD4E00603CE7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			files = (
+				D33F9F132FF5C33000603CE7 /* SharedStore.swift in Sources */,
+				D33F9F142FF5C37100603CE7 /* Colors.swift in Sources */,
+				D33F9F152FF5C38E00603CE7 /* FestSeason.swift in Sources */,
+				D33F9F112FF5C32100603CE7 /* FestActivityAttributes.swift in Sources */,
+				D33F9F122FF5C32A00603CE7 /* PulsingLiveDot.swift in Sources */,
+			);
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D33F9F042FF5BD4F00603CE7 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D33F9EF02FF5BD4E00603CE7 /* MLRWidgetExtension */;
+			targetProxy = D33F9F032FF5BD4F00603CE7 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		000000000000000011000000 /* Debug configuration for PBXProject "MLR App" */ = {
@@ -890,6 +1054,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MLR uses Calendar to add family events to your calendar.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "MLR uses Contacts to help you find and connect with family members.";
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
@@ -957,6 +1122,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MLR uses Calendar to add family events to your calendar.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "MLR uses Contacts to help you find and connect with family members.";
 				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
@@ -984,6 +1150,11 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "MLR uses Calendar to add family events to your calendar.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "MLR uses Contacts to help you find and connect with family members.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -1028,6 +1199,11 @@
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
+				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
+				INFOPLIST_KEY_NSCalendarsUsageDescription = "MLR uses Calendar to add family events to your calendar.";
+				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
+				INFOPLIST_KEY_NSContactsUsageDescription = "MLR uses Contacts to help you find and connect with family members.";
+				INFOPLIST_KEY_NSSupportsLiveActivities = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphoneos*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSceneManifest_Generation[sdk=iphonesimulator*]" = YES;
 				"INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents[sdk=iphoneos*]" = YES;
@@ -1059,6 +1235,73 @@
 			};
 			name = Release;
 		};
+		D33F9F072FF5BD4F00603CE7 /* Debug configuration for PBXNativeTarget "MLRWidgetExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = MLRWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UBM722BP54;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MLRWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MLRWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr.MLRWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		D33F9F082FF5BD4F00603CE7 /* Release configuration for PBXNativeTarget "MLRWidgetExtension" */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
+				CODE_SIGN_ENTITLEMENTS = MLRWidgetExtension.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = UBM722BP54;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = MLRWidget/Info.plist;
+				INFOPLIST_KEY_CFBundleDisplayName = MLRWidget;
+				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr.MLRWidget;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				REGISTER_APP_GROUPS = YES;
+				SDKROOT = iphoneos;
+				SKIP_INSTALL = YES;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_APPROACHABLE_CONCURRENCY = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1075,6 +1318,14 @@
 			buildConfigurations = (
 				000000000000000111000000 /* Debug configuration for PBXNativeTarget "MLR App" */,
 				000000000000000112000000 /* Release configuration for PBXNativeTarget "MLR App" */,
+			);
+			defaultConfigurationName = Release;
+		};
+		D33F9F0A2FF5BD4F00603CE7 /* Build configuration list for PBXNativeTarget "MLRWidgetExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D33F9F072FF5BD4F00603CE7 /* Debug configuration for PBXNativeTarget "MLRWidgetExtension" */,
+				D33F9F082FF5BD4F00603CE7 /* Release configuration for PBXNativeTarget "MLRWidgetExtension" */,
 			);
 			defaultConfigurationName = Release;
 		};

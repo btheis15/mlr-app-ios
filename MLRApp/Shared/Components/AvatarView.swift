@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 // MARK: - Avatar Size
 
@@ -62,27 +63,27 @@ struct AvatarView: View {
                 )
         }
         .frame(width: totalDiameter, height: totalDiameter)
+        // Decorative: a member's name is always shown alongside the avatar,
+        // so hiding it keeps VoiceOver from announcing a redundant image.
+        .accessibilityHidden(true)
     }
 
     @ViewBuilder
     private var avatarCircle: some View {
         if let urlString = url, let imageUrl = URL(string: urlString) {
-            AsyncImage(url: imageUrl) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: diameter, height: diameter)
-                        .clipShape(Circle())
-
-                case .failure, .empty:
-                    fallbackCircle
-
-                @unknown default:
-                    fallbackCircle
-                }
-            }
+            // Kingfisher: memory + disk cached, downsampled to the display size, so
+            // avatars don't re-download on every scroll (unlike AsyncImage).
+            KFImage(imageUrl)
+                .placeholder { fallbackCircle }
+                .setProcessor(DownsamplingImageProcessor(
+                    size: CGSize(width: diameter * 3, height: diameter * 3)))
+                .scaleFactor(UIScreen.main.scale)
+                .cacheOriginalImage()
+                .fade(duration: 0.2)
+                .resizable()
+                .scaledToFill()
+                .frame(width: diameter, height: diameter)
+                .clipShape(Circle())
         } else {
             fallbackCircle
         }
@@ -94,7 +95,7 @@ struct AvatarView: View {
             .frame(width: diameter, height: diameter)
             .overlay(
                 Image(systemName: "person.fill")
-                    .font(.system(size: size.iconSize))
+                    .font(.mlrScaled(size.iconSize))
                     .foregroundStyle(Color.mlrPrimary)
             )
     }

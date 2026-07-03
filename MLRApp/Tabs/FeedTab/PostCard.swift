@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 // MARK: - PostCard
 // A single post in the Feed. Mirrors the PostCard component in the web app.
@@ -20,7 +21,7 @@ struct PostCard: View {
 
     @Environment(AppEnvironment.self) private var env
     @State private var showComments = false
-    @State private var lightboxUrl: String?
+    @State private var lightbox: LightboxPresentation?
     @State private var showEdit = false
     @State private var comments: [PostComment] = []
     @State private var commentsLoaded = false
@@ -44,7 +45,7 @@ struct PostCard: View {
             }
             if !post.tags.isEmpty {
                 Label("With \(post.tags.map(\.name).joined(separator: ", "))", systemImage: "person.2.fill")
-                    .font(.system(size: 12))
+                    .font(.mlrScaled(12))
                     .foregroundStyle(Color.mlrTextMuted)
             }
             reactionRow
@@ -53,9 +54,8 @@ struct PostCard: View {
         .sheet(isPresented: $showComments) {
             CommentsView(post: post)
         }
-        .sheet(item: Binding(get: { lightboxUrl.map(IdentifiableURL.init) },
-                             set: { lightboxUrl = $0?.url })) { item in
-            LightboxView(imageUrl: item.url)
+        .fullScreenCover(item: $lightbox) { pres in
+            LightboxView(urls: post.mediaUrls, startIndex: pres.startIndex)
         }
         .sheet(isPresented: $showEdit) {
             PostComposer(editing: post)
@@ -79,7 +79,7 @@ struct PostCard: View {
             VStack(alignment: .leading, spacing: 1) {
                 // PrivateName: guests see first name only
                 Text(displayName)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                 Text(MLRFormat.relativeTime(post.timelineDate))
                     .font(.caption)
@@ -121,7 +121,7 @@ struct PostCard: View {
                 }
             } label: {
                 Image(systemName: "ellipsis")
-                    .font(.system(size: 16))
+                    .font(.mlrScaled(16))
                     .foregroundStyle(Color.mlrTextMuted)
                     .padding(8)
                     .contentShape(Rectangle())
@@ -136,56 +136,44 @@ struct PostCard: View {
         let urls = post.mediaUrls
         if urls.count > 1 {
             TabView {
-                ForEach(urls, id: \.self) { url in
-                    postImage(url: url)
+                ForEach(Array(urls.enumerated()), id: \.offset) { idx, url in
+                    mediaThumb(url: url, index: idx)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
             .frame(height: 240)
         } else if let first = urls.first {
-            postImage(url: first)
+            mediaThumb(url: first, index: 0)
         }
     }
 
-    // MARK: - Post image
+    // MARK: - Post media thumbnail (image or video poster) → tap opens the lightbox
 
     @ViewBuilder
-    private func postImage(url: String) -> some View {
-        if let imageURL = URL(string: url) {
-            AsyncImage(url: imageURL) { phase in
-                switch phase {
-                case .empty:
-                    Rectangle()
-                        .fill(Color.mlrCard)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(ProgressView())
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 220)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .contentShape(RoundedRectangle(cornerRadius: 12))
-                        .onTapGesture { lightboxUrl = url }
-                case .failure:
-                    Rectangle()
-                        .fill(Color.mlrCard)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 80)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                        .overlay(
-                            Label("Image unavailable", systemImage: "photo.slash")
-                                .font(.caption)
-                                .foregroundStyle(Color.mlrTextMuted)
-                        )
-                @unknown default:
-                    EmptyView()
-                }
+    private func mediaThumb(url: String, index: Int) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 12)
+        ZStack {
+            shape.fill(Color.mlrCard)
+            if url.isVideoURL {
+                Image(systemName: "play.circle.fill")
+                    .font(.mlrScaled(46))
+                    .foregroundStyle(.white.opacity(0.9))
+                    .shadow(radius: 4)
+            } else if let imageURL = URL(string: url) {
+                KFImage(imageURL)
+                    .placeholder { ProgressView() }
+                    .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 1200, height: 1200)))
+                    .scaleFactor(UIScreen.main.scale)
+                    .fade(duration: 0.2)
+                    .resizable()
+                    .scaledToFill()
             }
         }
+        .frame(maxWidth: .infinity)
+        .frame(height: 240)
+        .clipShape(shape)
+        .contentShape(shape)
+        .onTapGesture { lightbox = LightboxPresentation(startIndex: index) }
     }
 
     // MARK: - Reaction row
@@ -216,10 +204,10 @@ struct PostCard: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: comments.isEmpty ? "bubble.left" : "bubble.left.fill")
-                    .font(.system(size: 14))
+                    .font(.mlrScaled(14))
                     .foregroundStyle(comments.isEmpty ? Color.mlrTextMuted : Color.mlrPrimary)
                 Text(commentLabel)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.mlrScaled(14, weight: .medium))
                     .foregroundStyle(Color.mlrTextMuted)
             }
         }
@@ -280,10 +268,10 @@ struct ReactionButton: View {
         Button(action: onTap) {
             HStack(spacing: 4) {
                 Text(emoji)
-                    .font(.system(size: 15))
+                    .font(.mlrScaled(15))
                 if count > 0 {
                     Text("\(count)")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.mlrScaled(13, weight: .semibold))
                         .foregroundStyle(isSelected ? Color.mlrPrimary : Color.mlrTextMuted)
                 }
             }
@@ -338,10 +326,10 @@ struct PostCardSkeleton: View {
     }
 }
 
-// Wraps a URL string so it can drive an item-based .sheet (Lightbox per image).
-private struct IdentifiableURL: Identifiable {
-    let url: String
-    var id: String { url }
+// Drives the full-screen lightbox at a specific carousel index.
+private struct LightboxPresentation: Identifiable {
+    let startIndex: Int
+    var id: Int { startIndex }
 }
 
 // AvatarView — Shared/Components/AvatarView.swift

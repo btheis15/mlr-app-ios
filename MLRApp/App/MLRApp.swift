@@ -1,9 +1,11 @@
 import SwiftUI
 import AppIntents
+import TipKit
 
 @main
 struct MLRApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @Environment(\.scenePhase) private var scenePhase
     @State private var env = AppEnvironment()
     @State private var appearance = AppearanceManager.shared
 
@@ -22,6 +24,10 @@ struct MLRApp: App {
                 // override (System / Light / Dark) from Profile → Appearance.
                 .preferredColorScheme(appearance.appearance.colorScheme)
                 .task {
+                    try? Tips.configure([
+                        .displayFrequency(.immediate),
+                        .datastoreLocation(.applicationDefault),
+                    ])
                     await env.authService.restoreSession()
                     if env.authService.isSignedIn {
                         await env.loadProfile()
@@ -29,6 +35,7 @@ struct MLRApp: App {
                         // is refreshed/issued; the AppDelegate callback saves it.
                         await env.pushService.registerIfAuthorized()
                         await env.pushService.reconcileToken()
+                        await env.startNotificationsRealtime()
                     }
                 }
                 .onChange(of: env.authService.isSignedIn) { _, signedIn in
@@ -37,6 +44,7 @@ struct MLRApp: App {
                             await env.loadProfile()
                             await env.pushService.registerIfAuthorized()
                             await env.pushService.reconcileToken()
+                            await env.startNotificationsRealtime()
                         }
                     }
                 }
@@ -44,6 +52,17 @@ struct MLRApp: App {
                 // it as soon as the AppDelegate hands it over.
                 .onReceive(NotificationCenter.default.publisher(for: .apnsTokenReceived)) { _ in
                     Task { await env.pushService.reconcileToken() }
+                }
+                // Whenever the app comes to the foreground, re-sync the unread
+                // count so the Home Screen icon badge reflects what's actually
+                // unread (a push-delivered badge otherwise lingers after reading).
+                .onChange(of: scenePhase) { _, phase in
+                    guard phase == .active else { return }
+                    if env.authService.isSignedIn, let userId = env.currentProfile?.id {
+                        Task { await env.notificationsService.fetchUnreadCount(userId: userId) }
+                    } else {
+                        env.notificationsService.syncAppIconBadge()
+                    }
                 }
         }
     }

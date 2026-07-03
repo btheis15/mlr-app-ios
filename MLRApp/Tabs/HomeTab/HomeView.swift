@@ -318,11 +318,11 @@ struct HomeTile: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             Image(systemName: icon)
-                .font(.system(size: 20, weight: .semibold))
+                .font(.mlrScaled(20, weight: .semibold))
                 .foregroundStyle(tint)
 
             Text(title)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.mlrScaled(15, weight: .semibold))
                 .foregroundStyle(Color.mlrText)
 
             Text(subtitle)
@@ -363,10 +363,10 @@ private struct CollapsibleHomeSection<Content: View>: View {
                 withAnimation(.easeInOut(duration: 0.2)) { isOpen.toggle() }
             } label: {
                 HStack(spacing: 12) {
-                    Text(emoji).font(.system(size: 20))
+                    Text(emoji).font(.mlrScaled(20))
                     VStack(alignment: .leading, spacing: 1) {
                         Text(title)
-                            .font(.system(size: 16, weight: .semibold))
+                            .font(.mlrScaled(16, weight: .semibold))
                             .foregroundStyle(Color.mlrText)
                         Text(subtitle)
                             .font(.caption)
@@ -375,7 +375,7 @@ private struct CollapsibleHomeSection<Content: View>: View {
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(Color.mlrTextSubtle)
                         .rotationEffect(.degrees(isOpen ? 90 : 0))
                 }

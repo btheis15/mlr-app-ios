@@ -1,4 +1,5 @@
 import SwiftUI
+import Charts
 
 // MARK: - FestCrewView
 // Who's coming to Family Fest — driven by the real per-day RSVPs on the
@@ -42,7 +43,7 @@ struct FestCrewView: View {
                         showRSVP = true
                     } label: {
                         Label("RSVP your days", systemImage: "calendar.badge.plus")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.mlrScaled(14, weight: .semibold))
                             .foregroundStyle(Color.white)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 8)
@@ -66,6 +67,9 @@ struct FestCrewView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
                 } else {
+                    attendanceChart
+                        .padding(.horizontal, 16)
+
                     VStack(spacing: 10) {
                         ForEach(attendees) { attendee in
                             AttendeeCard(attendee: attendee, festDays: festDays)
@@ -77,6 +81,32 @@ struct FestCrewView: View {
             }
         }
         .background(Color.mlrFestParchment)
+    }
+
+    private var attendanceChart: some View {
+        let short = ["Monday": "Mon", "Tuesday": "Tue", "Wednesday": "Wed",
+                     "Thursday": "Thu", "Friday": "Fri"]
+        let counts = festDays.map { day -> (day: String, count: Int) in
+            (short[day] ?? day,
+             attendees.filter { $0.goingDays(allDays: festDays).contains(day) }.count)
+        }
+        return VStack(alignment: .leading, spacing: 6) {
+            Text("Who's here each day")
+                .font(.festSerif(13))
+                .foregroundStyle(Color.mlrFest.opacity(0.7))
+            Chart(counts, id: \.day) { item in
+                BarMark(x: .value("Day", item.day), y: .value("Coming", item.count))
+                    .foregroundStyle(Color.mlrFest)
+                    .cornerRadius(4)
+            }
+            .chartYAxis { AxisMarks(position: .leading) }
+            .frame(height: 120)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity)
+        .background(Color.mlrFestParchment)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.mlrFest.opacity(0.18), lineWidth: 1))
     }
 
     private var headerText: String {
@@ -115,14 +145,14 @@ private struct AttendeeCard: View {
                 Spacer()
                 if attendee.isWholeWeek {
                     Text("All week")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.mlrScaled(11, weight: .semibold))
                         .foregroundStyle(Color.mlrFest)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Color.mlrFest.opacity(0.12))
                         .clipShape(Capsule())
                 } else if attendee.status == .maybe {
                     Text("Maybe")
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.mlrScaled(11, weight: .semibold))
                         .foregroundStyle(Color.mlrFest.opacity(0.7))
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Color.mlrFest.opacity(0.08))
@@ -134,7 +164,7 @@ private struct AttendeeCard: View {
                 ForEach(festDays, id: \.self) { day in
                     let on = going.contains(day)
                     Text(shortDay[day] ?? day)
-                        .font(.system(size: 11, weight: .semibold))
+                        .font(.mlrScaled(11, weight: .semibold))
                         .foregroundStyle(on ? Color.white : Color.mlrFest.opacity(0.35))
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
@@ -166,7 +196,7 @@ struct FestSignInNotice: View {
         VStack(spacing: 20) {
             Spacer()
             Image(systemName: "lock.fill")
-                .font(.system(size: 36))
+                .font(.mlrScaled(36))
                 .foregroundStyle(Color.mlrFest.opacity(0.4))
             Text(message)
                 .font(.festSerif(15))

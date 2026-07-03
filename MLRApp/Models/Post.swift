@@ -25,6 +25,15 @@ struct PostTag: Identifiable, Equatable {
     let name: String
 }
 
+extension String {
+    /// Whether this media URL points at a video (the Mac-mini media server
+    /// transcodes uploads to .mp4). Used to pick VideoPlayer vs image rendering.
+    var isVideoURL: Bool {
+        let lower = (self as NSString).pathExtension.lowercased()
+        return ["mp4", "mov", "m4v"].contains(lower)
+    }
+}
+
 // MARK: - Post Comment
 
 struct PostComment: Codable, Identifiable, Equatable {

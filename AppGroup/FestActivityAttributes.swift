@@ -26,3 +26,25 @@ struct FestActivityAttributes: ActivityAttributes {
         var emoji: String           // contextual emoji for the next event
     }
 }
+
+// MARK: - Help Request Live Activity Attributes
+//
+// SHARED FILE (same as above). A Live Activity for an active "Ask for Help"
+// request the member posted — shows "on the way" responder count live until it's
+// covered/closed. Driven by `HelpLiveActivityController`.
+
+struct HelpActivityAttributes: ActivityAttributes {
+    public typealias ContentState = ContentStateData
+
+    // Static for the life of the activity
+    let requestId: String
+    let what: String
+    let categoryEmoji: String
+
+    struct ContentStateData: Codable, Hashable {
+        var respondersCount: Int
+        var neededCount: Int
+        var whereText: String?
+        var fulfilled: Bool
+    }
+}

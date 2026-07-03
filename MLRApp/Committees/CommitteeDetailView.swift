@@ -18,6 +18,7 @@ struct CommitteeDetailView: View {
     @State private var addingNew = false
     @State private var showEmail = false
     @State private var selectedProfile: Profile?
+    @State private var reviewingIds: Set<UUID> = []
 
     /// Canonical area order for role-based committees (matches the web).
     private let festAreas = [
@@ -30,6 +31,19 @@ struct CommitteeDetailView: View {
 
     private var roleBased: Bool { committee.slug == "family-fest" || roster.contains { !$0.roles.isEmpty } }
     private var canManage: Bool { env.isAdmin }   // app admins have universal privileges
+
+    /// A lead of this committee (per the roster) may also review join requests —
+    /// matching the web app, which gates approval on `isAdmin || committee lead`.
+    private var iAmLead: Bool {
+        guard let me = env.currentProfile else { return false }
+        return roster.contains { $0.linkedUserId == me.id && $0.isLead }
+    }
+    private var canReview: Bool { env.isAdmin || iAmLead }
+
+    /// Pending join requests scoped to this committee.
+    private var pendingForCommittee: [CommitteeJoinRequest] {
+        env.committeeService.pendingRequests.filter { $0.committeeId == committee.id }
+    }
 
     /// Member = linked roster account, or an app admin.
     private var isMember: Bool {
@@ -65,7 +79,7 @@ struct CommitteeDetailView: View {
                         showEmail = true
                     } label: {
                         Label("Email these members", systemImage: "envelope.fill")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.mlrScaled(15, weight: .semibold))
                             .foregroundStyle(Color.mlrPrimary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -78,7 +92,7 @@ struct CommitteeDetailView: View {
                 if canManage {
                     Button { addingNew = true } label: {
                         Label("Add a member", systemImage: "person.badge.plus")
-                            .font(.system(size: 15, weight: .semibold))
+                            .font(.mlrScaled(15, weight: .semibold))
                             .foregroundStyle(Color.mlrPrimary)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
@@ -88,6 +102,10 @@ struct CommitteeDetailView: View {
                     .buttonStyle(.plain)
                 }
 
+                if canReview && !pendingForCommittee.isEmpty {
+                    joinRequestsSection
+                }
+
                 rosterSection
             }
             .padding(20)
@@ -95,7 +113,23 @@ struct CommitteeDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(committee.name)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await load() }
+        .refreshable { await load() }
+        .task {
+            await load()
+            // Live-update the roster when members are added/removed anywhere
+            // (e.g. from the web app or another device), matching web behavior.
+            env.committeeService.subscribeToRoster(slug: committee.slug) {
+                Task { await load() }
+            }
+            // Live-update pending join requests + membership for managers.
+            env.committeeService.subscribeToManagement(slug: committee.slug, committeeId: committee.id) {
+                Task { await load() }
+            }
+        }
+        .onDisappear {
+            env.committeeService.unsubscribeFromRoster(slug: committee.slug)
+            env.committeeService.unsubscribeFromManagement(slug: committee.slug)
+        }
         .sheet(item: $editing) { entry in
             RosterEditSheet(committee: committee, entry: entry, areas: festAreas, roleBased: roleBased) {
                 Task { await load() }
@@ -120,14 +154,14 @@ struct CommitteeDetailView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 14) {
                 Text(committee.emoji ?? "📋")
-                    .font(.system(size: 40))
+                    .font(.mlrScaled(40))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(committee.name)
-                        .font(.system(size: 22, weight: .bold))
+                        .font(.mlrScaled(22, weight: .bold))
                         .foregroundStyle(Color.mlrText)
                     if committee.isPrivate == true {
                         Label("Private committee", systemImage: "lock.fill")
-                            .font(.system(size: 12))
+                            .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrTextMuted)
                     }
                 }
@@ -148,6 +182,81 @@ struct CommitteeDetailView: View {
                 .primaryButton()
         }
         .buttonStyle(.plain)
+    }
+
+    // MARK: - Join requests
+
+    private var joinRequestsSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(text: "Join requests (\(pendingForCommittee.count))")
+            VStack(spacing: 0) {
+                ForEach(pendingForCommittee) { req in
+                    joinRequestRow(req)
+                    if req.id != pendingForCommittee.last?.id { Divider().padding(.leading, 52) }
+                }
+            }
+            .background(Color.mlrCard)
+            .clipShape(RoundedRectangle(cornerRadius: 16))
+        }
+    }
+
+    private func joinRequestRow(_ req: CommitteeJoinRequest) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            AvatarView(url: req.profile?.avatarUrl, size: .small)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(req.profile?.displayName ?? "Member")
+                    .font(.mlrScaled(15, weight: .medium))
+                    .foregroundStyle(Color.mlrText)
+                if !req.areas.isEmpty {
+                    FlowChips(items: req.areas)
+                }
+                if let note = req.note?.trimmedNonEmpty {
+                    Text(note)
+                        .font(.mlrScaled(13))
+                        .foregroundStyle(Color.mlrTextMuted)
+                }
+            }
+            Spacer()
+            if reviewingIds.contains(req.id) {
+                ProgressView()
+            } else {
+                HStack(spacing: 10) {
+                    Button { review(req, approve: false) } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.mlrScaled(24))
+                            .foregroundStyle(Color.mlrTextSubtle)
+                    }
+                    .buttonStyle(.plain)
+                    Button { review(req, approve: true) } label: {
+                        Image(systemName: "checkmark.circle.fill")
+                            .font(.mlrScaled(24))
+                            .foregroundStyle(Color.mlrPrimary)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 10)
+    }
+
+    private func review(_ req: CommitteeJoinRequest, approve: Bool) {
+        reviewingIds.insert(req.id)
+        Task {
+            do {
+                if approve {
+                    try await env.committeeService.approveJoin(requestId: req.id)
+                } else {
+                    try await env.committeeService.declineJoin(requestId: req.id)
+                }
+                // Approving inserts a membership row and links the roster slot —
+                // refresh so the new member shows up immediately.
+                await load()
+            } catch {
+                print("[CommitteeDetailView] review join request error: \(error)")
+            }
+            reviewingIds.remove(req.id)
+        }
     }
 
     // MARK: - Roster
@@ -187,7 +296,7 @@ struct CommitteeDetailView: View {
     private func areaCard(area: String, entries: [CommitteeRosterEntry]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             Text(area)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.mlrScaled(15, weight: .semibold))
                 .foregroundStyle(Color.mlrText)
             VStack(spacing: 0) {
                 ForEach(entries) { entry in
@@ -232,14 +341,14 @@ struct CommitteeDetailView: View {
                     if let uid = entry.linkedUserId { openProfile(uid) }
                 } label: {
                     Text(entry.displayName)
-                        .font(.system(size: 15, weight: .medium))
+                        .font(.mlrScaled(15, weight: .medium))
                         .foregroundStyle(Color.mlrText)
                 }
                 .buttonStyle(.plain)
                 .disabled(!entry.isLinked)
                 if entry.isPending {
                     Text("Pending verification")
-                        .font(.system(size: 10, weight: .medium))
+                        .font(.mlrScaled(10, weight: .medium))
                         .foregroundStyle(Color.mlrTextMuted)
                         .padding(.horizontal, 6).padding(.vertical, 2)
                         .background(Color.mlrTextMuted.opacity(0.12))
@@ -249,7 +358,7 @@ struct CommitteeDetailView: View {
             Spacer()
             if showLead {
                 Text("Lead")
-                    .font(.system(size: 11, weight: .bold))
+                    .font(.mlrScaled(11, weight: .bold))
                     .foregroundStyle(Color.mlrPrimary)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(Color.mlrPrimaryLight)
@@ -259,7 +368,7 @@ struct CommitteeDetailView: View {
             if canManage {
                 Button { editing = entry } label: {
                     Image(systemName: "ellipsis.circle")
-                        .font(.system(size: 16))
+                        .font(.mlrScaled(16))
                         .foregroundStyle(Color.mlrTextSubtle)
                 }
                 .buttonStyle(.plain)
@@ -276,18 +385,18 @@ struct CommitteeDetailView: View {
                 if let phone = entry.effectivePhone?.trimmedNonEmpty {
                     if let url = URL(string: "tel:\(phone)") {
                         Link(destination: url) {
-                            Image(systemName: "phone.fill").font(.system(size: 13)).foregroundStyle(Color.mlrPrimary)
+                            Image(systemName: "phone.fill").font(.mlrScaled(13)).foregroundStyle(Color.mlrPrimary)
                         }
                     }
                     if let sms = URL(string: "sms:\(phone)") {
                         Link(destination: sms) {
-                            Image(systemName: "message.fill").font(.system(size: 13)).foregroundStyle(Color.mlrInfo)
+                            Image(systemName: "message.fill").font(.mlrScaled(13)).foregroundStyle(Color.mlrInfo)
                         }
                     }
                 }
                 if let email = entry.effectiveEmail?.trimmedNonEmpty, let url = URL(string: "mailto:\(email)") {
                     Link(destination: url) {
-                        Image(systemName: "envelope.fill").font(.system(size: 13)).foregroundStyle(Color.mlrTextMuted)
+                        Image(systemName: "envelope.fill").font(.mlrScaled(13)).foregroundStyle(Color.mlrTextMuted)
                     }
                 }
             }
@@ -299,6 +408,10 @@ struct CommitteeDetailView: View {
     private func load() async {
         isLoading = true
         roster = (try? await env.committeeService.fetchRoster(slug: committee.slug)) ?? roster
+        // Managers (admins / committee leads) also see and act on pending join requests.
+        if env.isAdmin || iAmLead {
+            try? await env.committeeService.fetchPendingRequests()
+        }
         isLoading = false
     }
 
@@ -321,5 +434,54 @@ private extension String {
     var trimmedNonEmpty: String? {
         let t = trimmingCharacters(in: .whitespacesAndNewlines)
         return t.isEmpty ? nil : t
+    }
+}
+
+// MARK: - Wrapping area chips
+
+/// The requested areas as small pills that wrap onto multiple lines.
+private struct FlowChips: View {
+    let items: [String]
+    var body: some View {
+        FlowLayout(spacing: 6) {
+            ForEach(items, id: \.self) { item in
+                Text(item)
+                    .font(.mlrScaled(11, weight: .semibold))
+                    .foregroundStyle(Color.mlrPrimary)
+                    .padding(.horizontal, 8).padding(.vertical, 3)
+                    .background(Color.mlrPrimaryLight)
+                    .clipShape(Capsule())
+            }
+        }
+    }
+}
+
+private struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0
+        for sv in subviews {
+            let size = sv.sizeThatFits(.unspecified)
+            if x + size.width > maxWidth && x > 0 { x = 0; y += rowHeight + spacing; rowHeight = 0 }
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        return CGSize(width: maxWidth == .infinity ? max(0, x - spacing) : maxWidth,
+                      height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, rowHeight: CGFloat = 0
+        for sv in subviews {
+            let size = sv.sizeThatFits(.unspecified)
+            if x - bounds.minX + size.width > bounds.width && x > bounds.minX {
+                x = bounds.minX; y += rowHeight + spacing; rowHeight = 0
+            }
+            sv.place(at: CGPoint(x: x, y: y), anchor: .topLeading, proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
     }
 }

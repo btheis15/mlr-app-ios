@@ -1,5 +1,29 @@
 import Foundation
 
+// MARK: - Family Fest Config
+// Lives here (not SeedData) so it's lightweight to share with the widget/Live
+// Activity target without dragging in the whole model layer.
+
+struct FamilyFestConfig {
+    static let startDate = "2026-07-27"
+    static let endDate   = "2026-07-31"
+    static let id        = "family-fest-2026"
+    static let year      = 2026
+
+    // "July 27 – 31" — auto-derived so the poster card never gets stale
+    static var dateRangeLabel: String {
+        let iso = DateFormatter()
+        iso.dateFormat = "yyyy-MM-dd"
+        guard let s = iso.date(from: startDate),
+              let e = iso.date(from: endDate) else { return "\(startDate) – \(endDate)" }
+        let monthFmt = DateFormatter()
+        monthFmt.dateFormat = "MMMM"
+        let dayFmt = DateFormatter()
+        dayFmt.dateFormat = "d"
+        return "\(monthFmt.string(from: s)) \(dayFmt.string(from: s)) – \(dayFmt.string(from: e))"
+    }
+}
+
 // MARK: - Fest Season
 // Port of lib/festSeason.ts — keep in sync with the web app's version.
 

@@ -62,6 +62,12 @@ struct NotifPrefsView: View {
                 toggle(for: .eventRsvp, label: "RSVPs to your events", icon: "calendar.badge.checkmark")
             }
 
+            // Work Checklist
+            Section("Work Checklist") {
+                toggle(for: .workItemComment, label: "Comments on work items", icon: "bubble.left.fill")
+                toggle(for: .workItemMention, label: "Work item @mentions",    icon: "at")
+            }
+
             // Help Requests
             Section("Help Requests") {
                 toggle(for: .helpRequest,  label: "Help requests near you", icon: "hand.raised.fill")
@@ -103,7 +109,7 @@ struct NotifPrefsView: View {
         )) {
             Label {
                 Text(label)
-                    .font(.system(size: 15))
+                    .font(.mlrScaled(15))
             } icon: {
                 Image(systemName: icon)
                     .foregroundStyle(Color.mlrPrimary)
@@ -118,7 +124,7 @@ struct NotifPrefsView: View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 3) {
                 Label {
-                    Text(label).font(.system(size: 15))
+                    Text(label).font(.mlrScaled(15))
                 } icon: {
                     Image(systemName: icon).foregroundStyle(Color.mlrPrimary)
                 }

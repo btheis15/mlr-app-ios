@@ -41,7 +41,7 @@ struct PushToggleView: View {
                     Label {
                         VStack(alignment: .leading, spacing: 2) {
                             Text("Push Notifications")
-                                .font(.system(size: 15, weight: .medium))
+                                .font(.mlrScaled(15, weight: .medium))
                             if masterEnabled {
                                 Text("Notifications are sent to this device")
                                     .font(.caption)
@@ -139,7 +139,7 @@ struct PushToggleView: View {
         )) {
             Label {
                 Text(label)
-                    .font(.system(size: 15))
+                    .font(.mlrScaled(15))
             } icon: {
                 Image(systemName: icon)
                     .foregroundStyle(Color.mlrPrimary)

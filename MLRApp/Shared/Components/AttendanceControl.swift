@@ -27,6 +27,8 @@ struct AttendanceControl: View {
 
     private let statuses: [AttendanceStatus] = [.going, .maybe, .notGoing]
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         HStack(spacing: 6) {
             ForEach(statuses, id: \.self) { status in
@@ -49,8 +51,9 @@ struct AttendanceControl: View {
                     .tint(Color.mlrPrimary)
             }
         }
-        .animation(.easeInOut(duration: 0.15), value: selection)
-        .animation(.easeInOut(duration: 0.15), value: isLoading)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: selection)
+        .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isLoading)
+        .sensoryFeedback(.selection, trigger: selection)
     }
 }
 
@@ -66,11 +69,12 @@ private struct AttendanceSegment: View {
         Button(action: action) {
             HStack(spacing: 4) {
                 Text(status.emoji)
-                    .font(.system(size: 14))
+                    .font(.mlrScaled(14))
                 Text(status.label)
-                    .font(.system(size: 13, weight: isSelected ? .semibold : .regular))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .font(.mlrScaled(13, weight: isSelected ? .semibold : .regular))
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                    .multilineTextAlignment(.center)
             }
             .foregroundStyle(isSelected ? .white : labelColor)
             .padding(.vertical, 9)
@@ -86,6 +90,9 @@ private struct AttendanceSegment: View {
         .buttonStyle(.plain)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.45)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(status.label)
+        .accessibilityAddTraits(isSelected ? [.isButton, .isSelected] : .isButton)
     }
 
     private var backgroundColor: Color {

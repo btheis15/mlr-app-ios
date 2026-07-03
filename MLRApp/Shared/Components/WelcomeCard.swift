@@ -37,13 +37,13 @@ struct WelcomeCard: View {
                         .fill(Color.mlrPrimaryLight)
                         .frame(width: 44, height: 44)
                     Image(systemName: "house.fill")
-                        .font(.system(size: 20))
+                        .font(.mlrScaled(20))
                         .foregroundStyle(Color.mlrPrimary)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Welcome to MLR")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
+                        .font(.mlrScaled(17, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.mlrPrimary)
 
                     Text("Muskellunge Lake Resort — Est. 1987")
@@ -59,7 +59,7 @@ struct WelcomeCard: View {
                     dismiss()
                 } label: {
                     Image(systemName: "xmark")
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.mlrScaled(12, weight: .semibold))
                         .foregroundStyle(Color.mlrTextMuted)
                         .padding(8)
                 }
@@ -125,13 +125,13 @@ private struct WelcomeBullet: View {
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 13))
+                .font(.mlrScaled(13))
                 .foregroundStyle(Color.mlrPrimary)
                 .frame(width: 20)
                 .padding(.top, 1)
 
             Text(text)
-                .font(.system(size: 14))
+                .font(.mlrScaled(14))
                 .foregroundStyle(Color.mlrText)
                 .fixedSize(horizontal: false, vertical: true)
         }

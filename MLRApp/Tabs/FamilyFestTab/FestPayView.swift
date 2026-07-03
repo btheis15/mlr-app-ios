@@ -41,7 +41,7 @@ struct FestPayView: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(spacing: 8) {
                 Image(systemName: "dollarsign.circle.fill")
-                    .font(.system(size: 20))
+                    .font(.mlrScaled(20))
                     .foregroundStyle(Color.mlrFest)
                 Text("Household Dues")
                     .font(.festSerif(16, weight: .bold))
@@ -50,7 +50,7 @@ struct FestPayView: View {
 
             if dues.isEmpty {
                 Text("Dues amounts are still being set — check back soon.")
-                    .font(.system(size: 13))
+                    .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrFest.opacity(0.65))
             } else {
                 VStack(spacing: 0) {
@@ -58,11 +58,11 @@ struct FestPayView: View {
                         HStack(alignment: .firstTextBaseline) {
                             VStack(alignment: .leading, spacing: 1) {
                                 Text(tier.label)
-                                    .font(.system(size: 14, weight: .semibold))
+                                    .font(.mlrScaled(14, weight: .semibold))
                                     .foregroundStyle(Color.mlrFest)
                                 if let note = tier.note, !note.isEmpty {
                                     Text(note)
-                                        .font(.system(size: 11))
+                                        .font(.mlrScaled(11))
                                         .foregroundStyle(Color.mlrFest.opacity(0.55))
                                 }
                             }
@@ -80,7 +80,7 @@ struct FestPayView: View {
             }
 
             Text("Dues cover shared meals, activities, and resort costs for the week. Note \u{201C}Family Fest 2026\u{201D} with your payment.")
-                .font(.system(size: 13))
+                .font(.mlrScaled(13))
                 .foregroundStyle(Color.mlrFest.opacity(0.65))
                 .fixedSize(horizontal: false, vertical: true)
         }
@@ -135,11 +135,11 @@ private struct PayeeCard: View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(payee.name)
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.mlrScaled(15, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                 if let role = payee.role, !role.isEmpty {
                     Text(role)
-                        .font(.system(size: 12))
+                        .font(.mlrScaled(12))
                         .foregroundStyle(Color.mlrFest.opacity(0.6))
                 }
                 if let amount = payee.amount {
@@ -165,7 +165,7 @@ private struct PayeeCard: View {
                         askAmount = true
                     } label: {
                         Label("Pay with Apple Cash", systemImage: "applelogo")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.mlrScaled(14, weight: .semibold))
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 10)
@@ -181,7 +181,7 @@ private struct PayeeCard: View {
             }
             if let note = payee.note?.trimmedNonEmpty {
                 Text(note)
-                    .font(.system(size: 12))
+                    .font(.mlrScaled(12))
                     .foregroundStyle(Color.mlrFest.opacity(0.6))
             }
         }
@@ -212,15 +212,15 @@ private struct PayeeCard: View {
     private func handleRow(label: String, value: String, icon: String, openURL: URL?) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
-                .font(.system(size: 18))
+                .font(.mlrScaled(18))
                 .foregroundStyle(Color.mlrFest)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
-                    .font(.system(size: 11))
+                    .font(.mlrScaled(11))
                     .foregroundStyle(Color.mlrFest.opacity(0.6))
                 Text(value)
-                    .font(.system(size: 14, weight: .medium, design: .monospaced))
+                    .font(.mlrScaled(14, weight: .medium, design: .monospaced))
                     .foregroundStyle(Color.mlrFest)
                     .lineLimit(1)
             }
@@ -231,14 +231,14 @@ private struct PayeeCard: View {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { if copied == label { copied = nil } }
             } label: {
                 Image(systemName: copied == label ? "checkmark" : "doc.on.doc")
-                    .font(.system(size: 13, weight: .semibold))
+                    .font(.mlrScaled(13, weight: .semibold))
                     .foregroundStyle(copied == label ? Color.mlrSuccess : Color.mlrFest.opacity(0.7))
             }
             .buttonStyle(.plain)
             if let openURL {
                 Link(destination: openURL) {
                     Image(systemName: "arrow.up.right.square")
-                        .font(.system(size: 15))
+                        .font(.mlrScaled(15))
                         .foregroundStyle(Color.mlrFest)
                 }
             }

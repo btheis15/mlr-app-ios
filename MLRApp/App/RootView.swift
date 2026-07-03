@@ -5,9 +5,15 @@ import SwiftUI
 
 struct RootView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: Tab = .home
     @State private var showSplash = true
     @State private var showAskForHelp = false
+    @State private var showAddWorkItem = false
+    @State private var pendingCommittee: Committee?
+    @State private var pendingWorkItem: WorkItem?
+    @State private var pendingHouse: House?
+    @State private var pendingCommitteeChat: PendingCommitteeChat?
 
     // Siri / Shortcuts → in-app navigation bridge.
     private var router = IntentRouter.shared
@@ -31,6 +37,29 @@ struct RootView: View {
         .sheet(isPresented: $showAskForHelp) {
             AskForHelpSheet()
         }
+        // Quick-add from Siri/Shortcuts (form), the Home widget, or Control Center.
+        .sheet(isPresented: $showAddWorkItem) {
+            WorkItemComposer { Task { await env.workItemsService.fetchItems() } }
+        }
+        // Tapping a join-request notification (or its Decline action) opens the
+        // committee's detail — which shows the pending-request approval section.
+        .sheet(item: $pendingCommittee) { committee in
+            NavigationStack { CommitteeDetailView(committee: committee) }
+        }
+        // Tapping a work-item comment/mention notification opens the item's detail.
+        .sheet(item: $pendingWorkItem) { item in
+            WorkItemDetailSheet(item: item) { Task { await env.workItemsService.fetchItems() } }
+        }
+        // Tapping a house-chat mention (or Siri "open house chat") opens the chat.
+        .sheet(item: $pendingHouse) { house in
+            NavigationStack { HouseChatView(house: house, assumeMember: true) }
+        }
+        // Siri / Shortcuts "open committee chat".
+        .sheet(item: $pendingCommitteeChat) { pending in
+            NavigationStack {
+                CommitteeChatView(committee: pending.committee, members: pending.members, assumeMember: true)
+            }
+        }
         .sheet(isPresented: Binding(
             get: { env.authService.showSignIn },
             set: { env.authService.showSignIn = $0 }
@@ -40,6 +69,23 @@ struct RootView: View {
         // Drive navigation when an App Intent opens the app.
         .onChange(of: router.pendingRoute) { _, _ in
             handlePendingRoute()
+        }
+        // Control Center controls can't reach the in-process router, so they stash a
+        // route in the App Group and open the app — drain it when we become active.
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active else { return }
+            if let key = SharedStore.shared.pendingRoute {
+                SharedStore.shared.pendingRoute = nil
+                if let url = URL(string: "mlr://\(key)"), let route = IntentRouter.Route(url: url) {
+                    router.requestRoute(route)
+                }
+            }
+        }
+        // Widget / Live Activity taps deep-link via mlr:// URLs.
+        .onOpenURL { url in
+            if let route = IntentRouter.Route(url: url) {
+                router.requestRoute(route)
+            }
         }
         .task {
             // Show/refresh the Family Fest Live Activity once the season is known.
@@ -62,7 +108,71 @@ struct RootView: View {
         case "event":           selectedTab = .home
         case "notification":    selectedTab = .activity
         case "committee_chat":  selectedTab = .home
+        case "committee_join_request":
+            resolveCommitteeForRequest(info)
+        case "work_item":
+            resolveWorkItem(info)
+        case "house_message":
+            resolveHouse(info)
         default:                selectedTab = .home
+        }
+    }
+
+    /// Resolve a work item behind a comment/mention notification and open its
+    /// detail sheet (comments + media).
+    private func resolveWorkItem(_ info: [AnyHashable: Any]?) {
+        guard let idStr = info?["target_id"] as? String, let id = UUID(uuidString: idStr) else {
+            selectedTab = .home; return
+        }
+        Task { @MainActor in
+            let item: WorkItem? = try? await supabase
+                .from("work_items")
+                .select("*, work_item_media(*), work_item_comments(id)")
+                .eq("id", value: id.uuidString)
+                .single()
+                .execute()
+                .value
+            if let item { pendingWorkItem = item } else { selectedTab = .home }
+        }
+    }
+
+    /// Resolve the house behind a house-chat mention (entity is the message id)
+    /// and open that house's chat.
+    private func resolveHouse(_ info: [AnyHashable: Any]?) {
+        guard let idStr = info?["target_id"] as? String, let id = UUID(uuidString: idStr) else {
+            selectedTab = .feed; return
+        }
+        Task { @MainActor in
+            struct Row: Decodable { let houseId: UUID
+                enum CodingKeys: String, CodingKey { case houseId = "house_id" } }
+            let row: Row? = try? await supabase
+                .from("house_messages")
+                .select("house_id")
+                .eq("id", value: id.uuidString)
+                .single()
+                .execute()
+                .value
+            if let hid = row?.houseId, let house = await env.housesService.house(withId: hid) {
+                pendingHouse = house
+            } else {
+                selectedTab = .feed
+            }
+        }
+    }
+
+    /// Resolve the committee behind a join-request notification (by committee id
+    /// if the push carried one, else via the request id) and present its detail.
+    private func resolveCommitteeForRequest(_ info: [AnyHashable: Any]?) {
+        Task { @MainActor in
+            let svc = env.committeeService
+            var committee: Committee?
+            if let cidStr = info?["committee_id"] as? String, let cid = UUID(uuidString: cidStr) {
+                committee = await svc.fetchCommittee(byId: cid)
+            }
+            if committee == nil, let ridStr = info?["target_id"] as? String, let rid = UUID(uuidString: ridStr) {
+                committee = await svc.fetchCommittee(forRequestId: rid)
+            }
+            if let committee { pendingCommittee = committee }
         }
     }
 
@@ -77,6 +187,32 @@ struct RootView: View {
             selectedTab = .fest
         case .events:
             selectedTab = .home
+        case .home:
+            selectedTab = .home
+        case .addWorkItem:
+            selectedTab = .home
+            showAddWorkItem = true
+        case .committeeChat(let slug):
+            selectedTab = .feed
+            resolveCommitteeChat(slug: slug)
+        case .houseChat:
+            selectedTab = .feed
+            Task { @MainActor in
+                if let hid = env.currentProfile?.houseId,
+                   let house = await env.housesService.house(withId: hid) {
+                    pendingHouse = house
+                }
+            }
+        }
+    }
+
+    /// Resolve a committee by slug + load its members, then present its chat.
+    private func resolveCommitteeChat(slug: String) {
+        Task { @MainActor in
+            if env.committeeService.committees.isEmpty { await env.committeeService.fetchCommittees() }
+            guard let committee = env.committeeService.committees.first(where: { $0.slug == slug }) else { return }
+            let members = (try? await env.committeeService.fetchMembers(committeeId: committee.id)) ?? []
+            pendingCommitteeChat = PendingCommitteeChat(committee: committee, members: members)
         }
     }
 }
@@ -85,6 +221,14 @@ struct RootView: View {
 
 enum Tab: String, CaseIterable {
     case home, feed, fest, activity, profile
+}
+
+// MARK: - Pending committee chat (Siri / Shortcuts open)
+
+struct PendingCommitteeChat: Identifiable {
+    let id = UUID()
+    let committee: Committee
+    let members: [CommitteeMember]
 }
 
 // MARK: - Main Tab View

@@ -200,7 +200,7 @@ struct WelcomeIntroView: View {
             VStack(alignment: .leading, spacing: 28) {
                 VStack(spacing: 8) {
                     Image(systemName: "bell.badge.fill")
-                        .font(.system(size: 48))
+                        .font(.mlrScaled(48))
                         .foregroundStyle(Color("primary"))
                         .frame(maxWidth: .infinity)
 

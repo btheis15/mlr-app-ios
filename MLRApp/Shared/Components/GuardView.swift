@@ -36,7 +36,7 @@ struct SignInWall<Content: View>: View {
     private var signInOverlay: some View {
         VStack(spacing: 20) {
             Image(systemName: "lock.fill")
-                .font(.system(size: 40))
+                .font(.mlrScaled(40))
                 .foregroundStyle(Color.mlrPrimary)
 
             VStack(spacing: 6) {
@@ -140,7 +140,7 @@ struct SignInChip: View {
             env.authService.promptSignIn()
         } label: {
             Label("Sign in", systemImage: "lock.fill")
-                .font(.system(size: 12, weight: .medium))
+                .font(.mlrScaled(12, weight: .medium))
                 .foregroundStyle(Color.mlrPrimary)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)

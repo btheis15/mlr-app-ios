@@ -24,7 +24,7 @@ import SwiftUI
 struct GlassPrimaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 16, weight: .semibold))
+            .font(.mlrScaled(16, weight: .semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
@@ -39,7 +39,7 @@ struct GlassPrimaryButtonStyle: ButtonStyle {
 struct GlassSecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 16, weight: .semibold))
+            .font(.mlrScaled(16, weight: .semibold))
             .foregroundStyle(Color.mlrPrimary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
@@ -54,7 +54,7 @@ struct GlassSecondaryButtonStyle: ButtonStyle {
 struct GlassFestButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 16, weight: .semibold))
+            .font(.mlrScaled(16, weight: .semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
@@ -70,7 +70,7 @@ struct GlassCircleButtonStyle: ButtonStyle {
     var tint: Color = .mlrPrimary
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 20, weight: .semibold))
+            .font(.mlrScaled(20, weight: .semibold))
             .foregroundStyle(.white)
             .frame(width: 56, height: 56)
             .glassEffect(.regular.tint(tint).interactive(), in: .circle)

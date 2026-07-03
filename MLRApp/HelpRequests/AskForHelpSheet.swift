@@ -1,5 +1,15 @@
 import SwiftUI
 import CoreLocation
+import FoundationModels
+import TipKit
+
+// MARK: - Tips
+
+struct PinLocationTip: Tip {
+    var title: Text { Text("Pin where you need help") }
+    var message: Text? { Text("Attach your exact spot so helpers can find you fast.") }
+    var image: Image? { Image(systemName: "mappin.and.ellipse") }
+}
 
 // MARK: - AskForHelpSheet
 // Compose an Ask-for-Help request: category, what (140 max), how many people,
@@ -26,8 +36,14 @@ struct AskForHelpSheet: View {
     @State private var pinnedCoordinate: CLLocationCoordinate2D?
     @State private var isSubmitting = false
     @State private var submitError: String?
+    @State private var suggesting = false
 
     @State private var locationManager = LocationPinManager()
+
+    private var aiAvailable: Bool {
+        if case .available = SystemLanguageModel.default.availability { return true }
+        return false
+    }
 
     private let maxWhat = 140
 
@@ -108,7 +124,7 @@ struct AskForHelpSheet: View {
                             category = cat
                         } label: {
                             Text("\(cat.emoji) \(cat.label)")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.mlrScaled(13, weight: .semibold))
                                 .foregroundStyle(category == cat ? .white : Color.mlrText)
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 9)
@@ -132,7 +148,7 @@ struct AskForHelpSheet: View {
                 SectionLabel(text: "What do you need?")
                 Spacer()
                 Text("\(what.count)/\(maxWhat)")
-                    .font(.system(size: 11))
+                    .font(.mlrScaled(11))
                     .foregroundStyle(what.count > maxWhat ? Color.mlrDanger : Color.mlrTextSubtle)
             }
             TextEditor(text: $what)
@@ -144,6 +160,40 @@ struct AskForHelpSheet: View {
                 .onChange(of: what) { _, new in
                     if new.count > maxWhat { what = String(new.prefix(maxWhat)) }
                 }
+            if aiAvailable && !what.trimmingCharacters(in: .whitespaces).isEmpty {
+                Button { Task { await suggest() } } label: {
+                    Label(suggesting ? "Thinking…" : "Suggest category & items",
+                          systemImage: "sparkles")
+                        .font(.mlrScaled(13, weight: .semibold))
+                        .foregroundStyle(Color.mlrFest)
+                }
+                .disabled(suggesting)
+            }
+        }
+    }
+
+    /// On-device: pick the best category and suggest supplies from the free text.
+    private func suggest() async {
+        suggesting = true
+        defer { suggesting = false }
+        let text = what.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        let categories = HelpCategory.allCases.map(\.label).joined(separator: ", ")
+        let session = LanguageModelSession(instructions: """
+            You help a family member fill out a "request for help" at a lake resort.
+            The available categories are: \(categories). Choose the single best-fitting one.
+            """)
+        let prompt = "Request: \"\(text)\". Pick the best category and suggest 0–5 short supplies to bring."
+        guard let response = try? await session.respond(to: prompt, generating: HelpDraft.self) else { return }
+        let draft = response.content
+        if let match = HelpCategory.allCases.first(where: {
+            $0.label.caseInsensitiveCompare(draft.category) == .orderedSame
+        }) {
+            category = match
+        }
+        for item in draft.items {
+            let trimmed = item.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !trimmed.isEmpty && !bringItems.contains(trimmed) { bringItems.append(trimmed) }
         }
     }
 
@@ -181,7 +231,7 @@ struct AskForHelpSheet: View {
                         ProgressView()
                     }
                 }
-                .font(.system(size: 14, weight: .semibold))
+                .font(.mlrScaled(14, weight: .semibold))
                 .foregroundStyle(pinnedCoordinate != nil ? Color.mlrSuccess : Color.mlrFest)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 11)
@@ -190,6 +240,7 @@ struct AskForHelpSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
             .buttonStyle(.plain)
+            .popoverTip(PinLocationTip())
 
             if let error = locationManager.errorMessage {
                 Text(error)
@@ -205,7 +256,7 @@ struct AskForHelpSheet: View {
         VStack(alignment: .leading, spacing: 10) {
             Toggle(isOn: $hasSchedule.animation()) {
                 Text("Schedule for a specific time")
-                    .font(.system(size: 15))
+                    .font(.mlrScaled(15))
                     .foregroundStyle(Color.mlrText)
             }
             .tint(Color.mlrFest)
@@ -230,7 +281,7 @@ struct AskForHelpSheet: View {
                     Image(systemName: linkedWorkItem == nil ? "checklist" : "checkmark.circle.fill")
                         .foregroundStyle(Color.mlrFest)
                     Text(linkedWorkItem?.title ?? "Choose a task…")
-                        .font(.system(size: 15))
+                        .font(.mlrScaled(15))
                         .foregroundStyle(linkedWorkItem == nil ? Color.mlrTextMuted : Color.mlrText)
                         .lineLimit(1)
                     Spacer()
@@ -240,7 +291,7 @@ struct AskForHelpSheet: View {
                             .onTapGesture { linkedWorkItem = nil }
                     } else {
                         Image(systemName: "chevron.right")
-                            .font(.system(size: 13))
+                            .font(.mlrScaled(13))
                             .foregroundStyle(Color.mlrTextSubtle)
                     }
                 }
@@ -279,7 +330,7 @@ struct AskForHelpSheet: View {
             ForEach(Array(bringItems.enumerated()), id: \.offset) { index, item in
                 HStack {
                     Text("• \(item)")
-                        .font(.system(size: 14))
+                        .font(.mlrScaled(14))
                         .foregroundStyle(Color.mlrText)
                     Spacer()
                     Button {
@@ -294,7 +345,7 @@ struct AskForHelpSheet: View {
                 TextField("Add an item (e.g. \"a folding table\")", text: $newItem)
                     .fieldStyle()
                 Button("Add") { addItem() }
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .disabled(newItem.trimmingCharacters(in: .whitespaces).isEmpty)
             }
             Text("Helpers can check off the items they're bringing.")
@@ -316,7 +367,7 @@ struct AskForHelpSheet: View {
         VStack(alignment: .leading, spacing: 6) {
             Toggle(isOn: $notifyAll) {
                 Text("Notify everyone willing")
-                    .font(.system(size: 15))
+                    .font(.mlrScaled(15))
                     .foregroundStyle(Color.mlrText)
             }
             .tint(Color.mlrFest)
@@ -359,6 +410,16 @@ struct AskForHelpSheet: View {
             print("[AskForHelp] submit error: \(error)")
         }
     }
+}
+
+// MARK: - AI draft (guided generation)
+
+@Generable
+struct HelpDraft {
+    @Guide(description: "The single category label that best fits the request, taken from the provided list")
+    var category: String
+    @Guide(description: "Zero to five short physical supplies the helper should bring")
+    var items: [String]
 }
 
 // MARK: - Location Pin Manager
@@ -450,7 +511,7 @@ private struct WorkItemPickerSheet: View {
                                     .foregroundStyle(Color.mlrTextSubtle)
                                 VStack(alignment: .leading, spacing: 2) {
                                     Text(item.title)
-                                        .font(.system(size: 15, weight: .medium))
+                                        .font(.mlrScaled(15, weight: .medium))
                                         .foregroundStyle(Color.mlrText)
                                     if let notes = item.notes, !notes.isEmpty {
                                         Text(notes)

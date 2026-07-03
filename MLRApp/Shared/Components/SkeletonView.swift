@@ -124,6 +124,32 @@ struct SkeletonList: View {
     }
 }
 
+// MARK: - ErrorStateView
+
+/// Standard failure state used across the app: a `ContentUnavailableView` with
+/// an optional retry action. Replaces ad-hoc inline error banners so every
+/// screen fails the same, professional way.
+struct ErrorStateView: View {
+    var title: String = "Something went wrong"
+    var message: String
+    var systemImage: String = "exclamationmark.triangle"
+    var retry: (() -> Void)? = nil
+
+    var body: some View {
+        ContentUnavailableView {
+            Label(title, systemImage: systemImage)
+        } description: {
+            Text(message)
+        } actions: {
+            if let retry {
+                Button("Try Again", action: retry)
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.mlrPrimary)
+            }
+        }
+    }
+}
+
 // MARK: - Preview
 
 #if DEBUG

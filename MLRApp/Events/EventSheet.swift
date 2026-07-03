@@ -1,4 +1,15 @@
 import SwiftUI
+import Charts
+import TipKit
+import StoreKit
+
+// MARK: - Tips
+
+struct AddToCalendarTip: Tip {
+    var title: Text { Text("Add it to your Calendar") }
+    var message: Text? { Text("Drop this event straight into your Apple Calendar.") }
+    var image: Image? { Image(systemName: "calendar.badge.plus") }
+}
 
 // MARK: - EventSheet
 // Full event detail: title, description, dates, location, the user's RSVP
@@ -8,6 +19,7 @@ import SwiftUI
 struct EventSheet: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.requestReview) private var requestReview
 
     let event: ResortEvent
 
@@ -44,8 +56,10 @@ struct EventSheet: View {
 
                     detailRows
 
-                    // WeatherKit forecast for the event date (self-hides if none)
-                    EventWeatherBadge(isoDate: event.startDate, compact: false)
+                    // WeatherKit forecast — a per-day strip + Apple Intelligence
+                    // summary for multi-day events, a single badge otherwise.
+                    // Self-hides when no forecast is available.
+                    EventWeatherForecastSection(event: event)
 
                     nativeActions
 
@@ -104,7 +118,7 @@ struct EventSheet: View {
             Text(event.title)
                 .font(event.isFamilyFest
                       ? .festSerif(28, weight: .bold)
-                      : .system(size: 26, weight: .bold))
+                      : .mlrScaled(26, weight: .bold))
                 .foregroundStyle(event.isFamilyFest ? Color.mlrFest : Color.mlrText)
         }
     }
@@ -125,11 +139,11 @@ struct EventSheet: View {
     private func detailRow(_ icon: String, _ text: String) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
-                .font(.system(size: 16))
+                .font(.mlrScaled(16))
                 .foregroundStyle(accent)
                 .frame(width: 24)
             Text(text)
-                .font(.system(size: 15, weight: .medium))
+                .font(.mlrScaled(15, weight: .medium))
                 .foregroundStyle(Color.mlrText)
             Spacer()
         }
@@ -145,7 +159,7 @@ struct EventSheet: View {
                 } label: {
                     Label(calendarAdded ? "Added ✓" : "Add to Calendar",
                           systemImage: calendarAdded ? "checkmark.circle.fill" : "calendar.badge.plus")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(calendarAdded ? Color.mlrSuccess : accent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
@@ -154,12 +168,13 @@ struct EventSheet: View {
                 }
                 .buttonStyle(.plain)
                 .disabled(calendarAdded)
+                .popoverTip(AddToCalendarTip())
 
                 Button {
                     shareState = ShareState(items: shareItems)
                 } label: {
                     Label("Share", systemImage: "square.and.arrow.up")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(accent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
@@ -179,7 +194,7 @@ struct EventSheet: View {
                     }
                 } label: {
                     Label("Directions", systemImage: "arrow.triangle.turn.up.right.diamond.fill")
-                        .font(.system(size: 14, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(accent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
@@ -276,10 +291,10 @@ struct EventSheet: View {
             HStack {
                 Image(systemName: dayStatuses[day] == .going
                       ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 20))
+                    .font(.mlrScaled(20))
                     .foregroundStyle(dayStatuses[day] == .going ? accent : Color.mlrTextSubtle)
                 Text(day)
-                    .font(.system(size: 15))
+                    .font(.mlrScaled(15))
                     .foregroundStyle(Color.mlrText)
                 Spacer()
             }
@@ -291,9 +306,40 @@ struct EventSheet: View {
 
     // MARK: - Who's going
 
+    private var attendanceSummary: AttendanceSummary? { env.eventsService.summaries[event.id] }
+
+    @ViewBuilder
+    private func rsvpChart(_ s: AttendanceSummary) -> some View {
+        let data: [(label: String, count: Int)] = [
+            ("Going", s.going), ("Maybe", s.maybe), ("Can't", s.notGoing)
+        ].filter { $0.count > 0 }
+        Chart(data, id: \.label) { item in
+            SectorMark(angle: .value("Count", item.count),
+                       innerRadius: .ratio(0.62), angularInset: 2)
+                .cornerRadius(4)
+                .foregroundStyle(by: .value("Type", item.label))
+        }
+        .chartForegroundStyleScale([
+            "Going": Color.mlrSuccess, "Maybe": Color.mlrWarning, "Can't": Color.mlrDanger,
+        ])
+        .frame(height: 150)
+        .overlay {
+            VStack(spacing: 0) {
+                Text("\(s.going)")
+                    .font(.mlrScaled(22, weight: .bold))
+                    .foregroundStyle(Color.mlrText)
+                Text("going").font(.caption).foregroundStyle(Color.mlrTextMuted)
+            }
+        }
+        .accessibilityLabel("RSVPs: \(s.going) going, \(s.maybe) maybe, \(s.notGoing) can't make it")
+    }
+
     private var whoIsGoingSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel(text: "Who's going")
+            if let s = attendanceSummary, s.total > 0 {
+                rsvpChart(s)
+            }
             if loadingAttendees {
                 SkeletonRow()
             } else if attendees.isEmpty {
@@ -309,7 +355,7 @@ struct EventSheet: View {
                     }
                     if attendees.count > 8 {
                         Text("+\(attendees.count - 8)")
-                            .font(.system(size: 12, weight: .bold))
+                            .font(.mlrScaled(12, weight: .bold))
                             .foregroundStyle(Color.mlrTextMuted)
                             .frame(width: 32, height: 32)
                             .background(Color.mlrCard)
@@ -343,7 +389,7 @@ struct EventSheet: View {
                     showDeleteConfirm = true
                 } label: {
                     Label("Delete", systemImage: "trash")
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.mlrScaled(16, weight: .semibold))
                         .foregroundStyle(Color.mlrDanger)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
@@ -383,6 +429,9 @@ struct EventSheet: View {
             try await env.eventsService.upsertAttendance(eventId: event.id, status: status)
             Haptics.success()
             await refreshAfterRSVP()
+            // A confirmed "Going" is a positive moment — a good time to ask for a
+            // rating (the system throttles this automatically).
+            if status == .going { requestReview() }
         } catch {
             actionError = "Couldn't save your RSVP. Try again."
         }

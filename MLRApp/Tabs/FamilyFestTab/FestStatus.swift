@@ -28,7 +28,7 @@ private struct OffSeasonCard: View {
     var body: some View {
         HStack(spacing: 12) {
             Image(systemName: "star.fill")
-                .font(.system(size: 18))
+                .font(.mlrScaled(18))
                 .foregroundStyle(Color.mlrFest.opacity(0.5))
 
             VStack(alignment: .leading, spacing: 2) {
@@ -63,7 +63,7 @@ private struct PlanningCard: View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
                 Image(systemName: "calendar.badge.clock")
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.mlrScaled(18, weight: .semibold))
                     .foregroundStyle(Color.mlrFest)
                 Text("\(season.daysUntilStart) days until the Fest")
                     .font(.festSerif(16, weight: .bold))
@@ -71,17 +71,9 @@ private struct PlanningCard: View {
                 Spacer()
             }
 
-            Text("Planning is underway — volunteers needed!")
+            Text("Planning is underway — check the schedule below for what's taking shape.")
                 .font(.festSerif(13))
                 .foregroundStyle(Color.mlrFest.opacity(0.75))
-
-            Label("Sign up to help", systemImage: "hand.raised.fill")
-                .font(.system(size: 13, weight: .semibold))
-                .foregroundStyle(Color.white)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 7)
-                .background(Color.mlrFest)
-                .clipShape(Capsule())
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -128,7 +120,7 @@ private struct LiveCard: View {
 
                 // Live badge
                 Text("LIVE")
-                    .font(.system(size: 10, weight: .black))
+                    .font(.mlrScaled(10, weight: .black))
                     .foregroundStyle(Color.white)
                     .padding(.horizontal, 8)
                     .padding(.vertical, 4)
@@ -147,11 +139,11 @@ private struct LiveCard: View {
                     ForEach(todayItems) { item in
                         HStack(spacing: 6) {
                             Text(item.time)
-                                .font(.system(size: 12, weight: .medium))
+                                .font(.mlrScaled(12, weight: .medium))
                                 .foregroundStyle(Color.mlrFest.opacity(0.6))
                                 .frame(width: 60, alignment: .leading)
                             Text(item.title)
-                                .font(.system(size: 13, weight: .medium))
+                                .font(.mlrScaled(13, weight: .medium))
                                 .foregroundStyle(Color.mlrFest)
                         }
                     }
@@ -192,7 +184,7 @@ private struct WrapCard: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 Text("📸")
-                    .font(.system(size: 22))
+                    .font(.mlrScaled(22))
                 Text("Thanks for a great Fest!")
                     .font(.festSerif(16, weight: .bold))
                     .foregroundStyle(Color.mlrFest)

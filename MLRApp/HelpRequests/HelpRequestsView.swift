@@ -16,6 +16,13 @@ struct HelpRequestsView: View {
 
     private var myId: UUID? { env.currentProfile?.id }
 
+    /// Changes whenever the user's own request's live-activity-relevant state
+    /// changes (status, responder count, covered) — drives the Live Activity.
+    private var myRequestSignature: String {
+        guard let myId, let mine = requests.first(where: { $0.requesterId == myId }) else { return "none" }
+        return "\(mine.status.rawValue)-\(mine.respondersCount)-\(mine.isCovered)"
+    }
+
     var body: some View {
         NavigationStack {
             Group {
@@ -53,6 +60,10 @@ struct HelpRequestsView: View {
                 await env.helpService.fetchOpenRequests()
                 env.helpService.subscribeToRealtime()
                 hasLoaded = true
+                HelpLiveActivityController.shared.sync(requests: requests, myId: myId)
+            }
+            .onChange(of: myRequestSignature) { _, _ in
+                HelpLiveActivityController.shared.sync(requests: requests, myId: myId)
             }
             .onDisappear { env.helpService.unsubscribeFromRealtime() }
         }
@@ -189,13 +200,13 @@ private struct HelpRequestCard: View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 Text(request.category.emoji)
-                    .font(.system(size: 26))
+                    .font(.mlrScaled(26))
                 VStack(alignment: .leading, spacing: 3) {
                     Text(request.category.label)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.mlrScaled(12, weight: .semibold))
                         .foregroundStyle(isUrgent ? Color.mlrDanger : Color.mlrTextMuted)
                     Text(request.what)
-                        .font(.system(size: 16, weight: .semibold))
+                        .font(.mlrScaled(16, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
                         .multilineTextAlignment(.leading)
                 }
@@ -209,12 +220,12 @@ private struct HelpRequestCard: View {
                 Label("\(request.respondersCount)/\(request.neededCount) on the way",
                       systemImage: "figure.walk")
             }
-            .font(.system(size: 12))
+            .font(.mlrScaled(12))
             .foregroundStyle(Color.mlrTextMuted)
 
             if let location = request.whereDescription, !location.isEmpty {
                 Label(location, systemImage: "mappin.and.ellipse")
-                    .font(.system(size: 13))
+                    .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrTextMuted)
             }
 
@@ -225,7 +236,7 @@ private struct HelpRequestCard: View {
 
             if let when = request.scheduledFor {
                 Label(when.formatted(date: .omitted, time: .shortened), systemImage: "clock")
-                    .font(.system(size: 13))
+                    .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrTextMuted)
             }
 
@@ -247,7 +258,7 @@ private struct HelpRequestCard: View {
     private var bringItemsSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             Text("What to bring — \(coveredItems)/\(request.items.count) covered")
-                .font(.system(size: 12, weight: .semibold))
+                .font(.mlrScaled(12, weight: .semibold))
                 .foregroundStyle(Color.mlrTextMuted)
             ForEach(request.items) { item in
                 Button {
@@ -257,13 +268,13 @@ private struct HelpRequestCard: View {
                         Image(systemName: item.isClaimed ? "checkmark.circle.fill" : "circle")
                             .foregroundStyle(item.isClaimed ? Color.mlrSuccess : Color.mlrTextSubtle)
                         Text(item.label)
-                            .font(.system(size: 14))
+                            .font(.mlrScaled(14))
                             .strikethrough(item.isClaimed)
                             .foregroundStyle(item.isClaimed ? Color.mlrTextMuted : Color.mlrText)
                         Spacer()
                         if let who = item.claimedByName {
                             Text(who)
-                                .font(.system(size: 11))
+                                .font(.mlrScaled(11))
                                 .foregroundStyle(Color.mlrTextMuted)
                         }
                     }
@@ -278,7 +289,7 @@ private struct HelpRequestCard: View {
 
     private var coveredBadge: some View {
         Text(request.isCovered ? "✅ Covered" : "Open")
-            .font(.system(size: 11, weight: .bold))
+            .font(.mlrScaled(11, weight: .bold))
             .foregroundStyle(request.isCovered ? Color.mlrSuccess : Color.mlrFest)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
@@ -319,7 +330,7 @@ private struct HelpRequestCard: View {
                 ProgressView().tint(filled ? .white : color)
             } else {
                 Text(text)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(filled ? .white : color)
             }
         }

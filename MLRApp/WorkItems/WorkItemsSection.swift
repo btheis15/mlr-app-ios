@@ -11,6 +11,11 @@ struct WorkItemRow: View {
     var checking: Bool = false
     var onCheck: (() -> Void)? = nil
     var onEdit: (() -> Void)? = nil
+    /// Tap the row to open the detail sheet (comments + media). Falls back to
+    /// `onEdit` when not provided (e.g. the event sheet's admin edit).
+    var onOpen: (() -> Void)? = nil
+
+    private var tapAction: (() -> Void)? { onOpen ?? onEdit }
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -24,7 +29,7 @@ struct WorkItemRow: View {
                         .frame(width: 20, height: 20)
                     if item.isDone {
                         Image(systemName: "checkmark")
-                            .font(.system(size: 11, weight: .bold))
+                            .font(.mlrScaled(11, weight: .bold))
                             .foregroundStyle(Color.mlrPrimary)
                     } else if checking {
                         Circle().fill(Color.mlrPrimary).frame(width: 10, height: 10)
@@ -34,31 +39,28 @@ struct WorkItemRow: View {
             .buttonStyle(.plain)
             .disabled(onCheck == nil || item.isDone || checking)
 
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
-                    .font(.system(size: 14, weight: .medium))
+                    .font(.mlrScaled(14, weight: .medium))
                     .strikethrough(item.isDone)
                     .foregroundStyle(item.isDone ? Color.mlrTextMuted : Color.mlrText)
                 if let notes = item.notes, !notes.isEmpty {
                     Text(notes)
                         .font(.caption)
                         .foregroundStyle(Color.mlrTextMuted)
+                        .lineLimit(2)
                 }
-                if let needed = item.peopleNeeded {
-                    Text("👥 \(needed) needed")
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(Color.mlrTextMuted)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.mlrCard)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
-                }
+                badges
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if onEdit != nil {
+            if let media = item.media.first {
+                mediaThumb(media)
+            }
+
+            if tapAction != nil {
                 Image(systemName: "chevron.right")
-                    .font(.system(size: 12, weight: .semibold))
+                    .font(.mlrScaled(12, weight: .semibold))
                     .foregroundStyle(Color.mlrTextSubtle)
                     .padding(.top, 2)
             }
@@ -66,7 +68,61 @@ struct WorkItemRow: View {
         .padding(.horizontal, 14)
         .padding(.vertical, 10)
         .contentShape(Rectangle())
-        .onTapGesture { onEdit?() }
+        .onTapGesture { tapAction?() }
+    }
+
+    @ViewBuilder
+    private var badges: some View {
+        let showUrgency = item.urgency != nil && !item.isDone
+        if showUrgency || item.peopleNeeded != nil || item.commentCount > 0 {
+            HStack(spacing: 6) {
+                if let urgency = item.urgency, !item.isDone {
+                    chip(text: "\(urgency.emoji) \(urgency.label)", color: urgency.uiColor)
+                }
+                if let needed = item.peopleNeeded {
+                    chip(text: "👥 \(needed) needed", color: Color.mlrTextMuted)
+                }
+                if item.commentCount > 0 {
+                    chip(text: "💬 \(item.commentCount)", color: Color.mlrTextMuted)
+                }
+            }
+        }
+    }
+
+    private func chip(text: String, color: Color) -> some View {
+        Text(text)
+            .font(.mlrScaled(10, weight: .semibold))
+            .foregroundStyle(color)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 2)
+            .background(color.opacity(0.12))
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+    }
+
+    private func mediaThumb(_ media: WorkItemMedia) -> some View {
+        ZStack {
+            if media.isVideo {
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color.mlrCard)
+                    .overlay(Image(systemName: "film").font(.mlrScaled(14)).foregroundStyle(Color.mlrPrimary))
+            } else {
+                MediaThumb(url: media.url)
+            }
+        }
+        .frame(width: 40, height: 40)
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+}
+
+// MARK: - Urgency colour (UI layer)
+
+extension WorkUrgency {
+    var uiColor: Color {
+        switch self {
+        case .asap:       return Color.mlrDanger
+        case .thisYear:   return Color.mlrWarning
+        case .niceToHave: return Color.mlrSuccess
+        }
     }
 }
 
@@ -96,7 +152,7 @@ struct EventWorkItemsSection: View {
                 if env.isAdmin {
                     Button { showAdd = true } label: {
                         Text("+ Add")
-                            .font(.system(size: 13, weight: .semibold))
+                            .font(.mlrScaled(13, weight: .semibold))
                             .foregroundStyle(Color.mlrPrimary)
                     }
                 }

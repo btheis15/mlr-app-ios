@@ -16,6 +16,14 @@ struct AdminView: View {
                 )
 
                 adminLink(
+                    destination: AdminHousesView(),
+                    icon: "house.fill",
+                    iconColor: Color.mlrAccent,
+                    title: "Houses",
+                    description: "Create houses and assign members"
+                )
+
+                adminLink(
                     destination: AdminSignInsView(),
                     icon: "clock.arrow.circlepath",
                     iconColor: Color.mlrInfo,
@@ -78,7 +86,7 @@ struct AdminView: View {
         NavigationLink(destination: destination) {
             HStack(spacing: 14) {
                 Image(systemName: icon)
-                    .font(.system(size: 18, weight: .semibold))
+                    .font(.mlrScaled(18, weight: .semibold))
                     .foregroundStyle(iconColor)
                     .frame(width: 36, height: 36)
                     .background(iconColor.opacity(0.12))
@@ -86,7 +94,7 @@ struct AdminView: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.mlrScaled(15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
                     Text(description)
                         .font(.caption)

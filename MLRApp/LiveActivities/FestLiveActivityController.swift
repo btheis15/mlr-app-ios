@@ -106,3 +106,64 @@ final class FestLiveActivityController {
         return "🌲"
     }
 }
+
+// MARK: - Help Request Live Activity Controller
+//
+// Drives a Live Activity for the CURRENT user's own active "Ask for Help" request,
+// showing responders arriving live. Call `sync(requests:myId:)` whenever the open
+// help requests change (the Help tab already refreshes them on realtime).
+
+@MainActor
+final class HelpLiveActivityController {
+    static let shared = HelpLiveActivityController()
+
+    private var activity: Activity<HelpActivityAttributes>?
+
+    private init() {
+        activity = Activity<HelpActivityAttributes>.activities.first
+    }
+
+    /// Reconcile the Live Activity with the user's own open request. Idempotent:
+    /// starts it when they have one, updates responder counts, ends it when the
+    /// request is gone (closed/cancelled).
+    func sync(requests: [HelpRequest], myId: UUID?) {
+        guard ActivityAuthorizationInfo().areActivitiesEnabled, let myId else {
+            Task { await end() }
+            return
+        }
+        guard let mine = requests.first(where: { $0.requesterId == myId && $0.status == .open }) else {
+            Task { await end() }
+            return
+        }
+        let state = HelpActivityAttributes.ContentState(
+            respondersCount: mine.respondersCount,
+            neededCount: mine.neededCount,
+            whereText: mine.whereDescription,
+            fulfilled: mine.isCovered
+        )
+        if let activity {
+            Task { await activity.update(.init(state: state, staleDate: nil)) }
+        } else {
+            let attributes = HelpActivityAttributes(
+                requestId: mine.id.uuidString,
+                what: mine.what,
+                categoryEmoji: mine.category.emoji
+            )
+            do {
+                activity = try Activity.request(
+                    attributes: attributes,
+                    content: .init(state: state, staleDate: nil),
+                    pushType: nil
+                )
+            } catch {
+                print("[HelpLiveActivity] start failed: \(error)")
+            }
+        }
+    }
+
+    func end() async {
+        guard let activity else { return }
+        await activity.end(nil, dismissalPolicy: .immediate)
+        self.activity = nil
+    }
+}

@@ -86,6 +86,11 @@ final class FestContentService {
     var payees: [Payee] = FestContentService.seedPayees
     var dues: [FestDuesTier] = FestContentService.seedDues
     var loaded = false
+    /// True when the DB fetch was empty/unreachable and we're showing the in-code
+    /// "TBD" seed instead of live content — surfaced as a subtle overview caption.
+    var usingSeedFallback = false
+
+    private var realtimeChannel: RealtimeChannelV2? = nil
 
     // Offline / pre-migration fallbacks so the Pay tab is never blank.
     static let seedDues: [FestDuesTier] = [
@@ -121,8 +126,11 @@ final class FestContentService {
             if !combined.isEmpty { schedule = combined }
             if !d.isEmpty { dinners = d }
             if !p.isEmpty { payees = p }
+            // If the schedule came back empty, we're still on the TBD seed.
+            usingSeedFallback = combined.isEmpty
             loaded = true
         } catch {
+            usingSeedFallback = true
             print("[FestContentService] load error (using seed fallback): \(error)")
         }
     }
@@ -155,6 +163,36 @@ final class FestContentService {
 
     /// Re-fetch everything after an edit so the display arrays update.
     func reload() async { await load(force: true) }
+
+    // MARK: - Realtime
+
+    /// Live-update Family Fest content (schedule, dinners, payees, dues, config,
+    /// activities) when an admin edits it — matching the web `fest-content-live` channel.
+    func subscribeToRealtime() {
+        guard realtimeChannel == nil else { return }
+        let channel = supabase.channel("fest-content-live")
+        realtimeChannel = channel
+
+        Task {
+            for table in ["fest_config", "fest_dues", "fest_schedule_items",
+                          "fest_dinners", "fest_payees", "fest_activities"] {
+                channel.onPostgresChange(AnyAction.self, schema: "public", table: table) { [weak self] _ in
+                    guard let self else { return }
+                    Task { @MainActor in await self.reload() }
+                }
+            }
+            await channel.subscribe()
+        }
+    }
+
+    func unsubscribeFromRealtime() {
+        Task {
+            if let channel = realtimeChannel {
+                await supabase.removeChannel(channel)
+                realtimeChannel = nil
+            }
+        }
+    }
 
     private func currentUid() async -> String? {
         (try? await supabase.auth.session.user.id)?.uuidString
@@ -249,6 +287,7 @@ final class FestContentService {
             ScheduleItem(
                 id: r.id.uuidString,
                 day: Self.weekday(from: r.day) ?? r.day,
+                isoDate: r.day,
                 time: r.startTime?.nilIfBlank ?? "TBD",
                 title: Self.titled(emoji: r.emoji, title: r.title),
                 location: r.location?.nilIfBlank ?? "TBD",
@@ -270,6 +309,7 @@ final class FestContentService {
             return ScheduleItem(
                 id: r.id.uuidString,
                 day: "Anytime",
+                isoDate: nil,
                 time: "Any time",
                 title: Self.titled(emoji: r.emoji, title: r.title),
                 location: r.location,

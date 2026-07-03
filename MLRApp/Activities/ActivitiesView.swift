@@ -31,7 +31,7 @@ struct ActivitiesView: View {
                                 Image(systemName: icon(for: group.category))
                                     .foregroundStyle(Color.mlrPrimary)
                                 Text(group.category)
-                                    .font(.system(size: 20, weight: .bold))
+                                    .font(.mlrScaled(20, weight: .bold))
                                     .foregroundStyle(Color.mlrText)
                             }
                             .padding(.horizontal, 16)
@@ -70,17 +70,17 @@ private struct ActivityCard: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             Text(activity.icon)
-                .font(.system(size: 30))
+                .font(.mlrScaled(30))
                 .frame(width: 48, height: 48)
                 .background(Color.mlrPrimaryLight)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(activity.title)
-                    .font(.system(size: 16, weight: .semibold))
+                    .font(.mlrScaled(16, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                 Text(activity.description)
-                    .font(.system(size: 14))
+                    .font(.mlrScaled(14))
                     .foregroundStyle(Color.mlrTextMuted)
                     .fixedSize(horizontal: false, vertical: true)
             }

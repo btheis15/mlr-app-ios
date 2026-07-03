@@ -123,9 +123,18 @@ struct CommitteeJoinRequest: Codable, Identifiable, Equatable {
     let userId: UUID
     var status: JoinRequestStatus
     var note: String?
-    var requestedArea: String?   // committee_join_requests.requested_area (migration 0051)
+    var requestedArea: String?     // legacy single area (migration 0051)
+    var requestedAreas: [String]   // migration 0060 — the areas the member picked
     var createdAt: Date?
     var profile: Profile?
+
+    /// All areas the requester asked for — prefers the array, falls back to the
+    /// legacy single column so older rows still show something.
+    var areas: [String] {
+        if !requestedAreas.isEmpty { return requestedAreas }
+        if let a = requestedArea, !a.isEmpty { return [a] }
+        return []
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -134,8 +143,22 @@ struct CommitteeJoinRequest: Codable, Identifiable, Equatable {
         case status
         case note = "message"
         case requestedArea = "requested_area"
+        case requestedAreas = "requested_areas"
         case createdAt = "created_at"
         case profile = "profiles"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id             = try c.decode(UUID.self, forKey: .id)
+        committeeId    = try c.decode(UUID.self, forKey: .committeeId)
+        userId         = try c.decode(UUID.self, forKey: .userId)
+        status         = try c.decode(JoinRequestStatus.self, forKey: .status)
+        note           = try? c.decodeIfPresent(String.self, forKey: .note)
+        requestedArea  = try? c.decodeIfPresent(String.self, forKey: .requestedArea)
+        requestedAreas = (try? c.decodeIfPresent([String].self, forKey: .requestedAreas)) ?? []
+        createdAt      = try? c.decodeIfPresent(Date.self, forKey: .createdAt)
+        profile        = try? c.decodeIfPresent(Profile.self, forKey: .profile)
     }
 }
 
@@ -165,6 +188,9 @@ struct CommitteeChatMessage: Codable, Identifiable, Equatable {
     var editedAt: Date?
     var deletedAt: Date?
     var createdAt: Date
+    /// The role channel this message belongs to; nil = the committee-wide
+    /// "General" channel (migration 0063). Set from the row, not decoded here.
+    var area: String? = nil
 
     enum CodingKeys: String, CodingKey {
         case id

@@ -49,15 +49,15 @@ struct NotificationRow: View {
                 // Title — bold when unread
                 Text(notification.title)
                     .font(isUnread
-                          ? .system(size: 15, weight: .semibold)
-                          : .system(size: 15, weight: .regular))
+                          ? .mlrScaled(15, weight: .semibold)
+                          : .mlrScaled(15, weight: .regular))
                     .foregroundStyle(Color.mlrText)
                     .fixedSize(horizontal: false, vertical: true)
 
                 // Optional body preview
                 if let body = notification.body, !body.isEmpty {
                     Text(body)
-                        .font(.system(size: 13))
+                        .font(.mlrScaled(13))
                         .foregroundStyle(Color.mlrTextMuted)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -66,7 +66,7 @@ struct NotificationRow: View {
                 // Relative timestamp + kind badge
                 HStack(spacing: 6) {
                     Text(MLRFormat.relativeTime(notification.createdAt))
-                        .font(.system(size: 12))
+                        .font(.mlrScaled(12))
                         .foregroundStyle(Color.mlrTextSubtle)
 
                     kindBadge
@@ -123,7 +123,7 @@ struct NotificationRow: View {
             .frame(width: 36, height: 36)
             .overlay {
                 Text(notification.actorName?.prefix(1).uppercased() ?? "?")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(accentColor)
             }
     }
@@ -134,7 +134,7 @@ struct NotificationRow: View {
             .frame(width: 36, height: 36)
             .overlay {
                 Image(systemName: kindIcon)
-                    .font(.system(size: 16, weight: .medium))
+                    .font(.mlrScaled(16, weight: .medium))
                     .foregroundStyle(accentColor)
             }
     }
@@ -159,6 +159,8 @@ struct NotificationRow: View {
         case .committeeJoin:        return "person.badge.plus"
         case .committeeJoinRequest: return "person.badge.clock"
         case .eventRsvp:            return "calendar.badge.checkmark"
+        case .workItemComment:      return "bubble.left.fill"
+        case .workItemMention:      return "at"
         }
     }
 
@@ -169,7 +171,7 @@ struct NotificationRow: View {
         let label = kindLabel
         if !label.isEmpty {
             Text(label)
-                .font(.system(size: 11, weight: .medium))
+                .font(.mlrScaled(11, weight: .medium))
                 .foregroundStyle(accentColor)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)
@@ -196,6 +198,8 @@ struct NotificationRow: View {
         case .committeeJoin:        return "Committee"
         case .committeeJoinRequest: return "Join Request"
         case .eventRsvp:            return "RSVP"
+        case .workItemComment:      return "Work Item"
+        case .workItemMention:      return "Mention"
         }
     }
 }

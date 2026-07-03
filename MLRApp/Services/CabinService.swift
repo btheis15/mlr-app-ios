@@ -12,6 +12,8 @@ final class CabinService {
     var isLoading: Bool = false
     var error: String? = nil
 
+    private var myBookingsChannel: RealtimeChannelV2? = nil
+
     // MARK: - Cabins
 
     func fetchCabins() async {
@@ -156,6 +158,38 @@ final class CabinService {
             .execute()
         myBookings.removeAll { $0.id == bookingId }
         allBookings.removeAll { $0.id == bookingId }
+    }
+
+    // MARK: - Realtime
+
+    /// Live-update the signed-in member's own bookings when an admin approves or
+    /// denies them — matching the web app's `my-cabin-bookings` channel.
+    func subscribeMyBookings(userId: UUID) {
+        guard myBookingsChannel == nil else { return }
+        let channel = supabase.channel("my-cabin-bookings-\(userId.uuidString)")
+        myBookingsChannel = channel
+
+        Task {
+            channel.onPostgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "cabin_bookings",
+                filter: "user_id=eq.\(userId.uuidString)"
+            ) { [weak self] _ in
+                guard let self else { return }
+                Task { @MainActor in await self.fetchMyBookings(userId: userId) }
+            }
+            await channel.subscribe()
+        }
+    }
+
+    func unsubscribeMyBookings() {
+        Task {
+            if let channel = myBookingsChannel {
+                await supabase.removeChannel(channel)
+                myBookingsChannel = nil
+            }
+        }
     }
 
     // MARK: - Private

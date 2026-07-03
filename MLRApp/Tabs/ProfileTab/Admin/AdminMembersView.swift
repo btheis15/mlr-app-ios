@@ -10,12 +10,16 @@ struct AdminMember: Codable, Identifiable, Equatable {
     var isAdmin: Bool
     var betaTester: Bool  // kept for DB compat; not surfaced in UI
     var avatarUrl: String?
+    var houseId: UUID?    // the member's house (migration 0064), admin-assigned
+    var houseName: String?
 
     enum CodingKeys: String, CodingKey {
         case id, name, email
         case isAdmin    = "is_admin"
         case betaTester = "beta_tester"
         case avatarUrl  = "avatar_url"
+        case houseId    = "house_id"
+        case houseName  = "house_name"
     }
 
     // Lenient decode: a single member with a null email/name (or any missing
@@ -28,6 +32,8 @@ struct AdminMember: Codable, Identifiable, Equatable {
         isAdmin = (try? c.decode(Bool.self, forKey: .isAdmin)) ?? false
         betaTester = (try? c.decode(Bool.self, forKey: .betaTester)) ?? false
         avatarUrl = try? c.decode(String.self, forKey: .avatarUrl)
+        houseId = try? c.decodeIfPresent(UUID.self, forKey: .houseId)
+        houseName = try? c.decodeIfPresent(String.self, forKey: .houseName)
     }
 }
 
@@ -75,8 +81,10 @@ struct AdminMembersView: View {
                 MemberRow(
                     member: member,
                     currentUserId: currentUserId,
+                    houses: env.housesService.houses,
                     onToggleAdmin: { Task { await toggleAdmin(member) } },
                     onToggleBeta: { Task { await toggleBeta(member) } },
+                    onSetHouse: { hid in Task { await setHouse(member, houseId: hid) } },
                     onRemove: {
                         memberToRemove = member
                         showRemoveAlert = true
@@ -93,7 +101,7 @@ struct AdminMembersView: View {
                     AdminSignInsView()
                 } label: {
                     Label("Sign-Ins", systemImage: "clock.arrow.circlepath")
-                        .font(.system(size: 14))
+                        .font(.mlrScaled(14))
                 }
             }
         }
@@ -102,6 +110,7 @@ struct AdminMembersView: View {
         }
         .task {
             await loadMembers()
+            if env.housesService.houses.isEmpty { await env.housesService.fetchHouses() }
         }
         .alert("Remove member?", isPresented: $showRemoveAlert, presenting: memberToRemove) { m in
             Button("Remove \(m.name)", role: .destructive) {
@@ -181,6 +190,21 @@ struct AdminMembersView: View {
     }
 
     @MainActor
+    private func setHouse(_ member: AdminMember, houseId: UUID?) async {
+        do {
+            try await env.housesService.setMemberHouse(target: member.id, houseId: houseId)
+            if let idx = members.firstIndex(of: member) {
+                members[idx].houseId = houseId
+                members[idx].houseName = houseId.flatMap { hid in
+                    env.housesService.houses.first { $0.id == hid }?.name
+                }
+            }
+        } catch {
+            self.error = "Couldn't update house."
+        }
+    }
+
+    @MainActor
     private func removeMember(_ member: AdminMember) async {
         guard !member.isAdmin, member.id != currentUserId else { return }
         do {
@@ -199,8 +223,10 @@ struct AdminMembersView: View {
 private struct MemberRow: View {
     let member: AdminMember
     let currentUserId: UUID?
+    let houses: [House]
     let onToggleAdmin: () -> Void
     let onToggleBeta: () -> Void
+    let onSetHouse: (UUID?) -> Void
     let onRemove: () -> Void
 
     private var isSelf: Bool { member.id == currentUserId }
@@ -213,11 +239,14 @@ private struct MemberRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
                     Text(member.name)
-                        .font(.system(size: 15, weight: .semibold))
+                        .font(.mlrScaled(15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
 
                     if member.isAdmin {
                         badge("Admin", color: Color.mlrPrimary)
+                    }
+                    if let houseName = member.houseName {
+                        badge("🏠 \(houseName)", color: Color.mlrAccent)
                     }
                     if member.betaTester {
                         badge("Beta", color: Color.mlrAccent)
@@ -256,6 +285,26 @@ private struct MemberRow: View {
                 )
             }
 
+            if !houses.isEmpty {
+                Menu {
+                    Button {
+                        onSetHouse(nil)
+                    } label: {
+                        Label("No house", systemImage: member.houseId == nil ? "checkmark" : "")
+                    }
+                    ForEach(houses) { house in
+                        Button {
+                            onSetHouse(house.id)
+                        } label: {
+                            Label("\(house.emoji) \(house.name)",
+                                  systemImage: member.houseId == house.id ? "checkmark" : "")
+                        }
+                    }
+                } label: {
+                    Label("Assign house", systemImage: "house.fill")
+                }
+            }
+
             if canRemove {
                 Divider()
                 Button(role: .destructive) {
@@ -288,7 +337,7 @@ private struct MemberRow: View {
 
     private func badge(_ text: String, color: Color) -> some View {
         Text(text)
-            .font(.system(size: 10, weight: .semibold))
+            .font(.mlrScaled(10, weight: .semibold))
             .foregroundStyle(color)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)

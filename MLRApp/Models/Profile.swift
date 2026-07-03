@@ -33,6 +33,8 @@ enum NotifType: String, Codable, CaseIterable {
     case helpRequest = "help_request"
     case helpResponse = "help_response"
     case helpUrgent = "help_urgent"
+    case workItemComment = "work_item_comment"
+    case workItemMention = "work_item_mention"
     case broadcast
 }
 
@@ -55,6 +57,7 @@ struct Profile: Codable, Identifiable, Equatable {
     var address: String? = nil
     var fullName: String? = nil
     var household: String? = nil
+    var houseId: UUID? = nil        // the member's House (migration 0064); admin-assigned
     var includeInDirectory: Bool = true
     var notifyNewMembers: Bool = true
     var emailAlerts: Bool
@@ -83,6 +86,7 @@ struct Profile: Codable, Identifiable, Equatable {
         case address
         case fullName = "full_name"
         case household
+        case houseId = "house_id"
         case includeInDirectory = "include_in_directory"
         case notifyNewMembers = "notify_new_members"
         case emailAlerts = "email_alerts"
@@ -149,6 +153,7 @@ extension Profile {
         address           = try? c.decodeIfPresent(String.self, forKey: .address)
         fullName          = try? c.decodeIfPresent(String.self, forKey: .fullName)
         household         = try? c.decodeIfPresent(String.self, forKey: .household)
+        houseId           = try? c.decodeIfPresent(UUID.self, forKey: .houseId)
         includeInDirectory = (try? c.decode(Bool.self, forKey: .includeInDirectory)) ?? true
         notifyNewMembers   = (try? c.decode(Bool.self, forKey: .notifyNewMembers)) ?? true
         emailAlerts     = (try? c.decode(Bool.self, forKey: .emailAlerts)) ?? true

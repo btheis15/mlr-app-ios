@@ -72,7 +72,7 @@ struct CommitteeMemberManageSheet: View {
                             Text("Suggestions").font(.caption).foregroundStyle(Color.mlrTextMuted)
                             ForEach(addableSuggestions, id: \.self) { s in
                                 Button { addArea(s) } label: {
-                                    Label(s, systemImage: "plus").font(.system(size: 13))
+                                    Label(s, systemImage: "plus").font(.mlrScaled(13))
                                 }
                             }
                         }

@@ -14,7 +14,9 @@ final class CommitteeService {
     /// Admin-visible join requests across all committees.
     var pendingRequests: [CommitteeJoinRequest] = []
 
-    private var messageChannels: [UUID: RealtimeChannelV2] = [:]
+    private var messageChannels: [String: RealtimeChannelV2] = [:]
+    private var rosterChannels: [String: RealtimeChannelV2] = [:]
+    private var mgmtChannels: [String: RealtimeChannelV2] = [:]
 
     // MARK: - Fetch committees
 
@@ -34,6 +36,29 @@ final class CommitteeService {
             self.error = "Couldn't load committees."
             print("[CommitteeService] fetchCommittees error: \(error)")
         }
+    }
+
+    /// A committee by id — returns the already-loaded one if present, else fetches.
+    func fetchCommittee(byId id: UUID) async -> Committee? {
+        if let c = committees.first(where: { $0.id == id }) { return c }
+        return try? await supabase
+            .from("committees").select("*").eq("id", value: id.uuidString)
+            .single().execute().value
+    }
+
+    /// The committee a pending join request belongs to — used to deep-link an
+    /// admin from a join-request notification straight to that committee.
+    func fetchCommittee(forRequestId requestId: UUID) async -> Committee? {
+        struct Row: Decodable {
+            let committeeId: UUID
+            enum CodingKeys: String, CodingKey { case committeeId = "committee_id" }
+        }
+        guard let row: Row = try? await supabase
+            .from("committee_join_requests").select("committee_id")
+            .eq("id", value: requestId.uuidString)
+            .single().execute().value
+        else { return nil }
+        return await fetchCommittee(byId: row.committeeId)
     }
 
     // MARK: - Members
@@ -162,17 +187,17 @@ final class CommitteeService {
 
     // MARK: - Join requests
 
-    func requestJoin(committeeId: UUID, note: String?, requestedArea: String? = nil) async throws {
+    func requestJoin(committeeId: UUID, note: String?, requestedAreas: [String] = []) async throws {
         struct JoinParams: Encodable {
             let cid: String
             let msg: String?
-            let requested_area: String?
+            let requested_areas: [String]
         }
         try await supabase
             .rpc("request_to_join", params: JoinParams(
                 cid: committeeId.uuidString,
                 msg: note,
-                requested_area: requestedArea
+                requested_areas: requestedAreas
             ))
             .execute()
     }
@@ -250,7 +275,7 @@ final class CommitteeService {
         let rows: [CommitteeJoinRequest] = try await supabase
             .from("committee_join_requests")
             .select("""
-                id, committee_id, user_id, status, message, requested_area, created_at,
+                id, committee_id, user_id, status, message, requested_area, requested_areas, created_at,
                 profiles!user_id(id, display_name, contact_email, avatar_url, phone, is_admin,
                                  beta_tester, willing_to_help, intro_seen,
                                  email_alerts, push_level, push_types,
@@ -265,31 +290,35 @@ final class CommitteeService {
 
     // MARK: - Chat messages
 
-    func fetchMessages(committeeId: UUID) async throws -> [CommitteeChatMessage] {
-        let rows: [CommitteeChatRow] = try await supabase
+    func fetchMessages(committeeId: UUID, area: String? = nil) async throws -> [CommitteeChatMessage] {
+        var query = supabase
             .from("committee_messages")
             .select("""
-                id, committee_id, author_id, text, edited_at, deleted_at, created_at,
+                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area,
                 profiles!author_id(display_name, avatar_url)
             """)
             .eq("committee_id", value: committeeId.uuidString)
+        // nil area = the General channel (area IS NULL); else the role channel.
+        if let area { query = query.eq("area", value: area) } else { query = query.is("area", value: nil) }
+        let rows: [CommitteeChatRow] = try await query
             .order("created_at", ascending: true)
             .execute()
             .value
         return rows.map(\.toChatMessage)
     }
 
-    func sendMessage(committeeId: UUID, text: String, authorId: UUID, mentionedIds: [UUID] = []) async throws -> CommitteeChatMessage {
+    func sendMessage(committeeId: UUID, area: String? = nil, text: String, authorId: UUID, mentionedIds: [UUID] = []) async throws -> CommitteeChatMessage {
         let params: [String: AnyJSON] = [
             "committee_id": .string(committeeId.uuidString),
             "author_id":    .string(authorId.uuidString),
-            "text":         .string(text)
+            "text":         .string(text),
+            "area":         area.map { AnyJSON.string($0) } ?? .null
         ]
         let row: CommitteeChatRow = try await supabase
             .from("committee_messages")
             .insert(params)
             .select("""
-                id, committee_id, author_id, text, edited_at, deleted_at, created_at,
+                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area,
                 profiles!author_id(display_name, avatar_url)
             """)
             .single()
@@ -335,14 +364,18 @@ final class CommitteeService {
     /// The caller is responsible for supplying a mutable messages array.
     func subscribeToMessages(
         committeeId: UUID,
+        area: String? = nil,
         onInsert: @escaping (CommitteeChatMessage) -> Void,
         onUpdate: @escaping (CommitteeChatMessage) -> Void
     ) {
-        guard messageChannels[committeeId] == nil else { return }
-        let channel = supabase.channel("committee-chat-\(committeeId.uuidString)")
-        messageChannels[committeeId] = channel
+        let key = channelKey(committeeId, area)
+        guard messageChannels[key] == nil else { return }
+        let channel = supabase.channel("committee-chat-\(key)")
+        messageChannels[key] = channel
 
         Task {
+            // Realtime filters on one column, so we filter by committee server-side
+            // and match the area client-side (a role channel vs the General one).
             channel.onPostgresChange(
                 AnyAction.self,
                 schema: "public",
@@ -357,13 +390,16 @@ final class CommitteeService {
                     case .update(let a): record = a.record; isInsert = false
                     case .delete: return
                     }
+                    // Only this channel's area (treat missing/null as General).
+                    let rowArea = record["area"]?.stringValue
+                    guard rowArea == area else { return }
                     guard let idStr = record["id"]?.stringValue,
                           let id = UUID(uuidString: idStr)
                     else { return }
                     if let row: CommitteeChatRow = try? await supabase
                         .from("committee_messages")
                         .select("""
-                            id, committee_id, author_id, text, edited_at, deleted_at, created_at,
+                            id, committee_id, author_id, text, edited_at, deleted_at, created_at, area,
                             profiles!author_id(display_name, avatar_url)
                         """)
                         .eq("id", value: id.uuidString)
@@ -380,13 +416,226 @@ final class CommitteeService {
         }
     }
 
-    func unsubscribeFromMessages(committeeId: UUID) {
-        guard let channel = messageChannels[committeeId] else { return }
+    func unsubscribeFromMessages(committeeId: UUID, area: String? = nil) {
+        let key = channelKey(committeeId, area)
+        guard let channel = messageChannels[key] else { return }
         Task {
             await supabase.removeChannel(channel)
-            messageChannels.removeValue(forKey: committeeId)
+            messageChannels.removeValue(forKey: key)
         }
     }
+
+    private func channelKey(_ committeeId: UUID, _ area: String?) -> String {
+        "\(committeeId.uuidString)|\(area ?? "")"
+    }
+
+    /// Mark a channel read (per-area unread state, migration 0063).
+    func markAreaRead(committeeId: UUID, area: String?) async {
+        struct Params: Encodable { let cid: String; let p_area: String? }
+        _ = try? await supabase
+            .rpc("mark_area_read", params: Params(cid: committeeId.uuidString, p_area: area))
+            .execute()
+    }
+
+    /// Mute or unmute a channel's push notifications (migration 0063).
+    func setAreaMute(committeeId: UUID, area: String?, muted: Bool) async {
+        struct Params: Encodable { let cid: String; let p_area: String?; let p_muted: Bool }
+        _ = try? await supabase
+            .rpc("set_area_mute", params: Params(cid: committeeId.uuidString, p_area: area, p_muted: muted))
+            .execute()
+    }
+
+    /// Whether the caller has muted a channel.
+    func isAreaMuted(committeeId: UUID, area: String?) async -> Bool {
+        struct Row: Decodable { let muted: Bool }
+        let rows: [Row] = (try? await supabase
+            .from("committee_area_reads")
+            .select("muted")
+            .eq("committee_id", value: committeeId.uuidString)
+            .eq("area", value: area ?? "")
+            .limit(1).execute().value) ?? []
+        return rows.first?.muted ?? false
+    }
+
+    // MARK: - Chat channels (Messages-style conversation list)
+
+    /// The chat channels the member sees on the Feed: for each committee they're
+    /// in, a General channel, plus one per role/area they hold (Family Fest →
+    /// "Meals", …). A committee where they hold no role shows a single chat.
+    func fetchMyChannels(userId: UUID) async -> [ChatChannel] {
+        if committees.isEmpty { await fetchCommittees() }
+        let mySlugs = await fetchMyCommitteeSlugs(userId: userId)
+        let mine = committees.filter { mySlugs.contains($0.slug) }.sorted { $0.name < $1.name }
+        var channels: [ChatChannel] = []
+        for committee in mine {
+            let roster = (try? await fetchRoster(slug: committee.slug)) ?? []
+            let myAreas = Self.areas(forUser: userId, in: roster)
+            if myAreas.isEmpty {
+                // No assigned role → a single committee chat (the General/NULL channel).
+                channels.append(ChatChannel(committee: committee, area: nil,
+                                            title: committee.name, subtitle: nil))
+            } else {
+                channels.append(ChatChannel(committee: committee, area: nil,
+                                            title: "General", subtitle: committee.name))
+                for area in myAreas {
+                    channels.append(ChatChannel(committee: committee, area: area,
+                                                title: area, subtitle: committee.name))
+                }
+            }
+        }
+        return channels
+    }
+
+    /// Distinct areas a user holds in a committee's roster (role " · Lead" suffix stripped).
+    static func areas(forUser userId: UUID, in roster: [CommitteeRosterEntry]) -> [String] {
+        var seen = Set<String>(); var ordered: [String] = []
+        for entry in roster where entry.linkedUserId == userId {
+            for role in entry.roles {
+                let area = role.hasSuffix(" · Lead") ? String(role.dropLast(" · Lead".count)) : role
+                if !area.isEmpty && !seen.contains(area) { seen.insert(area); ordered.append(area) }
+            }
+        }
+        return ordered
+    }
+
+    /// Last-message preview + unread count for a channel (drives the list rows).
+    func fetchChannelSummary(committeeId: UUID, area: String?, userId: UUID) async -> ChannelSummary {
+        struct LastRow: Decodable {
+            let text: String?; let createdAt: Date; let deletedAt: Date?; let authorName: String?
+            enum CodingKeys: String, CodingKey {
+                case text; case createdAt = "created_at"; case deletedAt = "deleted_at"
+                case profiles
+            }
+            struct P: Decodable { let displayName: String?
+                enum CodingKeys: String, CodingKey { case displayName = "display_name" } }
+            init(from decoder: Decoder) throws {
+                let c = try decoder.container(keyedBy: CodingKeys.self)
+                text = try c.decodeIfPresent(String.self, forKey: .text)
+                createdAt = try c.decode(Date.self, forKey: .createdAt)
+                deletedAt = try c.decodeIfPresent(Date.self, forKey: .deletedAt)
+                authorName = (try? c.decodeIfPresent(P.self, forKey: .profiles))?.displayName
+            }
+        }
+        var lastQ = supabase
+            .from("committee_messages")
+            .select("text, created_at, deleted_at, profiles!author_id(display_name)")
+            .eq("committee_id", value: committeeId.uuidString)
+        if let area { lastQ = lastQ.eq("area", value: area) } else { lastQ = lastQ.is("area", value: nil) }
+        let last: [LastRow] = (try? await lastQ.order("created_at", ascending: false).limit(1).execute().value) ?? []
+        let lastRow = last.first
+
+        struct ReadRow: Decodable { let lastReadAt: Date?; let muted: Bool?
+            enum CodingKeys: String, CodingKey { case lastReadAt = "last_read_at"; case muted } }
+        let reads: [ReadRow] = (try? await supabase
+            .from("committee_area_reads")
+            .select("last_read_at, muted")
+            .eq("committee_id", value: committeeId.uuidString)
+            .eq("user_id", value: userId.uuidString)
+            .eq("area", value: area ?? "")
+            .limit(1).execute().value) ?? []
+        let lastRead = reads.first?.lastReadAt
+        let muted = reads.first?.muted ?? false
+
+        var cq = supabase
+            .from("committee_messages")
+            .select("id", head: true, count: .exact)
+            .eq("committee_id", value: committeeId.uuidString)
+            .neq("author_id", value: userId.uuidString)
+        if let area { cq = cq.eq("area", value: area) } else { cq = cq.is("area", value: nil) }
+        if let lastRead { cq = cq.gt("created_at", value: ISO8601DateFormatter().string(from: lastRead)) }
+        let unread = (try? await cq.execute().count) ?? 0
+
+        let preview: String? = {
+            guard let lastRow else { return nil }
+            if lastRow.deletedAt != nil { return "Message deleted" }
+            let who = lastRow.authorName.map { "\($0): " } ?? ""
+            return who + (lastRow.text ?? "")
+        }()
+        return ChannelSummary(lastText: preview, lastAt: lastRow?.createdAt, unread: unread, muted: muted)
+    }
+
+    // MARK: - Realtime for roster
+
+    /// Subscribe to live roster changes for a committee so newly added members
+    /// appear without a manual refresh — matching the web app, which re-fetches
+    /// the roster on any committee_roster change. `onChange` should reload the
+    /// roster; it fires on insert/update/delete.
+    func subscribeToRoster(slug: String, onChange: @escaping () -> Void) {
+        guard rosterChannels[slug] == nil else { return }
+        let channel = supabase.channel("committee-roster-\(slug)")
+        rosterChannels[slug] = channel
+
+        Task {
+            channel.onPostgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "committee_roster",
+                filter: "committee_slug=eq.\(slug)"
+            ) { _ in
+                Task { @MainActor in onChange() }
+            }
+            await channel.subscribe()
+        }
+    }
+
+    func unsubscribeFromRoster(slug: String) {
+        guard let channel = rosterChannels[slug] else { return }
+        Task {
+            await supabase.removeChannel(channel)
+            rosterChannels.removeValue(forKey: slug)
+        }
+    }
+
+    /// Subscribe to live membership changes for a committee — join requests and
+    /// committee_members — so a manager's pending-request list and roster update
+    /// without a manual refresh, matching the web app. `onChange` should reload.
+    func subscribeToManagement(slug: String, committeeId: UUID, onChange: @escaping () -> Void) {
+        guard mgmtChannels[slug] == nil else { return }
+        let channel = supabase.channel("committee-mgmt-\(slug)")
+        mgmtChannels[slug] = channel
+
+        Task {
+            for table in ["committee_join_requests", "committee_members"] {
+                channel.onPostgresChange(
+                    AnyAction.self,
+                    schema: "public",
+                    table: table,
+                    filter: "committee_id=eq.\(committeeId.uuidString)"
+                ) { _ in
+                    Task { @MainActor in onChange() }
+                }
+            }
+            await channel.subscribe()
+        }
+    }
+
+    func unsubscribeFromManagement(slug: String) {
+        guard let channel = mgmtChannels[slug] else { return }
+        Task {
+            await supabase.removeChannel(channel)
+            mgmtChannels.removeValue(forKey: slug)
+        }
+    }
+}
+
+// MARK: - Chat channel + summary (conversation list)
+
+/// One row in the Feed conversation list: a committee's General channel or one
+/// of its role channels. `area == nil` = the General / whole-committee chat.
+struct ChatChannel: Identifiable, Equatable {
+    let committee: Committee
+    let area: String?
+    let title: String
+    let subtitle: String?
+    var id: String { "\(committee.id.uuidString)|\(area ?? "")" }
+}
+
+/// Preview state for a channel row: last message, its time, and unread count.
+struct ChannelSummary: Equatable {
+    var lastText: String?
+    var lastAt: Date?
+    var unread: Int
+    var muted: Bool = false
 }
 
 // MARK: - Private row type for committee chat messages
@@ -401,6 +650,7 @@ private struct CommitteeChatRow: Decodable {
     let editedAt: Date?
     let deletedAt: Date?
     let createdAt: Date
+    let area: String?
     let profiles: AuthorInfo?
 
     enum CodingKeys: String, CodingKey {
@@ -411,6 +661,7 @@ private struct CommitteeChatRow: Decodable {
         case editedAt = "edited_at"
         case deletedAt = "deleted_at"
         case createdAt = "created_at"
+        case area
         case profiles
     }
 
@@ -433,7 +684,8 @@ private struct CommitteeChatRow: Decodable {
             text: text ?? "",
             editedAt: editedAt,
             deletedAt: deletedAt,
-            createdAt: createdAt
+            createdAt: createdAt,
+            area: area
         )
     }
 }

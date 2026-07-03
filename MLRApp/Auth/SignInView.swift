@@ -149,7 +149,7 @@ struct SignInView: View {
             TextField("00000000", text: $code)
                 .keyboardType(.numberPad)
                 .textContentType(.oneTimeCode)
-                .font(.system(size: 32, weight: .semibold, design: .monospaced))
+                .font(.mlrScaled(32, weight: .semibold, design: .monospaced))
                 .multilineTextAlignment(.center)
                 .focused($codeFocused)
                 .padding()

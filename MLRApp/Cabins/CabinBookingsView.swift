@@ -54,13 +54,18 @@ struct CabinBookingsView: View {
                 Text(actionError ?? "")
             }
             .task {
-                guard !hasLoaded else { return }
-                await env.cabinService.fetchCabins()
-                if let userId = await env.authService.userId {
-                    await env.cabinService.fetchMyBookings(userId: userId)
+                if !hasLoaded {
+                    await env.cabinService.fetchCabins()
+                    if let userId = await env.authService.userId {
+                        await env.cabinService.fetchMyBookings(userId: userId)
+                    }
+                    hasLoaded = true
                 }
-                hasLoaded = true
+                if let userId = env.currentProfile?.id {
+                    env.cabinService.subscribeMyBookings(userId: userId)
+                }
             }
+            .onDisappear { env.cabinService.unsubscribeMyBookings() }
         }
     }
 
@@ -128,18 +133,20 @@ private struct BookingCard: View {
     let isCancelling: Bool
     let onCancel: () -> Void
 
+    @State private var calendarAdded = false
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(booking.cabin?.name ?? "Cabin")
-                        .font(.system(size: 17, weight: .bold))
+                        .font(.mlrScaled(17, weight: .bold))
                         .foregroundStyle(Color.mlrText)
                     Label(
                         "\(MLRFormat.shortDateISO(booking.checkIn)) – \(MLRFormat.shortDateISO(booking.checkOut))",
                         systemImage: "calendar"
                     )
-                    .font(.system(size: 13))
+                    .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrTextMuted)
                 }
                 Spacer()
@@ -152,21 +159,21 @@ private struct BookingCard: View {
                 Label("\(booking.guests) guest\(booking.guests == 1 ? "" : "s")",
                       systemImage: "person.2.fill")
             }
-            .font(.system(size: 12))
+            .font(.mlrScaled(12))
             .foregroundStyle(Color.mlrTextMuted)
 
             if let note = booking.note, !note.isEmpty {
                 Text(note)
-                    .font(.system(size: 13))
+                    .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrText)
             }
 
             if let adminNote = booking.adminNote, !adminNote.isEmpty {
                 HStack(alignment: .top, spacing: 6) {
                     Image(systemName: "text.bubble.fill")
-                        .font(.system(size: 11))
+                        .font(.mlrScaled(11))
                     Text(adminNote)
-                        .font(.system(size: 12))
+                        .font(.mlrScaled(12))
                 }
                 .foregroundStyle(Color.mlrTextMuted)
                 .padding(8)
@@ -182,7 +189,7 @@ private struct BookingCard: View {
                             .frame(maxWidth: .infinity).padding(.vertical, 8)
                     } else {
                         Text("Cancel request")
-                            .font(.system(size: 14, weight: .semibold))
+                            .font(.mlrScaled(14, weight: .semibold))
                             .foregroundStyle(Color.mlrDanger)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 8)
@@ -193,10 +200,41 @@ private struct BookingCard: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .disabled(isCancelling)
             }
+
+            if booking.status == .approved {
+                Button { Task { await addStayToCalendar() } } label: {
+                    Label(calendarAdded ? "Added to Calendar ✓" : "Add to Calendar",
+                          systemImage: calendarAdded ? "checkmark.circle.fill" : "calendar.badge.plus")
+                        .font(.mlrScaled(14, weight: .semibold))
+                        .foregroundStyle(calendarAdded ? Color.mlrSuccess : Color.mlrPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background((calendarAdded ? Color.mlrSuccess : Color.mlrPrimary).opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                .disabled(calendarAdded)
+            }
         }
         .padding(16)
         .background(Color.mlrCard)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    private func addStayToCalendar() async {
+        do {
+            _ = try await CalendarService.shared.addEvent(
+                title: "\(booking.cabin?.name ?? "Cabin") — Muskellunge Lake Resort",
+                startISO: booking.checkIn,
+                endISO: booking.checkOut,
+                location: "Muskellunge Lake Resort",
+                notes: booking.note
+            )
+            Haptics.success()
+            calendarAdded = true
+        } catch {
+            Haptics.error()
+        }
     }
 }
 
@@ -216,7 +254,7 @@ private struct StatusBadge: View {
 
     var body: some View {
         Text(status.label)
-            .font(.system(size: 11, weight: .bold))
+            .font(.mlrScaled(11, weight: .bold))
             .foregroundStyle(color)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)

@@ -1,252 +1,158 @@
 import SwiftUI
 
 // MARK: - FamilyFestSpotlight
-// Phase-aware spotlight card shown at the top of the Home screen (below the logo).
-// Mirrors components/FamilyFestSpotlight.tsx.
-//
-// Phases:
-//   .offSeason — quiet small banner
-//   .planning  — countdown card with volunteer CTA
-//   .live      — full hero card with day counter + today's highlights
-//   .wrap      — photo upload nudge
+// A compact, phase-aware Family Fest summary at the top of Home (kept small —
+// roughly a glance, not the whole hub). Tapping the summary opens the full
+// Family Fest tab. A single smart shortcut below it links to the Family Fest
+// committee CHAT if you're a member, or the JOIN request (with role picking) if
+// you're not.
 
 struct FamilyFestSpotlight: View {
     @Environment(AppEnvironment.self) private var env
     let season: FestSeason
 
-    /// One headline activity per day (the timed schedule, excluding the
-    /// "anytime" items) — previewed on the planning card.
-    private var scheduleHeadlines: [ScheduleItem] {
-        env.festContentService.schedule.filter { $0.day != "Anytime" }
+    @State private var showJoinSheet = false
+
+    private var familyFest: Committee? {
+        env.committeeService.committees.first { $0.slug == "family-fest" }
     }
 
-    private static let festDayOrder = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    private var isMember: Bool {
+        guard let ff = familyFest else { return false }
+        return env.committeeService.myMemberships.contains { $0.committeeId == ff.id }
+    }
 
-    /// "Mon, Jul 27" for a fest weekday name, derived from the fest start date.
-    private func dayDateLabel(_ day: String) -> String? {
-        guard let dayIdx = Self.festDayOrder.firstIndex(of: day),
-              let start = WeatherService.isoFormatter.date(from: FamilyFestConfig.startDate)
-        else { return nil }
-        let startIdx = Calendar.current.component(.weekday, from: start) - 1  // 0=Sun…6=Sat
-        guard let date = Calendar.current.date(byAdding: .day, value: dayIdx - startIdx, to: start)
-        else { return nil }
-        return date.formatted(.dateTime.weekday(.abbreviated).month(.abbreviated).day())
+    private var dateRange: String {
+        MLRFormat.dateRange(start: FamilyFestConfig.startDate, end: FamilyFestConfig.endDate)
+    }
+
+    private var iconName: String {
+        switch season.phase {
+        case .offSeason: return "star.fill"
+        case .planning:  return "calendar.badge.clock"
+        case .live:      return "star.fill"
+        case .wrap:      return "photo.fill"
+        }
+    }
+
+    private var statusLine: String {
+        switch season.phase {
+        case .offSeason:
+            return dateRange
+        case .planning:
+            return season.isSoon
+                ? "Almost here · \(dateRange)"
+                : "\(season.daysUntilStart) days to go · \(dateRange)"
+        case .live:
+            if let day = season.dayNumber { return "Live now · Day \(day) of \(season.totalDays)" }
+            return "Live now"
+        case .wrap:
+            return "That's a wrap · \(season.wrapDaysLeft) day\(season.wrapDaysLeft == 1 ? "" : "s") to post photos"
+        }
     }
 
     var body: some View {
-        switch season.phase {
-        case .offSeason:
-            offSeasonBanner
-        case .planning:
-            planningCard
-        case .live:
-            liveHeroCard
-        case .wrap:
-            wrapCard
-        }
-    }
+        VStack(spacing: 0) {
+            NavigationLink(destination: FestOverviewView()) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12)
+                            .fill(Color.mlrFest.opacity(0.12))
+                            .frame(width: 46, height: 46)
+                        if season.phase == .live {
+                            PulsingDot(color: Color.mlrFest)
+                        } else {
+                            Image(systemName: iconName)
+                                .font(.mlrScaled(20))
+                                .foregroundStyle(Color.mlrFest)
+                        }
+                    }
 
-    // MARK: - Off-season: quiet text link
-
-    private var offSeasonBanner: some View {
-        NavigationLink(destination: FestOverviewView()) {
-            HStack(spacing: 6) {
-                Image(systemName: "star.fill")
-                    .font(.caption)
-                    .foregroundStyle(Color.mlrFest)
-                Text("Family Fest 2026 · \(MLRFormat.dateRange(start: FamilyFestConfig.startDate, end: FamilyFestConfig.endDate))")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.mlrFest)
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.caption2)
-                    .foregroundStyle(Color.mlrTextMuted)
-            }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 2)
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Planning: countdown + volunteer CTA
-
-    private var planningCard: some View {
-        NavigationLink(destination: FestOverviewView()) {
-            VStack(alignment: .leading, spacing: 10) {
-                HStack {
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 3) {
                         Text("Family Fest 2026")
                             .font(.festSerif(16, weight: .bold))
                             .foregroundStyle(Color.mlrFest)
-                        Text(MLRFormat.dateRange(
-                            start: FamilyFestConfig.startDate,
-                            end: FamilyFestConfig.endDate
-                        ))
-                        .font(.caption)
-                        .foregroundStyle(Color.mlrFest.opacity(0.8))
-                    }
-                    Spacer()
-                    VStack(spacing: 2) {
-                        Text("\(season.daysUntilStart)")
-                            .font(.system(size: 28, weight: .bold, design: .rounded))
-                            .foregroundStyle(Color.mlrFest)
-                        Text("days to go")
-                            .font(.caption2)
+                        Text(statusLine)
+                            .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrFest.opacity(0.7))
+                            .lineLimit(1)
                     }
-                }
 
-                // Headline — matches the web's "taking shape" framing.
-                Text(season.isSoon
-                     ? "Almost here — final plans coming together"
-                     : "\(season.daysUntilStart) days out — here's what's taking shape")
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Divider()
-                    .background(Color.mlrFest.opacity(0.2))
-
-                // What's planned so far — one headline activity per day.
-                if !scheduleHeadlines.isEmpty {
-                    VStack(spacing: 9) {
-                        ForEach(scheduleHeadlines) { item in
-                            HStack(spacing: 8) {
-                                Text(item.title)
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundStyle(Color.mlrFest)
-                                    .lineLimit(1)
-                                Spacer(minLength: 8)
-                                if let label = dayDateLabel(item.day) {
-                                    Text(label)
-                                        .font(.system(size: 11))
-                                        .foregroundStyle(Color.mlrFest.opacity(0.55))
-                                }
-                            }
-                        }
-                    }
-                    Divider()
-                        .background(Color.mlrFest.opacity(0.2))
-                }
-
-                HStack(spacing: 6) {
-                    Image(systemName: "hand.raised.fill")
-                        .font(.caption)
-                        .foregroundStyle(Color.mlrFest)
-                    Text("Volunteers welcome — see the plans & pitch in")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.mlrFest.opacity(0.9))
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-
-                Text("View Family Fest →")
-                    .font(.system(size: 13, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .background(Color.mlrFest)
-                    .clipShape(Capsule())
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(16)
-            .background(Color.mlrFestParchment)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
-            )
-        }
-        .buttonStyle(.plain)
-    }
-
-    // MARK: - Live: hero card with day counter + today's highlight
-
-    private var liveHeroCard: some View {
-        NavigationLink(destination: FestOverviewView()) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 6) {
-                            // Pulsing live indicator
-                            PulsingDot(color: Color.mlrFest)
-                            Text("Live Now")
-                                .font(.system(size: 11, weight: .semibold))
-                                .foregroundStyle(Color.mlrFest)
-                        }
-                        if let day = season.dayNumber {
-                            Text("Day \(day) of \(season.totalDays)")
-                                .font(.festSerif(22, weight: .bold))
-                                .foregroundStyle(.white)
-                        }
-                        Text("Family Fest 2026")
-                            .font(.system(size: 15, weight: .semibold))
-                            .foregroundStyle(.white.opacity(0.85))
-                    }
                     Spacer()
-                    Image(systemName: "star.fill")
-                        .font(.title2)
-                        .foregroundStyle(.white.opacity(0.6))
-                }
 
-                Text("Tap to see today's schedule →")
-                    .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(.white.opacity(0.85))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
-                    .background(.white.opacity(0.2))
-                    .clipShape(Capsule())
+                    Image(systemName: "chevron.right")
+                        .font(.mlrScaled(13, weight: .semibold))
+                        .foregroundStyle(Color.mlrFest.opacity(0.4))
+                }
+                .padding(14)
+                .contentShape(Rectangle())
             }
-            .padding(18)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(
-                LinearGradient(
-                    colors: [Color.mlrFest, Color.mlrFest.opacity(0.75)],
-                    startPoint: .topLeading,
-                    endPoint: .bottomTrailing
-                )
-            )
-            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .buttonStyle(.plain)
+
+            // Only non-members get a shortcut (to join). Members don't need a
+            // redirect — the Feed/Chats tab is where their chats live now.
+            if familyFest != nil && !isMember {
+                Divider().background(Color.mlrFest.opacity(0.15))
+                joinCTA
+            }
+        }
+        .background(Color.mlrFestParchment)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
+        )
+        .task {
+            // Make sure committee membership is known so the shortcut points the
+            // right way. Cheap + guarded so it doesn't refetch on every appearance.
+            if env.committeeService.committees.isEmpty {
+                await env.committeeService.fetchCommittees()
+            }
+            if env.isSignedIn,
+               env.committeeService.myMemberships.isEmpty,
+               let uid = await env.authService.userId {
+                await env.committeeService.fetchMyMemberships(userId: uid)
+            }
+        }
+        .sheet(isPresented: $showJoinSheet) {
+            if let ff = familyFest {
+                CommitteeJoinSheet(committee: ff, onRequested: {})
+            }
+        }
+    }
+
+    // MARK: - Smart shortcut
+
+    private var joinCTA: some View {
+        Button {
+            guard env.isSignedIn else { env.authService.promptSignIn(); return }
+            showJoinSheet = true
+        } label: {
+            ctaLabel(icon: "hand.raised.fill", text: "Join the Family Fest committee")
         }
         .buttonStyle(.plain)
     }
 
-    // MARK: - Wrap: photo nudge card
-
-    private var wrapCard: some View {
-        NavigationLink(destination: FestPhotosView()) {
-            HStack(spacing: 14) {
-                Text("📸")
-                    .font(.system(size: 32))
-
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("Post your photos!")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.mlrFest)
-                    Text("\(season.wrapDaysLeft) day\(season.wrapDaysLeft == 1 ? "" : "s") left to share memories")
-                        .font(.subheadline)
-                        .foregroundStyle(Color.mlrFest.opacity(0.8))
-                }
-
-                Spacer()
-
-                Image(systemName: "chevron.right")
-                    .font(.caption)
-                    .foregroundStyle(Color.mlrFest.opacity(0.6))
-            }
-            .padding(16)
-            .background(Color.mlrFestParchment)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
-            )
+    private func ctaLabel(icon: String, text: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+                .font(.mlrScaled(13, weight: .semibold))
+            Text(text)
+                .font(.mlrScaled(14, weight: .semibold))
+            Spacer()
+            Image(systemName: "chevron.right")
+                .font(.mlrScaled(12, weight: .semibold))
+                .foregroundStyle(Color.mlrFest.opacity(0.4))
         }
-        .buttonStyle(.plain)
+        .foregroundStyle(Color.mlrFest)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 12)
+        .contentShape(Rectangle())
     }
 }
 
 // MARK: - PulsingDot
-// Animated live indicator dot used in the live phase card.
+// Animated live indicator dot used in the live phase.
 
 struct PulsingDot: View {
     let color: Color

@@ -40,7 +40,7 @@ struct GuideView: View {
     private var failureState: some View {
         VStack(spacing: 14) {
             Image(systemName: "doc.questionmark")
-                .font(.system(size: 40))
+                .font(.mlrScaled(40))
                 .foregroundStyle(Color.mlrTextMuted)
             Text("Couldn't load the tour")
                 .font(.headline)
@@ -50,7 +50,7 @@ struct GuideView: View {
                 .foregroundStyle(Color.mlrTextMuted)
                 .multilineTextAlignment(.center)
             Link("Open in Safari ↗", destination: MLRLinks.guidePDF)
-                .font(.system(size: 15, weight: .semibold))
+                .font(.mlrScaled(15, weight: .semibold))
                 .foregroundStyle(Color.mlrPrimary)
         }
         .padding(32)

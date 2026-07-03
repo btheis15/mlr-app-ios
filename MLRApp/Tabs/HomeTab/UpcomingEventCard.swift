@@ -25,13 +25,13 @@ struct UpcomingEventCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     EventKindBadge(kind: event.kind)
                     Text(event.title)
-                        .font(.system(size: 17, weight: .semibold))
+                        .font(.mlrScaled(17, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
                 }
                 Spacer()
                 VStack(alignment: .trailing, spacing: 2) {
                     Text(MLRFormat.dateRange(start: event.startDate, end: event.endDate))
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.mlrScaled(13, weight: .medium))
                         .foregroundStyle(Color.mlrPrimary)
                     EventWeatherBadge(isoDate: event.startDate)
                     if let location = event.location {
@@ -76,7 +76,7 @@ struct UpcomingEventCard: View {
                     showEventSheet = true
                 } label: {
                     Label("Who's going", systemImage: "person.2")
-                        .font(.system(size: 13, weight: .medium))
+                        .font(.mlrScaled(13, weight: .medium))
                         .foregroundStyle(Color.mlrPrimary)
                 }
             }
@@ -96,7 +96,7 @@ struct EventKindBadge: View {
 
     var body: some View {
         Text(label)
-            .font(.system(size: 11, weight: .semibold))
+            .font(.mlrScaled(11, weight: .semibold))
             .foregroundStyle(tintColor)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)

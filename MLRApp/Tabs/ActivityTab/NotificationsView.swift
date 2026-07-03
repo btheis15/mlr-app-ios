@@ -7,9 +7,11 @@ import SwiftUI
 struct NotificationsView: View {
     @Environment(AppEnvironment.self) private var env
 
-    @State private var notifications: [AppNotification] = []
     @State private var isLoading = false
     @State private var error: String? = nil
+
+    // Source of truth is the service, so app-wide realtime inserts appear here live.
+    private var notifications: [AppNotification] { env.notificationsService.notifications }
 
     // MARK: - Grouping
 
@@ -96,7 +98,7 @@ struct NotificationsView: View {
                     }
                 } header: {
                     Text(group.label)
-                        .font(.system(size: 12, weight: .semibold))
+                        .font(.mlrScaled(12, weight: .semibold))
                         .foregroundStyle(Color.mlrTextMuted)
                         .textCase(nil)
                 }
@@ -115,7 +117,7 @@ struct NotificationsView: View {
             Task { await markAllRead() }
         } label: {
             Text("Mark all read")
-                .font(.system(size: 14))
+                .font(.mlrScaled(14))
         }
         .foregroundStyle(Color.mlrPrimary)
         .disabled(!notifications.contains(where: \.isUnread))
@@ -126,7 +128,7 @@ struct NotificationsView: View {
     private var emptyState: some View {
         VStack(spacing: 16) {
             Image(systemName: "bell.slash")
-                .font(.system(size: 44, weight: .light))
+                .font(.mlrScaled(44, weight: .light))
                 .foregroundStyle(Color.mlrTextSubtle)
             Text("Nothing new yet")
                 .font(.headline)
@@ -178,7 +180,7 @@ struct NotificationsView: View {
     private var signInWall: some View {
         VStack(spacing: 24) {
             Image(systemName: "bell.badge.fill")
-                .font(.system(size: 52, weight: .light))
+                .font(.mlrScaled(52, weight: .light))
                 .foregroundStyle(Color.mlrPrimary.opacity(0.6))
 
             VStack(spacing: 8) {
@@ -234,7 +236,6 @@ struct NotificationsView: View {
             self.error = "Couldn't load notifications. Pull to retry."
             return
         }
-        notifications = env.notificationsService.notifications
         // Mark all as seen (clears badge) — non-throwing
         await env.notificationsService.markAllSeen(userId: userId)
         await env.notificationsService.fetchUnreadCount(userId: userId)
@@ -244,15 +245,8 @@ struct NotificationsView: View {
     private func markAllRead() async {
         guard let userId = env.currentProfile?.id else { return }
         do {
+            // markAllRead stamps the service's rows optimistically.
             try await env.notificationsService.markAllRead(userId: userId)
-            // Optimistically update local state
-            let now = Date.now
-            notifications = notifications.map { n in
-                var updated = n
-                updated.readAt = updated.readAt ?? now
-                updated.seenAt = updated.seenAt ?? now
-                return updated
-            }
             await env.notificationsService.fetchUnreadCount(userId: userId)
         } catch {
             self.error = "Couldn't mark notifications as read."
@@ -263,11 +257,8 @@ struct NotificationsView: View {
     private func handleTap(_ notification: AppNotification) async {
         // Mark this individual notification as read via existing service method
         if notification.isUnread {
-            // markRead(notificationId:) is the existing API — non-throwing
+            // markRead stamps read_at on the service row — non-throwing
             await env.notificationsService.markRead(notificationId: notification.id)
-            if let idx = notifications.firstIndex(where: { $0.id == notification.id }) {
-                notifications[idx].readAt = .now
-            }
             if let uid = env.currentProfile?.id {
                 await env.notificationsService.fetchUnreadCount(userId: uid)
             }
@@ -326,14 +317,24 @@ private struct ShimmerModifier: ViewModifier {
 // fetchNotifications(userId:), markAllSeen(userId:), and markRead(notificationId:).
 
 extension NotificationsService {
-    /// Stamp `read_at` on all unread rows for `userId`.
+    /// Stamp `read_at` on all unread rows for `userId`. The notifications table
+    /// keys the recipient as `recipient_id` (there is no `user_id` column).
     func markAllRead(userId: UUID) async throws {
         try await supabase
             .from("notifications")
             .update(["read_at": ISO8601DateFormatter().string(from: .now)])
-            .eq("user_id", value: userId.uuidString)
+            .eq("recipient_id", value: userId.uuidString)
             .is("read_at", value: nil)
             .execute()
+
+        // Optimistically stamp the in-memory rows so the list updates immediately.
+        let now = Date.now
+        notifications = notifications.map { n in
+            var updated = n
+            if updated.readAt == nil { updated.readAt = now }
+            if updated.seenAt == nil { updated.seenAt = now }
+            return updated
+        }
     }
 }
 

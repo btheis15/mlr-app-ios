@@ -91,7 +91,7 @@ struct CloseButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: "xmark")
-                .font(.system(size: 13, weight: .semibold))
+                .font(.mlrScaled(13, weight: .semibold))
                 .foregroundStyle(Color.mlrTextMuted)
                 .frame(width: 30, height: 30)
                 .background(Color.mlrCard)

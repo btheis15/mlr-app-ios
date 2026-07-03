@@ -37,6 +37,7 @@ final class AppEnvironment {
     var pushService: PushService
     var mediaService: MediaService
     var workItemsService: WorkItemsService
+    var housesService: HousesService
     var festContentService: FestContentService
     var appImagesService: AppImagesService
 
@@ -74,6 +75,7 @@ final class AppEnvironment {
         pushService          = PushService()
         mediaService         = MediaService()
         workItemsService     = WorkItemsService()
+        housesService        = HousesService()
         festContentService   = FestContentService()
         appImagesService     = AppImagesService()
 
@@ -83,29 +85,93 @@ final class AppEnvironment {
         AppEnvironment.activeWorkItemsService = workItemsService
     }
 
-    // Load the signed-in profile after auth
+    // Load the signed-in profile after auth.
+    //
+    // The profile row is created by a DB trigger when the OTP is verified, so on a
+    // fresh sign-in it may not be visible yet due to replication lag. We fetch as an
+    // array (never throws on zero rows), retry once for that race, and fall back to a
+    // minimal email-derived profile so the user always renders as signed in — matching
+    // the web app, which uses .maybeSingle() with the same fallback.
     @MainActor
     func loadProfile() async {
-        guard let userId = try? await supabase.auth.session.user.id else {
+        guard let user = try? await supabase.auth.session.user else {
             currentProfile = nil
             return
         }
+
+        if let profile = await fetchProfile(id: user.id) {
+            currentProfile = profile
+            return
+        }
+
+        // Row not visible yet — wait briefly for the verify trigger to replicate, retry once.
+        try? await Task.sleep(for: .milliseconds(600))
+        if let profile = await fetchProfile(id: user.id) {
+            currentProfile = profile
+            return
+        }
+
+        // Still nothing: render a fallback so the user isn't stranded on a signed-out view.
+        // The real row will replace this on the next load (relaunch, tab switch, etc.).
+        currentProfile = Self.fallbackProfile(id: user.id, email: user.email ?? "")
+    }
+
+    private func fetchProfile(id: UUID) async -> Profile? {
         do {
-            let profile: Profile = try await supabase
+            let rows: [Profile] = try await supabase
                 .from("profiles")
                 .select("*")
-                .eq("id", value: userId.uuidString)
-                .single()
+                .eq("id", value: id.uuidString)
+                .limit(1)
                 .execute()
                 .value
-            currentProfile = profile
+            return rows.first
         } catch {
             print("[AppEnvironment] loadProfile error: \(error)")
+            return nil
         }
+    }
+
+    private static func fallbackProfile(id: UUID, email: String) -> Profile {
+        let name = email.split(separator: "@").first.map(String.init) ?? "Member"
+        return Profile(
+            id: id,
+            name: name,
+            email: email,
+            phone: nil,
+            birthday: nil,
+            bio: nil,
+            avatarUrl: nil,
+            venmoHandle: nil,
+            zelleHandle: nil,
+            appleCashHandle: nil,
+            emailAlerts: true,
+            pushLevel: nil,
+            pushTypes: [],
+            notifTypes: [],
+            pushPrompted: false,
+            isAdmin: false,
+            betaTester: false,
+            willingToHelp: false,
+            introSeen: true,
+            createdAt: nil
+        )
+    }
+
+    /// Start the app-wide notifications subscription so the Activity tab badge and
+    /// list stay live no matter which screen is open. Safe to call repeatedly.
+    @MainActor
+    func startNotificationsRealtime() async {
+        guard let uid = currentProfile?.id else { return }
+        notificationsService.subscribeToRealtime(userId: uid)
+        await notificationsService.fetchUnreadCount(userId: uid)
     }
 
     @MainActor
     func signOut() async {
+        notificationsService.unsubscribeFromRealtime()
+        notificationsService.notifications = []
+        notificationsService.unreadCount = 0
         await authService.signOut()
         currentProfile = nil
     }

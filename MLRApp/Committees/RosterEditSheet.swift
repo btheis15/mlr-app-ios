@@ -53,7 +53,7 @@ struct RosterEditSheet: View {
                             showPicker = true
                         } label: {
                             Label("Choose a member", systemImage: "person.crop.circle.badge.checkmark")
-                                .font(.system(size: 16, weight: .semibold))
+                                .font(.mlrScaled(16, weight: .semibold))
                                 .foregroundStyle(Color.mlrPrimary)
                         }
                     }
@@ -153,7 +153,7 @@ struct RosterEditSheet: View {
                 Image(systemName: isLead ? "star.fill" : "star")
                 Text("Lead")
             }
-            .font(.system(size: 12, weight: .semibold))
+            .font(.mlrScaled(12, weight: .semibold))
             .foregroundStyle(isLead ? Color.mlrPrimary : Color.mlrTextMuted)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)

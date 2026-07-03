@@ -38,6 +38,16 @@ final class MediaService {
         return try publicURL(bucket: "post-photos", path: path)
     }
 
+    /// Upload a post video (mp4) to the Mac mini, which transcodes server-side.
+    /// Video requires the mini (no Supabase Storage fallback for size/transcode).
+    func uploadPostVideo(data: Data, userId: UUID) async throws -> String {
+        guard let session = try? await supabase.auth.session else {
+            throw MediaError.miniServerError
+        }
+        return try await uploadToMini(
+            data: data, mimeType: "video/mp4", category: "posts", token: session.accessToken)
+    }
+
     // MARK: - Site images (admin-managed: logo, fest cover, …)
 
     /// Upload an admin-managed site image to the public `site-assets` bucket and

@@ -2,10 +2,11 @@ import SwiftUI
 
 // MARK: - WorkChecklistCard
 //
-// The work checklist card on Home (Communication section). Any signed-in member
-// can add items and check them off; admins can tap a row to edit/delete. Open
-// items preview to 5 with "show N more"; done items collapse into a count.
-// Mirrors the web WorkChecklist component.
+// The work checklist card on Home. Any signed-in member can add items and check
+// them off; tap a row to open its detail (photos + comments). Items are grouped
+// into an "Around the resort" (MLR) section and the viewer's house section(s)
+// (migration 0066), ordered by urgency (0069). Open items preview to 5 with
+// "show N more"; done items collapse into a count. Mirrors the web WorkChecklist.
 
 struct WorkChecklistCard: View {
     @Environment(AppEnvironment.self) private var env
@@ -13,27 +14,59 @@ struct WorkChecklistCard: View {
     @State private var showAll = false
     @State private var checking: UUID? = nil
     @State private var composing = false
-    @State private var editing: WorkItem? = nil
+    @State private var opened: WorkItem? = nil
 
     private let preview = 5
 
     private var open: [WorkItem] { env.workItemsService.openItems }
     private var done: [WorkItem] { env.workItemsService.doneItems }
-    private var visible: [WorkItem] { showAll ? open : Array(open.prefix(preview)) }
-    private var hiddenCount: Int { open.count - preview }
+    private var total: Int { open.count + done.count }
+
+    /// Open items ordered by section (MLR first, then houses by position), then
+    /// urgency, then newest-first.
+    private var orderedOpen: [WorkItem] {
+        open.sorted { a, b in
+            let ra = sectionRank(a), rb = sectionRank(b)
+            if ra != rb { return ra < rb }
+            let ua = a.urgency?.rank ?? 3, ub = b.urgency?.rank ?? 3
+            if ua != ub { return ua < ub }
+            return a.createdAt > b.createdAt
+        }
+    }
+    private var visible: [WorkItem] { showAll ? orderedOpen : Array(orderedOpen.prefix(preview)) }
+    private var hiddenCount: Int { orderedOpen.count - preview }
+    private var hasHouseSections: Bool { open.contains { $0.houseId != nil } }
 
     var body: some View {
         VStack(spacing: 0) {
             header
 
+            if total > 0 {
+                Gauge(value: Double(done.count), in: 0...Double(total)) {
+                    EmptyView()
+                } currentValueLabel: {
+                    Text("\(done.count)/\(total)")
+                }
+                .gaugeStyle(.accessoryLinearCapacity)
+                .tint(Color.mlrPrimary)
+                .padding(.horizontal, 14)
+                .padding(.bottom, 10)
+                .accessibilityLabel("Work checklist progress")
+                .accessibilityValue("\(done.count) of \(total) done")
+            }
+
             if !open.isEmpty {
                 Divider()
-                ForEach(visible) { item in
+                ForEach(Array(visible.enumerated()), id: \.element.id) { idx, item in
+                    if idx == 0 || visible[idx - 1].houseId != item.houseId,
+                       let h = sectionHeader(for: item) {
+                        sectionHeaderView(emoji: h.emoji, name: h.name)
+                    }
                     WorkItemRow(
                         item: item,
                         checking: checking == item.id,
                         onCheck: { Task { await check(item: item) } },
-                        onEdit: env.isAdmin ? { editing = item } : nil
+                        onOpen: { opened = item }
                     )
                     Divider().padding(.leading, 14)
                 }
@@ -42,7 +75,7 @@ struct WorkChecklistCard: View {
                         withAnimation { showAll.toggle() }
                     } label: {
                         Text(showAll ? "Show less" : "Show \(hiddenCount) more item\(hiddenCount == 1 ? "" : "s") ›")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.mlrScaled(12, weight: .medium))
                             .foregroundStyle(showAll ? Color.mlrTextMuted : Color.mlrPrimary)
                             .frame(maxWidth: .infinity, alignment: .leading)
                             .padding(.horizontal, 14)
@@ -63,21 +96,26 @@ struct WorkChecklistCard: View {
             }
         }
         .cardStyle()
-        .task { await env.workItemsService.fetchItems() }
+        .task {
+            await env.workItemsService.fetchItems()
+            if env.housesService.houses.isEmpty { await env.housesService.fetchHouses() }
+            env.workItemsService.subscribeToRealtime()
+        }
+        .onDisappear { env.workItemsService.unsubscribeFromRealtime() }
         .sheet(isPresented: $composing) {
             WorkItemComposer { Task { await env.workItemsService.fetchItems() } }
         }
-        .sheet(item: $editing) { item in
-            WorkItemComposer(item: item) { Task { await env.workItemsService.fetchItems() } }
+        .sheet(item: $opened) { item in
+            WorkItemDetailSheet(item: item) { Task { await env.workItemsService.fetchItems() } }
         }
     }
 
     private var header: some View {
         HStack(spacing: 12) {
-            Text("🔧").font(.system(size: 18))
+            Text("🔧").font(.mlrScaled(18))
             VStack(alignment: .leading, spacing: 1) {
                 Text("Work Checklist")
-                    .font(.system(size: 15, weight: .semibold))
+                    .font(.mlrScaled(15, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                 Text(subtitle)
                     .font(.caption)
@@ -88,7 +126,7 @@ struct WorkChecklistCard: View {
                 if env.isSignedIn { composing = true } else { env.authService.promptSignIn() }
             } label: {
                 Image(systemName: "plus")
-                    .font(.system(size: 15, weight: .bold))
+                    .font(.mlrScaled(15, weight: .bold))
                     .foregroundStyle(Color.mlrPrimary)
                     .frame(width: 32, height: 32)
                     .background(Color.mlrPrimary.opacity(0.1))
@@ -105,6 +143,35 @@ struct WorkChecklistCard: View {
         if open.isEmpty && done.isEmpty { return "Nothing on the list yet" }
         if open.isEmpty { return "All \(done.count) item\(done.count == 1 ? "" : "s") done ✅" }
         return "\(open.count) open" + (done.isEmpty ? "" : " · \(done.count) done")
+    }
+
+    // MARK: - Sections
+
+    private func sectionRank(_ item: WorkItem) -> Int {
+        guard let hid = item.houseId else { return -1 }   // MLR sorts first
+        return env.housesService.houses.first { $0.id == hid }?.position ?? 9_999
+    }
+
+    /// The section header for an item, or nil when the MLR list stands alone.
+    private func sectionHeader(for item: WorkItem) -> (emoji: String, name: String)? {
+        if let hid = item.houseId {
+            if let h = env.housesService.houses.first(where: { $0.id == hid }) { return (h.emoji, h.name) }
+            return ("🏠", "House")
+        }
+        return hasHouseSections ? ("🏕️", "Around the resort") : nil
+    }
+
+    private func sectionHeaderView(emoji: String, name: String) -> some View {
+        HStack(spacing: 6) {
+            Text(emoji).font(.mlrScaled(12))
+            Text(name.uppercased())
+                .font(.mlrScaled(11, weight: .bold))
+                .foregroundStyle(Color.mlrTextMuted)
+            Spacer()
+        }
+        .padding(.horizontal, 14)
+        .padding(.top, 12)
+        .padding(.bottom, 4)
     }
 
     private func check(item: WorkItem) async {

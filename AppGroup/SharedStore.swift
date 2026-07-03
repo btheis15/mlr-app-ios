@@ -15,6 +15,12 @@ struct EventSnapshot: Codable {
     let location: String?
 }
 
+/// Snapshot of the work checklist for the "Things to do" widget.
+struct TodoSnapshot: Codable {
+    let openCount: Int
+    let titles: [String]   // a few top open items to preview
+}
+
 final class SharedStore {
     static let shared = SharedStore()
 
@@ -29,6 +35,39 @@ final class SharedStore {
     private enum Key {
         static let nextEvent = "shared.nextEvent"
         static let memberName = "shared.memberName"
+        static let todo = "shared.todo"
+        static let pendingRoute = "shared.pendingRoute"
+    }
+
+    // MARK: Pending route (Control Center / extensions → app)
+    //
+    // Control Center controls can't reach the app's in-process IntentRouter, so a
+    // control intent stashes a route key here and opens the app; RootView reads and
+    // clears it when it next becomes active. Values match IntentRouter hosts
+    // (e.g. "add-work-item").
+
+    var pendingRoute: String? {
+        get { defaults.string(forKey: Key.pendingRoute) }
+        set {
+            if let newValue { defaults.set(newValue, forKey: Key.pendingRoute) }
+            else { defaults.removeObject(forKey: Key.pendingRoute) }
+        }
+    }
+
+    // MARK: Work checklist (for the Things-to-do widget)
+
+    var todo: TodoSnapshot? {
+        get {
+            guard let data = defaults.data(forKey: Key.todo) else { return nil }
+            return try? JSONDecoder().decode(TodoSnapshot.self, from: data)
+        }
+        set {
+            if let newValue, let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: Key.todo)
+            } else {
+                defaults.removeObject(forKey: Key.todo)
+            }
+        }
     }
 
     // MARK: Next event (for NextEventWidget + Siri intents)

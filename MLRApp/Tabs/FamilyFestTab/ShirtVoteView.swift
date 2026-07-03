@@ -45,7 +45,7 @@ struct ShirtVoteView: View {
         VStack(spacing: 16) {
             Spacer(minLength: 40)
             Image(systemName: "tshirt.fill")
-                .font(.system(size: 40))
+                .font(.mlrScaled(40))
                 .foregroundStyle(Color.mlrFest.opacity(0.3))
             Text("T-Shirt Vote")
                 .font(.festSerif(18, weight: .bold))
@@ -53,7 +53,7 @@ struct ShirtVoteView: View {
             Text(isPastDeadline
                  ? "Voting has closed. Results coming soon!"
                  : "T-shirt voting opens closer to the Fest.")
-                .font(.system(size: 14))
+                .font(.mlrScaled(14))
                 .foregroundStyle(Color.mlrFest.opacity(0.45))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
@@ -73,30 +73,30 @@ struct ShirtVoteView: View {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack(spacing: 8) {
                         Text("🗳️")
-                            .font(.system(size: 22))
+                            .font(.mlrScaled(22))
                         Text("Vote for the 2026 Shirt")
                             .font(.festSerif(18, weight: .bold))
                             .foregroundStyle(Color.mlrFest)
                     }
 
                     Text("Browse the designs below, then open the poll to cast your vote and RSVP.")
-                        .font(.system(size: 13))
+                        .font(.mlrScaled(13))
                         .foregroundStyle(Color.mlrFest.opacity(0.65))
 
                     HStack(spacing: 6) {
                         Image(systemName: "calendar.badge.exclamationmark")
-                            .font(.system(size: 12))
+                            .font(.mlrScaled(12))
                         Text("Voting closes \(deadlineFormatted)")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.mlrScaled(12, weight: .medium))
                     }
                     .foregroundStyle(Color.mlrFest.opacity(0.55))
 
                     if TshirtVoteConfig.rankedChoice {
                         HStack(spacing: 6) {
                             Image(systemName: "list.number")
-                                .font(.system(size: 12))
+                                .font(.mlrScaled(12))
                             Text("Ranked-choice · Voters \(TshirtVoteConfig.minVoterAge)+ years old")
-                                .font(.system(size: 12))
+                                .font(.mlrScaled(12))
                         }
                         .foregroundStyle(Color.mlrFest.opacity(0.5))
                     }
@@ -137,7 +137,7 @@ struct ShirtVoteView: View {
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "arrow.up.right.square")
-                            .font(.system(size: 15))
+                            .font(.mlrScaled(15))
                         Text("Open the Poll to Vote & RSVP")
                     }
                 }
@@ -177,7 +177,7 @@ private struct ShirtDesignCard: View {
                             .overlay(
                                 VStack(spacing: 8) {
                                     Image(systemName: "tshirt.fill")
-                                        .font(.system(size: 40))
+                                        .font(.mlrScaled(40))
                                         .foregroundStyle(Color.mlrFest.opacity(0.3))
                                     Text(design.name)
                                         .font(.festSerif(14))
@@ -197,10 +197,10 @@ private struct ShirtDesignCard: View {
                     .font(.festSerif(16, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                 Text("by \(design.artist)")
-                    .font(.system(size: 13))
+                    .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrFest.opacity(0.6))
                 Text(design.blurb)
-                    .font(.system(size: 13))
+                    .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrFest.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.top, 2)
@@ -234,7 +234,7 @@ private struct ShirtDesignLightbox: View {
                             .padding(.horizontal, 20)
                     } else {
                         Image(systemName: "tshirt.fill")
-                            .font(.system(size: 80))
+                            .font(.mlrScaled(80))
                             .foregroundStyle(Color.white.opacity(0.3))
                     }
 
@@ -243,7 +243,7 @@ private struct ShirtDesignLightbox: View {
                             .font(.festSerif(18, weight: .bold))
                             .foregroundStyle(Color.white)
                         Text("by \(design.artist)")
-                            .font(.system(size: 14))
+                            .font(.mlrScaled(14))
                             .foregroundStyle(Color.white.opacity(0.7))
                     }
                 }
@@ -265,13 +265,13 @@ private struct DesignPlaceholder: View {
     var body: some View {
         VStack(spacing: 12) {
             Image(systemName: "photo.on.rectangle")
-                .font(.system(size: 36))
+                .font(.mlrScaled(36))
                 .foregroundStyle(Color.mlrFest.opacity(0.3))
             Text("Designs coming soon")
                 .font(.festSerif(14))
                 .foregroundStyle(Color.mlrFest.opacity(0.5))
             Text("Update TshirtVoteConfig.designs in SeedData.swift when the committee finalizes the options.")
-                .font(.system(size: 12))
+                .font(.mlrScaled(12))
                 .foregroundStyle(Color.mlrFest.opacity(0.4))
                 .multilineTextAlignment(.center)
         }

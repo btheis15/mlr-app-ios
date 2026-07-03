@@ -18,6 +18,8 @@ final class EventsService {
     var isLoading: Bool = false
     var error: String? = nil
 
+    private var realtimeChannel: RealtimeChannelV2? = nil
+
     // MARK: - Computed
 
     /// All events starting today or later, sorted ascending.
@@ -98,23 +100,22 @@ final class EventsService {
     }
 
     func fetchSummary(eventId: String) async -> AttendanceSummary {
-        struct SummaryRow: Decodable {
-            let status: AttendanceStatus
-            let count: Int
-        }
+        struct StatusRow: Decodable { let status: AttendanceStatus }
         do {
-            let rows: [SummaryRow] = try await supabase
+            // Count client-side: PostgREST aggregate functions (`.count()`) are
+            // disabled on this backend, so fetch the status rows and tally them.
+            let rows: [StatusRow] = try await supabase
                 .from("event_attendance")
-                .select("status, count:user_id.count()")
+                .select("status")
                 .eq("event_id", value: eventId)
                 .execute()
                 .value
             var going = 0, maybe = 0, notGoing = 0
             for row in rows {
                 switch row.status {
-                case .going:    going    += row.count
-                case .maybe:    maybe    += row.count
-                case .notGoing: notGoing += row.count
+                case .going:    going    += 1
+                case .maybe:    maybe    += 1
+                case .notGoing: notGoing += 1
                 }
             }
             let summary = AttendanceSummary(going: going, maybe: maybe, notGoing: notGoing)
@@ -294,6 +295,38 @@ final class EventsService {
             .execute()
         events.removeAll { $0.id == id }
         summaries.removeValue(forKey: id)
+    }
+
+    // MARK: - Realtime
+
+    /// Live-update events + this user's RSVPs when the calendar or attendance
+    /// changes anywhere — matching the web app's `events-live` channel.
+    func subscribeToRealtime(userId: UUID?) {
+        guard realtimeChannel == nil else { return }
+        let channel = supabase.channel("events-live")
+        realtimeChannel = channel
+
+        Task {
+            for table in ["events", "event_attendance"] {
+                channel.onPostgresChange(AnyAction.self, schema: "public", table: table) { [weak self] _ in
+                    guard let self else { return }
+                    Task { @MainActor in
+                        await self.fetchEvents()
+                        if let userId { await self.fetchAttendance(userId: userId) }
+                    }
+                }
+            }
+            await channel.subscribe()
+        }
+    }
+
+    func unsubscribeFromRealtime() {
+        Task {
+            if let channel = realtimeChannel {
+                await supabase.removeChannel(channel)
+                realtimeChannel = nil
+            }
+        }
     }
 
     // MARK: - Helpers

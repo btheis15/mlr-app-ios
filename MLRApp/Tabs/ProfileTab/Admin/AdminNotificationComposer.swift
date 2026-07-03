@@ -51,7 +51,7 @@ struct AdminNotificationComposer: View {
                 // Compose fields
                 Section("Message") {
                     TextField("Title (required)", text: $title)
-                        .font(.system(size: 16, weight: .medium))
+                        .font(.mlrScaled(16, weight: .medium))
 
                     ZStack(alignment: .topLeading) {
                         if messageBody.isEmpty {
@@ -179,7 +179,7 @@ struct AdminNotificationComposer: View {
     private var notificationPreview: some View {
         HStack(spacing: 12) {
             Image(systemName: "bell.badge.fill")
-                .font(.system(size: 20))
+                .font(.mlrScaled(20))
                 .foregroundStyle(Color.mlrPrimary)
                 .frame(width: 36, height: 36)
                 .background(Color.mlrPrimaryLight)
@@ -187,7 +187,7 @@ struct AdminNotificationComposer: View {
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(title.isEmpty ? "Title" : title)
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                     .lineLimit(2)
 
@@ -200,7 +200,7 @@ struct AdminNotificationComposer: View {
 
                 HStack(spacing: 4) {
                     Image(systemName: audience.icon)
-                        .font(.system(size: 10))
+                        .font(.mlrScaled(10))
                     Text("→ \(audience.label)")
                         .font(.caption2)
                 }

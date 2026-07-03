@@ -1,5 +1,6 @@
 import Foundation
 import Supabase
+import UserNotifications
 
 // MARK: - NotificationsService
 
@@ -41,17 +42,18 @@ final class NotificationsService {
     }
 
     func fetchUnreadCount(userId: UUID) async {
-        struct CountRow: Decodable { let count: Int }
         do {
-            let rows: [CountRow] = try await supabase
+            // Use the PostgREST exact-count header (not the disabled `.count()`
+            // aggregate) — a HEAD request that returns the row count only.
+            let response = try await supabase
                 .from("notifications")
-                .select("count:id.count()")
+                .select("id", head: true, count: .exact)
                 .eq("recipient_id", value: userId.uuidString)
                 .is("seen_at", value: nil as Bool?)
                 .or("expires_at.is.null,expires_at.gt.\(iso8601Now())")
                 .execute()
-                .value
-            unreadCount = rows.first?.count ?? 0
+            unreadCount = response.count ?? 0
+            syncAppIconBadge()
         } catch {
             print("[NotificationsService] fetchUnreadCount error: \(error)")
         }
@@ -75,6 +77,7 @@ final class NotificationsService {
                 return updated
             }
             unreadCount = 0
+            syncAppIconBadge()
         } catch {
             print("[NotificationsService] markAllSeen error: \(error)")
         }
@@ -185,6 +188,7 @@ final class NotificationsService {
                             self.notifications.insert(notif, at: 0)
                             if notif.countsForBadge {
                                 self.unreadCount += 1
+                                self.syncAppIconBadge()
                             }
                         }
                     }
@@ -207,6 +211,15 @@ final class NotificationsService {
 
     private func updateUnreadCount() {
         unreadCount = notifications.filter(\.countsForBadge).count
+        syncAppIconBadge()
+    }
+
+    /// Keep the Home Screen app-icon badge in lockstep with the in-app unread
+    /// count. Without this, a badge delivered by a push payload lingers on the
+    /// icon even after the notifications are read in-app.
+    func syncAppIconBadge() {
+        let count = unreadCount
+        Task { try? await UNUserNotificationCenter.current().setBadgeCount(count) }
     }
 
     private func iso8601Now() -> String {

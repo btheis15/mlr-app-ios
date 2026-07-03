@@ -162,7 +162,7 @@ struct ProfileView: View {
                             showAvatarPicker = true
                         } label: {
                             Image(systemName: "camera.fill")
-                                .font(.system(size: 13, weight: .semibold))
+                                .font(.mlrScaled(13, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(width: 28, height: 28)
                                 .background(Color.mlrPrimary)
@@ -245,7 +245,7 @@ struct ProfileView: View {
 
             VStack(alignment: .leading, spacing: 6) {
                 Text("Bio")
-                    .font(.system(size: 13))
+                    .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrTextMuted)
                 TextEditor(text: $bio)
                     .frame(minHeight: 80)
@@ -396,7 +396,7 @@ struct ProfileView: View {
             )) {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
-                        Text("Email me alerts").font(.system(size: 15))
+                        Text("Email me alerts").font(.mlrScaled(15))
                         Text("Admin announcements sent to your email")
                             .font(.caption).foregroundStyle(Color.mlrTextMuted)
                     }
@@ -555,7 +555,7 @@ struct ProfileView: View {
     private var guestContent: some View {
         VStack(spacing: 28) {
             Image(systemName: "person.crop.circle")
-                .font(.system(size: 64, weight: .light))
+                .font(.mlrScaled(64, weight: .light))
                 .foregroundStyle(Color.mlrPrimary.opacity(0.5))
 
             VStack(spacing: 8) {
@@ -751,7 +751,7 @@ private struct AssistantToggleRow: View {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("AI Assistant")
-                        .font(.system(size: 15))
+                        .font(.mlrScaled(15))
                     Text("Ask MLR — answers from app data")
                         .font(.caption)
                         .foregroundStyle(Color.mlrTextMuted)
@@ -781,7 +781,7 @@ private struct WillingToHelpRow: View {
             Label {
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Willing to Help")
-                        .font(.system(size: 15))
+                        .font(.mlrScaled(15))
                     Text("Get pinged when someone needs a hand at the resort")
                         .font(.caption)
                         .foregroundStyle(Color.mlrTextMuted)

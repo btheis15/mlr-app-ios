@@ -238,6 +238,14 @@ final class PostsService {
                     }
                 }
             }
+            // Comments and reactions change the counts shown on each card — reload
+            // the feed when they change, matching the web `posts-feed` channel.
+            for table in ["post_comments", "post_reactions", "post_media", "post_tags"] {
+                channel.onPostgresChange(AnyAction.self, schema: "public", table: table) { [weak self] _ in
+                    guard let self else { return }
+                    Task { @MainActor in await self.fetchPosts(userId: nil) }
+                }
+            }
             await channel.subscribe()
         }
     }

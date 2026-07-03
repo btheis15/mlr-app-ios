@@ -1,5 +1,6 @@
 import SwiftUI
 import PhotosUI
+import Kingfisher
 
 // MARK: - FestPhoto Model
 
@@ -52,15 +53,16 @@ struct FestPhotosView: View {
                             Button {
                                 lightboxPhoto = photo
                             } label: {
-                                AsyncImage(url: photo.url) { image in
-                                    image
-                                        .resizable()
-                                        .scaledToFill()
-                                } placeholder: {
-                                    Color.mlrFest.opacity(0.1)
-                                }
-                                .frame(height: 180)
-                                .clipped()
+                                KFImage(photo.url)
+                                    .placeholder { Color.mlrFest.opacity(0.1) }
+                                    .setProcessor(DownsamplingImageProcessor(
+                                        size: CGSize(width: 400, height: 400)))
+                                    .scaleFactor(UIScreen.main.scale)
+                                    .fade(duration: 0.2)
+                                    .resizable()
+                                    .scaledToFill()
+                                    .frame(height: 180)
+                                    .clipped()
                             }
                             .buttonStyle(.plain)
                         }
@@ -106,7 +108,7 @@ struct FestPhotosView: View {
                         .tint(Color.mlrFest)
                         .scaleEffect(0.8)
                     Text("Uploading…")
-                        .font(.system(size: 13))
+                        .font(.mlrScaled(13))
                         .foregroundStyle(Color.mlrFest.opacity(0.7))
                 }
             } else {
@@ -114,7 +116,7 @@ struct FestPhotosView: View {
                     showPhotoPicker = true
                 } label: {
                     Label("Upload", systemImage: "photo.badge.plus")
-                        .font(.system(size: 13, weight: .semibold))
+                        .font(.mlrScaled(13, weight: .semibold))
                         .foregroundStyle(Color.white)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 7)
@@ -132,13 +134,13 @@ struct FestPhotosView: View {
         VStack(spacing: 14) {
             Spacer(minLength: 40)
             Image(systemName: "photo.on.rectangle.angled")
-                .font(.system(size: 44))
+                .font(.mlrScaled(44))
                 .foregroundStyle(Color.mlrFest.opacity(0.3))
             Text("No photos yet")
                 .font(.festSerif(16, weight: .bold))
                 .foregroundStyle(Color.mlrFest.opacity(0.5))
             Text("Be the first to share a memory from the Fest!")
-                .font(.system(size: 13))
+                .font(.mlrScaled(13))
                 .foregroundStyle(Color.mlrFest.opacity(0.4))
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, 40)
