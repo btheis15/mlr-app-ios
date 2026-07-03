@@ -87,8 +87,11 @@ struct PushToggleView: View {
             if masterEnabled && permissionStatus == .authorized {
                 Section("Notify me about…") {
                     pushToggle(for: .alerts,    label: "Announcements & alerts",  icon: "megaphone.fill")
+                    pushToggle(for: .birthdays, label: "Birthdays",                icon: "birthday.cake.fill")
                     pushToggle(for: .chat,      label: "Chat messages",            icon: "bubble.left.fill")
+                    pushToggle(for: .postTag,   label: "Tagged in a post",         icon: "tag.fill")
                     pushToggle(for: .postMention, label: "Post @mentions",         icon: "at")
+                    pushToggle(for: .postReply, label: "Replies on posts",         icon: "arrowshape.turn.up.left.fill")
                     pushToggle(for: .eventRsvp, label: "Event RSVPs",              icon: "calendar.badge.checkmark")
                     pushToggle(for: .cabinDecision, label: "Cabin stay decisions", icon: "house.lodge.fill")
                     pushToggle(for: .committeeJoin, label: "Committee joins",      icon: "person.badge.plus")
@@ -179,6 +182,7 @@ struct PushToggleView: View {
             masterEnabled = true
             await env.pushService.requestPermission()
             await saveLevel(level: "all")
+            await saveDefaultTypes()
 
         case .notDetermined:
             do {
@@ -189,6 +193,7 @@ struct PushToggleView: View {
                     UIApplication.shared.registerForRemoteNotifications()
                     await env.pushService.requestPermission()
                     await saveLevel(level: "all")
+                    await saveDefaultTypes()
                 } else {
                     permissionStatus = .denied
                     masterEnabled = false
@@ -210,6 +215,26 @@ struct PushToggleView: View {
         masterEnabled = false
         try? await env.pushService.removeToken(userId: userId)
         await saveLevel(level: "off")
+        // Mirrors the web app (PushToggle.tsx): turning push off clears push_types
+        // too, so re-enabling later (here or on web) starts from a clean slate
+        // instead of silently keeping stale category picks.
+        enabledTypes = []
+        await saveTypes()
+    }
+
+    // Mirrors the web app's DEFAULT_PUSH_TYPES (lib/types.ts) — turning push ON
+    // opts into this set unconditionally (same as web's master toggle), so a
+    // member who enables push for the first time on iOS doesn't end up with
+    // every category silently off until they visit each row individually.
+    private static let defaultPushTypes: Set<PushType> = [
+        .alerts, .birthdays, .committeeJoin, .cabinDecision,
+        .postTag, .postMention, .postReply, .chat, .helpRequest, .helpResponse,
+    ]
+
+    @MainActor
+    private func saveDefaultTypes() async {
+        enabledTypes = Self.defaultPushTypes
+        await saveTypes()
     }
 
     @MainActor
