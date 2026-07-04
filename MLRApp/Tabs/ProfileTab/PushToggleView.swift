@@ -99,6 +99,7 @@ struct PushToggleView: View {
                     pushToggle(for: .helpRequest,  label: "Help requests",         icon: "hand.raised.fill")
                     pushToggle(for: .helpResponse, label: "Help responses",        icon: "figure.walk")
                     pushToggle(for: .workItemCreated, label: "New work items",     icon: "wrench.and.screwdriver.fill")
+                    pushToggle(for: .houseStayCreated, label: "New house stays",    icon: "house.fill")
 
                     if env.isAdmin {
                         pushToggle(for: .committeeJoinRequest, label: "Committee join requests (admin)", icon: "person.badge.clock")

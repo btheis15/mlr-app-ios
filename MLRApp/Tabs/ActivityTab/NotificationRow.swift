@@ -162,6 +162,7 @@ struct NotificationRow: View {
         case .workItemComment:      return "bubble.left.fill"
         case .workItemMention:      return "at"
         case .workItemCreated:      return "wrench.and.screwdriver.fill"
+        case .houseStayCreated:     return "house.fill"
         }
     }
 
@@ -202,6 +203,7 @@ struct NotificationRow: View {
         case .workItemComment:      return "Work Item"
         case .workItemMention:      return "Mention"
         case .workItemCreated:      return "New Task"
+        case .houseStayCreated:     return "House Stay"
         }
     }
 }
