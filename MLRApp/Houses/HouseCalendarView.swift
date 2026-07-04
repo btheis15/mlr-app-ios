@@ -51,7 +51,7 @@ struct HouseCalendarView: View {
     }
 
     private var upcomingStays: [HouseStay] { stays.filter { !$0.isPast(today) } }
-    private var pastStays: [HouseStay] { stays.filter { $0.isPast(today) }.reversed() }
+    private var pastStays: [HouseStay] { Array(stays.filter { $0.isPast(today) }.reversed()) }
 
     var body: some View {
         ScrollView {
@@ -129,8 +129,11 @@ struct HouseCalendarView: View {
         let firstOfMonth = cal.date(from: DateComponents(year: year, month: month, day: 1)) ?? monthAnchor
         let leading = (cal.component(.weekday, from: firstOfMonth) - 1) // 0 = Sunday
         let daysInMonth = cal.range(of: .day, in: .month, for: firstOfMonth)?.count ?? 30
-        let cells: [String?] = Array(repeating: nil, count: leading)
-            + (1...daysInMonth).map { HouseStay.iso.string(from: cal.date(from: DateComponents(year: year, month: month, day: $0))!) }
+        let leadingBlanks: [String?] = Array(repeating: nil, count: leading)
+        let dayCells: [String?] = (1...daysInMonth).map {
+            HouseStay.iso.string(from: cal.date(from: DateComponents(year: year, month: month, day: $0))!)
+        }
+        let cells = leadingBlanks + dayCells
 
         return VStack(spacing: 8) {
             HStack {
