@@ -12,9 +12,11 @@ struct PostsView: View {
     @Environment(AppEnvironment.self) private var env
 
     @State private var channels: [ChatChannel] = []
-    @State private var myHouse: House?
-    @State private var loadedChannels = false
 
+    // The member's house comes from the observed service value (resolved on profile
+    // load) so the "Your house" row shows reliably; reading it in `showList` also
+    // re-renders the body when it arrives, which re-fires the channels task below.
+    private var myHouse: House? { env.housesService.myHouse }
     private var showList: Bool { env.isSignedIn && (!channels.isEmpty || myHouse != nil) }
 
     var body: some View {
@@ -27,13 +29,11 @@ struct PostsView: View {
                 }
             }
         }
-        .task {
-            guard !loadedChannels else { return }
-            if let uid = env.currentProfile?.id, env.isSignedIn {
-                channels = await env.committeeService.fetchMyChannels(userId: uid)
-                myHouse = await env.housesService.house(withId: env.currentProfile?.houseId)
-            }
-            loadedChannels = true
+        // Keyed on the signed-in user id so it (re)loads once the profile finishes
+        // loading after launch — not just on the first appear when it may still be nil.
+        .task(id: env.currentProfile?.id) {
+            guard let uid = env.currentProfile?.id, env.isSignedIn else { return }
+            channels = await env.committeeService.fetchMyChannels(userId: uid)
         }
     }
 }

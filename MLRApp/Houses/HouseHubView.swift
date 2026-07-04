@@ -104,11 +104,14 @@ struct HouseHubView: View {
 
 struct HouseHubHomeCard: View {
     @Environment(AppEnvironment.self) private var env
-    @State private var house: House?
 
     var body: some View {
+        // Read the member's house from the observed service value (resolved when the
+        // profile loads, in AppEnvironment.refreshMyHouse). Gating in rendered content
+        // is a reliably-tracked dependency, so the card appears as soon as it's set —
+        // unlike a per-view .task(id: currentProfile?.houseId), which didn't re-render.
         Group {
-            if let house {
+            if let house = env.housesService.myHouse {
                 NavigationLink(destination: HouseHubView(house: house)) {
                     HStack(spacing: 12) {
                         Text(house.emoji)
@@ -129,13 +132,6 @@ struct HouseHubHomeCard: View {
                     .clipShape(RoundedRectangle(cornerRadius: 16))
                 }
                 .buttonStyle(.plain)
-            }
-        }
-        .task(id: env.currentProfile?.houseId) {
-            if let hid = env.currentProfile?.houseId {
-                house = await env.housesService.house(withId: hid)
-            } else {
-                house = nil
             }
         }
     }

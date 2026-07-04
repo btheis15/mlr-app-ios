@@ -13,6 +13,11 @@ import Supabase
 @MainActor
 final class HousesService {
     var houses: [House] = []
+    /// The signed-in member's house, resolved once their profile loads (see
+    /// AppEnvironment.refreshMyHouse). Home/Feed read this observed value directly
+    /// so the "Your house" surfaces appear reliably — gating on it in rendered
+    /// content is a tracked dependency, unlike reading houseId only in `.task(id:)`.
+    var myHouse: House? = nil
     var isLoading: Bool = false
     var error: String? = nil
 

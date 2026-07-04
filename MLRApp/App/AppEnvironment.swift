@@ -96,24 +96,32 @@ final class AppEnvironment {
     func loadProfile() async {
         guard let user = try? await supabase.auth.session.user else {
             currentProfile = nil
+            housesService.myHouse = nil
             return
         }
 
-        if let profile = await fetchProfile(id: user.id) {
-            currentProfile = profile
+        // Fetch the row; retry once for replication lag on a fresh verify; fall back
+        // to a minimal email-derived profile so the user always renders as signed in.
+        var resolved = await fetchProfile(id: user.id)
+        if resolved == nil {
+            try? await Task.sleep(for: .milliseconds(600))
+            resolved = await fetchProfile(id: user.id)
+        }
+        currentProfile = resolved ?? Self.fallbackProfile(id: user.id, email: user.email ?? "")
+
+        // Resolve the member's house so the Home/Feed "Your house" surfaces can read
+        // it directly (see HousesService.myHouse).
+        await refreshMyHouse()
+    }
+
+    /// Resolve the signed-in member's house into `housesService.myHouse`.
+    @MainActor
+    func refreshMyHouse() async {
+        guard let hid = currentProfile?.houseId else {
+            housesService.myHouse = nil
             return
         }
-
-        // Row not visible yet — wait briefly for the verify trigger to replicate, retry once.
-        try? await Task.sleep(for: .milliseconds(600))
-        if let profile = await fetchProfile(id: user.id) {
-            currentProfile = profile
-            return
-        }
-
-        // Still nothing: render a fallback so the user isn't stranded on a signed-out view.
-        // The real row will replace this on the next load (relaunch, tab switch, etc.).
-        currentProfile = Self.fallbackProfile(id: user.id, email: user.email ?? "")
+        housesService.myHouse = await housesService.house(withId: hid)
     }
 
     private func fetchProfile(id: UUID) async -> Profile? {
@@ -174,5 +182,6 @@ final class AppEnvironment {
         notificationsService.unreadCount = 0
         await authService.signOut()
         currentProfile = nil
+        housesService.myHouse = nil
     }
 }
