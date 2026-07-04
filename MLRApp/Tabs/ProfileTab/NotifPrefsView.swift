@@ -62,6 +62,11 @@ struct NotifPrefsView: View {
                 toggle(for: .eventRsvp, label: "RSVPs to your events", icon: "calendar.badge.checkmark")
             }
 
+            // House calendar
+            Section("House calendar") {
+                toggle(for: .houseStayCreated, label: "New stays at your house", icon: "house.fill")
+            }
+
             // Work Checklist
             Section("Work Checklist") {
                 toggle(for: .workItemCreated, label: "New work items",        icon: "wrench.and.screwdriver.fill")

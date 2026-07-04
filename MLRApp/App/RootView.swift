@@ -13,6 +13,7 @@ struct RootView: View {
     @State private var pendingCommittee: Committee?
     @State private var pendingWorkItem: WorkItem?
     @State private var pendingHouse: House?
+    @State private var pendingHouseHub: House?
     @State private var pendingCommitteeChat: PendingCommitteeChat?
 
     // Siri / Shortcuts → in-app navigation bridge.
@@ -53,6 +54,9 @@ struct RootView: View {
         // Tapping a house-chat mention (or Siri "open house chat") opens the chat.
         .sheet(item: $pendingHouse) { house in
             NavigationStack { HouseChatView(house: house, assumeMember: true) }
+        }
+        .sheet(item: $pendingHouseHub) { house in
+            NavigationStack { HouseHubView(house: house) }
         }
         // Siri / Shortcuts "open committee chat".
         .sheet(item: $pendingCommitteeChat) { pending in
@@ -114,6 +118,16 @@ struct RootView: View {
             resolveWorkItem(info)
         case "house_message":
             resolveHouse(info)
+        case "house_stay":
+            // A new stay on the house calendar — open the House Hub. Resolve the
+            // viewer's own house (mirrors the house-chat deep link).
+            selectedTab = .home
+            Task { @MainActor in
+                if let hid = env.currentProfile?.houseId,
+                   let house = await env.housesService.house(withId: hid) {
+                    pendingHouseHub = house
+                }
+            }
         default:                selectedTab = .home
         }
     }

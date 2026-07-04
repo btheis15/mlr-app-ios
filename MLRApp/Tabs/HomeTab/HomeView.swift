@@ -58,6 +58,10 @@ struct HomeView: View {
                                 )
                             }
 
+                            // ── Your house — hub for calendar, chat & to-do ──
+                            // Self-hides for guests and anyone not in a house.
+                            HouseHubHomeCard()
+
                             // ── 5. Work Checklist (standalone collapsible card) ──
                             WorkChecklistCard()
 

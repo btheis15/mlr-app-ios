@@ -17,6 +17,7 @@ final class HousesService {
     var error: String? = nil
 
     private var messageChannels: [UUID: RealtimeChannelV2] = [:]
+    private var stayChannels: [UUID: RealtimeChannelV2] = [:]
 
     // MARK: - Houses
 
@@ -245,6 +246,126 @@ final class HousesService {
         }
     }
 
+    // MARK: - House calendar: stays (migration 0071)
+
+    /// Every stay on a house's calendar (RLS-gated to the house), with the
+    /// member's name + avatar. Sorted by start date ascending.
+    func fetchStays(houseId: UUID) async -> [HouseStay] {
+        do {
+            let rows: [HouseStayRow] = try await supabase
+                .from("house_stays")
+                .select("""
+                    id, house_id, created_by, title, start_date, end_date, guest_names, note, created_at,
+                    profiles:created_by(display_name, avatar_url)
+                """)
+                .eq("house_id", value: houseId.uuidString)
+                .order("start_date", ascending: true)
+                .execute()
+                .value
+            return rows.map(\.toStay)
+        } catch {
+            print("[HousesService] fetchStays error: \(error)")
+            return []
+        }
+    }
+
+    /// Add my stay to a house calendar. Returns the new stay's id.
+    @discardableResult
+    func createStay(
+        houseId: UUID,
+        startDate: String,
+        endDate: String,
+        title: String?,
+        guestNames: [String],
+        note: String?
+    ) async throws -> UUID {
+        struct Params: Encodable {
+            let p_house: String
+            let p_start_date: String
+            let p_end_date: String
+            let p_title: String?
+            let p_guest_names: [String]
+            let p_note: String?
+        }
+        let id: UUID = try await supabase
+            .rpc("create_house_stay", params: Params(
+                p_house: houseId.uuidString,
+                p_start_date: startDate,
+                p_end_date: endDate,
+                p_title: title,
+                p_guest_names: guestNames,
+                p_note: note
+            ))
+            .execute()
+            .value
+        return id
+    }
+
+    /// Edit a stay (author or admin — enforced server-side).
+    func updateStay(
+        id: UUID,
+        startDate: String,
+        endDate: String,
+        title: String?,
+        guestNames: [String],
+        note: String?
+    ) async throws {
+        struct Params: Encodable {
+            let p_id: String
+            let p_start_date: String
+            let p_end_date: String
+            let p_title: String?
+            let p_guest_names: [String]
+            let p_note: String?
+        }
+        try await supabase
+            .rpc("update_house_stay", params: Params(
+                p_id: id.uuidString,
+                p_start_date: startDate,
+                p_end_date: endDate,
+                p_title: title,
+                p_guest_names: guestNames,
+                p_note: note
+            ))
+            .execute()
+    }
+
+    /// Cancel a stay (author or admin — enforced server-side).
+    func deleteStay(id: UUID) async throws {
+        struct Params: Encodable { let p_id: String }
+        try await supabase
+            .rpc("delete_house_stay", params: Params(p_id: id.uuidString))
+            .execute()
+    }
+
+    /// Live-update a house's calendar. `onChange` fires on any insert/update/
+    /// delete to house_stays for this house — the view re-fetches. Mirrors the
+    /// events-live channel; keyed per house so it composes with the chat channel.
+    func subscribeToStays(houseId: UUID, onChange: @escaping () -> Void) {
+        guard stayChannels[houseId] == nil else { return }
+        let channel = supabase.channel("house-stays-\(houseId.uuidString)")
+        stayChannels[houseId] = channel
+        Task {
+            channel.onPostgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "house_stays",
+                filter: "house_id=eq.\(houseId.uuidString)"
+            ) { _ in
+                Task { @MainActor in onChange() }
+            }
+            await channel.subscribe()
+        }
+    }
+
+    func unsubscribeFromStays(houseId: UUID) {
+        guard let channel = stayChannels[houseId] else { return }
+        Task {
+            await supabase.removeChannel(channel)
+            stayChannels.removeValue(forKey: houseId)
+        }
+    }
+
     // MARK: - Admin: house management (migration 0064)
 
     /// Assign a member to a house, or clear it with `houseId = nil`. Admin-only.
@@ -280,6 +401,58 @@ final class HousesService {
 
 // MARK: - Private row type for house chat messages
 // house_messages has no flat author columns; author comes from profiles!author_id.
+
+// house_stays has no flat author columns; author comes from profiles!created_by.
+private struct HouseStayRow: Decodable {
+    let id: UUID
+    let houseId: UUID
+    let createdBy: UUID
+    let title: String?
+    let startDate: String
+    let endDate: String
+    let guestNames: [String]?
+    let note: String?
+    let createdAt: Date
+    let profiles: Author?
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case houseId = "house_id"
+        case createdBy = "created_by"
+        case title
+        case startDate = "start_date"
+        case endDate = "end_date"
+        case guestNames = "guest_names"
+        case note
+        case createdAt = "created_at"
+        case profiles
+    }
+
+    struct Author: Decodable {
+        let name: String?
+        let avatarUrl: String?
+        enum CodingKeys: String, CodingKey {
+            case name = "display_name"
+            case avatarUrl = "avatar_url"
+        }
+    }
+
+    var toStay: HouseStay {
+        HouseStay(
+            id: id,
+            houseId: houseId,
+            createdBy: createdBy,
+            authorName: profiles?.name ?? "Member",
+            authorAvatarUrl: profiles?.avatarUrl,
+            title: title,
+            startDate: startDate,
+            endDate: endDate,
+            guestNames: guestNames ?? [],
+            note: note,
+            createdAt: createdAt
+        )
+    }
+}
 
 private struct HouseChatRow: Decodable {
     let id: UUID
