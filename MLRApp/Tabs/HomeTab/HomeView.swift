@@ -58,20 +58,22 @@ struct HomeView: View {
                                 )
                             }
 
-                            // ── Your house — hub for calendar, chat & to-do ──
-                            // Self-hides for guests and anyone not in a house.
-                            HouseHubHomeCard()
-
                             // ── 5. Work Checklist (standalone collapsible card) ──
+                            // Kept directly under the Family Fest summary card.
                             WorkChecklistCard()
 
                             // ── 6. Communication ──────────────────────────
                             communicationSection
 
-                            // ── 6. Around the Resort ─────────────────────
+                            // ── 7. Around the Resort ─────────────────────
                             aroundResortSection
 
-                            // ── 7. App & Help ────────────────────────────
+                            // ── Your house — hub for calendar, chat & to-do ──
+                            // Self-hides for guests and anyone not in a house.
+                            // Sits near the bottom, just above App & Help.
+                            HouseHubHomeCard()
+
+                            // ── 8. App & Help ────────────────────────────
                             appHelpSection
 
                             // ── 8. Heritage footer ────────────────────────
