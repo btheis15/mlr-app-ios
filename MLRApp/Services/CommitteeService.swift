@@ -295,7 +295,8 @@ final class CommitteeService {
             .from("committee_messages")
             .select("""
                 id, committee_id, author_id, text, edited_at, deleted_at, created_at, area,
-                profiles!author_id(display_name, avatar_url)
+                profiles!author_id(display_name, avatar_url),
+                committee_message_media(storage_path, media_type, width, height, file_name, position)
             """)
             .eq("committee_id", value: committeeId.uuidString)
         // nil area = the General channel (area IS NULL); else the role channel.
@@ -307,7 +308,7 @@ final class CommitteeService {
         return rows.map(\.toChatMessage)
     }
 
-    func sendMessage(committeeId: UUID, area: String? = nil, text: String, authorId: UUID, mentionedIds: [UUID] = []) async throws -> CommitteeChatMessage {
+    func sendMessage(committeeId: UUID, area: String? = nil, text: String, authorId: UUID, mentionedIds: [UUID] = [], media: [ChatMedia] = []) async throws -> CommitteeChatMessage {
         let params: [String: AnyJSON] = [
             "committee_id": .string(committeeId.uuidString),
             "author_id":    .string(authorId.uuidString),
@@ -325,6 +326,11 @@ final class CommitteeService {
             .execute()
             .value
 
+        // Persist any attachments (already uploaded to the mini) as media rows.
+        if !media.isEmpty {
+            try await supabase.from("committee_message_media")
+                .insert(chatMediaRows(messageId: row.id, media: media)).execute()
+        }
         // Record @mentions so the server can fire chat-mention notifications.
         if !mentionedIds.isEmpty {
             let rows: [[String: AnyJSON]] = mentionedIds.map {
@@ -332,7 +338,9 @@ final class CommitteeService {
             }
             try? await supabase.from("committee_message_mentions").insert(rows).execute()
         }
-        return row.toChatMessage
+        var msg = row.toChatMessage
+        msg.media = media   // render immediately without a round-trip
+        return msg
     }
 
     func editMessage(messageId: UUID, text: String) async throws {
@@ -400,7 +408,8 @@ final class CommitteeService {
                         .from("committee_messages")
                         .select("""
                             id, committee_id, author_id, text, edited_at, deleted_at, created_at, area,
-                            profiles!author_id(display_name, avatar_url)
+                            profiles!author_id(display_name, avatar_url),
+                            committee_message_media(storage_path, media_type, width, height, file_name, position)
                         """)
                         .eq("id", value: id.uuidString)
                         .single()
@@ -652,6 +661,7 @@ private struct CommitteeChatRow: Decodable {
     let createdAt: Date
     let area: String?
     let profiles: AuthorInfo?
+    let media: [ChatMedia]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -663,6 +673,7 @@ private struct CommitteeChatRow: Decodable {
         case createdAt = "created_at"
         case area
         case profiles
+        case media = "committee_message_media"
     }
 
     struct AuthorInfo: Decodable {
@@ -685,7 +696,8 @@ private struct CommitteeChatRow: Decodable {
             editedAt: editedAt,
             deletedAt: deletedAt,
             createdAt: createdAt,
-            area: area
+            area: area,
+            media: (media ?? []).sorted { $0.position < $1.position }
         )
     }
 }

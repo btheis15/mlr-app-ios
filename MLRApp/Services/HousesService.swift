@@ -90,7 +90,8 @@ final class HousesService {
             .from("house_messages")
             .select("""
                 id, house_id, author_id, text, edited_at, deleted_at, created_at,
-                profiles!author_id(display_name, avatar_url)
+                profiles!author_id(display_name, avatar_url),
+                house_message_media(storage_path, media_type, width, height, file_name, position)
             """)
             .eq("house_id", value: houseId.uuidString)
             .order("created_at", ascending: true)
@@ -100,7 +101,7 @@ final class HousesService {
     }
 
     @discardableResult
-    func sendMessage(houseId: UUID, text: String, authorId: UUID, mentionedIds: [UUID] = []) async throws -> HouseChatMessage {
+    func sendMessage(houseId: UUID, text: String, authorId: UUID, mentionedIds: [UUID] = [], media: [ChatMedia] = []) async throws -> HouseChatMessage {
         let params: [String: AnyJSON] = [
             "house_id":  .string(houseId.uuidString),
             "author_id": .string(authorId.uuidString),
@@ -117,13 +118,19 @@ final class HousesService {
             .execute()
             .value
 
+        if !media.isEmpty {
+            try await supabase.from("house_message_media")
+                .insert(chatMediaRows(messageId: row.id, media: media)).execute()
+        }
         if !mentionedIds.isEmpty {
             let rows: [[String: AnyJSON]] = mentionedIds.map {
                 ["message_id": .string(row.id.uuidString), "mentioned_user_id": .string($0.uuidString)]
             }
             try? await supabase.from("house_message_mentions").insert(rows).execute()
         }
-        return row.toChatMessage
+        var msg = row.toChatMessage
+        msg.media = media
+        return msg
     }
 
     func editMessage(messageId: UUID, text: String) async throws {
@@ -239,7 +246,8 @@ final class HousesService {
                         .from("house_messages")
                         .select("""
                             id, house_id, author_id, text, edited_at, deleted_at, created_at,
-                            profiles!author_id(display_name, avatar_url)
+                            profiles!author_id(display_name, avatar_url),
+                            house_message_media(storage_path, media_type, width, height, file_name, position)
                         """)
                         .eq("id", value: id.uuidString)
                         .single()
@@ -480,6 +488,7 @@ private struct HouseChatRow: Decodable {
     let deletedAt: Date?
     let createdAt: Date
     let profiles: AuthorInfo?
+    let media: [ChatMedia]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -490,6 +499,7 @@ private struct HouseChatRow: Decodable {
         case deletedAt = "deleted_at"
         case createdAt = "created_at"
         case profiles
+        case media = "house_message_media"
     }
 
     struct AuthorInfo: Decodable {
@@ -511,7 +521,8 @@ private struct HouseChatRow: Decodable {
             text: text ?? "",
             editedAt: editedAt,
             deletedAt: deletedAt,
-            createdAt: createdAt
+            createdAt: createdAt,
+            media: (media ?? []).sorted { $0.position < $1.position }
         )
     }
 }

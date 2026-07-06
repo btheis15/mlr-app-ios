@@ -181,7 +181,7 @@ struct HouseChatView: View {
                 roster: members,
                 isEditing: editingMessage != nil,
                 sending: sending,
-                onSend: { Task { await send() } },
+                onSend: { attachments in Task { await send(attachments) } },
                 onCancelEdit: { cancelEdit() }
             )
         }
@@ -284,9 +284,10 @@ struct HouseChatView: View {
         )
     }
 
-    private func send() async {
+    private func send(_ attachments: [ChatAttachment] = []) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty, let userId = env.currentProfile?.id else { return }
+        guard let userId = env.currentProfile?.id else { return }
+        guard editingMessage != nil || !text.isEmpty || !attachments.isEmpty else { return }
         sending = true
         defer { sending = false }
 
@@ -299,11 +300,21 @@ struct HouseChatView: View {
                 }
                 cancelEdit()
             } else {
+                var uploaded: [ChatMedia] = []
+                for att in attachments {
+                    if let res = try? await env.mediaService.uploadChatMedia(
+                        data: att.data, filename: att.filename, mimeType: att.mimeType, room: house.slug) {
+                        // Trust the local kind (we know it) rather than the server echo,
+                        // so photos/videos render right even before the mini redeploys.
+                        let type = att.kind == .image ? "image" : att.kind == .video ? "video" : "file"
+                        uploaded.append(ChatMedia(url: res.url, type: type, name: att.kind == .file ? att.filename : nil, position: uploaded.count))
+                    }
+                }
                 let mentioned = members
                     .filter { !$0.name.isEmpty && text.lowercased().contains("@\($0.name.lowercased())") }
                     .map(\.id)
                 let msg = try await env.housesService.sendMessage(
-                    houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned)
+                    houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded)
                 if !messages.contains(where: { $0.id == msg.id }) {
                     messages.append(msg)
                 }
@@ -375,22 +386,33 @@ private struct HouseMessageBubble: View {
                 .background(Color.mlrCard.opacity(0.6))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         } else {
-            VStack(alignment: .trailing, spacing: 2) {
-                MentionText(
-                    message.text,
-                    baseColor: isOwn ? .white : Color.mlrText,
-                    mentionColor: isOwn ? Color.mlrPrimaryLight : Color.mlrPrimary
-                )
-                if message.isEdited {
+            VStack(alignment: isOwn ? .trailing : .leading, spacing: 4) {
+                if !message.media.isEmpty {
+                    ChatMediaView(media: message.media, isOwn: isOwn)
+                }
+                if !message.text.isEmpty {
+                    VStack(alignment: .trailing, spacing: 2) {
+                        MentionText(
+                            message.text,
+                            baseColor: isOwn ? .white : Color.mlrText,
+                            mentionColor: isOwn ? Color.mlrPrimaryLight : Color.mlrPrimary
+                        )
+                        if message.isEdited {
+                            Text("edited")
+                                .font(.mlrScaled(10))
+                                .foregroundStyle(isOwn ? Color.white.opacity(0.7) : Color.mlrTextSubtle)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
+                    .background(isOwn ? Color.mlrPrimary : Color.mlrCard)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+                } else if message.isEdited {
                     Text("edited")
                         .font(.mlrScaled(10))
-                        .foregroundStyle(isOwn ? Color.white.opacity(0.7) : Color.mlrTextSubtle)
+                        .foregroundStyle(Color.mlrTextSubtle)
                 }
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(isOwn ? Color.mlrPrimary : Color.mlrCard)
-            .clipShape(RoundedRectangle(cornerRadius: 14))
             .contextMenu {
                 if canEdit {
                     Button { onEdit() } label: { Label("Edit", systemImage: "pencil") }

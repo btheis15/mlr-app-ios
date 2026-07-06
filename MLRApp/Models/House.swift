@@ -95,6 +95,9 @@ struct HouseChatMessage: Codable, Identifiable, Equatable {
     var editedAt: Date?
     var deletedAt: Date?
     var createdAt: Date
+    /// Attachments (photos/videos/files). Set from the embedded media rows in the
+    /// service, not decoded here — so it's excluded from CodingKeys below.
+    var media: [ChatMedia] = []
 
     enum CodingKeys: String, CodingKey {
         case id

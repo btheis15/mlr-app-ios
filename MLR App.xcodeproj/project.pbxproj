@@ -144,6 +144,7 @@
 		D3533C132FE9EC60001AD887 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C122FE9EC60001AD887 /* Storage */; };
 		D3533C152FE9EC60001AD887 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C142FE9EC60001AD887 /* Supabase */; };
 		D3533C182FE9EC81001AD887 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C172FE9EC81001AD887 /* Kingfisher */; };
+		D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39BD8902FFC47C000B1E74D /* ChatMedia.swift */; };
 		D3A0000000000000000000B1 /* HouseStay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A1 /* HouseStay.swift */; };
 		D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A2 /* HouseCalendarView.swift */; };
 		D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A3 /* HouseCalendarSheets.swift */; };
@@ -301,6 +302,7 @@
 		D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemIntents.swift; sourceTree = "<group>"; };
 		D33F9F242FF84C1C00603CE7 /* AppEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntities.swift; sourceTree = "<group>"; };
 		D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseIntents.swift; sourceTree = "<group>"; };
+		D39BD8902FFC47C000B1E74D /* ChatMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMedia.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A1 /* HouseStay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStay.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A2 /* HouseCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarView.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A3 /* HouseCalendarSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarSheets.swift; sourceTree = "<group>"; };
@@ -479,6 +481,7 @@
 				D33F9ECF2FF3170900603CE7 /* WorkItem.swift */,
 				D33F9F172FF844AA00603CE7 /* House.swift */,
 				D3A0000000000000000000A1 /* HouseStay.swift */,
+				D39BD8902FFC47C000B1E74D /* ChatMedia.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -885,6 +888,7 @@
 				D33F9E6F2FEC086700603CE7 /* CabinBookingsView.swift in Sources */,
 				D33F9E702FEC086700603CE7 /* FestScheduleDetailView.swift in Sources */,
 				D33F9E712FEC086700603CE7 /* NotificationRow.swift in Sources */,
+				D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */,
 				D33F9E722FEC086700603CE7 /* AuthService.swift in Sources */,
 				D33F9EEC2FF4502100603CE7 /* RosterEditSheet.swift in Sources */,
 				D33F9E732FEC086700603CE7 /* NotificationActions.swift in Sources */,

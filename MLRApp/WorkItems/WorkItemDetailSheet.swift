@@ -54,7 +54,8 @@ struct WorkItemDetailSheet: View {
                         text: $draft,
                         roster: roster,
                         sending: sending,
-                        onSend: { Task { await post() } }
+                        allowsAttachments: false,
+                        onSend: { _ in Task { await post() } }
                     )
                 }
             }

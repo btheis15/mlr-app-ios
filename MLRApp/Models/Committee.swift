@@ -191,6 +191,9 @@ struct CommitteeChatMessage: Codable, Identifiable, Equatable {
     /// The role channel this message belongs to; nil = the committee-wide
     /// "General" channel (migration 0063). Set from the row, not decoded here.
     var area: String? = nil
+    /// Attachments (photos/videos/files). Set from the embedded media rows in the
+    /// service, not decoded here — so it's excluded from CodingKeys below.
+    var media: [ChatMedia] = []
 
     enum CodingKeys: String, CodingKey {
         case id

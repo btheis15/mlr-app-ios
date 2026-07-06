@@ -98,6 +98,47 @@ final class MediaService {
         return json.url
     }
 
+    // MARK: - Chat attachments
+
+    /// Result of a chat upload: the stored URL, the server-classified media type
+    /// ("image" | "video" | "file"), and the original filename (for file chips).
+    struct ChatUploadResult { let url: String; let type: String; let name: String? }
+
+    /// Upload any chat attachment (photo, video, or arbitrary file) to the mini
+    /// under chat/<room>/. The server sniffs the bytes: images/videos are
+    /// processed as before; anything else is stored as a generic "file". The
+    /// original filename is preserved so the client can show it on a file chip.
+    func uploadChatMedia(data: Data, filename: String, mimeType: String, room: String) async throws -> ChatUploadResult {
+        guard let session = try? await supabase.auth.session else { throw MediaError.miniServerError }
+        var comps = URLComponents(string: "\(Self.miniServerURL)/upload")
+        comps?.queryItems = [
+            URLQueryItem(name: "category", value: "chat"),
+            URLQueryItem(name: "room", value: room),
+        ]
+        guard let url = comps?.url else { throw MediaError.invalidURL }
+
+        var request = URLRequest(url: url, timeoutInterval: 120)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        body.append("--\(boundary)\r\n")
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"\(filename)\"\r\n")
+        body.append("Content-Type: \(mimeType)\r\n\r\n")
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n")
+        request.httpBody = body
+
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw MediaError.miniServerError
+        }
+        let json = try JSONDecoder().decode(MiniUploadResponse.self, from: responseData)
+        return ChatUploadResult(url: json.url, type: json.type ?? "file", name: json.originalName)
+    }
+
     // MARK: - Avatars
 
     /// Resize to 400×400, upload to "avatars/<userId>.jpg",
@@ -226,6 +267,8 @@ enum MediaError: LocalizedError {
 
 private struct MiniUploadResponse: Decodable {
     let url: String
+    var type: String?          // "image" | "video" | "file" (chat uploads)
+    var originalName: String?  // the original filename (chat file uploads)
 }
 
 // MARK: - Data helpers

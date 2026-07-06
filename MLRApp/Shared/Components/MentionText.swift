@@ -1,5 +1,7 @@
 import SwiftUI
 import UIKit
+import PhotosUI
+import UniformTypeIdentifiers
 
 // MARK: - MentionText
 // Renders a string with @name mentions highlighted in mlrPrimary green.
@@ -216,11 +218,14 @@ struct MentionTextView: UIViewRepresentable {
     var placeholder: String = "Message…"
     var maxHeight: CGFloat = 124
     var onMentionQueryChange: (String?) -> Void = { _ in }
+    /// Called when the user pastes image(s) from the clipboard (iMessage-style).
+    var onPasteMedia: ([ChatAttachment]) -> Void = { _ in }
 
     private static let inset = UIEdgeInsets(top: 9, left: 6, bottom: 9, right: 6)
 
     func makeUIView(context: Context) -> UITextView {
-        let tv = UITextView()
+        let tv = PasteAwareTextView()
+        tv.pasteCoordinator = context.coordinator
         tv.delegate = context.coordinator
         tv.font = UIFont.preferredFont(forTextStyle: .body)
         tv.adjustsFontForContentSizeCategory = true
@@ -368,26 +373,83 @@ struct MentionTextView: UIViewRepresentable {
     }
 }
 
+// MARK: - PasteAwareTextView
+//
+// A UITextView that accepts pasted IMAGES (iMessage-style) in addition to text.
+// When the clipboard has image(s), Paste hands them to the composer as
+// attachments instead of doing nothing; text still pastes normally. Videos/PDFs
+// from the clipboard are rare — the composer's attach button (Photos + Files)
+// covers those.
+
+final class PasteAwareTextView: UITextView {
+    weak var pasteCoordinator: MentionTextView.Coordinator?
+
+    override func canPerformAction(_ action: Selector, withSender sender: Any?) -> Bool {
+        if action == #selector(paste(_:)) && UIPasteboard.general.hasImages { return true }
+        return super.canPerformAction(action, withSender: sender)
+    }
+
+    override func paste(_ sender: Any?) {
+        let pb = UIPasteboard.general
+        if pb.hasImages, let images = pb.images, !images.isEmpty {
+            let items: [ChatAttachment] = images.compactMap { img in
+                guard let data = img.jpegData(compressionQuality: 0.85) else { return nil }
+                return ChatAttachment(data: data, filename: "pasted.jpg", mimeType: "image/jpeg", kind: .image, preview: img)
+            }
+            if !items.isEmpty {
+                pasteCoordinator?.parent.onPasteMedia(items)
+                if pb.hasStrings { super.paste(sender) } // keep any text paste too
+                return
+            }
+        }
+        super.paste(sender)
+    }
+}
+
+// MARK: - ChatAttachment
+//
+// A file staged in the composer, uploaded on send. Photos/videos preview inline;
+// anything else (PDFs, docs, …) shows as a file chip.
+
+struct ChatAttachment: Identifiable {
+    let id = UUID()
+    var data: Data
+    var filename: String
+    var mimeType: String
+    var kind: Kind
+    var preview: UIImage?
+    enum Kind { case image, video, file }
+}
+
 // MARK: - ChatComposer
 //
 // The full message input bar: the growing TextKit field, the @mention
-// autocomplete popover, an optional "editing" banner, and a spring-animated
-// send button with haptics. Reusable across chat/comments/posts.
+// autocomplete popover, an optional "editing" banner, an attach button (photos,
+// videos, or any file) with a staged-attachment strip, clipboard image paste,
+// and a spring-animated send button with haptics. Reusable across chat.
 
 struct ChatComposer: View {
     @Binding var text: String
     let roster: [Profile]
     var isEditing: Bool = false
     var sending: Bool = false
-    var onSend: () -> Void
+    /// Whether the attach button + clipboard-image paste are offered. Off for
+    /// surfaces that are text-only (e.g. work-item comments).
+    var allowsAttachments: Bool = true
+    /// Called on send with the staged attachments (cleared here afterwards).
+    var onSend: ([ChatAttachment]) -> Void
     var onCancelEdit: () -> Void = {}
 
     @State private var height: CGFloat = 36
     @State private var mentionQuery: String?
     @State private var pendingMention: Profile?
+    @State private var attachments: [ChatAttachment] = []
+    @State private var photoItems: [PhotosPickerItem] = []
+    @State private var showPhotoPicker = false
+    @State private var showFileImporter = false
 
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
-    private var canSend: Bool { !trimmed.isEmpty && !sending }
+    private var canSend: Bool { (!trimmed.isEmpty || !attachments.isEmpty) && !sending }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -415,14 +477,40 @@ struct ChatComposer: View {
                 .padding(.top, 6)
             }
 
-            HStack(alignment: .bottom, spacing: 10) {
+            // Staged attachments (photos/videos/files), removable before sending.
+            if !attachments.isEmpty && !isEditing {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(attachments) { att in
+                            attachmentThumb(att)
+                        }
+                    }
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+                }
+            }
+
+            HStack(alignment: .bottom, spacing: 8) {
+                if !isEditing && allowsAttachments {
+                    Menu {
+                        Button { showPhotoPicker = true } label: { Label("Photo or Video", systemImage: "photo") }
+                        Button { showFileImporter = true } label: { Label("File", systemImage: "doc") }
+                    } label: {
+                        Image(systemName: "paperclip")
+                            .font(.mlrScaled(18, weight: .medium))
+                            .foregroundStyle(Color.mlrTextMuted)
+                            .frame(width: 34, height: 38)
+                    }
+                }
+
                 MentionTextView(
                     text: $text,
                     height: $height,
                     pendingMention: $pendingMention,
                     onMentionQueryChange: { q in
                         withAnimation(.easeOut(duration: 0.16)) { mentionQuery = q }
-                    }
+                    },
+                    onPasteMedia: { items in if allowsAttachments { attachments.append(contentsOf: items) } }
                 )
                 .frame(height: height)
                 .padding(.horizontal, 8)
@@ -432,7 +520,8 @@ struct ChatComposer: View {
 
                 Button {
                     Haptics.tap()
-                    onSend()
+                    onSend(attachments)
+                    attachments = []
                 } label: {
                     Group {
                         if sending {
@@ -455,6 +544,82 @@ struct ChatComposer: View {
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
             .background(Color.mlrSurface)
+        }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 5, matching: .any(of: [.images, .videos]))
+        .onChange(of: photoItems) { _, items in
+            guard !items.isEmpty else { return }
+            Task { await loadPhotoItems(items) }
+        }
+        .fileImporter(isPresented: $showFileImporter, allowedContentTypes: [.item], allowsMultipleSelection: true) { result in
+            handleFileImport(result)
+        }
+    }
+
+    // MARK: - Attachment thumbnail
+
+    @ViewBuilder
+    private func attachmentThumb(_ att: ChatAttachment) -> some View {
+        ZStack(alignment: .topTrailing) {
+            Group {
+                if att.kind == .image, let img = att.preview {
+                    Image(uiImage: img).resizable().scaledToFill()
+                } else if att.kind == .video {
+                    ZStack {
+                        Color.mlrCard
+                        Image(systemName: "film").font(.mlrScaled(20)).foregroundStyle(Color.mlrTextMuted)
+                    }
+                } else {
+                    VStack(spacing: 2) {
+                        Image(systemName: "doc.fill").font(.mlrScaled(18)).foregroundStyle(Color.mlrTextMuted)
+                        Text(att.filename).font(.system(size: 8)).lineLimit(1).foregroundStyle(Color.mlrTextMuted)
+                    }
+                    .padding(4)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                    .background(Color.mlrCard)
+                }
+            }
+            .frame(width: 60, height: 60)
+            .clipShape(RoundedRectangle(cornerRadius: 10))
+
+            Button {
+                attachments.removeAll { $0.id == att.id }
+            } label: {
+                Image(systemName: "xmark.circle.fill")
+                    .font(.mlrScaled(16))
+                    .foregroundStyle(.white, .black.opacity(0.5))
+            }
+            .padding(2)
+        }
+    }
+
+    // MARK: - Loading picked media
+
+    @MainActor
+    private func loadPhotoItems(_ items: [PhotosPickerItem]) async {
+        for item in items {
+            let isVideo = item.supportedContentTypes.contains { $0.conforms(to: .movie) }
+            guard let data = try? await item.loadTransferable(type: Data.self) else { continue }
+            if isVideo {
+                attachments.append(ChatAttachment(data: data, filename: "video.mp4", mimeType: "video/mp4", kind: .video, preview: nil))
+            } else {
+                let img = UIImage(data: data)
+                let jpeg = img?.jpegData(compressionQuality: 0.8) ?? data
+                attachments.append(ChatAttachment(data: jpeg, filename: "photo.jpg", mimeType: "image/jpeg", kind: .image, preview: img))
+            }
+        }
+        photoItems = []
+    }
+
+    private func handleFileImport(_ result: Result<[URL], Error>) {
+        guard case .success(let urls) = result else { return }
+        for url in urls {
+            let access = url.startAccessingSecurityScopedResource()
+            defer { if access { url.stopAccessingSecurityScopedResource() } }
+            guard let data = try? Data(contentsOf: url) else { continue }
+            let mime = UTType(filenameExtension: url.pathExtension)?.preferredMIMEType ?? "application/octet-stream"
+            let kind: ChatAttachment.Kind = mime.hasPrefix("image") ? .image : mime.hasPrefix("video") ? .video : .file
+            let preview = kind == .image ? UIImage(data: data) : nil
+            attachments.append(ChatAttachment(data: data, filename: url.lastPathComponent, mimeType: mime, kind: kind, preview: preview))
         }
     }
 }
