@@ -441,7 +441,6 @@ struct ProfileView: View {
 
     private var featuresSection: some View {
         Section("Features") {
-            AssistantToggleRow()
             WillingToHelpRow()
         }
     }
@@ -738,30 +737,6 @@ extension HelpService {
             .execute()
             .value
         return rows.first?.count ?? 0
-    }
-}
-
-// MARK: - AssistantToggleRow
-
-private struct AssistantToggleRow: View {
-    @AppStorage("assistant_enabled") private var assistantEnabled = false
-
-    var body: some View {
-        Toggle(isOn: $assistantEnabled) {
-            Label {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("AI Assistant")
-                        .font(.mlrScaled(15))
-                    Text("Ask MLR — answers from app data")
-                        .font(.caption)
-                        .foregroundStyle(Color.mlrTextMuted)
-                }
-            } icon: {
-                Image(systemName: "sparkles")
-                    .foregroundStyle(Color.mlrAccent)
-            }
-        }
-        .tint(Color.mlrPrimary)
     }
 }
 

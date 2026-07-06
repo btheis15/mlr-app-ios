@@ -66,6 +66,9 @@ struct PostComposer: View {
                           selected: $tagIds)
             }
         }
+        // A light half-height card (drag up for more), not a full-screen takeover.
+        .presentationDetents([.medium, .large])
+        .presentationDragIndicator(.visible)
         .task {
             allProfiles = (try? await fetchMemberList()) ?? []
             if let editing {
@@ -89,30 +92,33 @@ struct PostComposer: View {
 
     private var composeArea: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
+            VStack(alignment: .leading, spacing: 10) {
                 HStack(spacing: 10) {
-                    AvatarView(url: env.currentProfile?.avatarUrl, size: .medium)
+                    AvatarView(url: env.currentProfile?.avatarUrl, size: .small)
                     Text(env.currentProfile?.name ?? "")
-                        .font(.mlrScaled(15, weight: .semibold))
+                        .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
+                    Spacer()
+                    // Char counter only surfaces as you near/pass the limit — no clutter otherwise.
+                    if text.count > softLimit - 20 {
+                        Text("\(softLimit - text.count)")
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(text.count > softLimit ? Color.mlrDanger : Color.mlrWarning)
+                    }
                 }
 
                 ZStack(alignment: .topLeading) {
                     if text.isEmpty {
                         Text("What's on your mind?")
-                            .foregroundStyle(Color.mlrTextSubtle).padding(.top, 2)
+                            .foregroundStyle(Color.mlrTextSubtle)
+                            .padding(.top, 8)
+                            .padding(.leading, 5)
                     }
                     TextEditor(text: $text)
-                        .frame(minHeight: 120)
+                        .frame(minHeight: 90)
+                        .scrollContentBackground(.hidden)
                         .onChange(of: text) { _, v in detectMentionTrigger(in: v) }
-                }
-
-                HStack {
-                    Spacer()
-                    Text("\(softLimit - text.count)")
-                        .font(.caption)
-                        .foregroundStyle(text.count > softLimit ? Color.mlrDanger
-                                         : text.count > softLimit - 20 ? Color.mlrWarning : Color.mlrTextMuted)
                 }
 
                 if !images.isEmpty { imageStrip }
