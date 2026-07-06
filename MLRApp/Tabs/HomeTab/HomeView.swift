@@ -312,6 +312,10 @@ struct HomeTile: View {
     let subtitle: String
     let tint: Color
     var fullWidth: Bool = false
+    // When set, gives the tile a shared minimum height so a column of full-width
+    // tiles lines up cleanly regardless of subtitle length. Default nil leaves
+    // Home's grid tiles unchanged.
+    var minHeight: CGFloat? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -330,7 +334,7 @@ struct HomeTile: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
-        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity, alignment: .leading)
         .cardStyle()
     }
 }

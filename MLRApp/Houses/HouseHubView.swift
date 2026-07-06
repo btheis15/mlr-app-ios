@@ -13,9 +13,19 @@ struct HouseHubView: View {
 
     @State private var stays: [HouseStay] = []
     @State private var loading = true
+    @State private var showRulesEditor = false
+    // Locally reflects a just-saved edit without re-navigating (the passed-in
+    // `house` is immutable); falls back to the house's stored rules.
+    @State private var rulesOverride: String? = nil
 
     private var today: String { HouseStay.iso.string(from: .now) }
     private var upcoming: [HouseStay] { stays.filter { !$0.isPast(today) } }
+    private var rules: String { rulesOverride ?? house.rules }
+
+    // Shared minimum height for the three full-width hub cards (calendar, chat,
+    // rules) so they line up cleanly. The rules card can still grow past this
+    // once it holds text.
+    private let hubCardMinHeight: CGFloat = 101
 
     var body: some View {
         ScrollView {
@@ -35,7 +45,8 @@ struct HouseHubView: View {
                         title: "House calendar",
                         subtitle: calSubtitle,
                         tint: Color.mlrPrimary,
-                        fullWidth: true
+                        fullWidth: true,
+                        minHeight: hubCardMinHeight
                     )
                 }
                 .buttonStyle(.plain)
@@ -47,8 +58,45 @@ struct HouseHubView: View {
                         title: "House chat",
                         subtitle: "Talk with everyone in your house.",
                         tint: Color.mlrInfo,
-                        fullWidth: true
+                        fullWidth: true,
+                        minHeight: hubCardMinHeight
                     )
+                }
+                .buttonStyle(.plain)
+
+                // House Rules — a shared, editable open-text doc (any member).
+                Button {
+                    showRulesEditor = true
+                } label: {
+                    VStack(alignment: .leading, spacing: 6) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "list.bullet.rectangle.portrait.fill")
+                                .font(.mlrScaled(18, weight: .semibold))
+                                .foregroundStyle(Color.mlrAccent)
+                            Text("House Rules")
+                                .font(.mlrScaled(15, weight: .semibold))
+                                .foregroundStyle(Color.mlrText)
+                            Spacer()
+                            Image(systemName: "square.and.pencil")
+                                .font(.mlrScaled(13, weight: .semibold))
+                                .foregroundStyle(Color.mlrTextSubtle)
+                        }
+                        let trimmed = rules.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if trimmed.isEmpty {
+                            Text("No house rules yet — tap to add.")
+                                .font(.mlrCaption)
+                                .foregroundStyle(Color.mlrTextMuted)
+                        } else {
+                            Text(rules)
+                                .font(.mlrBody)
+                                .foregroundStyle(Color.mlrText)
+                                .lineLimit(8)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                        }
+                    }
+                    .padding(14)
+                    .frame(maxWidth: .infinity, minHeight: hubCardMinHeight, alignment: .leading)
+                    .cardStyle()
                 }
                 .buttonStyle(.plain)
 
@@ -85,6 +133,11 @@ struct HouseHubView: View {
         .task {
             stays = await env.housesService.fetchStays(houseId: house.id)
             loading = false
+        }
+        .sheet(isPresented: $showRulesEditor) {
+            HouseRulesEditor(houseId: house.id, initial: rules) { saved in
+                rulesOverride = saved
+            }
         }
     }
 
@@ -133,6 +186,85 @@ struct HouseHubHomeCard: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+}
+
+// MARK: - HouseRulesEditor
+// A plain open-text editor for a house's shared rules doc. Any house member can
+// save (gated server-side by set_house_rules → is_house_member, migration 0072).
+
+private struct HouseRulesEditor: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+
+    let houseId: UUID
+    let onSaved: (String) -> Void
+
+    @State private var draft: String
+    @State private var saving = false
+    @State private var errorText: String?
+
+    init(houseId: UUID, initial: String, onSaved: @escaping (String) -> Void) {
+        self.houseId = houseId
+        self.onSaved = onSaved
+        _draft = State(initialValue: initial)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                TextEditor(text: $draft)
+                    .font(.mlrBody)
+                    .padding(12)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.mlrSurface)
+                    .overlay(alignment: .topLeading) {
+                        if draft.isEmpty {
+                            Text("Add your house rules — anything goes. e.g. quiet hours, who feeds the dog, cabin close-up checklist…")
+                                .font(.mlrBody)
+                                .foregroundStyle(Color.mlrTextSubtle)
+                                .padding(.horizontal, 17)
+                                .padding(.vertical, 20)
+                                .allowsHitTesting(false)
+                        }
+                    }
+                if let errorText {
+                    Text(errorText)
+                        .font(.mlrCaption)
+                        .foregroundStyle(Color.mlrDanger)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.bottom, 8)
+                }
+            }
+            .background(Color.mlrSurface)
+            .navigationTitle("House Rules")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.disabled(saving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(saving ? "Saving…" : "Save") { Task { await save() } }
+                        .disabled(saving)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        guard env.isSignedIn else { env.authService.promptSignIn(); return }
+        saving = true
+        errorText = nil
+        defer { saving = false }
+        do {
+            try await env.housesService.saveHouseRules(houseId: houseId, rules: draft)
+            onSaved(draft)
+            dismiss()
+        } catch {
+            errorText = "Couldn't save. Check your connection and try again."
+            print("[HouseRulesEditor] save error: \(error)")
         }
     }
 }

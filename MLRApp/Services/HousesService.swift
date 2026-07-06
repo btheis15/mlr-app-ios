@@ -58,6 +58,18 @@ final class HousesService {
         return houses.first { $0.slug == slug }
     }
 
+    /// Save the house's shared "house rules" doc (any member of the house, via
+    /// set_house_rules, migration 0072). Refreshes the cached house + myHouse so
+    /// the Hub reflects the new text. Last write wins.
+    func saveHouseRules(houseId: UUID, rules: String) async throws {
+        struct Params: Encodable { let hid: String; let p_rules: String }
+        try await supabase
+            .rpc("set_house_rules", params: Params(hid: houseId.uuidString, p_rules: rules))
+            .execute()
+        await fetchHouses()
+        if myHouse?.id == houseId { myHouse = houses.first { $0.id == houseId } }
+    }
+
     /// Everyone assigned to a house (profiles.house_id). Drives the chat's
     /// "who's in this chat" sheet and @mention autocomplete.
     func fetchMembers(houseId: UUID) async -> [Profile] {

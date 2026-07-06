@@ -14,14 +14,18 @@ struct House: Codable, Identifiable, Equatable {
     var emoji: String
     var description: String
     var position: Int
+    /// A shared, editable open-text "house rules" doc (migration 0072). Any house
+    /// member can edit it via set_house_rules; empty until someone writes it.
+    var rules: String
 
     enum CodingKeys: String, CodingKey {
-        case id, slug, name, emoji, description, position
+        case id, slug, name, emoji, description, position, rules
     }
 
-    init(id: UUID, slug: String, name: String, emoji: String = "🏠", description: String = "", position: Int = 0) {
+    init(id: UUID, slug: String, name: String, emoji: String = "🏠", description: String = "", position: Int = 0, rules: String = "") {
         self.id = id; self.slug = slug; self.name = name
         self.emoji = emoji; self.description = description; self.position = position
+        self.rules = rules
     }
 
     init(from decoder: Decoder) throws {
@@ -32,6 +36,7 @@ struct House: Codable, Identifiable, Equatable {
         emoji       = (try? c.decodeIfPresent(String.self, forKey: .emoji)) ?? "🏠"
         description = (try? c.decodeIfPresent(String.self, forKey: .description)) ?? ""
         position    = (try? c.decodeIfPresent(Int.self, forKey: .position)) ?? 0
+        rules       = (try? c.decodeIfPresent(String.self, forKey: .rules)) ?? ""
     }
 }
 
