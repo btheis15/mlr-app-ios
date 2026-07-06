@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 // MARK: - Root View
 // Houses the TabView and handles deep-link navigation.
@@ -259,6 +260,21 @@ struct MainTabView: View {
         FestSeason.current()
     }
 
+    /// The Family Fest tab icon — the ⚔️ emoji rendered to a full-colour image.
+    /// A tab item's icon has to be an `Image`; drawing the emoji ourselves and
+    /// flagging it `.alwaysOriginal` keeps its colour (UITabBar would otherwise
+    /// tint a template image to a flat silhouette).
+    static let emojiTabIcon: UIImage = {
+        let size: CGFloat = 27
+        let font = UIFont.systemFont(ofSize: size)
+        let string = "⚔️" as NSString
+        let bounds = string.size(withAttributes: [.font: font])
+        let renderer = UIGraphicsImageRenderer(size: bounds)
+        return renderer.image { _ in
+            string.draw(at: .zero, withAttributes: [.font: font])
+        }.withRenderingMode(.alwaysOriginal)
+    }()
+
     var body: some View {
         TabView(selection: $selectedTab) {
             HomeView()
@@ -274,7 +290,11 @@ struct MainTabView: View {
                     Label {
                         Text("Family Fest")
                     } icon: {
-                        Image(systemName: "star.fill")
+                        // A tab-bar icon must be an Image; SwiftUI ignores a Text
+                        // icon. Render the ⚔️ emoji to an image so it shows in full
+                        // colour (matching the Fest's medieval theme).
+                        Image(uiImage: Self.emojiTabIcon)
+                            .renderingMode(.original)
                     }
                 }
                 .tag(Tab.fest)
