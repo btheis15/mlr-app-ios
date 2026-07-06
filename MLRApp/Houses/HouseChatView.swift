@@ -216,7 +216,8 @@ struct HouseChatView: View {
                                 canDelete: canDelete(message),
                                 onEdit: { startEdit(message) },
                                 onDelete: { Task { await deleteMessage(message) } },
-                                onReact: { emoji in Task { await react(message, emoji) } }
+                                onReact: { emoji in Task { await react(message, emoji) } },
+                                reactorName: { reactorName($0) }
                             )
                             .id(message.id)
                         }
@@ -239,6 +240,13 @@ struct HouseChatView: View {
         } description: {
             Text("This chat is just for \(house.name) members.")
         }
+    }
+
+    /// Display name for a reactor's user id — "You" for yourself, the house
+    /// member's name otherwise, falling back to "Member" for anyone unresolved.
+    private func reactorName(_ id: UUID) -> String {
+        if id == env.currentProfile?.id { return "You" }
+        return members.first { $0.id == id }?.displayName ?? "Member"
     }
 
     // MARK: - Permission helpers
@@ -384,6 +392,11 @@ private struct HouseMessageBubble: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     var onReact: (String) -> Void = { _ in }
+    /// Resolves a reactor's user id to a display name ("You" for yourself).
+    var reactorName: (UUID) -> String = { _ in "Member" }
+
+    /// Which emoji's reactor list is expanded (tap a pill to reveal who reacted).
+    @State private var expandedReaction: String? = nil
 
     var body: some View {
         HStack {
@@ -405,26 +418,45 @@ private struct HouseMessageBubble: View {
         .padding(.horizontal, 14)
     }
 
-    /// Tapback count pills under the bubble; tap one to toggle your own reaction.
+    /// Tapback count pills under the bubble; tap one to reveal who reacted
+    /// (reacting itself lives on the bubble's long-press palette).
     private var reactionPills: some View {
-        HStack(spacing: 4) {
-            ForEach(chatReactionCounts(message.reactions), id: \.emoji) { item in
-                let mine = message.reactions.contains { $0.emoji == item.emoji && $0.userId == myUserId }
-                Button { onReact(item.emoji) } label: {
-                    HStack(spacing: 2) {
-                        Text(item.emoji).font(.mlrScaled(12))
-                        if item.count > 1 {
-                            Text("\(item.count)")
-                                .font(.mlrScaled(11, weight: .semibold))
-                                .foregroundStyle(mine ? Color.mlrPrimary : Color.mlrTextMuted)
+        VStack(alignment: isOwn ? .trailing : .leading, spacing: 3) {
+            HStack(spacing: 4) {
+                ForEach(chatReactionCounts(message.reactions), id: \.emoji) { item in
+                    let mine = message.reactions.contains { $0.emoji == item.emoji && $0.userId == myUserId }
+                    let expanded = expandedReaction == item.emoji
+                    Button {
+                        withAnimation(.easeOut(duration: 0.15)) {
+                            expandedReaction = expanded ? nil : item.emoji
                         }
+                    } label: {
+                        HStack(spacing: 2) {
+                            Text(item.emoji).font(.mlrScaled(12))
+                            if item.count > 1 {
+                                Text("\(item.count)")
+                                    .font(.mlrScaled(11, weight: .semibold))
+                                    .foregroundStyle(mine ? Color.mlrPrimary : Color.mlrTextMuted)
+                            }
+                        }
+                        .padding(.horizontal, 7).padding(.vertical, 3)
+                        .background(mine ? Color.mlrPrimaryLight : Color.mlrCard)
+                        .clipShape(Capsule())
+                        .overlay(Capsule().stroke(expanded ? Color.mlrPrimary : (mine ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder), lineWidth: expanded ? 1.5 : 1))
                     }
-                    .padding(.horizontal, 7).padding(.vertical, 3)
-                    .background(mine ? Color.mlrPrimaryLight : Color.mlrCard)
-                    .clipShape(Capsule())
-                    .overlay(Capsule().stroke(mine ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder, lineWidth: 1))
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("See who reacted \(item.emoji)")
                 }
-                .buttonStyle(.plain)
+            }
+            if let expandedReaction {
+                let names = message.reactions.filter { $0.emoji == expandedReaction }.map { reactorName($0.userId) }
+                if !names.isEmpty {
+                    Text("\(expandedReaction) \(names.joined(separator: ", "))")
+                        .font(.mlrScaled(11))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .multilineTextAlignment(isOwn ? .trailing : .leading)
+                        .frame(maxWidth: 240, alignment: isOwn ? .trailing : .leading)
+                }
             }
         }
         .padding(.horizontal, 4)
