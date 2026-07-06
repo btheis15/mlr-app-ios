@@ -5,13 +5,12 @@ import SwiftUI
 // Add CaseIterable + Identifiable conformances and UI helpers here.
 
 extension BroadcastAudience: CaseIterable, Identifiable {
-    public static var allCases: [BroadcastAudience] { [.everyone, .beta, .admins] }
+    public static var allCases: [BroadcastAudience] { [.everyone, .admins] }
     public var id: String { rawValue }
 
     var label: String {
         switch self {
         case .everyone: return "Everyone"
-        case .beta:     return "Beta testers"
         case .admins:   return "Admins"
         }
     }
@@ -19,7 +18,6 @@ extension BroadcastAudience: CaseIterable, Identifiable {
     var icon: String {
         switch self {
         case .everyone: return "person.3.fill"
-        case .beta:     return "testtube.2"
         case .admins:   return "shield.fill"
         }
     }

@@ -35,7 +35,6 @@
 		D33F9E762FEC086700603CE7 /* MLRSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E232FEC086700603CE7 /* MLRSheet.swift */; };
 		D33F9E772FEC086700603CE7 /* SkeletonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E242FEC086700603CE7 /* SkeletonView.swift */; };
 		D33F9E782FEC086700603CE7 /* InstallPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E212FEC086700603CE7 /* InstallPrompt.swift */; };
-		D33F9E792FEC086700603CE7 /* AdminMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4D2FEC086700603CE7 /* AdminMembersView.swift */; };
 		D33F9E7A2FEC086700603CE7 /* FestDinnersDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E342FEC086700603CE7 /* FestDinnersDetailView.swift */; };
 		D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E3B2FEC086700603CE7 /* FestStatus.swift */; };
 		D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E3F2FEC086700603CE7 /* LightboxView.swift */; };
@@ -134,11 +133,6 @@
 		D33F9F1A2FF8457100603CE7 /* HousesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F192FF8457100603CE7 /* HousesService.swift */; };
 		D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F1B2FF846D300603CE7 /* WorkItemDetailSheet.swift */; };
 		D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F1E2FF8475E00603CE7 /* HouseChatView.swift */; };
-		D3A0000000000000000000B1 /* HouseStay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A1 /* HouseStay.swift */; };
-		D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A2 /* HouseCalendarView.swift */; };
-		D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A3 /* HouseCalendarSheets.swift */; };
-		D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A4 /* HouseStayComposer.swift */; };
-		D3A0000000000000000000B5 /* HouseHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A5 /* HouseHubView.swift */; };
 		D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */; };
 		D33F9F232FF84B0500603CE7 /* WorkItemIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */; };
 		D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F242FF84C1C00603CE7 /* AppEntities.swift */; };
@@ -150,6 +144,11 @@
 		D3533C132FE9EC60001AD887 /* Storage in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C122FE9EC60001AD887 /* Storage */; };
 		D3533C152FE9EC60001AD887 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C142FE9EC60001AD887 /* Supabase */; };
 		D3533C182FE9EC81001AD887 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C172FE9EC81001AD887 /* Kingfisher */; };
+		D3A0000000000000000000B1 /* HouseStay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A1 /* HouseStay.swift */; };
+		D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A2 /* HouseCalendarView.swift */; };
+		D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A3 /* HouseCalendarSheets.swift */; };
+		D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A4 /* HouseStayComposer.swift */; };
+		D3A0000000000000000000B5 /* HouseHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A5 /* HouseHubView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -263,7 +262,6 @@
 		D33F9E492FEC086700603CE7 /* UpcomingEventCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpcomingEventCard.swift; sourceTree = "<group>"; };
 		D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminAlertComposer.swift; sourceTree = "<group>"; };
 		D33F9E4C2FEC086700603CE7 /* AdminCabinBookings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCabinBookings.swift; sourceTree = "<group>"; };
-		D33F9E4D2FEC086700603CE7 /* AdminMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminMembersView.swift; sourceTree = "<group>"; };
 		D33F9E4E2FEC086700603CE7 /* AdminModerationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminModerationView.swift; sourceTree = "<group>"; };
 		D33F9E4F2FEC086700603CE7 /* AdminNotificationComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminNotificationComposer.swift; sourceTree = "<group>"; };
 		D33F9E502FEC086700603CE7 /* AdminSignInsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminSignInsView.swift; sourceTree = "<group>"; };
@@ -299,15 +297,15 @@
 		D33F9F192FF8457100603CE7 /* HousesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HousesService.swift; sourceTree = "<group>"; };
 		D33F9F1B2FF846D300603CE7 /* WorkItemDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemDetailSheet.swift; sourceTree = "<group>"; };
 		D33F9F1E2FF8475E00603CE7 /* HouseChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseChatView.swift; sourceTree = "<group>"; };
+		D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminHousesView.swift; sourceTree = "<group>"; };
+		D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemIntents.swift; sourceTree = "<group>"; };
+		D33F9F242FF84C1C00603CE7 /* AppEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntities.swift; sourceTree = "<group>"; };
+		D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseIntents.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A1 /* HouseStay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStay.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A2 /* HouseCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarView.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A3 /* HouseCalendarSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarSheets.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A4 /* HouseStayComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStayComposer.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A5 /* HouseHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseHubView.swift; sourceTree = "<group>"; };
-		D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminHousesView.swift; sourceTree = "<group>"; };
-		D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemIntents.swift; sourceTree = "<group>"; };
-		D33F9F242FF84C1C00603CE7 /* AppEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntities.swift; sourceTree = "<group>"; };
-		D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseIntents.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -630,7 +628,6 @@
 			children = (
 				D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */,
 				D33F9E4C2FEC086700603CE7 /* AdminCabinBookings.swift */,
-				D33F9E4D2FEC086700603CE7 /* AdminMembersView.swift */,
 				D33F9E4E2FEC086700603CE7 /* AdminModerationView.swift */,
 				D33F9E4F2FEC086700603CE7 /* AdminNotificationComposer.swift */,
 				D33F9E502FEC086700603CE7 /* AdminSignInsView.swift */,
@@ -897,7 +894,6 @@
 				D33F9ED22FF3172100603CE7 /* WorkItemsService.swift in Sources */,
 				D33F9E772FEC086700603CE7 /* SkeletonView.swift in Sources */,
 				D33F9E782FEC086700603CE7 /* InstallPrompt.swift in Sources */,
-				D33F9E792FEC086700603CE7 /* AdminMembersView.swift in Sources */,
 				D33F9E7A2FEC086700603CE7 /* FestDinnersDetailView.swift in Sources */,
 				D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */,
 				D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */,

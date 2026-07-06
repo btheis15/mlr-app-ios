@@ -292,6 +292,5 @@ private struct NotifRow: Decodable {
 
 enum BroadcastAudience: String {
     case everyone = "everyone"
-    case beta
     case admins
 }

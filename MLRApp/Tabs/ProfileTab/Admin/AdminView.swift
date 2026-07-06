@@ -7,14 +7,8 @@ struct AdminView: View {
     var body: some View {
         List {
             Section("Members & Access") {
-                adminLink(
-                    destination: AdminMembersView(),
-                    icon: "person.2.fill",
-                    iconColor: Color.mlrPrimary,
-                    title: "Members",
-                    description: "Manage accounts, admin & beta roles"
-                )
-
+                // Per-member admin actions (make admin, assign house, remove) now live on
+                // each member's profile in the People tab — no separate Members list.
                 adminLink(
                     destination: AdminHousesView(),
                     icon: "house.fill",
@@ -56,7 +50,7 @@ struct AdminView: View {
                     icon: "bell.badge.fill",
                     iconColor: Color.mlrPrimary,
                     title: "Send Notification",
-                    description: "Broadcast to members or beta testers"
+                    description: "Broadcast to everyone or just admins"
                 )
             }
 

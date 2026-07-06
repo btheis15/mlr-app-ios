@@ -3,7 +3,7 @@ import SwiftUI
 // MARK: - AdminHousesView
 //
 // Admin management for Houses (migration 0064): create, rename, re-emoji, and
-// delete houses. Member assignment lives in AdminMembersView ("Assign house").
+// delete houses. Member assignment lives on each member's profile (People tab).
 // Deleting a house un-assigns its members (their MLR access is unaffected) and
 // removes its house-only chat + work items.
 
@@ -68,7 +68,7 @@ struct AdminHousesView: View {
                         .foregroundStyle(Color.mlrTextMuted)
                 }
             } footer: {
-                Text("A house is a private group with its own chat and work items. Assign members in Members → Assign house.")
+                Text("A house is a private group with its own chat and work items. Assign members from each person's profile in the People tab.")
             }
         }
         .navigationTitle("Houses")

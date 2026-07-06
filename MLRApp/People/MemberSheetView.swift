@@ -34,6 +34,12 @@ struct MemberSheetView: View {
                     paymentSection
                     birthdaySection
 
+                    // Admin controls (make/remove admin, assign house, remove member) —
+                    // admins only, and not on your own row. Replaces the old Admin → Members tab.
+                    if env.isAdmin && !isOwnProfile {
+                        MemberAdminCard(member: member) { dismiss() }
+                    }
+
                     if isOwnProfile {
                         NavigationLink {
                             // Profile editing lives in the Profile tab; this is the entry point.
@@ -339,6 +345,128 @@ struct MemberSheetView: View {
         let outFmt = DateFormatter()
         outFmt.dateFormat = "MMMM d"
         return outFmt.string(from: date)
+    }
+}
+
+// MARK: - MemberAdminCard
+// Admin-only controls on a member's profile sheet: promote/demote admin, assign
+// a house, and remove the account. Moved here from the old Admin → Members tab so
+// there's a single member list (People). All gated server-side by the RPCs.
+
+private struct MemberAdminCard: View {
+    @Environment(AppEnvironment.self) private var env
+
+    let member: Profile
+    var onRemoved: () -> Void
+
+    @State private var isAdmin: Bool
+    @State private var houseId: UUID?
+    @State private var working = false
+    @State private var errorText: String?
+    @State private var showRemove = false
+
+    init(member: Profile, onRemoved: @escaping () -> Void) {
+        self.member = member
+        self.onRemoved = onRemoved
+        _isAdmin = State(initialValue: member.isAdmin)
+        _houseId = State(initialValue: member.houseId)
+    }
+
+    private var houseName: String? {
+        env.housesService.houses.first { $0.id == houseId }?.name
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            SectionLabel(text: "Admin")
+            VStack(spacing: 0) {
+                Button { Task { await toggleAdmin() } } label: {
+                    row(isAdmin ? "Remove admin" : "Make admin",
+                        icon: isAdmin ? "shield.slash.fill" : "shield.fill")
+                }
+                .buttonStyle(.plain)
+                .disabled(working)
+
+                Divider().padding(.leading, 44)
+
+                Menu {
+                    Button { Task { await setHouse(nil) } } label: {
+                        Label("No house", systemImage: houseId == nil ? "checkmark" : "")
+                    }
+                    ForEach(env.housesService.houses) { h in
+                        Button { Task { await setHouse(h.id) } } label: {
+                            Label("\(h.emoji) \(h.name)", systemImage: houseId == h.id ? "checkmark" : "")
+                        }
+                    }
+                } label: {
+                    row(houseName.map { "House · \($0)" } ?? "Assign house", icon: "house.fill")
+                }
+                .disabled(working)
+
+                Divider().padding(.leading, 44)
+
+                Button(role: .destructive) { showRemove = true } label: {
+                    row("Remove member", icon: "trash.fill", tint: Color.mlrDanger)
+                }
+                .buttonStyle(.plain)
+                .disabled(working)
+            }
+            if let errorText {
+                Text(errorText).font(.mlrCaption).foregroundStyle(Color.mlrDanger)
+            }
+        }
+        .padding(16)
+        .cardStyle()
+        .task { if env.housesService.houses.isEmpty { await env.housesService.fetchHouses() } }
+        .alert("Remove member?", isPresented: $showRemove) {
+            Button("Remove \(member.name)", role: .destructive) { Task { await remove() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This permanently removes \(member.name)'s account and all their data. This can't be undone.")
+        }
+    }
+
+    private func row(_ title: String, icon: String, tint: Color = Color.mlrPrimary) -> some View {
+        HStack(spacing: 12) {
+            Image(systemName: icon)
+                .font(.mlrScaled(15))
+                .foregroundStyle(tint)
+                .frame(width: 24)
+            Text(title)
+                .font(.mlrScaled(15, weight: .medium))
+                .foregroundStyle(tint == Color.mlrDanger ? Color.mlrDanger : Color.mlrText)
+            Spacer()
+        }
+        .padding(.vertical, 11)
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Actions (server-gated RPCs)
+
+    private func toggleAdmin() async {
+        let newValue = !isAdmin
+        working = true; errorText = nil; defer { working = false }
+        do {
+            struct P: Encodable { let target: String; let value: Bool }
+            try await supabase.rpc("set_admin", params: P(target: member.id.uuidString, value: newValue)).execute()
+            isAdmin = newValue
+        } catch { errorText = "Couldn't update admin role." }
+    }
+
+    private func setHouse(_ hid: UUID?) async {
+        working = true; errorText = nil; defer { working = false }
+        do {
+            try await env.housesService.setMemberHouse(target: member.id, houseId: hid)
+            houseId = hid
+        } catch { errorText = "Couldn't update house." }
+    }
+
+    private func remove() async {
+        working = true; errorText = nil; defer { working = false }
+        do {
+            try await supabase.rpc("delete_member", params: ["target": member.id.uuidString]).execute()
+            onRemoved()
+        } catch { errorText = "Couldn't remove member." }
     }
 }
 
