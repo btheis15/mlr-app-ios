@@ -26,11 +26,16 @@ struct PushToggleView: View {
         Form {
             // Explanation
             Section {
-                Text("Push notifications work on iOS when the app is added to your Home Screen.")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.mlrTextMuted)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Push notifications alert this device even when the app is closed.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.mlrTextMuted)
+                    Text("Pick exactly what buzzes your phone below. The in-app bell — the notifications list you see inside the app — is set separately under “Activity notifications.”")
+                        .font(.caption)
+                        .foregroundStyle(Color.mlrTextSubtle)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             }
 
             // Master toggle
@@ -86,25 +91,29 @@ struct PushToggleView: View {
 
             // Granular toggles (only when master is on)
             if masterEnabled && permissionStatus == .authorized {
-                Section("Notify me about…") {
-                    pushToggle(for: .alerts,    label: "Announcements & alerts",  icon: "megaphone.fill")
-                    pushToggle(for: .birthdays, label: "Birthdays",                icon: "birthday.cake.fill")
-                    pushToggle(for: .chat,      label: "Chat messages",            icon: "bubble.left.fill")
-                    pushToggle(for: .postTag,   label: "Tagged in a post",         icon: "tag.fill")
-                    pushToggle(for: .postMention, label: "Post @mentions",         icon: "at")
-                    pushToggle(for: .postReply, label: "Replies on posts",         icon: "arrowshape.turn.up.left.fill")
-                    pushToggle(for: .eventRsvp, label: "Event RSVPs",              icon: "calendar.badge.checkmark")
-                    pushToggle(for: .cabinDecision, label: "Cabin stay decisions", icon: "house.lodge.fill")
-                    pushToggle(for: .committeeJoin, label: "Committee joins",      icon: "person.badge.plus")
-                    pushToggle(for: .helpRequest,  label: "Help requests",         icon: "hand.raised.fill")
-                    pushToggle(for: .helpResponse, label: "Help responses",        icon: "figure.walk")
-                    pushToggle(for: .workItemCreated, label: "New work items",     icon: "wrench.and.screwdriver.fill")
-                    pushToggle(for: .houseStayCreated, label: "New house stays",    icon: "house.fill")
+                Section {
+                    pushToggle(for: .alerts,    label: "Announcements & alerts",  desc: "Resort-wide announcements from admins", icon: "megaphone.fill")
+                    pushToggle(for: .birthdays, label: "Birthdays",                desc: "A heads-up on members' birthdays", icon: "birthday.cake.fill")
+                    pushToggle(for: .chat,      label: "Chat messages",            desc: "New messages in your committee and house chats", icon: "bubble.left.fill")
+                    pushToggle(for: .postTag,   label: "Tagged in a post",         desc: "When someone tags you in a feed post", icon: "tag.fill")
+                    pushToggle(for: .postMention, label: "Post @mentions",         desc: "When someone @mentions you in a comment", icon: "at")
+                    pushToggle(for: .postReply, label: "Replies on posts",         desc: "Replies to your posts and comments", icon: "arrowshape.turn.up.left.fill")
+                    pushToggle(for: .eventRsvp, label: "Event RSVPs",              desc: "When someone RSVPs to an event you created", icon: "calendar.badge.checkmark")
+                    pushToggle(for: .cabinDecision, label: "Cabin stay decisions", desc: "When your cabin request is approved or declined", icon: "house.lodge.fill")
+                    pushToggle(for: .committeeJoin, label: "Committee joins",      desc: "When someone joins a committee you lead", icon: "person.badge.plus")
+                    pushToggle(for: .helpRequest,  label: "Help requests",         desc: "Nearby “Ask for Help” requests", icon: "hand.raised.fill")
+                    pushToggle(for: .helpResponse, label: "Help responses",        desc: "When someone's on their way to help you", icon: "figure.walk")
+                    pushToggle(for: .workItemCreated, label: "New work items",     desc: "When a new work item is added", icon: "wrench.and.screwdriver.fill")
+                    pushToggle(for: .houseStayCreated, label: "New house stays",    desc: "New stays added to your house calendar", icon: "house.fill")
 
                     if env.isAdmin {
-                        pushToggle(for: .committeeJoinRequest, label: "Committee join requests (admin)", icon: "person.badge.clock")
+                        pushToggle(for: .committeeJoinRequest, label: "Committee join requests", desc: "Admins only: when a member asks to join a committee", icon: "person.badge.clock")
                         newMemberToggle
                     }
+                } header: {
+                    Text("Notify me about…")
+                } footer: {
+                    Text("These apply only while Push Notifications is on. Urgent “Ask for Help” emergencies always come through as long as push is on.")
                 }
             }
         }
@@ -134,7 +143,7 @@ struct PushToggleView: View {
 
     // MARK: - Push type toggle
 
-    private func pushToggle(for type: PushType, label: String, icon: String) -> some View {
+    private func pushToggle(for type: PushType, label: String, desc: String, icon: String) -> some View {
         Toggle(isOn: Binding(
             get: { enabledTypes.contains(type) },
             set: { enabled in
@@ -144,8 +153,13 @@ struct PushToggleView: View {
             }
         )) {
             Label {
-                Text(label)
-                    .font(.mlrScaled(15))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(label)
+                        .font(.mlrScaled(15))
+                    Text(desc)
+                        .font(.caption)
+                        .foregroundStyle(Color.mlrTextMuted)
+                }
             } icon: {
                 Image(systemName: icon)
                     .foregroundStyle(Color.mlrPrimary)

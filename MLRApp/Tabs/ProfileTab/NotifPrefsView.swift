@@ -18,11 +18,16 @@ struct NotifPrefsView: View {
     var body: some View {
         Form {
             Section {
-                Text("Choose which activities send you an in-app notification. These controls are independent of push notifications.")
-                    .font(.subheadline)
-                    .foregroundStyle(Color.mlrTextMuted)
-                    .listRowBackground(Color.clear)
-                    .listRowInsets(EdgeInsets())
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("These control the in-app bell — the notifications list you see inside the app.")
+                        .font(.subheadline)
+                        .foregroundStyle(Color.mlrTextMuted)
+                    Text("They're separate from Push notifications, which alert your phone even when the app is closed.")
+                        .font(.caption)
+                        .foregroundStyle(Color.mlrTextSubtle)
+                }
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
             }
 
             // Your activity
