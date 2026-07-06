@@ -296,7 +296,8 @@ final class CommitteeService {
             .select("""
                 id, committee_id, author_id, text, edited_at, deleted_at, created_at, area,
                 profiles!author_id(display_name, avatar_url),
-                committee_message_media(storage_path, media_type, width, height, file_name, position)
+                committee_message_media(storage_path, media_type, width, height, file_name, position),
+                committee_message_reactions(user_id, emoji)
             """)
             .eq("committee_id", value: committeeId.uuidString)
         // nil area = the General channel (area IS NULL); else the role channel.
@@ -366,6 +367,33 @@ final class CommitteeService {
             .execute()
     }
 
+    /// Toggle the caller's tapback on a message: tapping the same emoji removes
+    /// it, a different one replaces it (one reaction per member per message).
+    func toggleReaction(messageId: UUID, emoji: String, userId: UUID) async {
+        struct Row: Decodable { let emoji: String }
+        let existing: [Row] = (try? await supabase
+            .from("committee_message_reactions")
+            .select("emoji")
+            .eq("message_id", value: messageId.uuidString)
+            .eq("user_id", value: userId.uuidString)
+            .limit(1).execute().value) ?? []
+        do {
+            if existing.first?.emoji == emoji {
+                try await supabase.from("committee_message_reactions").delete()
+                    .eq("message_id", value: messageId.uuidString)
+                    .eq("user_id", value: userId.uuidString)
+                    .execute()
+            } else {
+                try await supabase.from("committee_message_reactions").upsert(
+                    ["message_id": messageId.uuidString, "user_id": userId.uuidString, "emoji": emoji],
+                    onConflict: "message_id,user_id"
+                ).execute()
+            }
+        } catch {
+            print("[CommitteeChat] toggleReaction error: \(error)")
+        }
+    }
+
     // MARK: - Realtime for messages
 
     /// Subscribe to live message inserts/updates in a committee chat room.
@@ -374,7 +402,8 @@ final class CommitteeService {
         committeeId: UUID,
         area: String? = nil,
         onInsert: @escaping (CommitteeChatMessage) -> Void,
-        onUpdate: @escaping (CommitteeChatMessage) -> Void
+        onUpdate: @escaping (CommitteeChatMessage) -> Void,
+        onReactionsChanged: @escaping () -> Void = {}
     ) {
         let key = channelKey(committeeId, area)
         guard messageChannels[key] == nil else { return }
@@ -420,6 +449,15 @@ final class CommitteeService {
                         if isInsert { onInsert(msg) } else { onUpdate(msg) }
                     }
                 }
+            }
+            // Reactions live on their own table (no committee column to filter on),
+            // so listen table-wide and let the view reconcile with a light refetch.
+            channel.onPostgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "committee_message_reactions"
+            ) { _ in
+                Task { @MainActor in onReactionsChanged() }
             }
             await channel.subscribe()
         }
@@ -662,6 +700,7 @@ private struct CommitteeChatRow: Decodable {
     let area: String?
     let profiles: AuthorInfo?
     let media: [ChatMedia]?
+    let reactions: [ChatReaction]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -674,6 +713,7 @@ private struct CommitteeChatRow: Decodable {
         case area
         case profiles
         case media = "committee_message_media"
+        case reactions = "committee_message_reactions"
     }
 
     struct AuthorInfo: Decodable {
@@ -697,7 +737,8 @@ private struct CommitteeChatRow: Decodable {
             deletedAt: deletedAt,
             createdAt: createdAt,
             area: area,
-            media: (media ?? []).sorted { $0.position < $1.position }
+            media: (media ?? []).sorted { $0.position < $1.position },
+            reactions: reactions ?? []
         )
     }
 }

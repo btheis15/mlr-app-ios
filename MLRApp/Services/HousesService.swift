@@ -91,7 +91,8 @@ final class HousesService {
             .select("""
                 id, house_id, author_id, text, edited_at, deleted_at, created_at,
                 profiles!author_id(display_name, avatar_url),
-                house_message_media(storage_path, media_type, width, height, file_name, position)
+                house_message_media(storage_path, media_type, width, height, file_name, position),
+                house_message_reactions(user_id, emoji)
             """)
             .eq("house_id", value: houseId.uuidString)
             .order("created_at", ascending: true)
@@ -149,6 +150,32 @@ final class HousesService {
             .update(["deleted_at": AnyJSON.string(now)])
             .eq("id", value: messageId.uuidString)
             .execute()
+    }
+
+    /// Toggle the caller's tapback on a house message (one per member per message).
+    func toggleReaction(messageId: UUID, emoji: String, userId: UUID) async {
+        struct Row: Decodable { let emoji: String }
+        let existing: [Row] = (try? await supabase
+            .from("house_message_reactions")
+            .select("emoji")
+            .eq("message_id", value: messageId.uuidString)
+            .eq("user_id", value: userId.uuidString)
+            .limit(1).execute().value) ?? []
+        do {
+            if existing.first?.emoji == emoji {
+                try await supabase.from("house_message_reactions").delete()
+                    .eq("message_id", value: messageId.uuidString)
+                    .eq("user_id", value: userId.uuidString)
+                    .execute()
+            } else {
+                try await supabase.from("house_message_reactions").upsert(
+                    ["message_id": messageId.uuidString, "user_id": userId.uuidString, "emoji": emoji],
+                    onConflict: "message_id,user_id"
+                ).execute()
+            }
+        } catch {
+            print("[HouseChat] toggleReaction error: \(error)")
+        }
     }
 
     // MARK: - Read state (unread badge)
@@ -218,7 +245,8 @@ final class HousesService {
     func subscribeToMessages(
         houseId: UUID,
         onInsert: @escaping (HouseChatMessage) -> Void,
-        onUpdate: @escaping (HouseChatMessage) -> Void
+        onUpdate: @escaping (HouseChatMessage) -> Void,
+        onReactionsChanged: @escaping () -> Void = {}
     ) {
         guard messageChannels[houseId] == nil else { return }
         let channel = supabase.channel("house-chat-\(houseId.uuidString)")
@@ -258,6 +286,15 @@ final class HousesService {
                         if isInsert { onInsert(msg) } else { onUpdate(msg) }
                     }
                 }
+            }
+            // Reactions have no house column to filter on — listen table-wide and
+            // let the view reconcile with a light refetch.
+            channel.onPostgresChange(
+                AnyAction.self,
+                schema: "public",
+                table: "house_message_reactions"
+            ) { _ in
+                Task { @MainActor in onReactionsChanged() }
             }
             await channel.subscribe()
         }
@@ -489,6 +526,7 @@ private struct HouseChatRow: Decodable {
     let createdAt: Date
     let profiles: AuthorInfo?
     let media: [ChatMedia]?
+    let reactions: [ChatReaction]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -500,6 +538,7 @@ private struct HouseChatRow: Decodable {
         case createdAt = "created_at"
         case profiles
         case media = "house_message_media"
+        case reactions = "house_message_reactions"
     }
 
     struct AuthorInfo: Decodable {
@@ -522,7 +561,8 @@ private struct HouseChatRow: Decodable {
             editedAt: editedAt,
             deletedAt: deletedAt,
             createdAt: createdAt,
-            media: (media ?? []).sorted { $0.position < $1.position }
+            media: (media ?? []).sorted { $0.position < $1.position },
+            reactions: reactions ?? []
         )
     }
 }

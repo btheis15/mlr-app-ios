@@ -211,10 +211,12 @@ struct HouseChatView: View {
                             HouseMessageBubble(
                                 message: message,
                                 isOwn: message.authorId == env.currentProfile?.id,
+                                myUserId: env.currentProfile?.id,
                                 canEdit: canEdit(message),
                                 canDelete: canDelete(message),
                                 onEdit: { startEdit(message) },
-                                onDelete: { Task { await deleteMessage(message) } }
+                                onDelete: { Task { await deleteMessage(message) } },
+                                onReact: { emoji in Task { await react(message, emoji) } }
                             )
                             .id(message.id)
                         }
@@ -280,8 +282,32 @@ struct HouseChatView: View {
                 if let idx = messages.firstIndex(where: { $0.id == msg.id }) {
                     messages[idx] = msg
                 }
+            },
+            onReactionsChanged: {
+                Task {
+                    if let fresh = try? await env.housesService.fetchMessages(houseId: house.id) {
+                        messages = fresh
+                    }
+                }
             }
         )
+    }
+
+    /// Toggle my tapback on a message — optimistic local update, then persist.
+    private func react(_ message: HouseChatMessage, _ emoji: String) async {
+        guard let userId = env.currentProfile?.id else { return }
+        if let idx = messages.firstIndex(where: { $0.id == message.id }) {
+            var rs = messages[idx].reactions
+            if let mine = rs.firstIndex(where: { $0.userId == userId }) {
+                if rs[mine].emoji == emoji { rs.remove(at: mine) }
+                else { rs[mine] = ChatReaction(userId: userId, emoji: emoji) }
+            } else {
+                rs.append(ChatReaction(userId: userId, emoji: emoji))
+            }
+            messages[idx].reactions = rs
+        }
+        Haptics.tap()
+        await env.housesService.toggleReaction(messageId: message.id, emoji: emoji, userId: userId)
     }
 
     private func send(_ attachments: [ChatAttachment] = []) async {
@@ -352,10 +378,12 @@ struct HouseChatView: View {
 private struct HouseMessageBubble: View {
     let message: HouseChatMessage
     let isOwn: Bool
+    var myUserId: UUID? = nil
     let canEdit: Bool
     let canDelete: Bool
     let onEdit: () -> Void
     let onDelete: () -> Void
+    var onReact: (String) -> Void = { _ in }
 
     var body: some View {
         HStack {
@@ -368,10 +396,38 @@ private struct HouseMessageBubble: View {
                         .padding(.horizontal, 4)
                 }
                 bubble
+                if !message.reactions.isEmpty {
+                    reactionPills
+                }
             }
             if !isOwn { Spacer(minLength: 50) }
         }
         .padding(.horizontal, 14)
+    }
+
+    /// Tapback count pills under the bubble; tap one to toggle your own reaction.
+    private var reactionPills: some View {
+        HStack(spacing: 4) {
+            ForEach(chatReactionCounts(message.reactions), id: \.emoji) { item in
+                let mine = message.reactions.contains { $0.emoji == item.emoji && $0.userId == myUserId }
+                Button { onReact(item.emoji) } label: {
+                    HStack(spacing: 2) {
+                        Text(item.emoji).font(.mlrScaled(12))
+                        if item.count > 1 {
+                            Text("\(item.count)")
+                                .font(.mlrScaled(11, weight: .semibold))
+                                .foregroundStyle(mine ? Color.mlrPrimary : Color.mlrTextMuted)
+                        }
+                    }
+                    .padding(.horizontal, 7).padding(.vertical, 3)
+                    .background(mine ? Color.mlrPrimaryLight : Color.mlrCard)
+                    .clipShape(Capsule())
+                    .overlay(Capsule().stroke(mine ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder, lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+            }
+        }
+        .padding(.horizontal, 4)
     }
 
     @ViewBuilder
@@ -414,6 +470,15 @@ private struct HouseMessageBubble: View {
                 }
             }
             .contextMenu {
+                // Palette style renders the emoji as a single horizontal tapback
+                // bar (iMessage-like); the current reaction shows selected.
+                Picker("React", selection: Binding(
+                    get: { message.reactions.first { $0.userId == myUserId }?.emoji ?? "" },
+                    set: { onReact($0) }
+                )) {
+                    ForEach(chatReactionEmojis, id: \.self) { Text($0).tag($0) }
+                }
+                .pickerStyle(.palette)
                 if canEdit {
                     Button { onEdit() } label: { Label("Edit", systemImage: "pencil") }
                 }

@@ -194,6 +194,8 @@ struct CommitteeChatMessage: Codable, Identifiable, Equatable {
     /// Attachments (photos/videos/files). Set from the embedded media rows in the
     /// service, not decoded here — so it's excluded from CodingKeys below.
     var media: [ChatMedia] = []
+    /// Tapback reactions. Set from the embedded reaction rows in the service.
+    var reactions: [ChatReaction] = []
 
     enum CodingKeys: String, CodingKey {
         case id

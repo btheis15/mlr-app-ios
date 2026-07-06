@@ -49,6 +49,37 @@ struct ChatMedia: Identifiable, Equatable, Hashable, Decodable {
     }
 }
 
+// MARK: - ChatReaction
+//
+// An iMessage-style tapback on a chat message: one emoji per member per message
+// (the tables have PK (message_id, user_id)). Decoded from the embedded
+// *_message_reactions rows. The pickable set mirrors the web app.
+
+let chatReactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "🎉"]
+
+struct ChatReaction: Identifiable, Equatable, Hashable, Decodable {
+    let userId: UUID
+    let emoji: String
+
+    var id: String { "\(userId.uuidString)|\(emoji)" }
+
+    enum CodingKeys: String, CodingKey {
+        case userId = "user_id"
+        case emoji
+    }
+}
+
+/// Group reactions into (emoji, count) in first-seen order — drives the pills.
+func chatReactionCounts(_ reactions: [ChatReaction]) -> [(emoji: String, count: Int)] {
+    var order: [String] = []
+    var counts: [String: Int] = [:]
+    for r in reactions {
+        if counts[r.emoji] == nil { order.append(r.emoji) }
+        counts[r.emoji, default: 0] += 1
+    }
+    return order.map { (emoji: $0, count: counts[$0] ?? 0) }
+}
+
 // Build media-row inserts for a chat message's attachments — the shared shape
 // for both committee_message_media and house_message_media.
 func chatMediaRows(messageId: UUID, media: [ChatMedia]) -> [[String: AnyJSON]] {
