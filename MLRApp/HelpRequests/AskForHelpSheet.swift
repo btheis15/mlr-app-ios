@@ -1,19 +1,9 @@
 import SwiftUI
-import CoreLocation
 import FoundationModels
-import TipKit
-
-// MARK: - Tips
-
-struct PinLocationTip: Tip {
-    var title: Text { Text("Pin where you need help") }
-    var message: Text? { Text("Attach your exact spot so helpers can find you fast.") }
-    var image: Image? { Image(systemName: "mappin.and.ellipse") }
-}
 
 // MARK: - AskForHelpSheet
 // Compose an Ask-for-Help request: category, what (140 max), how many people,
-// where + optional GPS pin, optional scheduled time, "notify everyone willing"
+// where (free text), optional scheduled time, "notify everyone willing"
 // escape hatch. Submits via helpService.requestHelp (event targeting is
 // resolved inside the service via helpTargeting()).
 
@@ -33,12 +23,9 @@ struct AskForHelpSheet: View {
     @State private var linkedWorkItem: WorkItem?
     @State private var showTaskPicker = false
 
-    @State private var pinnedCoordinate: CLLocationCoordinate2D?
     @State private var isSubmitting = false
     @State private var submitError: String?
     @State private var suggesting = false
-
-    @State private var locationManager = LocationPinManager()
 
     private var aiAvailable: Bool {
         if case .available = SystemLanguageModel.default.availability { return true }
@@ -89,9 +76,6 @@ struct AskForHelpSheet: View {
                             .disabled(!canSubmit)
                     }
                 }
-            }
-            .onChange(of: locationManager.coordinate) { _, coord in
-                if let coord { pinnedCoordinate = coord }
             }
             .task {
                 if env.workItemsService.items.isEmpty {
@@ -219,34 +203,6 @@ struct AskForHelpSheet: View {
             SectionLabel(text: "Where? (optional)")
             TextField("e.g. Cabin 3, the dock, the pavilion", text: $whereText)
                 .fieldStyle()
-
-            Button {
-                locationManager.requestPin()
-            } label: {
-                HStack {
-                    Image(systemName: pinnedCoordinate != nil ? "mappin.circle.fill" : "location.fill")
-                    Text(pinnedCoordinate != nil ? "Location pinned" : "Pin my location")
-                    Spacer()
-                    if locationManager.isLocating {
-                        ProgressView()
-                    }
-                }
-                .font(.mlrScaled(14, weight: .semibold))
-                .foregroundStyle(pinnedCoordinate != nil ? Color.mlrSuccess : Color.mlrFest)
-                .padding(.horizontal, 14)
-                .padding(.vertical, 11)
-                .frame(maxWidth: .infinity)
-                .background((pinnedCoordinate != nil ? Color.mlrSuccess : Color.mlrFest).opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.plain)
-            .popoverTip(PinLocationTip())
-
-            if let error = locationManager.errorMessage {
-                Text(error)
-                    .font(.mlrCaption)
-                    .foregroundStyle(Color.mlrTextMuted)
-            }
         }
     }
 
@@ -395,8 +351,8 @@ struct AskForHelpSheet: View {
                 what: what.trimmingCharacters(in: .whitespacesAndNewlines),
                 neededCount: neededCount,
                 whereDescription: trimmedWhere.isEmpty ? nil : trimmedWhere,
-                latitude: pinnedCoordinate?.latitude,
-                longitude: pinnedCoordinate?.longitude,
+                latitude: nil,
+                longitude: nil,
                 scheduledFor: hasSchedule ? scheduledFor : nil,
                 notifyAll: notifyAll,
                 items: bringItems,
@@ -420,66 +376,6 @@ struct HelpDraft {
     var category: String
     @Guide(description: "Zero to five short physical supplies the helper should bring")
     var items: [String]
-}
-
-// MARK: - Location Pin Manager
-
-@Observable
-final class LocationPinManager: NSObject, CLLocationManagerDelegate {
-    var coordinate: CLLocationCoordinate2D?
-    var isLocating = false
-    var errorMessage: String?
-
-    private let manager = CLLocationManager()
-
-    override init() {
-        super.init()
-        manager.delegate = self
-        manager.desiredAccuracy = kCLLocationAccuracyNearestTenMeters
-    }
-
-    func requestPin() {
-        errorMessage = nil
-        isLocating = true
-        let status = manager.authorizationStatus
-        switch status {
-        case .notDetermined:
-            manager.requestWhenInUseAuthorization()
-        case .authorizedWhenInUse, .authorizedAlways:
-            manager.requestLocation()
-        case .denied, .restricted:
-            isLocating = false
-            errorMessage = "Location access is off. Enable it in Settings to drop a pin."
-        @unknown default:
-            isLocating = false
-        }
-    }
-
-    // MARK: - Delegate
-
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
-        switch manager.authorizationStatus {
-        case .authorizedWhenInUse, .authorizedAlways:
-            if isLocating { manager.requestLocation() }
-        case .denied, .restricted:
-            isLocating = false
-            errorMessage = "Location access is off. Enable it in Settings to drop a pin."
-        default:
-            break
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
-        isLocating = false
-        if let loc = locations.last {
-            coordinate = loc.coordinate
-        }
-    }
-
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
-        isLocating = false
-        errorMessage = "Couldn't get your location. Try again or type where you are."
-    }
 }
 
 // MARK: - Work Item Picker
@@ -534,13 +430,5 @@ private struct WorkItemPickerSheet: View {
                 }
             }
         }
-    }
-}
-
-// MARK: - Coordinate equatable conformance for onChange
-
-extension CLLocationCoordinate2D: @retroactive Equatable {
-    public static func == (lhs: CLLocationCoordinate2D, rhs: CLLocationCoordinate2D) -> Bool {
-        lhs.latitude == rhs.latitude && lhs.longitude == rhs.longitude
     }
 }

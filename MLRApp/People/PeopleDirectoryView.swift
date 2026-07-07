@@ -115,7 +115,8 @@ struct PeopleDirectoryView: View {
                 .order("display_name", ascending: true)
                 .execute()
                 .value
-            members = rows
+            // Never list the App Review account (kept hidden from all members).
+            members = rows.filter { !ReviewAccess.isReviewEmail($0.email) }
         } catch {
             loadError = "Check your connection and try again."
             print("[PeopleDirectory] load error: \(error)")

@@ -1,6 +1,32 @@
 import Foundation
 import Supabase
 
+// MARK: - App Review access
+//
+// Apple's reviewer cannot receive our emailed one-time code, so a single
+// designated review account signs in with an embedded password instead of a
+// real OTP. When this email is used:
+//   • no code email is sent (no member is emailed or notified), and
+//   • the fixed `code` below is exchanged for a normal password session.
+// The account is also hidden from the People directory (see PeopleDirectoryView).
+//
+// SETUP: create this user in Supabase Auth with exactly `password` below, and a
+// `profiles` row with include_in_directory = false. Rotate the code/password or
+// delete the account after the app is approved.
+enum ReviewAccess {
+    /// The reviewer signs in with this email.
+    static let email = "appreview@muskellungelakeresort.com"
+    /// The fixed 8-digit "code" the reviewer types on the code screen.
+    static let code = "77341902"
+    /// Password of the Supabase review user (must match the dashboard).
+    static let password = "Mlr!Review-2026-x9Kp3qL"
+
+    /// True when `input` is the review account's email (case/space-insensitive).
+    static func isReviewEmail(_ input: String) -> Bool {
+        input.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == email
+    }
+}
+
 // MARK: - AuthService
 
 @Observable
@@ -53,6 +79,12 @@ final class AuthService {
         isLoading = true
         error = nil
         defer { isLoading = false }
+        // App Review account: send nothing (no email, no member notified) and let
+        // the UI advance to the code screen where the fixed review code is entered.
+        if ReviewAccess.isReviewEmail(email) {
+            print("[AuthService] review account — skipping OTP email")
+            return
+        }
         do {
             try await supabase.auth.signInWithOTP(
                 email: email,
@@ -72,6 +104,23 @@ final class AuthService {
         error = nil
         defer { isLoading = false }
         print("[AuthService] verifyOTP called — email: \(email), token length: \(token.count)")
+        // App Review bypass: exchange the fixed review code for a password session.
+        if ReviewAccess.isReviewEmail(email) {
+            guard token == ReviewAccess.code else {
+                self.error = "Code invalid or expired — tap Resend to get a new one."
+                return
+            }
+            do {
+                try await supabase.auth.signIn(email: ReviewAccess.email, password: ReviewAccess.password)
+                print("[AuthService] review account SUCCESS")
+                isSignedIn = true
+                showSignIn = false
+            } catch {
+                print("[AuthService] review account FAILED — raw: \(error)")
+                self.error = friendlyAuthError(error)
+            }
+            return
+        }
         do {
             try await supabase.auth.verifyOTP(
                 email: email,
