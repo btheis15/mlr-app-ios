@@ -36,6 +36,9 @@ struct MLRApp: App {
                         await env.pushService.registerIfAuthorized()
                         await env.pushService.reconcileToken()
                         await env.startNotificationsRealtime()
+                        // Feed resort content to Spotlight's semantic index so
+                        // Siri / Apple Intelligence can find it by natural language.
+                        Task { await ContentIndexer.reindexAll() }
                     }
                 }
                 .onChange(of: env.authService.isSignedIn) { _, signedIn in
@@ -45,7 +48,11 @@ struct MLRApp: App {
                             await env.pushService.registerIfAuthorized()
                             await env.pushService.reconcileToken()
                             await env.startNotificationsRealtime()
+                            await ContentIndexer.reindexAll()
                         }
+                    } else {
+                        // Signed out — pull all content back out of the index.
+                        ContentIndexer.clear()
                     }
                 }
                 // The APNs token arrives asynchronously after registration — save

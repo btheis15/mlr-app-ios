@@ -57,9 +57,13 @@ struct EventEntity: AppEntity, IndexedEntity {
     static var defaultQuery = EventEntityQuery()
 }
 
-struct EventEntityQuery: EntityQuery {
+struct EventEntityQuery: EntityStringQuery {
     func entities(for identifiers: [String]) async throws -> [EventEntity] {
         await Self.upcoming().filter { identifiers.contains($0.id) }
+    }
+    // Resolve an event by spoken name — "the 4th of July", "Family Fest".
+    func entities(matching string: String) async throws -> [EventEntity] {
+        await Self.upcoming().filter { $0.title.localizedCaseInsensitiveContains(string) }
     }
     func suggestedEntities() async throws -> [EventEntity] {
         await Self.upcoming()
@@ -89,9 +93,17 @@ struct CommitteeEntity: AppEntity, IndexedEntity {
     static var defaultQuery = CommitteeEntityQuery()
 }
 
-struct CommitteeEntityQuery: EntityQuery {
+struct CommitteeEntityQuery: EntityStringQuery {
     func entities(for identifiers: [String]) async throws -> [CommitteeEntity] {
         try await Self.all().filter { identifiers.contains($0.id) }
+    }
+    // Resolve a committee by spoken name — "games" → "Entertainment & Games",
+    // "meals" → "Meals", "family fest" → the Family Fest committee.
+    func entities(matching string: String) async throws -> [CommitteeEntity] {
+        let q = string.trimmingCharacters(in: .whitespaces)
+        return try await Self.all().filter {
+            $0.name.localizedCaseInsensitiveContains(q) || $0.id.localizedCaseInsensitiveContains(q)
+        }
     }
     func suggestedEntities() async throws -> [CommitteeEntity] {
         try await Self.all()

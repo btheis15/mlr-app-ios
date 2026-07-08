@@ -145,6 +145,20 @@
 		D3533C152FE9EC60001AD887 /* Supabase in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C142FE9EC60001AD887 /* Supabase */; };
 		D3533C182FE9EC81001AD887 /* Kingfisher in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C172FE9EC81001AD887 /* Kingfisher */; };
 		D363474A2FFD37F9001D52C8 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = D36347492FFD37F9001D52C8 /* PrivacyInfo.xcprivacy */; };
+		D363474C2FFDD8DC001D52C8 /* FestQueryIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363474B2FFDD8DC001D52C8 /* FestQueryIntents.swift */; };
+		D363474E2FFDD91D001D52C8 /* ResortQueryIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363474D2FFDD91D001D52C8 /* ResortQueryIntents.swift */; };
+		D36347502FFDD9C0001D52C8 /* FestEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363474F2FFDD9C0001D52C8 /* FestEntities.swift */; };
+		D36347522FFDD9CE001D52C8 /* MemberQueryIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347512FFDD9CE001D52C8 /* MemberQueryIntents.swift */; };
+		D36347542FFDDF3D001D52C8 /* ChatSearchIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347532FFDDF3D001D52C8 /* ChatSearchIntents.swift */; };
+		D36347562FFDDFA5001D52C8 /* ContentIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347552FFDDFA5001D52C8 /* ContentIndexer.swift */; };
+		D36347582FFDE088001D52C8 /* CommitteeActionIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347572FFDE088001D52C8 /* CommitteeActionIntents.swift */; };
+		D363475A2FFDE1CD001D52C8 /* SearchIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347592FFDE1CD001D52C8 /* SearchIntents.swift */; };
+		D363475C2FFDE656001D52C8 /* ResortLifeIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363475B2FFDE656001D52C8 /* ResortLifeIntents.swift */; };
+		D363475E2FFDE689001D52C8 /* PersonalIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363475D2FFDE689001D52C8 /* PersonalIntents.swift */; };
+		D36347602FFDE761001D52C8 /* WriteActionIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363475F2FFDE761001D52C8 /* WriteActionIntents.swift */; };
+		D36347622FFDED75001D52C8 /* PlaceIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347612FFDED75001D52C8 /* PlaceIntents.swift */; };
+		D36347642FFDED8A001D52C8 /* InfoIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347632FFDED8A001D52C8 /* InfoIntents.swift */; };
+		D36347662FFDEE12001D52C8 /* CabinIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347652FFDEE12001D52C8 /* CabinIntents.swift */; };
 		D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39BD8902FFC47C000B1E74D /* ChatMedia.swift */; };
 		D3A0000000000000000000B1 /* HouseStay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A1 /* HouseStay.swift */; };
 		D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A2 /* HouseCalendarView.swift */; };
@@ -304,6 +318,20 @@
 		D33F9F242FF84C1C00603CE7 /* AppEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntities.swift; sourceTree = "<group>"; };
 		D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseIntents.swift; sourceTree = "<group>"; };
 		D36347492FFD37F9001D52C8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = file; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D363474B2FFDD8DC001D52C8 /* FestQueryIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestQueryIntents.swift; sourceTree = "<group>"; };
+		D363474D2FFDD91D001D52C8 /* ResortQueryIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResortQueryIntents.swift; sourceTree = "<group>"; };
+		D363474F2FFDD9C0001D52C8 /* FestEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestEntities.swift; sourceTree = "<group>"; };
+		D36347512FFDD9CE001D52C8 /* MemberQueryIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberQueryIntents.swift; sourceTree = "<group>"; };
+		D36347532FFDDF3D001D52C8 /* ChatSearchIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSearchIntents.swift; sourceTree = "<group>"; };
+		D36347552FFDDFA5001D52C8 /* ContentIndexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentIndexer.swift; sourceTree = "<group>"; };
+		D36347572FFDE088001D52C8 /* CommitteeActionIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeActionIntents.swift; sourceTree = "<group>"; };
+		D36347592FFDE1CD001D52C8 /* SearchIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SearchIntents.swift; sourceTree = "<group>"; };
+		D363475B2FFDE656001D52C8 /* ResortLifeIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResortLifeIntents.swift; sourceTree = "<group>"; };
+		D363475D2FFDE689001D52C8 /* PersonalIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersonalIntents.swift; sourceTree = "<group>"; };
+		D363475F2FFDE761001D52C8 /* WriteActionIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WriteActionIntents.swift; sourceTree = "<group>"; };
+		D36347612FFDED75001D52C8 /* PlaceIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceIntents.swift; sourceTree = "<group>"; };
+		D36347632FFDED8A001D52C8 /* InfoIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoIntents.swift; sourceTree = "<group>"; };
+		D36347652FFDEE12001D52C8 /* CabinIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CabinIntents.swift; sourceTree = "<group>"; };
 		D39BD8902FFC47C000B1E74D /* ChatMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMedia.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A1 /* HouseStay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStay.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A2 /* HouseCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarView.swift; sourceTree = "<group>"; };
@@ -457,6 +485,19 @@
 				D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */,
 				D33F9F242FF84C1C00603CE7 /* AppEntities.swift */,
 				D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */,
+				D363474B2FFDD8DC001D52C8 /* FestQueryIntents.swift */,
+				D363474D2FFDD91D001D52C8 /* ResortQueryIntents.swift */,
+				D363474F2FFDD9C0001D52C8 /* FestEntities.swift */,
+				D36347512FFDD9CE001D52C8 /* MemberQueryIntents.swift */,
+				D36347532FFDDF3D001D52C8 /* ChatSearchIntents.swift */,
+				D36347572FFDE088001D52C8 /* CommitteeActionIntents.swift */,
+				D36347592FFDE1CD001D52C8 /* SearchIntents.swift */,
+				D363475B2FFDE656001D52C8 /* ResortLifeIntents.swift */,
+				D363475D2FFDE689001D52C8 /* PersonalIntents.swift */,
+				D363475F2FFDE761001D52C8 /* WriteActionIntents.swift */,
+				D36347612FFDED75001D52C8 /* PlaceIntents.swift */,
+				D36347632FFDED8A001D52C8 /* InfoIntents.swift */,
+				D36347652FFDEE12001D52C8 /* CabinIntents.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -499,6 +540,7 @@
 				D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */,
 				D33F9E0E2FEC086700603CE7 /* Payments.swift */,
 				D33F9E0F2FEC086700603CE7 /* SpotlightIndexer.swift */,
+				D36347552FFDDFA5001D52C8 /* ContentIndexer.swift */,
 			);
 			path = Native;
 			sourceTree = "<group>";
@@ -871,7 +913,9 @@
 				D33F9EEA2FF41A0A00603CE7 /* AppImagesAdminView.swift in Sources */,
 				D33F9ECA2FEC184500603CE7 /* FestActivityAttributes.swift in Sources */,
 				D33F9ECB2FEC184500603CE7 /* PulsingLiveDot.swift in Sources */,
+				D36347522FFDD9CE001D52C8 /* MemberQueryIntents.swift in Sources */,
 				D33F9ECC2FEC184500603CE7 /* SharedStore.swift in Sources */,
+				D36347622FFDED75001D52C8 /* PlaceIntents.swift in Sources */,
 				D33F9ED02FF3170900603CE7 /* WorkItem.swift in Sources */,
 				D33F9E612FEC086700603CE7 /* WelcomeIntroView.swift in Sources */,
 				D33F9E622FEC086700603CE7 /* EventsService.swift in Sources */,
@@ -883,6 +927,7 @@
 				D33F9E682FEC086700603CE7 /* MemberSheetView.swift in Sources */,
 				D33F9EE42FF4075B00603CE7 /* FestContentService.swift in Sources */,
 				D33F9E692FEC086700603CE7 /* EventWeatherBadge.swift in Sources */,
+				D36347502FFDD9C0001D52C8 /* FestEntities.swift in Sources */,
 				D33F9E6A2FEC086700603CE7 /* PeopleDirectoryView.swift in Sources */,
 				D33F9E6B2FEC086700603CE7 /* AttendanceControl.swift in Sources */,
 				D33F9E6C2FEC086700603CE7 /* HelpRequest.swift in Sources */,
@@ -900,13 +945,16 @@
 				D33F9E752FEC086700603CE7 /* PushToggleView.swift in Sources */,
 				D33F9E762FEC086700603CE7 /* MLRSheet.swift in Sources */,
 				D33F9ED22FF3172100603CE7 /* WorkItemsService.swift in Sources */,
+				D36347602FFDE761001D52C8 /* WriteActionIntents.swift in Sources */,
 				D33F9E772FEC086700603CE7 /* SkeletonView.swift in Sources */,
+				D363475E2FFDE689001D52C8 /* PersonalIntents.swift in Sources */,
 				D33F9E782FEC086700603CE7 /* InstallPrompt.swift in Sources */,
 				D33F9E7A2FEC086700603CE7 /* FestDinnersDetailView.swift in Sources */,
 				D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */,
 				D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */,
 				D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */,
 				D33F9E7D2FEC086700603CE7 /* FestDinnersView.swift in Sources */,
+				D363475C2FFDE656001D52C8 /* ResortLifeIntents.swift in Sources */,
 				D33F9E7E2FEC086700603CE7 /* FestCountdownIntent.swift in Sources */,
 				D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */,
 				D3A0000000000000000000B1 /* HouseStay.swift in Sources */,
@@ -952,6 +1000,7 @@
 				D33F9E9D2FEC086700603CE7 /* NextEventIntent.swift in Sources */,
 				D33F9E9E2FEC086700603CE7 /* CabinService.swift in Sources */,
 				D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */,
+				D36347582FFDE088001D52C8 /* CommitteeActionIntents.swift in Sources */,
 				D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */,
 				D33F9EA02FEC086700603CE7 /* AdminNotificationComposer.swift in Sources */,
 				D33F9EA22FEC086700603CE7 /* NotifPrefsView.swift in Sources */,
@@ -967,16 +1016,20 @@
 				D33F9EAC2FEC086700603CE7 /* AskForHelpIntent.swift in Sources */,
 				D33F9EAD2FEC086700603CE7 /* Notification.swift in Sources */,
 				D33F9EAE2FEC086700603CE7 /* MessageComposer.swift in Sources */,
+				D36347662FFDEE12001D52C8 /* CabinIntents.swift in Sources */,
 				D33F9EDB2FF319D600603CE7 /* CommitteeEmailComposer.swift in Sources */,
 				D33F9EAF2FEC086700603CE7 /* FestOverviewView.swift in Sources */,
 				D33F9EE02FF3FC7500603CE7 /* HelpView.swift in Sources */,
 				D33F9EB02FEC086700603CE7 /* UpcomingEventCard.swift in Sources */,
 				D33F9EB12FEC086700603CE7 /* HapticsAndShare.swift in Sources */,
+				D363475A2FFDE1CD001D52C8 /* SearchIntents.swift in Sources */,
 				D33F9EB22FEC086700603CE7 /* AdminModerationView.swift in Sources */,
+				D363474E2FFDD91D001D52C8 /* ResortQueryIntents.swift in Sources */,
 				D33F9EB32FEC086700603CE7 /* ContactsService.swift in Sources */,
 				D33F9EB42FEC086700603CE7 /* Profile.swift in Sources */,
 				D33F9EB52FEC086700603CE7 /* NotificationsView.swift in Sources */,
 				D33F9EB62FEC086700603CE7 /* NotificationsService.swift in Sources */,
+				D36347542FFDDF3D001D52C8 /* ChatSearchIntents.swift in Sources */,
 				D33F9EB72FEC086700603CE7 /* PostComposer.swift in Sources */,
 				D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */,
 				D33F9EB82FEC086700603CE7 /* PushService.swift in Sources */,
@@ -989,7 +1042,10 @@
 				D33F9EBC2FEC086700603CE7 /* AdminView.swift in Sources */,
 				D33F9ED72FF3178900603CE7 /* WorkItemComposer.swift in Sources */,
 				D33F9EBD2FEC086700603CE7 /* LiquidGlass.swift in Sources */,
+				D363474C2FFDD8DC001D52C8 /* FestQueryIntents.swift in Sources */,
+				D36347642FFDED8A001D52C8 /* InfoIntents.swift in Sources */,
 				D33F9EBE2FEC086700603CE7 /* HelpRequestsView.swift in Sources */,
+				D36347562FFDDFA5001D52C8 /* ContentIndexer.swift in Sources */,
 			);
 		};
 		D33F9EED2FF5BD4E00603CE7 /* Sources */ = {
@@ -1159,7 +1215,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MLRApp/MLRApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = UBM722BP54;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
@@ -1184,8 +1240,9 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				NEW_SETTING = "";
+				NEW_SETTING1 = "";
 				New_setting_2 = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -1208,7 +1265,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MLRApp/MLRApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = UBM722BP54;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
@@ -1233,8 +1290,9 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.1;
 				NEW_SETTING = "";
+				NEW_SETTING1 = "";
 				New_setting_2 = "";
 				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr;
 				PRODUCT_NAME = "$(TARGET_NAME)";

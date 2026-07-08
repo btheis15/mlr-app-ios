@@ -42,10 +42,11 @@ final class IntentRouter {
         case addWorkItem
         case committeeChat(slug: String)
         case houseChat
+        case feed
 
-        /// Map a widget / Live Activity deep-link (`mlr://…`) to a route.
-        /// widgetURL hands the URL to the owning app's `onOpenURL`, so the
-        /// scheme doesn't need to be registered for our own surfaces.
+        /// Map a widget / Live Activity / Spotlight deep-link (`mlr://…`) to a
+        /// route. widgetURL and Spotlight hand the URL to the owning app's
+        /// `onOpenURL`, so the scheme doesn't need to be registered.
         init?(url: URL) {
             guard url.scheme == "mlr" else { return nil }
             switch url.host {
@@ -54,6 +55,15 @@ final class IntentRouter {
             case "events":        self = .events
             case "home":          self = .home
             case "add-work-item": self = .addWorkItem
+            // Spotlight / semantic-index result hosts → land on a relevant tab.
+            case "people", "work", "places": self = .home
+            case "posts":          self = .feed
+            case "houses":         self = .houseChat
+            case "committees":
+                // A committee entity carries ?slug=; a message link doesn't.
+                let slug = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?.first(where: { $0.name == "slug" })?.value
+                if let slug { self = .committeeChat(slug: slug) } else { self = .feed }
             default:              return nil
             }
         }

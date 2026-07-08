@@ -59,7 +59,7 @@ Do NOT declare: Location, Health, Contacts, Financial Info, Browsing/Search Hist
 Purchases, Usage Data, Diagnostics. (Payment handles are just usernames → covered by
 "Other User Content"; the app has no Apple in-app purchases.)
 
-- [ ] Privacy Policy URL: `<PUBLIC_URL>/privacy`
+- [ ] Privacy Policy URL: `https://brians-mac-mini.tail49943c.ts.net/privacy`  (verified live, 200 OK)
 
 ---
 
@@ -104,7 +104,7 @@ Private to Muskellunge Lake Resort members.
 lake,resort,family,community,cabin,events,rsvp,chat,directory,muskellunge
 ```
 
-**Support URL:** _________________  *(a reachable page; if you have no resort site, `<PUBLIC_URL>/privacy` is accepted)*
+**Support URL:** _________________  *(a reachable page; if you have no resort site, `https://brians-mac-mini.tail49943c.ts.net/privacy` is accepted)*
 **Marketing URL (optional):** _________________
 **Copyright:** `2026 Muskellunge Lake Resort`
 

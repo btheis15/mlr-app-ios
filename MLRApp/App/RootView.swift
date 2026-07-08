@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import CoreSpotlight
 
 // MARK: - Root View
 // Houses the TabView and handles deep-link navigation.
@@ -91,6 +92,14 @@ struct RootView: View {
             if let route = IntentRouter.Route(url: url) {
                 router.requestRoute(route)
             }
+        }
+        // Spotlight / Siri semantic-index result taps: the tapped item's id is a
+        // mlr:// deep link — route it to the right tab.
+        .onContinueUserActivity(CSSearchableItemActionType) { activity in
+            guard let id = activity.userInfo?[CSSearchableItemActivityIdentifier] as? String,
+                  let url = URL(string: id),
+                  let route = IntentRouter.Route(url: url) else { return }
+            router.requestRoute(route)
         }
         .task {
             // Show/refresh the Family Fest Live Activity once the season is known.
@@ -204,6 +213,8 @@ struct RootView: View {
             selectedTab = .home
         case .home:
             selectedTab = .home
+        case .feed:
+            selectedTab = .feed
         case .addWorkItem:
             selectedTab = .home
             showAddWorkItem = true

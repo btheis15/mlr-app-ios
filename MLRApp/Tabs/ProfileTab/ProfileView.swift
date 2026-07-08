@@ -10,6 +10,9 @@ struct ProfileView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(AppearanceManager.self) private var appearance
 
+    // Whether resort content is fed to Spotlight / Siri's semantic index.
+    @AppStorage("spotlight_indexing_enabled") private var spotlightEnabled = true
+
     // Form state — mirrors Profile fields
     @State private var name: String = ""
     @State private var phone: String = ""
@@ -442,6 +445,20 @@ struct ProfileView: View {
     private var featuresSection: some View {
         Section("Features") {
             WillingToHelpRow()
+
+            VStack(alignment: .leading, spacing: 4) {
+                Toggle(isOn: $spotlightEnabled) {
+                    Label("Siri & Spotlight search", systemImage: "magnifyingglass")
+                }
+                .tint(Color.mlrPrimary)
+                .onChange(of: spotlightEnabled) { _, on in
+                    if on { Task { await ContentIndexer.reindexAll() } }
+                    else { ContentIndexer.clear() }
+                }
+                Text("Let Siri and Spotlight find resort events, chats, work items, and people on this device.")
+                    .font(.mlrCaption)
+                    .foregroundStyle(Color.mlrTextMuted)
+            }
         }
     }
 
