@@ -39,6 +39,8 @@ struct MLRApp: App {
                         // Feed resort content to Spotlight's semantic index so
                         // Siri / Apple Intelligence can find it by natural language.
                         Task { await ContentIndexer.reindexAll() }
+                        Task { await ContentIndexer.publishWidgetSnapshots() }
+                        Task { await SiriDonations.donateCommon() }
                     }
                 }
                 .onChange(of: env.authService.isSignedIn) { _, signedIn in
@@ -49,6 +51,7 @@ struct MLRApp: App {
                             await env.pushService.reconcileToken()
                             await env.startNotificationsRealtime()
                             await ContentIndexer.reindexAll()
+                            await ContentIndexer.publishWidgetSnapshots()
                         }
                     } else {
                         // Signed out — pull all content back out of the index.

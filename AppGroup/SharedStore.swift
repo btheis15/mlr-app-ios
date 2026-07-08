@@ -21,6 +21,13 @@ struct TodoSnapshot: Codable {
     let titles: [String]   // a few top open items to preview
 }
 
+/// Snapshot of the next upcoming house-calendar stay for the "Next Visit" widget.
+struct VisitSnapshot: Codable {
+    let who: String
+    let dateLabel: String   // e.g. "Jul 18 – 20"
+    let house: String?
+}
+
 final class SharedStore {
     static let shared = SharedStore()
 
@@ -37,6 +44,23 @@ final class SharedStore {
         static let memberName = "shared.memberName"
         static let todo = "shared.todo"
         static let pendingRoute = "shared.pendingRoute"
+        static let nextVisit = "shared.nextVisit"
+    }
+
+    // MARK: Next visit up north (for NextVisitWidget)
+
+    var nextVisit: VisitSnapshot? {
+        get {
+            guard let data = defaults.data(forKey: Key.nextVisit) else { return nil }
+            return try? JSONDecoder().decode(VisitSnapshot.self, from: data)
+        }
+        set {
+            if let newValue, let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: Key.nextVisit)
+            } else {
+                defaults.removeObject(forKey: Key.nextVisit)
+            }
+        }
     }
 
     // MARK: Pending route (Control Center / extensions → app)

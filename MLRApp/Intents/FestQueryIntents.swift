@@ -66,21 +66,27 @@ struct DinnerForDayIntent: AppIntent {
     }
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
         let svc = FestContentService()
         await svc.load()
         let target = day.weekdayName
         guard let dinner = svc.dinners.first(where: {
             $0.day.caseInsensitiveCompare(target) == .orderedSame
         }) else {
-            return .result(dialog: "I don't see a Family Fest dinner scheduled for \(target) yet.")
+            return .result(
+                dialog: "I don't see a Family Fest dinner scheduled for \(target) yet.",
+                view: SimpleInfoSnippet(symbol: "fork.knife", title: "\(target) dinner", subtitle: "Not scheduled yet")
+            )
         }
 
         var parts: [String] = ["\(target)'s dinner is \(dinner.title)"]
         if dinner.chef != "TBD" { parts.append("made by \(dinner.chef)") }
         if dinner.time != "TBD" { parts.append("served at \(dinner.time)") }
         if let loc = dinner.location, !loc.isEmpty { parts.append("at \(loc)") }
-        return .result(dialog: IntentDialog(stringLiteral: parts.joined(separator: ", ") + "."))
+        return .result(
+            dialog: IntentDialog(stringLiteral: parts.joined(separator: ", ") + "."),
+            view: DinnerSnippet(day: target, title: dinner.title, chef: dinner.chef, time: dinner.time, menu: dinner.menuLines)
+        )
     }
 }
 

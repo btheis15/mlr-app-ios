@@ -50,6 +50,64 @@ enum ContentIndexer {
     /// Remove all indexed MLR content (call on sign-out).
     static func clear() {
         CSSearchableIndex.default().deleteAllSearchableItems { _ in }
+        SharedStore.shared.nextVisit = nil
+        SharedStore.shared.reloadWidgets()
+    }
+
+    /// Publish the App-Group widget snapshots (currently the next house-calendar
+    /// visit for the "Next Visit Up North" widget). NOT gated by the Spotlight
+    /// opt-out — widgets are a separate surface.
+    static func publishWidgetSnapshots() async {
+        let iso = DateFormatter()
+        iso.dateFormat = "yyyy-MM-dd"
+        iso.locale = Locale(identifier: "en_US_POSIX")
+        iso.timeZone = TimeZone(identifier: "America/Chicago")
+        let today = iso.string(from: Date())
+
+        struct Row: Decodable {
+            let startDate: String
+            let endDate: String
+            let title: String?
+            let profiles: A?
+            let houses: H?
+            struct A: Decodable { let displayName: String?
+                enum CodingKeys: String, CodingKey { case displayName = "display_name" } }
+            struct H: Decodable { let name: String? }
+            enum CodingKeys: String, CodingKey {
+                case startDate = "start_date"
+                case endDate = "end_date"
+                case title, profiles, houses
+            }
+        }
+        let rows: [Row] = (try? await supabase
+            .from("house_stays")
+            .select("start_date, end_date, title, profiles!created_by(display_name), houses(name)")
+            .gte("end_date", value: today)
+            .order("start_date", ascending: true)
+            .limit(1)
+            .execute().value) ?? []
+
+        guard let n = rows.first else {
+            SharedStore.shared.nextVisit = nil
+            SharedStore.shared.reloadWidgets()
+            return
+        }
+        let out = DateFormatter()
+        out.dateFormat = "MMM d"
+        out.locale = Locale(identifier: "en_US_POSIX")
+        out.timeZone = TimeZone(identifier: "America/Chicago")
+        let label: String = {
+            guard let s = iso.date(from: n.startDate) else { return n.startDate }
+            let a = out.string(from: s)
+            if n.endDate == n.startDate { return a }
+            if let e = iso.date(from: n.endDate) { return "\(a) – \(out.string(from: e))" }
+            return a
+        }()
+        let who = n.profiles?.displayName
+            ?? n.title?.trimmingCharacters(in: .whitespaces)
+            ?? "Someone"
+        SharedStore.shared.nextVisit = VisitSnapshot(who: who, dateLabel: label, house: n.houses?.name)
+        SharedStore.shared.reloadWidgets()
     }
 
     // MARK: - Item builder

@@ -159,6 +159,8 @@
 		D36347622FFDED75001D52C8 /* PlaceIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347612FFDED75001D52C8 /* PlaceIntents.swift */; };
 		D36347642FFDED8A001D52C8 /* InfoIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347632FFDED8A001D52C8 /* InfoIntents.swift */; };
 		D36347662FFDEE12001D52C8 /* CabinIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347652FFDEE12001D52C8 /* CabinIntents.swift */; };
+		D36347682FFDEF09001D52C8 /* SnippetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347672FFDEF09001D52C8 /* SnippetViews.swift */; };
+		D363476A2FFDF098001D52C8 /* IntentDonations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347692FFDF098001D52C8 /* IntentDonations.swift */; };
 		D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39BD8902FFC47C000B1E74D /* ChatMedia.swift */; };
 		D3A0000000000000000000B1 /* HouseStay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A1 /* HouseStay.swift */; };
 		D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A2 /* HouseCalendarView.swift */; };
@@ -332,6 +334,8 @@
 		D36347612FFDED75001D52C8 /* PlaceIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaceIntents.swift; sourceTree = "<group>"; };
 		D36347632FFDED8A001D52C8 /* InfoIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InfoIntents.swift; sourceTree = "<group>"; };
 		D36347652FFDEE12001D52C8 /* CabinIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CabinIntents.swift; sourceTree = "<group>"; };
+		D36347672FFDEF09001D52C8 /* SnippetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetViews.swift; sourceTree = "<group>"; };
+		D36347692FFDF098001D52C8 /* IntentDonations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentDonations.swift; sourceTree = "<group>"; };
 		D39BD8902FFC47C000B1E74D /* ChatMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMedia.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A1 /* HouseStay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStay.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A2 /* HouseCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarView.swift; sourceTree = "<group>"; };
@@ -498,6 +502,8 @@
 				D36347612FFDED75001D52C8 /* PlaceIntents.swift */,
 				D36347632FFDED8A001D52C8 /* InfoIntents.swift */,
 				D36347652FFDEE12001D52C8 /* CabinIntents.swift */,
+				D36347672FFDEF09001D52C8 /* SnippetViews.swift */,
+				D36347692FFDF098001D52C8 /* IntentDonations.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -1007,6 +1013,7 @@
 				D33F9EA32FEC086700603CE7 /* GuardView.swift in Sources */,
 				D33F9EA42FEC086700603CE7 /* HelpService.swift in Sources */,
 				D33F9EA52FEC086700603CE7 /* MLRApp.swift in Sources */,
+				D36347682FFDEF09001D52C8 /* SnippetViews.swift in Sources */,
 				D33F9EA62FEC086700603CE7 /* EventComposer.swift in Sources */,
 				D33F9EA72FEC086700603CE7 /* HomeNavigationStubs.swift in Sources */,
 				D33F9EA82FEC086700603CE7 /* MentionText.swift in Sources */,
@@ -1045,6 +1052,7 @@
 				D363474C2FFDD8DC001D52C8 /* FestQueryIntents.swift in Sources */,
 				D36347642FFDED8A001D52C8 /* InfoIntents.swift in Sources */,
 				D33F9EBE2FEC086700603CE7 /* HelpRequestsView.swift in Sources */,
+				D363476A2FFDF098001D52C8 /* IntentDonations.swift in Sources */,
 				D36347562FFDDFA5001D52C8 /* ContentIndexer.swift in Sources */,
 			);
 		};

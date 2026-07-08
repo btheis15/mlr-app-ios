@@ -204,3 +204,78 @@ struct ThingsToDoEntryView: View {
         }
     }
 }
+
+// MARK: - Next Visit Up North Widget
+//
+// Shows the next upcoming stay from the house calendars. The app publishes a
+// snapshot to the App Group (`SharedStore.nextVisit`) on launch, so the widget
+// renders without a network call.
+
+struct NextVisitWidget: Widget {
+    let kind = "NextVisitWidget"
+
+    var body: some WidgetConfiguration {
+        StaticConfiguration(kind: kind, provider: NextVisitProvider()) { entry in
+            NextVisitEntryView(entry: entry)
+                .containerBackground(.fill.tertiary, for: .widget)
+        }
+        .configurationDisplayName("Next Visit Up North")
+        .description("The next time someone's heading up to the resort.")
+        .supportedFamilies([.systemSmall, .systemMedium, .accessoryRectangular])
+    }
+}
+
+struct NextVisitEntry: TimelineEntry {
+    let date: Date
+    let visit: VisitSnapshot?
+}
+
+struct NextVisitProvider: TimelineProvider {
+    func placeholder(in context: Context) -> NextVisitEntry {
+        .init(date: .now, visit: VisitSnapshot(who: "The Theis family", dateLabel: "Jul 18 – 20", house: "MJT House"))
+    }
+    func getSnapshot(in context: Context, completion: @escaping (NextVisitEntry) -> Void) {
+        completion(.init(date: .now, visit: SharedStore.shared.nextVisit))
+    }
+    func getTimeline(in context: Context, completion: @escaping (Timeline<NextVisitEntry>) -> Void) {
+        completion(Timeline(entries: [.init(date: .now, visit: SharedStore.shared.nextVisit)], policy: .atEnd))
+    }
+}
+
+struct NextVisitEntryView: View {
+    @Environment(\.widgetFamily) private var family
+    let entry: NextVisitEntry
+
+    var body: some View {
+        if family == .accessoryRectangular {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("🏡 Next up north").font(.headline)
+                if let v = entry.visit {
+                    Text("\(v.who) · \(v.dateLabel)").font(.caption).lineLimit(1)
+                } else {
+                    Text("Nothing booked").font(.caption).foregroundStyle(.secondary)
+                }
+            }
+        } else {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("🏡 Next up north")
+                    .font(.caption2.bold())
+                    .foregroundStyle(Color.mlrPrimary)
+                if let v = entry.visit {
+                    Text(v.who).font(.headline).lineLimit(2)
+                    Text(v.dateLabel).font(.subheadline).foregroundStyle(.secondary)
+                    if let h = v.house, family == .systemMedium {
+                        Text(h).font(.caption).foregroundStyle(.secondary)
+                    }
+                } else {
+                    Spacer()
+                    Text("No visits booked yet")
+                        .font(.subheadline).foregroundStyle(.secondary)
+                    Spacer()
+                }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .leading)
+            .widgetURL(URL(string: "mlr://houses"))
+        }
+    }
+}

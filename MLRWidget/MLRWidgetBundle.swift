@@ -14,6 +14,7 @@ struct MLRWidgetBundle: WidgetBundle {
         NextEventWidget()
         FamilyFestCountdownWidget()
         ThingsToDoWidget()
+        NextVisitWidget()
         AddWorkItemControl()
         FestLiveActivity()
         HelpLiveActivity()

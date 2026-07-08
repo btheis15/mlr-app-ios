@@ -30,7 +30,7 @@ struct WeatherUpNorthIntent: AppIntent {
     }
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
         let start: String
         let end: String
         if let r = period.range {
@@ -42,12 +42,21 @@ struct WeatherUpNorthIntent: AppIntent {
         }
         let forecasts = await WeatherService.shared.forecasts(fromISO: start, toISO: end)
         guard !forecasts.isEmpty else {
-            return .result(dialog: "I don't have the forecast for \(period.label) yet — WeatherKit only reaches about 10 days out.")
+            return .result(
+                dialog: "I don't have the forecast for \(period.label) yet — WeatherKit only reaches about 10 days out.",
+                view: SimpleInfoSnippet(symbol: "cloud.sun", title: "Weather up north", subtitle: "Not available for \(period.label) yet")
+            )
         }
         let lines = forecasts.prefix(5).map { f in
             "\(f.weekdayLabel): \(f.condition), high \(f.highLabel()), \(f.precipPercent)% rain"
         }.joined(separator: "; ")
-        return .result(dialog: IntentDialog(stringLiteral: "Up north \(period.label): \(lines)."))
+        let days = forecasts.prefix(5).map {
+            WeatherSnippet.Day(weekday: $0.weekdayLabel, symbol: $0.symbolName, high: $0.highLabel(), precip: $0.precipPercent)
+        }
+        return .result(
+            dialog: IntentDialog(stringLiteral: "Up north \(period.label): \(lines)."),
+            view: WeatherSnippet(title: "Weather up north — \(period.label)", days: days)
+        )
     }
 }
 
