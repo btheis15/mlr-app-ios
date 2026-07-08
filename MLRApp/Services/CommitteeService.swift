@@ -522,8 +522,11 @@ final class CommitteeService {
                 channels.append(ChatChannel(committee: committee, area: nil,
                                             title: committee.name, subtitle: nil))
             } else {
+                // Committee-wide channel: title carries the committee name (e.g.
+                // "Family Fest General") so it's clear which committee's General
+                // this is once real messages replace the subtitle fallback.
                 channels.append(ChatChannel(committee: committee, area: nil,
-                                            title: "General", subtitle: committee.name))
+                                            title: "\(committee.name) General", subtitle: nil))
                 for area in myAreas {
                     channels.append(ChatChannel(committee: committee, area: area,
                                                 title: area, subtitle: committee.name))
