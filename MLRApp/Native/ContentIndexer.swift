@@ -71,6 +71,18 @@ enum ContentIndexer {
     /// visit for the "Next Visit Up North" widget). NOT gated by the Spotlight
     /// opt-out — widgets are a separate surface.
     static func publishWidgetSnapshots() async {
+        // Cache the member's first name for personalized Siri responses.
+        if let uid = try? await supabase.auth.session.user.id {
+            struct P: Decodable { let displayName: String?
+                enum CodingKeys: String, CodingKey { case displayName = "display_name" } }
+            let rows: [P] = (try? await supabase
+                .from("profiles").select("display_name").eq("id", value: uid.uuidString).limit(1)
+                .execute().value) ?? []
+            if let name = rows.first?.displayName, !name.isEmpty {
+                SharedStore.shared.memberFirstName = name.split(separator: " ").first.map(String.init)
+            }
+        }
+
         let iso = DateFormatter()
         iso.dateFormat = "yyyy-MM-dd"
         iso.locale = Locale(identifier: "en_US_POSIX")

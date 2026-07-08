@@ -22,14 +22,21 @@ struct EventTurnoutIntent: AppIntent {
     }
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
         let s = await EventsService().fetchSummary(eventId: event.id)
         guard s.total > 0 else {
-            return .result(dialog: "No one has RSVP'd to \(event.title) yet.")
+            return .result(
+                dialog: "No one has RSVP'd to \(event.title) yet.",
+                view: SimpleInfoSnippet(symbol: "person.2", title: event.title, subtitle: "No RSVPs yet")
+            )
         }
         var parts = ["\(s.going) going"]
         if s.maybe > 0 { parts.append("\(s.maybe) maybe") }
-        return .result(dialog: IntentDialog(stringLiteral: "\(event.title): \(parts.joined(separator: ", ")).")) 
+        let summary = parts.joined(separator: ", ")
+        return .result(
+            dialog: IntentDialog(stringLiteral: "\(event.title): \(summary)."),
+            view: SimpleInfoSnippet(symbol: "person.2.fill", title: event.title, subtitle: summary)
+        )
     }
 }
 
@@ -56,7 +63,8 @@ struct WhatDidIMissIntent: AppIntent {
             return .result(dialog: "You're all caught up up north. ✅")
         }
         let list = rows.prefix(5).map(\.title).joined(separator: "; ")
-        return .result(dialog: IntentDialog(stringLiteral: "You have \(rows.count) new notification\(rows.count == 1 ? "" : "s"): \(list).")) 
+        let greeting = SharedStore.shared.memberFirstName.map { "\($0), you" } ?? "You"
+        return .result(dialog: IntentDialog(stringLiteral: "\(greeting) have \(rows.count) new notification\(rows.count == 1 ? "" : "s"): \(list)."))
     }
 }
 

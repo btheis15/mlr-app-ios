@@ -74,7 +74,7 @@ struct CabinAvailabilityIntent: AppIntent {
     }
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
         let checkIn: String
         let checkOut: String
         if let r = period.range {
@@ -87,10 +87,16 @@ struct CabinAvailabilityIntent: AppIntent {
         let avail = await CabinService().fetchAvailability(checkIn: checkIn, checkOut: checkOut)
         let open = avail.filter { $0.available > 0 }
         guard !open.isEmpty else {
-            return .result(dialog: "No cabins have open rooms \(period.label).")
+            return .result(
+                dialog: "No cabins have open rooms \(period.label).",
+                view: SimpleInfoSnippet(symbol: "bed.double", title: "Cabins \(period.label)", subtitle: "None available")
+            )
         }
         let list = open.map { "\($0.name) (\($0.available) room\($0.available == 1 ? "" : "s"))" }.joined(separator: ", ")
-        return .result(dialog: IntentDialog(stringLiteral: "Open \(period.label): \(list)."))
+        return .result(
+            dialog: IntentDialog(stringLiteral: "Open \(period.label): \(list)."),
+            view: SimpleInfoSnippet(symbol: "bed.double.fill", title: "Open cabins \(period.label)", subtitle: list)
+        )
     }
 }
 
@@ -101,24 +107,32 @@ struct FestDuesIntent: AppIntent {
     static var description = IntentDescription("How much Family Fest dues are and who to pay.")
 
     @MainActor
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
         let svc = FestContentService()
         await svc.load()
         let tiers = svc.dues.filter { $0.amount != nil }
         var sentence: String
+        let cardSubtitle: String
         if tiers.isEmpty {
             sentence = "Family Fest dues aren't posted yet."
+            cardSubtitle = "Not posted yet"
         } else {
             let parts = tiers.map { "\($0.label): $\($0.amount!)" }.joined(separator: ", ")
             sentence = "Family Fest dues — \(parts)."
+            cardSubtitle = parts
         }
+        var payLine = ""
         if let payee = svc.payees.first {
             var pay = " Pay \(payee.name)"
             if let v = payee.venmo, !v.isEmpty { pay += " on Venmo (\(v))" }
             pay += "."
             sentence += pay
+            payLine = "\nPay \(payee.name)" + ((payee.venmo.map { " · Venmo \($0)" }) ?? "")
         }
-        return .result(dialog: IntentDialog(stringLiteral: sentence))
+        return .result(
+            dialog: IntentDialog(stringLiteral: sentence),
+            view: SimpleInfoSnippet(symbol: "dollarsign.circle.fill", title: "Family Fest dues", subtitle: cardSubtitle + payLine)
+        )
     }
 }
 
