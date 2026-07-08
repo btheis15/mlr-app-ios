@@ -4,8 +4,9 @@ import Kingfisher
 
 // MARK: - WorkItemComposer
 //
-// Add/edit sheet for a work checklist item. Any signed-in member can add items;
-// admins get the status toggle + delete when editing. Items can be scoped to the
+// Add/edit sheet for a work checklist item. Any signed-in member can add items,
+// and can edit an item they created (admins can edit any); admins additionally
+// get the status toggle + delete when editing. Items can be scoped to the
 // resort (MLR) or a house you belong to (migration 0066), carry an urgency
 // rating (0069), and attach photos/video (0067). Mirrors the web WorkItemComposer.
 
