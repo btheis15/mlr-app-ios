@@ -452,7 +452,7 @@ struct ProfileView: View {
                 }
                 .tint(Color.mlrPrimary)
                 .onChange(of: spotlightEnabled) { _, on in
-                    if on { Task { await ContentIndexer.reindexAll() } }
+                    if on { Task { await ContentIndexer.reindexAll(force: true) } }
                     else { ContentIndexer.clear() }
                 }
                 Text("Let Siri and Spotlight find resort events, chats, work items, and people on this device.")

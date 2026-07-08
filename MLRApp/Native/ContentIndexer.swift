@@ -20,10 +20,20 @@ enum ContentIndexer {
 
     /// Re-index everything the current user can see. Safe to call on launch /
     /// sign-in; runs off the main actor where possible.
-    static func reindexAll() async {
+    private static let lastIndexedKey = "spotlight_last_indexed_at"
+
+    static func reindexAll(force: Bool = false) async {
         // Respect the user's opt-out (Profile → Features → Siri & Spotlight search).
         let enabled = (UserDefaults.standard.object(forKey: "spotlight_indexing_enabled") as? Bool) ?? true
         guard enabled else { clear(); return }
+        // Only index while signed in — every query is RLS-scoped to the user.
+        guard (try? await supabase.auth.session) != nil else { return }
+        // Throttle: a full re-index is ~15 queries + up to ~1500 items, so skip it
+        // if we indexed within the last 6 hours (unless forced).
+        if !force {
+            let last = UserDefaults.standard.double(forKey: lastIndexedKey)
+            if last > 0, Date().timeIntervalSince1970 - last < 6 * 3600 { return }
+        }
 
         var items: [CSSearchableItem] = []
         items += await memberItems()
@@ -40,6 +50,8 @@ enum ContentIndexer {
         items += localPlaceItems()
         items += await announcementItems()
 
+        // Stamp the run even if empty, so a genuinely-empty account doesn't re-query every launch.
+        UserDefaults.standard.set(Date().timeIntervalSince1970, forKey: lastIndexedKey)
         guard !items.isEmpty else { return }
         CSSearchableIndex.default().indexSearchableItems(items) { error in
             if let error { print("[ContentIndexer] index error: \(error)") }
@@ -50,6 +62,7 @@ enum ContentIndexer {
     /// Remove all indexed MLR content (call on sign-out).
     static func clear() {
         CSSearchableIndex.default().deleteAllSearchableItems { _ in }
+        UserDefaults.standard.removeObject(forKey: lastIndexedKey)
         SharedStore.shared.nextVisit = nil
         SharedStore.shared.reloadWidgets()
     }

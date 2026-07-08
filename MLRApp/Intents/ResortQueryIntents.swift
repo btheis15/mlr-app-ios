@@ -110,7 +110,7 @@ struct NextVisitUpNorthIntent: AppIntent {
     static var title: LocalizedStringResource = "Next Visit Up North"
     static var description = IntentDescription("Find the next time someone is heading up to the resort, from the house calendars.")
 
-    func perform() async throws -> some IntentResult & ProvidesDialog {
+    func perform() async throws -> some IntentResult & ProvidesDialog & ShowsSnippetView {
         let tz = TimeZone(identifier: "America/Chicago")!
         let iso = DateFormatter()
         iso.dateFormat = "yyyy-MM-dd"
@@ -133,7 +133,10 @@ struct NextVisitUpNorthIntent: AppIntent {
             .value) ?? []
 
         guard let next = rows.first else {
-            return .result(dialog: "There's nothing on the house calendars right now.")
+            return .result(
+                dialog: "There's nothing on the house calendars right now.",
+                view: SimpleInfoSnippet(symbol: "house", title: "Next visit up north", subtitle: "Nothing booked yet")
+            )
         }
 
         let out = DateFormatter()
@@ -150,7 +153,10 @@ struct NextVisitUpNorthIntent: AppIntent {
             return start
         }()
         let titlePart = (next.title?.trimmingCharacters(in: .whitespaces).isEmpty == false) ? " — \(next.title!)" : ""
-        return .result(dialog: IntentDialog(stringLiteral: "The next time someone's up north is \(range)\(titlePart)."))
+        return .result(
+            dialog: IntentDialog(stringLiteral: "The next time someone's up north is \(range)\(titlePart)."),
+            view: SimpleInfoSnippet(symbol: "house.fill", title: "Next visit up north", subtitle: range + titlePart)
+        )
     }
 }
 
