@@ -6,8 +6,9 @@ import Kingfisher
 // Tap a checklist item to open this sheet: title + urgency/people badges, photo/
 // video grid (tap → lightbox), notes, and a comment thread with @mentions.
 // Any member who can see the item can comment; the author or an admin can delete
-// a comment. Admins get an Edit button (hands off to WorkItemComposer). Mirrors
-// the web WorkItemSheet (comments migration 0068, media 0067).
+// a comment. An Edit button (admins for any item, the author for their own —
+// enforced by update_work_item, migration 0079) hands off to WorkItemComposer.
+// Mirrors the web WorkItemSheet (comments migration 0068, media 0067).
 
 struct WorkItemDetailSheet: View {
     @Environment(AppEnvironment.self) private var env
@@ -33,6 +34,14 @@ struct WorkItemDetailSheet: View {
     private var houseName: String? {
         guard let hid = current.houseId else { return nil }
         return env.housesService.houses.first { $0.id == hid }?.name
+    }
+
+    /// Who may edit: an admin (any item) or the person who created it (their own).
+    /// The update_work_item RPC enforces the same rule server-side (migration 0079).
+    private var canEdit: Bool {
+        if env.isAdmin { return true }
+        guard let uid = env.currentProfile?.id, let author = current.createdBy else { return false }
+        return author == uid
     }
 
     var body: some View {
@@ -66,7 +75,7 @@ struct WorkItemDetailSheet: View {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
                 }
-                if env.isAdmin {
+                if canEdit {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button("Edit") { editing = true }
                     }
