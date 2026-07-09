@@ -12,6 +12,11 @@ struct FestPayView: View {
     private var dues: [FestDuesTier] { env.festContentService.dues }
     private var payees: [Payee] { env.festContentService.payees }
 
+    // Running total + note from the dues calculator, fed into each payee's Venmo
+    // deep link so the amount and memo are pre-filled (#249).
+    @State private var calcAmount = 0
+    @State private var calcNote = "Family Fest"
+
     var body: some View {
         if !env.isSignedIn {
             FestSignInNotice(message: "Sign in to see dues and payment details.")
@@ -53,30 +58,7 @@ struct FestPayView: View {
                     .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrFest.opacity(0.65))
             } else {
-                VStack(spacing: 0) {
-                    ForEach(dues) { tier in
-                        HStack(alignment: .firstTextBaseline) {
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text(tier.label)
-                                    .font(.mlrScaled(14, weight: .semibold))
-                                    .foregroundStyle(Color.mlrFest)
-                                if let note = tier.note, !note.isEmpty {
-                                    Text(note)
-                                        .font(.mlrScaled(11))
-                                        .foregroundStyle(Color.mlrFest.opacity(0.55))
-                                }
-                            }
-                            Spacer()
-                            Text(tier.amount.map { "$\($0)" } ?? "TBD")
-                                .font(.festSerif(16, weight: .bold))
-                                .foregroundStyle(tier.amount == nil ? Color.mlrFest.opacity(0.5) : Color.mlrFest)
-                        }
-                        .padding(.vertical, 9)
-                        if tier.id != dues.last?.id {
-                            Divider().background(Color.mlrFest.opacity(0.12))
-                        }
-                    }
-                }
+                FestDuesCalculator(dues: dues, totalAmount: $calcAmount, note: $calcNote)
             }
 
             Text("Dues cover shared meals, activities, and resort costs for the week. Note \u{201C}Family Fest 2026\u{201D} with your payment.")
@@ -101,7 +83,7 @@ struct FestPayView: View {
                 .font(.festSerif(15, weight: .bold))
                 .foregroundStyle(Color.mlrFest)
             ForEach(payees) { payee in
-                PayeeCard(payee: payee)
+                PayeeCard(payee: payee, calcAmount: calcAmount, calcNote: calcNote)
             }
         }
     }
@@ -111,7 +93,26 @@ struct FestPayView: View {
 
 private struct PayeeCard: View {
     let payee: Payee
+    // Total + note from the dues calculator — pre-fill the Venmo deep link when set.
+    var calcAmount: Int = 0
+    var calcNote: String = ""
     @State private var copied: String?
+
+    /// Venmo deep link: a full pre-filled charge (amount + memo) once the
+    /// calculator has a total, otherwise just open the payee's profile.
+    private func venmoURL(handle: String) -> URL? {
+        guard calcAmount > 0 else { return URL(string: "venmo://users/\(handle)") }
+        var c = URLComponents()
+        c.scheme = "venmo"
+        c.host = "paycharge"
+        c.queryItems = [
+            URLQueryItem(name: "txn", value: "pay"),
+            URLQueryItem(name: "recipients", value: handle),
+            URLQueryItem(name: "amount", value: String(calcAmount)),
+            URLQueryItem(name: "note", value: calcNote.isEmpty ? "Family Fest 2026" : calcNote),
+        ]
+        return c.url
+    }
     // Apple Cash handoff: amount the payer chooses + the Messages composer.
     @State private var appleCashAmount = ""
     @State private var askAmount = false
@@ -152,7 +153,7 @@ private struct PayeeCard: View {
             if let venmo = payee.venmo?.trimmedNonEmpty {
                 let handle = venmo.replacingOccurrences(of: "@", with: "")
                 handleRow(label: "Venmo", value: "@\(handle)", icon: "v.circle.fill",
-                          openURL: URL(string: "venmo://users/\(handle)"))
+                          openURL: venmoURL(handle: handle))
             }
             if let zelle = payee.zelle?.trimmedNonEmpty {
                 handleRow(label: "Zelle", value: zelle, icon: "z.circle.fill", openURL: nil)

@@ -43,6 +43,9 @@ final class IntentRouter {
         case committeeChat(slug: String)
         case houseChat
         case feed
+        /// Open the in-app global search screen, pre-filled with a term (from the
+        /// `.system.searchInApp` Siri / Apple Intelligence intent).
+        case search(term: String)
 
         /// Map a widget / Live Activity / Spotlight deep-link (`mlr://…`) to a
         /// route. widgetURL and Spotlight hand the URL to the owning app's
@@ -55,6 +58,10 @@ final class IntentRouter {
             case "events":        self = .events
             case "home":          self = .home
             case "add-work-item": self = .addWorkItem
+            case "search":
+                let term = URLComponents(url: url, resolvingAgainstBaseURL: false)?
+                    .queryItems?.first(where: { $0.name == "q" })?.value ?? ""
+                self = .search(term: term)
             // Spotlight / semantic-index result hosts → land on a relevant tab.
             case "people", "work", "places": self = .home
             case "posts":          self = .feed

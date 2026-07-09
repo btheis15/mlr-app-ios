@@ -62,7 +62,7 @@ private struct DinnerCard: View {
                 }
                 .foregroundStyle(Color.mlrFest.opacity(0.65))
 
-                Text(dinner.time)
+                Text(MLRFormat.time(dinner.time))
                     .font(.mlrScaled(12))
                     .foregroundStyle(Color.mlrFest.opacity(0.5))
             }

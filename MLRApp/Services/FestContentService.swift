@@ -11,11 +11,14 @@ struct FestConfig: Equatable {
 }
 
 /// A dues tier (Adult / Kid / per-day / without-food / …). `amount` nil = TBD.
+/// `perDay` tiers are billed × a shared day count in the Pay calculator (#249,
+/// migration 0078); flat tiers are a one-time/full-week amount.
 struct FestDuesTier: Identifiable, Equatable {
     let id: UUID
     var label: String
     var amount: Int?
     var note: String?
+    var perDay: Bool = false
 }
 
 // MARK: - Editable drafts (raw rows for the Planner)
@@ -96,7 +99,7 @@ final class FestContentService {
     static let seedDues: [FestDuesTier] = [
         FestDuesTier(id: UUID(), label: "Adult (high school & up)", amount: nil, note: nil),
         FestDuesTier(id: UUID(), label: "Kid (K–8th grade)", amount: nil, note: nil),
-        FestDuesTier(id: UUID(), label: "Per day", amount: nil, note: "per person"),
+        FestDuesTier(id: UUID(), label: "Per day", amount: nil, note: "per person", perDay: true),
         FestDuesTier(id: UUID(), label: "Without food", amount: nil, note: "per person"),
     ]
     static let seedPayees: [Payee] = [
@@ -151,7 +154,7 @@ final class FestContentService {
             .from("fest_dues").select("*").eq("fest_year", value: year)
             .order("position", ascending: true)
             .execute().value
-        return rows.map { FestDuesTier(id: $0.id, label: $0.label, amount: $0.amount, note: $0.note) }
+        return rows.map { FestDuesTier(id: $0.id, label: $0.label, amount: $0.amount, note: $0.note, perDay: $0.perDay ?? false) }
     }
 
     // MARK: - Editing (admin / fest committee; RLS enforces can_edit_fest)
@@ -242,6 +245,7 @@ final class FestContentService {
         var p: [String: AnyJSON] = [
             "fest_year": .integer(year), "label": .string(t.label),
             "amount": j(t.amount), "note": j(t.note), "position": .integer(position),
+            "per_day": .bool(t.perDay),
         ]
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_dues", id: isNew ? nil : t.id, payload: p)
@@ -395,6 +399,11 @@ private struct DuesRow: Decodable {
     let label: String
     let amount: Int?
     let note: String?
+    let perDay: Bool?
+    enum CodingKeys: String, CodingKey {
+        case id, label, amount, note
+        case perDay = "per_day"
+    }
 }
 
 private struct ScheduleRow: Decodable {

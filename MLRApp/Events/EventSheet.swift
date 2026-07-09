@@ -2,6 +2,7 @@ import SwiftUI
 import Charts
 import TipKit
 import StoreKit
+import AppIntents
 
 // MARK: - Tips
 
@@ -80,6 +81,9 @@ struct EventSheet: View {
             }
             .background(Color.mlrSurface)
             .navigationBarTitleDisplayMode(.inline)
+            // Onscreen context for Apple Intelligence / Siri ("who's going to
+            // this?", "add this to my calendar") — associates the sheet with its entity.
+            .appEntityIdentifier(EntityIdentifier(for: EventEntity.self, identifier: event.id))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     CloseButton { dismiss() }

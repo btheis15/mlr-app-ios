@@ -14,6 +14,10 @@ struct HomeView: View {
     // Drive AttendanceControlStateless optimistically
     @State private var nearestEventStatus: AttendanceStatus? = nil
 
+    // Manual entry to the global search screen (the same screen Siri's
+    // `.system.searchInApp` intent opens).
+    @State private var showSearch = false
+
     /// The next upcoming event to spotlight on Home: the nearest non–Family-Fest
     /// event the member hasn't declined. Declined ("not going") events drop off
     /// Home but stay findable in the Events list — matches the web.
@@ -88,6 +92,9 @@ struct HomeView: View {
             .navigationBarHidden(true)
             .background(Color.mlrSurface)
         }
+        .sheet(isPresented: $showSearch) {
+            NavigationStack { GlobalSearchView(initialTerm: "") }
+        }
         // When the spotlight switches events (e.g. after declining one), drop the
         // stale optimistic override so it can't leak onto the next event's card.
         .onChange(of: spotlightEvent?.id) { _, _ in nearestEventStatus = nil }
@@ -124,6 +131,18 @@ struct HomeView: View {
                 .padding(.top, 10)
                 .padding(.bottom, 4)
             Spacer()
+        }
+        // Search everything up north — people, events, committees, work, chats.
+        .overlay(alignment: .trailing) {
+            Button { showSearch = true } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.mlrScaled(18, weight: .semibold))
+                    .foregroundStyle(Color.mlrPrimary)
+                    .padding(10)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Search Up North")
+            .padding(.trailing, 4)
         }
     }
 

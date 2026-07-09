@@ -52,16 +52,9 @@ struct MLRAppShortcuts: AppShortcutsProvider {
             shortTitle: "Who's Making Dinner",
             systemImageName: "fork.knife"
         )
-        AppShortcut(
-            intent: SearchUpNorthIntent(),
-            phrases: [
-                "Search Up North in \(.applicationName)",
-                "Search \(.applicationName)",
-                "Search the resort in \(.applicationName)",
-            ],
-            shortTitle: "Search Up North",
-            systemImageName: "magnifyingglass"
-        )
+        // Search is exposed through the `.system.searchInApp` assistant schema
+        // (SearchUpNorthIntent, iOS 27+) so free-form Siri / Apple Intelligence
+        // reaches it without a shortcut — no App Shortcut entry needed here.
         AppShortcut(
             intent: FestCountdownIntent(),
             phrases: [

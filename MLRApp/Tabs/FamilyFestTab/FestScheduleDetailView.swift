@@ -21,7 +21,7 @@ struct FestScheduleDetailView: View {
                         Label(item.day, systemImage: "calendar")
                             .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFest.opacity(0.7))
-                        Label(item.time, systemImage: "clock")
+                        Label(MLRFormat.time(item.time), systemImage: "clock")
                             .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFest.opacity(0.7))
                     }
@@ -223,7 +223,7 @@ struct ExpandableScheduleRow: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
-            Text(item.time)
+            Text(MLRFormat.time(item.time))
                 .font(.mlrScaled(12, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.mlrFest.opacity(0.6))
                 .frame(width: 62, alignment: .leading)
@@ -351,7 +351,7 @@ struct ExpandableDinnerRow: View {
                 Text("Dinner")
                     .font(.festSerif(14, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
-                Text("\(dinner.chef) · \(dinner.time)")
+                Text("\(dinner.chef) · \(MLRFormat.time(dinner.time))")
                     .font(.mlrScaled(12))
                     .foregroundStyle(Color.mlrFest.opacity(0.6))
                     .lineLimit(1)

@@ -47,7 +47,6 @@
 		D33F9E832FEC086700603CE7 /* CommentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E3E2FEC086700603CE7 /* CommentsView.swift */; };
 		D33F9E842FEC086700603CE7 /* AskForHelpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DF52FEC086700603CE7 /* AskForHelpSheet.swift */; };
 		D33F9E852FEC086700603CE7 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E282FEC086700603CE7 /* Colors.swift */; };
-		D33F9E862FEC086700603CE7 /* SpotlightIndexer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E0F2FEC086700603CE7 /* SpotlightIndexer.swift */; };
 		D33F9E872FEC086700603CE7 /* CabinRequestSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DEA2FEC086700603CE7 /* CabinRequestSheet.swift */; };
 		D33F9E882FEC086700603CE7 /* CalendarService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E082FEC086700603CE7 /* CalendarService.swift */; };
 		D33F9E892FEC086700603CE7 /* AdminCabinBookings.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4C2FEC086700603CE7 /* AdminCabinBookings.swift */; };
@@ -136,7 +135,6 @@
 		D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */; };
 		D33F9F232FF84B0500603CE7 /* WorkItemIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */; };
 		D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F242FF84C1C00603CE7 /* AppEntities.swift */; };
-		D33F9F272FF84C6100603CE7 /* BrowseIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */; };
 		D3533C0B2FE9EC60001AD887 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0A2FE9EC60001AD887 /* Auth */; };
 		D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0C2FE9EC60001AD887 /* Functions */; };
 		D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0E2FE9EC60001AD887 /* PostgREST */; };
@@ -161,12 +159,15 @@
 		D36347662FFDEE12001D52C8 /* CabinIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347652FFDEE12001D52C8 /* CabinIntents.swift */; };
 		D36347682FFDEF09001D52C8 /* SnippetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347672FFDEF09001D52C8 /* SnippetViews.swift */; };
 		D363476A2FFDF098001D52C8 /* IntentDonations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347692FFDF098001D52C8 /* IntentDonations.swift */; };
+		D363476D2FFEA947001D52C8 /* GlobalSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363476C2FFEA947001D52C8 /* GlobalSearchView.swift */; };
+		D363476F2FFEAA14001D52C8 /* OpenEntityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363476E2FFEAA14001D52C8 /* OpenEntityIntents.swift */; };
 		D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39BD8902FFC47C000B1E74D /* ChatMedia.swift */; };
 		D3A0000000000000000000B1 /* HouseStay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A1 /* HouseStay.swift */; };
 		D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A2 /* HouseCalendarView.swift */; };
 		D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A3 /* HouseCalendarSheets.swift */; };
 		D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A4 /* HouseStayComposer.swift */; };
 		D3A0000000000000000000B5 /* HouseHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A5 /* HouseHubView.swift */; };
+		D3E4FD3D2FFFE7340008DA06 /* FestDuesCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -231,7 +232,6 @@
 		D33F9E0C2FEC086700603CE7 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
 		D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActions.swift; sourceTree = "<group>"; };
 		D33F9E0E2FEC086700603CE7 /* Payments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Payments.swift; sourceTree = "<group>"; };
-		D33F9E0F2FEC086700603CE7 /* SpotlightIndexer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpotlightIndexer.swift; sourceTree = "<group>"; };
 		D33F9E112FEC086700603CE7 /* MemberSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberSheetView.swift; sourceTree = "<group>"; };
 		D33F9E122FEC086700603CE7 /* PeopleDirectoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleDirectoryView.swift; sourceTree = "<group>"; };
 		D33F9E142FEC086700603CE7 /* CabinService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CabinService.swift; sourceTree = "<group>"; };
@@ -318,8 +318,7 @@
 		D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminHousesView.swift; sourceTree = "<group>"; };
 		D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemIntents.swift; sourceTree = "<group>"; };
 		D33F9F242FF84C1C00603CE7 /* AppEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntities.swift; sourceTree = "<group>"; };
-		D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BrowseIntents.swift; sourceTree = "<group>"; };
-		D36347492FFD37F9001D52C8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = file; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
+		D36347492FFD37F9001D52C8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		D363474B2FFDD8DC001D52C8 /* FestQueryIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestQueryIntents.swift; sourceTree = "<group>"; };
 		D363474D2FFDD91D001D52C8 /* ResortQueryIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResortQueryIntents.swift; sourceTree = "<group>"; };
 		D363474F2FFDD9C0001D52C8 /* FestEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestEntities.swift; sourceTree = "<group>"; };
@@ -336,12 +335,15 @@
 		D36347652FFDEE12001D52C8 /* CabinIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CabinIntents.swift; sourceTree = "<group>"; };
 		D36347672FFDEF09001D52C8 /* SnippetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetViews.swift; sourceTree = "<group>"; };
 		D36347692FFDF098001D52C8 /* IntentDonations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentDonations.swift; sourceTree = "<group>"; };
+		D363476C2FFEA947001D52C8 /* GlobalSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalSearchView.swift; sourceTree = "<group>"; };
+		D363476E2FFEAA14001D52C8 /* OpenEntityIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenEntityIntents.swift; sourceTree = "<group>"; };
 		D39BD8902FFC47C000B1E74D /* ChatMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMedia.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A1 /* HouseStay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStay.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A2 /* HouseCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarView.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A3 /* HouseCalendarSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarSheets.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A4 /* HouseStayComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStayComposer.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A5 /* HouseHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseHubView.swift; sourceTree = "<group>"; };
+		D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDuesCalculator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -488,7 +490,6 @@
 				D33F9DFB2FEC086700603CE7 /* NextEventIntent.swift */,
 				D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */,
 				D33F9F242FF84C1C00603CE7 /* AppEntities.swift */,
-				D33F9F262FF84C6100603CE7 /* BrowseIntents.swift */,
 				D363474B2FFDD8DC001D52C8 /* FestQueryIntents.swift */,
 				D363474D2FFDD91D001D52C8 /* ResortQueryIntents.swift */,
 				D363474F2FFDD9C0001D52C8 /* FestEntities.swift */,
@@ -504,6 +505,7 @@
 				D36347652FFDEE12001D52C8 /* CabinIntents.swift */,
 				D36347672FFDEF09001D52C8 /* SnippetViews.swift */,
 				D36347692FFDF098001D52C8 /* IntentDonations.swift */,
+				D363476E2FFEAA14001D52C8 /* OpenEntityIntents.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -545,7 +547,6 @@
 				D33F9E0C2FEC086700603CE7 /* MessageComposer.swift */,
 				D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */,
 				D33F9E0E2FEC086700603CE7 /* Payments.swift */,
-				D33F9E0F2FEC086700603CE7 /* SpotlightIndexer.swift */,
 				D36347552FFDDFA5001D52C8 /* ContentIndexer.swift */,
 			);
 			path = Native;
@@ -647,6 +648,7 @@
 				D33F9E3A2FEC086700603CE7 /* FestScheduleView.swift */,
 				D33F9E3B2FEC086700603CE7 /* FestStatus.swift */,
 				D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */,
+				D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */,
 			);
 			path = FamilyFestTab;
 			sourceTree = "<group>";
@@ -747,6 +749,7 @@
 				D33F9EDE2FF3FC7500603CE7 /* Help */,
 				D33F9F1D2FF8475E00603CE7 /* Houses */,
 				D36347492FFD37F9001D52C8 /* PrivacyInfo.xcprivacy */,
+				D363476B2FFEA947001D52C8 /* Search */,
 			);
 			path = MLRApp;
 			sourceTree = "<group>";
@@ -799,6 +802,14 @@
 				D3A0000000000000000000A5 /* HouseHubView.swift */,
 			);
 			path = Houses;
+			sourceTree = "<group>";
+		};
+		D363476B2FFEA947001D52C8 /* Search */ = {
+			isa = PBXGroup;
+			children = (
+				D363476C2FFEA947001D52C8 /* GlobalSearchView.swift */,
+			);
+			path = Search;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -912,7 +923,6 @@
 			isa = PBXSourcesBuildPhase;
 			files = (
 				D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */,
-				D33F9F272FF84C6100603CE7 /* BrowseIntents.swift in Sources */,
 				D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */,
 				D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */,
 				D33F9E602FEC086700603CE7 /* FestLiveActivityController.swift in Sources */,
@@ -960,6 +970,7 @@
 				D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */,
 				D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */,
 				D33F9E7D2FEC086700603CE7 /* FestDinnersView.swift in Sources */,
+				D3E4FD3D2FFFE7340008DA06 /* FestDuesCalculator.swift in Sources */,
 				D363475C2FFDE656001D52C8 /* ResortLifeIntents.swift in Sources */,
 				D33F9E7E2FEC086700603CE7 /* FestCountdownIntent.swift in Sources */,
 				D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */,
@@ -977,7 +988,7 @@
 				D33F9E842FEC086700603CE7 /* AskForHelpSheet.swift in Sources */,
 				D33F9E852FEC086700603CE7 /* Colors.swift in Sources */,
 				D33F9ED52FF3175D00603CE7 /* WorkItemsSection.swift in Sources */,
-				D33F9E862FEC086700603CE7 /* SpotlightIndexer.swift in Sources */,
+				D363476D2FFEA947001D52C8 /* GlobalSearchView.swift in Sources */,
 				D33F9E872FEC086700603CE7 /* CabinRequestSheet.swift in Sources */,
 				D33F9E882FEC086700603CE7 /* CalendarService.swift in Sources */,
 				D33F9E892FEC086700603CE7 /* AdminCabinBookings.swift in Sources */,
@@ -1039,6 +1050,7 @@
 				D36347542FFDDF3D001D52C8 /* ChatSearchIntents.swift in Sources */,
 				D33F9EB72FEC086700603CE7 /* PostComposer.swift in Sources */,
 				D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */,
+				D363476F2FFEAA14001D52C8 /* OpenEntityIntents.swift in Sources */,
 				D33F9EB82FEC086700603CE7 /* PushService.swift in Sources */,
 				D33F9EB92FEC086700603CE7 /* PostsView.swift in Sources */,
 				D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */,
@@ -1223,12 +1235,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MLRApp/MLRApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UBM722BP54;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MLR uses Calendar to add family events to your calendar.";
@@ -1248,7 +1261,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
@@ -1273,12 +1286,13 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MLRApp/MLRApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UBM722BP54;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MLR uses Calendar to add family events to your calendar.";
@@ -1298,7 +1312,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.1;
+				MARKETING_VERSION = 1.2;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";

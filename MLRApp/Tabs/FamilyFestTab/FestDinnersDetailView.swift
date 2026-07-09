@@ -21,7 +21,7 @@ struct FestDinnersDetailView: View {
                         Label(dinner.day, systemImage: "calendar")
                             .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFest.opacity(0.7))
-                        Label(dinner.time, systemImage: "clock")
+                        Label(MLRFormat.time(dinner.time), systemImage: "clock")
                             .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFest.opacity(0.7))
                     }

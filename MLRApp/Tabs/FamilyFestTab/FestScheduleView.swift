@@ -125,7 +125,7 @@ private struct ScheduleRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: 14) {
             // Time column
-            Text(item.time)
+            Text(MLRFormat.time(item.time))
                 .font(.mlrScaled(12, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.mlrFest.opacity(0.6))
                 .frame(width: 62, alignment: .leading)

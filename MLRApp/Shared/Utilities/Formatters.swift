@@ -103,6 +103,41 @@ enum MLRFormat {
         default: return "\(days) days"
         }
     }
+
+    // MARK: Time of day ("18:00" or "6:00 PM" → "6:00 PM")
+    // Port of lib/format.ts `formatTime` (#247): a Fest time may be stored as a
+    // 24h "H:MM"/"HH:MM" (web's native time picker) or a 12h "H:MM AM/PM" (typed
+    // in the iOS planner). Normalize either to a friendly "6:00 PM"; fall back to
+    // the raw text instead of ever rendering an "Invalid Date". Empty/unset (or
+    // the "TBD" sentinel) reads "TBD".
+
+    static func time(_ input: String?) -> String {
+        guard let raw = input?.trimmingCharacters(in: .whitespaces), !raw.isEmpty else { return "TBD" }
+        guard let parts = timeParts(raw) else { return raw }
+        var comps = DateComponents()
+        comps.hour = parts.h
+        comps.minute = parts.m
+        guard let date = Calendar.current.date(from: comps) else { return raw }
+        return clockFormatter.string(from: date)
+    }
+
+    /// Parse "H:MM"/"HH:MM" (24h) or "H:MM AM/PM" (12h); nil for anything else.
+    private static func timeParts(_ s: String) -> (h: Int, m: Int)? {
+        var str = s.uppercased()
+        var isPM: Bool?
+        if str.hasSuffix("AM") { isPM = false; str.removeLast(2) }
+        else if str.hasSuffix("PM") { isPM = true; str.removeLast(2) }
+        str = str.trimmingCharacters(in: .whitespaces)
+        let parts = str.split(separator: ":")
+        guard parts.count == 2, let h0 = Int(parts[0]), let m = Int(parts[1]), (0...59).contains(m) else { return nil }
+        if let isPM {
+            guard (1...12).contains(h0) else { return nil }
+            let h = h0 == 12 ? (isPM ? 12 : 0) : (isPM ? h0 + 12 : h0)
+            return (h, m)
+        }
+        guard (0...23).contains(h0) else { return nil }
+        return (h0, m)
+    }
 }
 
 // MARK: - Private formatters
@@ -133,6 +168,13 @@ private let currencyFormatter: NumberFormatter = {
     let f = NumberFormatter()
     f.numberStyle = .currency
     f.currencyCode = "USD"
+    return f
+}()
+
+private let clockFormatter: DateFormatter = {
+    let f = DateFormatter()
+    f.timeStyle = .short   // "6:00 PM"
+    f.dateStyle = .none
     return f
 }()
 

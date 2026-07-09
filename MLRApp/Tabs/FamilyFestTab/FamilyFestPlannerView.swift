@@ -398,6 +398,11 @@ private struct DuesEditSheet: View {
                 TextField("Label (e.g. Adult, Kid, Per day)", text: $tier.label)
                 TextField("Amount (leave blank for TBD)", value: $tier.amount, format: .number).keyboardType(.numberPad)
                 TextField("Note (optional)", text: optional($tier.note))
+                Toggle("Billed per day", isOn: $tier.perDay)
+                if tier.perDay {
+                    Text("The Pay calculator multiplies this amount by a shared \u{201C}number of days\u{201D} count.")
+                        .font(.mlrCaption).foregroundStyle(Color.mlrTextMuted)
+                }
             }
             .navigationTitle(isNew ? "Add dues amount" : "Edit dues amount")
             .navigationBarTitleDisplayMode(.inline)

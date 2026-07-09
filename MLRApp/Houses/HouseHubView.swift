@@ -100,24 +100,9 @@ struct HouseHubView: View {
                 }
                 .buttonStyle(.plain)
 
-                // Upcoming stays preview
-                if !upcoming.isEmpty {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Who's staying").font(.mlrScaled(15, weight: .bold))
-                        ForEach(upcoming.prefix(3)) { s in
-                            NavigationLink(destination: HouseCalendarView(house: house)) {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text(s.label).font(.mlrScaled(15, weight: .semibold)).foregroundStyle(Color.mlrText)
-                                    Text(s.headCount > 1 ? "\(s.dateRangeLabel) · \(s.headCount) people" : s.dateRangeLabel)
-                                        .font(.mlrCaption).foregroundStyle(Color.mlrTextMuted)
-                                }
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                                .padding(12).cardStyle()
-                            }
-                            .buttonStyle(.plain)
-                        }
-                    }
-                }
+                // Who's staying lives on the House calendar (surfaced via the
+                // "Next up:" line on the calendar card above) — no separate
+                // preview here, matching web (#248).
 
                 // To-do list (the checklist also shows resort-wide MLR items).
                 VStack(alignment: .leading, spacing: 8) {

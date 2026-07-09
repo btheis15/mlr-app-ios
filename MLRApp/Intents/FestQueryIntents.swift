@@ -81,11 +81,11 @@ struct DinnerForDayIntent: AppIntent {
 
         var parts: [String] = ["\(target)'s dinner is \(dinner.title)"]
         if dinner.chef != "TBD" { parts.append("made by \(dinner.chef)") }
-        if dinner.time != "TBD" { parts.append("served at \(dinner.time)") }
+        if dinner.time != "TBD" { parts.append("served at \(MLRFormat.time(dinner.time))") }
         if let loc = dinner.location, !loc.isEmpty { parts.append("at \(loc)") }
         return .result(
             dialog: IntentDialog(stringLiteral: parts.joined(separator: ", ") + "."),
-            view: DinnerSnippet(day: target, title: dinner.title, chef: dinner.chef, time: dinner.time, menu: dinner.menuLines)
+            view: DinnerSnippet(day: target, title: dinner.title, chef: dinner.chef, time: MLRFormat.time(dinner.time), menu: dinner.menuLines)
         )
     }
 }
@@ -117,7 +117,7 @@ struct FestScheduleForDayIntent: AppIntent {
             return .result(dialog: "There's nothing on the Family Fest schedule for \(target) yet.")
         }
         let list = items.prefix(6).map { item -> String in
-            let t = item.time == "TBD" ? "" : "\(item.time): "
+            let t = item.time == "TBD" ? "" : "\(MLRFormat.time(item.time)): "
             return "\(t)\(item.title)"
         }.joined(separator: "; ")
         let more = items.count > 6 ? ", and more" : ""

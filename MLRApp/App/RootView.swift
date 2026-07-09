@@ -17,6 +17,7 @@ struct RootView: View {
     @State private var pendingHouse: House?
     @State private var pendingHouseHub: House?
     @State private var pendingCommitteeChat: PendingCommitteeChat?
+    @State private var searchRequest: GlobalSearchRequest?
 
     // Siri / Shortcuts → in-app navigation bridge.
     private var router = IntentRouter.shared
@@ -65,6 +66,11 @@ struct RootView: View {
             NavigationStack {
                 CommitteeChatView(committee: pending.committee, members: pending.members, assumeMember: true)
             }
+        }
+        // `.system.searchInApp` Siri / Apple Intelligence search (or the Home
+        // search button) — the destination the search schema navigates to.
+        .sheet(item: $searchRequest) { req in
+            NavigationStack { GlobalSearchView(initialTerm: req.term) }
         }
         .sheet(isPresented: Binding(
             get: { env.authService.showSignIn },
@@ -229,6 +235,9 @@ struct RootView: View {
                     pendingHouse = house
                 }
             }
+        case .search(let term):
+            selectedTab = .home
+            searchRequest = GlobalSearchRequest(term: term)
         }
     }
 

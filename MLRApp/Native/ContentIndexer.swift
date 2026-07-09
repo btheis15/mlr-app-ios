@@ -13,6 +13,13 @@ import UniformTypeIdentifiers
 // Everything runs as the signed-in user, so RLS scopes results to content that
 // person is allowed to see — private chats never leak. Index is cleared on sign
 // out. Each source is defensive: a failing query just contributes nothing.
+//
+// For content that has an App Entity (people, committees, events, work items,
+// fest dinners/schedule) we keep the hand-built CSSearchableItem (its mlr:// id
+// drives tap-routing + rich keywords) and additionally call `associateAppEntity`
+// — per Apple's docs this gives the same Apple-Intelligence benefits as
+// `indexAppEntities` WITHOUT creating duplicate index entries, and lets the
+// `.system.open` intents open the entity from a Spotlight result on iOS 27.
 
 enum ContentIndexer {
     private static let domain = "com.muskellungelakeresort.mlr"
@@ -167,51 +174,63 @@ enum ContentIndexer {
                 keywords += ["birthday", "born", pretty]
                 desc = "Birthday: \(pretty)"
             }
-            return item(id: "mlr://people?id=\(m.id.uuidString)", title: m.name,
-                        description: desc, keywords: keywords, contentType: .contact)
+            let it = item(id: "mlr://people?id=\(m.id.uuidString)", title: m.name,
+                          description: desc, keywords: keywords, contentType: .contact)
+            it.associateAppEntity(m, priority: 0)
+            return it
         }
     }
 
     private static func committeeItems() async -> [CSSearchableItem] {
         let committees = (try? await CommitteeEntityQuery.all()) ?? []
         return committees.map { c in
-            item(id: "mlr://committees?slug=\(c.id)", title: "\(c.emoji) \(c.name)",
-                 description: "Committee", keywords: [c.name, "committee", "volunteer", "group"])
+            let it = item(id: "mlr://committees?slug=\(c.id)", title: "\(c.emoji) \(c.name)",
+                          description: "Committee", keywords: [c.name, "committee", "volunteer", "group"])
+            it.associateAppEntity(c, priority: 0)
+            return it
         }
     }
 
     private static func eventItems() async -> [CSSearchableItem] {
         let events = await EventEntityQuery.upcoming()
         return events.map { e in
-            item(id: "mlr://events?id=\(e.id)", title: e.title,
-                 description: e.subtitle, keywords: [e.title, "event", "calendar", "gathering", e.subtitle])
+            let it = item(id: "mlr://events?id=\(e.id)", title: e.title,
+                          description: e.subtitle, keywords: [e.title, "event", "calendar", "gathering", e.subtitle])
+            it.associateAppEntity(e, priority: 0)
+            return it
         }
     }
 
     private static func workItemItems() async -> [CSSearchableItem] {
         let items0 = (try? await WorkItemEntityQuery.open()) ?? []
         return items0.map { w in
-            item(id: "mlr://work?id=\(w.id.uuidString)", title: w.title,
-                 description: "Work checklist · \(w.subtitle)",
-                 keywords: [w.title, "work", "task", "to do", "checklist", "project", "fix"])
+            let it = item(id: "mlr://work?id=\(w.id.uuidString)", title: w.title,
+                          description: "Work checklist · \(w.subtitle)",
+                          keywords: [w.title, "work", "task", "to do", "checklist", "project", "fix"])
+            it.associateAppEntity(w, priority: 0)
+            return it
         }
     }
 
     private static func festDinnerItems() async -> [CSSearchableItem] {
         let dinners = await FestDinnerEntityQuery.all()
         return dinners.map { d in
-            item(id: "mlr://family-fest?dinner=\(d.id)", title: d.title,
-                 description: d.subtitle,
-                 keywords: [d.title, "dinner", "meal", "chef", "cooking", "food", "family fest"])
+            let it = item(id: "mlr://family-fest?dinner=\(d.id)", title: d.title,
+                          description: d.subtitle,
+                          keywords: [d.title, "dinner", "meal", "chef", "cooking", "food", "family fest"])
+            it.associateAppEntity(d, priority: 0)
+            return it
         }
     }
 
     private static func festScheduleItems() async -> [CSSearchableItem] {
         let sched = await FestScheduleEntityQuery.all()
         return sched.map { s in
-            item(id: "mlr://family-fest?item=\(s.id)", title: s.title,
-                 description: s.subtitle,
-                 keywords: [s.title, "schedule", "plan", "activity", "family fest", "event"])
+            let it = item(id: "mlr://family-fest?item=\(s.id)", title: s.title,
+                          description: s.subtitle,
+                          keywords: [s.title, "schedule", "plan", "activity", "family fest", "event"])
+            it.associateAppEntity(s, priority: 0)
+            return it
         }
     }
 

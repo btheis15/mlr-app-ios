@@ -138,7 +138,7 @@ private struct LiveCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     ForEach(todayItems) { item in
                         HStack(spacing: 6) {
-                            Text(item.time)
+                            Text(MLRFormat.time(item.time))
                                 .font(.mlrScaled(12, weight: .medium))
                                 .foregroundStyle(Color.mlrFest.opacity(0.6))
                                 .frame(width: 60, alignment: .leading)
