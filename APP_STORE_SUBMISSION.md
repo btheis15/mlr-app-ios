@@ -80,7 +80,7 @@ Your family lake community
 
 **Promotional text (≤170):**
 ```
-Stay connected with everyone at the lake — events, chat, help requests, cabin bookings, and Family Fest, all in one place.
+Stay connected with everyone Up North — events, chat, help requests, cabin bookings, and Family Fest, all in one place.
 ```
 
 **Description:**
