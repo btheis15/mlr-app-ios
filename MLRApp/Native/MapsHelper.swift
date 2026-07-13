@@ -11,8 +11,8 @@ import CoreLocation
 //   • Local Places → a map of nearby businesses.
 
 enum MapsHelper {
-    /// Muskellunge Lake Resort (approx), Tomahawk, WI.
-    static let resort = CLLocationCoordinate2D(latitude: 45.4669, longitude: -89.7296)
+    /// Muskellunge Lake Resort, Tomahawk, WI.
+    static let resort = CLLocationCoordinate2D(latitude: 45.53492, longitude: -89.69830)
 
     /// Open Apple Maps with driving directions to a coordinate.
     static func directions(to coordinate: CLLocationCoordinate2D, name: String) {
