@@ -208,7 +208,7 @@ struct WelcomeIntroView: View {
                         .font(.title.bold())
                         .frame(maxWidth: .infinity)
 
-                    Text("First, turn on notifications so you get a heads-up on your phone for what matters at the lake — event RSVPs, dinners, help requests, and emergencies. You can change these anytime in Profile → Notifications.")
+                    Text("First, turn on notifications so you get a heads-up on your phone for what matters Up North — event RSVPs, dinners, help requests, and emergencies. You can change these anytime in Profile → Notifications.")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)

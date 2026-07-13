@@ -284,7 +284,7 @@ extension ResortEvent {
         ResortEvent(
             id: "up-north-4th-2026",
             title: "Up North for the 4th",
-            description: "The 4th of July weekend at the lake — fireworks, cookouts, and time on the water. Let everyone know if you're heading up.",
+            description: "The 4th of July weekend Up North — fireworks, cookouts, and time on the water. Let everyone know if you're heading up.",
             kind: .holiday,
             startDate: "2026-07-03",
             endDate: "2026-07-05",
