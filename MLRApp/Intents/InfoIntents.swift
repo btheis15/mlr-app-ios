@@ -70,9 +70,8 @@ struct DirectionsToResortIntent: AppIntent {
     static var description = IntentDescription("Get driving directions up north.")
 
     func perform() async throws -> some IntentResult & OpensIntent & ProvidesDialog {
-        let dest = "Muskellunge Lake Resort, Tomahawk, WI"
-        let q = dest.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "Tomahawk,WI"
-        guard let url = URL(string: "http://maps.apple.com/?daddr=\(q)") else {
+        let r = MapsHelper.resort
+        guard let url = URL(string: "http://maps.apple.com/?daddr=\(r.latitude),\(r.longitude)") else {
             return .result(dialog: "I couldn't open directions.")
         }
         return .result(opensIntent: OpenURLIntent(url),

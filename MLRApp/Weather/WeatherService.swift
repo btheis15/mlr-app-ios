@@ -23,8 +23,8 @@ import FoundationModels
 final class WeatherService {
     static let shared = WeatherService()
 
-    /// Muskellunge Lake Resort, Tomahawk, WI (approx).
-    static let resortCoordinate = CLLocationCoordinate2D(latitude: 45.4669, longitude: -89.7296)
+    /// Muskellunge Lake Resort, Tomahawk, WI.
+    static let resortCoordinate = CLLocationCoordinate2D(latitude: 45.53492, longitude: -89.69830)
 
     private let service = WeatherKit.WeatherService.shared
     private let maxForecastDays = 10
