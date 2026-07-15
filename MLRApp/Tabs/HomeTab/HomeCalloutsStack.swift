@@ -22,6 +22,9 @@ struct HomeCalloutsStack: View {
     @Environment(AppEnvironment.self) private var env
 
     let season: FestSeason
+    /// When set by the admin date-preview mode, overrides the real calendar date
+    /// for callout visibility filtering. Format: `yyyy-MM-dd`.
+    var previewDate: String? = nil
 
     // In-memory dismissals — resets on cold launch, like the web's sessionStorage.
     @State private var dismissed: Set<String> = []
@@ -29,6 +32,7 @@ struct HomeCalloutsStack: View {
     @State private var markingDoneId: String? = nil
 
     private var today: String {
+        if let p = previewDate { return p }
         let f = DateFormatter()
         f.dateFormat = "yyyy-MM-dd"
         f.locale = Locale(identifier: "en_US_POSIX")

@@ -18,6 +18,19 @@ struct HomeView: View {
     // `.system.searchInApp` intent opens).
     @State private var showSearch = false
 
+    // Admin date-preview: simulate what Home looks like on a given day.
+    @State private var previewDate: Date? = nil
+    @State private var showDatePicker = false
+
+    private var previewDateString: String? {
+        guard let d = previewDate else { return nil }
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "America/Chicago")!
+        f.locale = Locale(identifier: "en_US_POSIX")
+        return f.string(from: d)
+    }
+
     /// The next upcoming event to spotlight on Home: the nearest non–Family-Fest
     /// event the member hasn't declined. Declined ("not going") events drop off
     /// Home but stay findable in the Events list — matches the web.
@@ -37,6 +50,13 @@ struct HomeView: View {
                         // ── 1. MLR logo hero ──────────────────────────────
                         logoHero(geometry: geometry)
 
+                        // Admin preview banner — shown when viewing Home as a future date.
+                        if let pd = previewDate {
+                            previewBanner(date: pd)
+                                .padding(.horizontal, 16)
+                                .padding(.bottom, 4)
+                        }
+
                         // First-visit welcome (guests only; self-dismisses)
                         WelcomeCard()
                             .padding(.bottom, 4)
@@ -54,7 +74,7 @@ struct HomeView: View {
                             // Admin-managed swipeable callout cards (home_callouts,
                             // migration 0083) stack above the permanent FamilyFestSpotlight
                             // base — same shape as the web's HomeSpotlight/CalloutStack.
-                            HomeCalloutsStack(season: festSeason)
+                            HomeCalloutsStack(season: festSeason, previewDate: previewDateString)
 
                             // ── 5. Upcoming event ─────────────────────────
                             if let event = spotlightEvent {
@@ -106,9 +126,47 @@ struct HomeView: View {
         .sheet(isPresented: $showSearch) {
             NavigationStack { GlobalSearchView(initialTerm: "") }
         }
+        .sheet(isPresented: $showDatePicker) {
+            NavigationStack {
+                Form {
+                    Section {
+                        DatePicker(
+                            "Preview date",
+                            selection: Binding(
+                                get: { previewDate ?? Date() },
+                                set: { previewDate = $0 }
+                            ),
+                            displayedComponents: .date
+                        )
+                        .datePickerStyle(.graphical)
+                        .tint(Color.mlrPrimary)
+                    }
+                    if previewDate != nil {
+                        Section {
+                            Button("Clear preview — use today") {
+                                previewDate = nil
+                                showDatePicker = false
+                            }
+                            .foregroundStyle(Color.mlrDanger)
+                            .frame(maxWidth: .infinity, alignment: .center)
+                        }
+                    }
+                }
+                .navigationTitle("View Home as…")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .confirmationAction) {
+                        Button("Done") { showDatePicker = false }
+                    }
+                }
+            }
+        }
         // When the spotlight switches events (e.g. after declining one), drop the
         // stale optimistic override so it can't leak onto the next event's card.
         .onChange(of: spotlightEvent?.id) { _, _ in nearestEventStatus = nil }
+        .onChange(of: previewDate) { _, newDate in
+            festSeason = FestSeason.current(now: newDate ?? Date())
+        }
         .task {
             festSeason = FestSeason.current()
             await env.appImagesService.load()
@@ -190,6 +248,49 @@ struct HomeView: View {
             .accessibilityLabel("Search Up North")
             .padding(.trailing, 4)
         }
+        // Admin-only: date preview button (leading).
+        .overlay(alignment: .leading) {
+            if env.isAdmin {
+                Button { showDatePicker = true } label: {
+                    Image(systemName: previewDate == nil
+                          ? "calendar.badge.clock"
+                          : "calendar.badge.exclamationmark")
+                        .font(.mlrScaled(18, weight: .semibold))
+                        .foregroundStyle(previewDate == nil ? Color.mlrPrimary : .orange)
+                        .padding(10)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("View Home as a date")
+                .padding(.leading, 4)
+            }
+        }
+    }
+
+    private func previewBanner(date: Date) -> some View {
+        let f = DateFormatter()
+        f.dateStyle = .medium
+        f.timeStyle = .none
+        return HStack(spacing: 8) {
+            Image(systemName: "clock.badge.exclamationmark")
+                .foregroundStyle(.orange)
+                .font(.mlrScaled(14))
+            Text("Previewing Home as \(f.string(from: date))")
+                .font(.mlrScaled(12, weight: .medium))
+                .foregroundStyle(.orange)
+            Spacer()
+            Button { previewDate = nil } label: {
+                Image(systemName: "xmark")
+                    .font(.mlrScaled(11, weight: .semibold))
+                    .foregroundStyle(.orange.opacity(0.8))
+                    .padding(4)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(.orange.opacity(0.1))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.orange.opacity(0.25), lineWidth: 1))
     }
 
     // "App & Help" — guided tour, share the app, help & how-to
