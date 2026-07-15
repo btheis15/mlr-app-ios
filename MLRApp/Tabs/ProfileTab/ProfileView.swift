@@ -116,27 +116,27 @@ struct ProfileView: View {
             // 3. Payment handles
             paymentSection
 
-            // 4. Notifications
-            notificationsSection
-
-            // 4a. Account (email alerts + change login email)
-            accountSection
-
-            // 4b. Appearance (light / dark / system)
-            appearanceSection
-
-            // 5. Ask for Help (willing to help toggle + log)
-            askForHelpSection
-
-            // 6. Features (Siri/Spotlight)
-            featuresSection
-
-            // 6. Admin hub (admins only)
+            // 4. Admin hub (admins only — elevated above notifications for discoverability)
             if env.isAdmin {
                 adminSection
             }
 
-            // 7. Sign out
+            // 5. Notifications
+            notificationsSection
+
+            // 5a. Account (email alerts + change login email)
+            accountSection
+
+            // 5b. Appearance (light / dark / system)
+            appearanceSection
+
+            // 6. Ask for Help (willing to help toggle + log)
+            askForHelpSection
+
+            // 7. Features (Siri/Spotlight)
+            featuresSection
+
+            // 8. Sign out
             signOutSection
 
             // 8. App info

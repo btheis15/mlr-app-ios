@@ -110,6 +110,8 @@ struct CalloutComposerView: View {
     @State private var links: [CalloutLink] = []
     @State private var startsOn = ""
     @State private var endsOn = ""
+    @State private var hasDeadline = false
+    @State private var deadlineDate = Date()
     @State private var isActive = true
     @State private var isSaving = false
     @State private var isUploadingImage = false
@@ -229,6 +231,20 @@ struct CalloutComposerView: View {
                     .tint(Color.mlrPrimary)
             }
 
+            Section {
+                Toggle("Has deadline", isOn: $hasDeadline.animation())
+                    .tint(Color.mlrPrimary)
+                if hasDeadline {
+                    DatePicker("Deadline", selection: $deadlineDate,
+                               displayedComponents: [.date, .hourAndMinute])
+                }
+            } header: {
+                Text("Deadline")
+            } footer: {
+                Text("The actual due-by moment (separate from the show window above). Used by scheduled reminders.")
+                    .font(.mlrScaled(12))
+            }
+
             if let saveError {
                 Section {
                     Text(saveError)
@@ -275,6 +291,10 @@ struct CalloutComposerView: View {
         startsOn = c.startsOn ?? ""
         endsOn   = c.endsOn ?? ""
         isActive = c.isActive
+        if let dl = c.deadlineAt, let date = ISO8601DateFormatter().date(from: dl) {
+            hasDeadline = true
+            deadlineDate = date
+        }
     }
 
     private func uploadImage(_ item: PhotosPickerItem) async {
@@ -309,6 +329,7 @@ struct CalloutComposerView: View {
             var links: [LinkPayload]
             var starts_on: String?
             var ends_on: String?
+            var deadline_at: String?
             var is_active: Bool
             var dismiss_id: String?
             var position: Int?
@@ -318,16 +339,17 @@ struct CalloutComposerView: View {
             .map { LinkPayload(href: $0.href, label: $0.label) }
 
         let payload = CalloutPayload(
-            id:         existing?.id,
-            title:      title.isEmpty    ? nil : title,
-            body:       body_.isEmpty    ? nil : body_,
-            image_url:  imageUrl.isEmpty ? nil : imageUrl,
-            links:      validLinks,
-            starts_on:  startsOn.isEmpty ? nil : startsOn,
-            ends_on:    endsOn.isEmpty   ? nil : endsOn,
-            is_active:  isActive,
-            dismiss_id: existing?.dismissId,
-            position:   existing?.position
+            id:          existing?.id,
+            title:       title.isEmpty    ? nil : title,
+            body:        body_.isEmpty    ? nil : body_,
+            image_url:   imageUrl.isEmpty ? nil : imageUrl,
+            links:       validLinks,
+            starts_on:   startsOn.isEmpty ? nil : startsOn,
+            ends_on:     endsOn.isEmpty   ? nil : endsOn,
+            deadline_at: hasDeadline ? ISO8601DateFormatter().string(from: deadlineDate) : nil,
+            is_active:   isActive,
+            dismiss_id:  existing?.dismissId,
+            position:    existing?.position
         )
         do {
             if existing != nil {

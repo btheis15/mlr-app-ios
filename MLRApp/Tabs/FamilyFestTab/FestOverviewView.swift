@@ -19,11 +19,11 @@ struct FestOverviewView: View {
     private var content: FestContentService { env.festContentService }
 
     /// Timed items grouped by day, ordered by real date (falls back to weekday
-    /// order when a day has no ISO date, e.g. the offline seed). During the
-    /// live week, today is omitted — FestStatus shows it in full at the top.
+    /// order when a day has no ISO date, e.g. the offline seed). All days shown
+    /// including today during the live week — FamilyFestSpotlight shows today
+    /// prominently above, but the full week list is always complete.
     private var dayGroups: [(day: String, isoDate: String?, items: [ScheduleItem])] {
-        let todayName = festSeason.phase == .live ? Self.todayWeekday : nil
-        let timed = content.schedule.filter { $0.day != "Anytime" && $0.day != todayName }
+        let timed = content.schedule.filter { $0.day != "Anytime" }
         return Dictionary(grouping: timed, by: \.day)
             .map { (day: $0.key, isoDate: $0.value.compactMap(\.isoDate).first, items: $0.value) }
             .sorted { a, b in

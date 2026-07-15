@@ -20,6 +20,9 @@ struct EventComposer: View {
     @State private var location: String
     @State private var dayRsvp: Bool
 
+    @State private var hasStartTime: Bool
+    @State private var startTimeDate: Date
+
     @State private var isSaving = false
     @State private var saveError: String?
     @State private var drafting = false
@@ -55,6 +58,40 @@ struct EventComposer: View {
             _endDate = State(initialValue: start)
             _hasEndDate = State(initialValue: false)
         }
+
+        if let hhmm = existing?.startTime {
+            _hasStartTime = State(initialValue: true)
+            _startTimeDate = State(initialValue: Self.parseTime(hhmm))
+        } else {
+            _hasStartTime = State(initialValue: false)
+            _startTimeDate = State(initialValue: Self.defaultTime())
+        }
+    }
+
+    private static func parseTime(_ hhmm: String) -> Date {
+        let parts = hhmm.split(separator: ":").compactMap { Int($0) }
+        guard parts.count >= 2 else { return defaultTime() }
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Chicago")!
+        var comps = cal.dateComponents([.year, .month, .day], from: .now)
+        comps.hour = parts[0]; comps.minute = parts[1]
+        return cal.date(from: comps) ?? defaultTime()
+    }
+
+    private static func defaultTime() -> Date {
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Chicago")!
+        var comps = cal.dateComponents([.year, .month, .day], from: .now)
+        comps.hour = 9; comps.minute = 0
+        return cal.date(from: comps) ?? .now
+    }
+
+    private var startTimeString: String? {
+        guard hasStartTime else { return nil }
+        let f = DateFormatter()
+        f.dateFormat = "HH:mm"
+        f.timeZone = TimeZone(identifier: "America/Chicago")!
+        return f.string(from: startTimeDate)
     }
 
     private var isEditing: Bool { existing != nil }
@@ -102,6 +139,11 @@ struct EventComposer: View {
                     if hasEndDate {
                         DatePicker("Ends", selection: $endDate,
                                    in: startDate..., displayedComponents: .date)
+                    }
+                    Toggle("Set start time", isOn: $hasStartTime.animation())
+                    if hasStartTime {
+                        DatePicker("Time", selection: $startTimeDate,
+                                   displayedComponents: .hourAndMinute)
                     }
                 }
 
@@ -222,7 +264,8 @@ struct EventComposer: View {
                     startDate: startISO,
                     endDate: endISO,
                     location: locParam,
-                    dayRsvp: dayRsvp
+                    dayRsvp: dayRsvp,
+                    startTime: startTimeString
                 )
                 eventId = existing.id
             } else {
@@ -233,7 +276,8 @@ struct EventComposer: View {
                     startDate: startISO,
                     endDate: endISO,
                     location: locParam,
-                    dayRsvp: dayRsvp
+                    dayRsvp: dayRsvp,
+                    startTime: startTimeString
                 )
             }
             // Replace the event's linked work items with the current selection.

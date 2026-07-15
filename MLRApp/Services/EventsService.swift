@@ -219,7 +219,8 @@ final class EventsService {
         endDate: String?,
         location: String?,
         dayRsvp: Bool,
-        emoji: String? = nil
+        emoji: String? = nil,
+        startTime: String? = nil
     ) async throws -> String {
         struct CreateParams: Encodable {
             let p_title: String
@@ -230,6 +231,7 @@ final class EventsService {
             let p_location: String?
             let p_description: String?
             let p_day_rsvp: Bool
+            let p_start_time: String?
         }
         let newId: UUID = try await supabase
             .rpc("create_event", params: CreateParams(
@@ -240,7 +242,8 @@ final class EventsService {
                 p_emoji: emoji,
                 p_location: location,
                 p_description: description,
-                p_day_rsvp: dayRsvp
+                p_day_rsvp: dayRsvp,
+                p_start_time: startTime
             ))
             .execute()
             .value
@@ -257,7 +260,8 @@ final class EventsService {
         endDate: String?,
         location: String?,
         dayRsvp: Bool,
-        emoji: String? = nil
+        emoji: String? = nil,
+        startTime: String? = nil
     ) async throws {
         // Use the SECURITY DEFINER RPC (matches web) instead of a direct table
         // write, so authorization + notification triggers run server-side.
@@ -271,6 +275,7 @@ final class EventsService {
             let p_location: String?
             let p_description: String?
             let p_day_rsvp: Bool
+            let p_start_time: String?
         }
         try await supabase
             .rpc("update_event", params: UpdateParams(
@@ -282,7 +287,8 @@ final class EventsService {
                 p_emoji: emoji,
                 p_location: location,
                 p_description: description,
-                p_day_rsvp: dayRsvp
+                p_day_rsvp: dayRsvp,
+                p_start_time: startTime
             ))
             .execute()
         await fetchEvents()

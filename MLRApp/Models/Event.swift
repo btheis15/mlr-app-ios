@@ -10,6 +10,9 @@ struct ResortEvent: Codable, Identifiable, Equatable {
     var kind: EventKind
     var startDate: String
     var endDate: String?
+    /// Optional "HH:MM" in resort local time (America/Chicago). When set, reminder
+    /// offsets can be hour-based ("2 hours before"); otherwise only day-based.
+    var startTime: String?
     var location: String?
     var dayRsvp: Bool
     var source: EventSource
@@ -18,6 +21,7 @@ struct ResortEvent: Codable, Identifiable, Equatable {
         case id, title, description, emoji, kind
         case startDate = "start_date"
         case endDate = "end_date"
+        case startTime = "start_time"
         case location
         case dayRsvp = "day_rsvp"
         case source

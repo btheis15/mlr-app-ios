@@ -93,6 +93,9 @@ struct HomeCallout: Identifiable, Equatable {
     var links: [CalloutLink]    // migration 0093 — replaces single linkHref/linkLabel
     var startsOn: String?   // yyyy-MM-dd, nil = show immediately
     var endsOn: String?     // yyyy-MM-dd inclusive, nil = open-ended
+    /// Optional due-by timestamp (ISO 8601). Distinct from startsOn/endsOn which
+    /// only gate visibility — this is the actual deadline reminders count down to.
+    var deadlineAt: String?
     var dismissId: String
     var position: Int
     var isActive: Bool
@@ -117,6 +120,7 @@ private let seedCallout = HomeCallout(
     links: [CalloutLink(href: "tel:7153653195", label: "📞 Call Tricia at Metro to order")],
     startsOn: nil,
     endsOn: "2026-07-15",
+    deadlineAt: nil,
     dismissId: "tshirt-order-jul15-2026",
     position: 0,
     isActive: true
@@ -235,6 +239,7 @@ final class FestContentService {
                     links: (row.links ?? []).map { CalloutLink(href: $0.href, label: $0.label) },
                     startsOn: row.startsOn,
                     endsOn: row.endsOn,
+                    deadlineAt: row.deadlineAt,
                     dismissId: row.dismissId ?? row.id.uuidString,
                     position: row.position ?? 0,
                     isActive: row.isActive ?? true
@@ -678,6 +683,7 @@ private struct CalloutRow: Decodable {
     let links: [CalloutLinkRow]?   // migration 0093 — jsonb array [{href, label}]
     let startsOn: String?
     let endsOn: String?
+    let deadlineAt: String?
     let dismissId: String?
     let position: Int?
     let isActive: Bool?
@@ -692,6 +698,7 @@ private struct CalloutRow: Decodable {
         case imageUrl  = "image_url"
         case startsOn  = "starts_on"
         case endsOn    = "ends_on"
+        case deadlineAt = "deadline_at"
         case dismissId = "dismiss_id"
         case position
         case isActive  = "is_active"
