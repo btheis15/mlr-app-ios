@@ -173,6 +173,7 @@
 		D3F9D87130071059006874DA /* EditCabinBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87030071059006874DA /* EditCabinBookingSheet.swift */; };
 		D3F9D87330071069006874DA /* PollsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87230071069006874DA /* PollsService.swift */; };
 		D3F9D876300710BC006874DA /* PollsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D875300710BC006874DA /* PollsView.swift */; };
+		D3F9D8783007189A006874DA /* FestInlineEditSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -349,6 +350,7 @@
 		D3F9D87030071059006874DA /* EditCabinBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditCabinBookingSheet.swift; sourceTree = "<group>"; };
 		D3F9D87230071069006874DA /* PollsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollsService.swift; sourceTree = "<group>"; };
 		D3F9D875300710BC006874DA /* PollsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollsView.swift; sourceTree = "<group>"; };
+		D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestInlineEditSheets.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -627,6 +629,7 @@
 				D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */,
 				D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */,
 				D3F9D86C3006E599006874DA /* FestDinnerEditSheet.swift */,
+				D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */,
 			);
 			path = FamilyFestTab;
 			sourceTree = "<group>";
@@ -926,6 +929,7 @@
 				D3F9D87130071059006874DA /* EditCabinBookingSheet.swift in Sources */,
 				D33F9E712FEC086700603CE7 /* NotificationRow.swift in Sources */,
 				D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */,
+				D3F9D8783007189A006874DA /* FestInlineEditSheets.swift in Sources */,
 				D33F9E722FEC086700603CE7 /* AuthService.swift in Sources */,
 				D33F9EEC2FF4502100603CE7 /* RosterEditSheet.swift in Sources */,
 				D33F9E732FEC086700603CE7 /* NotificationActions.swift in Sources */,

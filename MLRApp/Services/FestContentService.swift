@@ -144,6 +144,8 @@ final class FestContentService {
     /// Callout IDs the signed-in user has permanently marked "done" (migration 0098).
     var completedCalloutIds: Set<String> = []
     var loaded = false
+    /// Cached result of `canEditFest()` — readable by expandable rows without an async call.
+    var userCanEditFest: Bool = false
     /// True when the DB fetch was empty/unreachable and we're showing the in-code
     /// "TBD" seed instead of live content — surfaced as a subtle overview caption.
     var usingSeedFallback = false
@@ -310,8 +312,11 @@ final class FestContentService {
     // MARK: - Editing (admin / fest committee; RLS enforces can_edit_fest)
 
     /// True if the signed-in user may edit fest content (server-authoritative).
+    /// Result is cached in `userCanEditFest` so expandable rows can read it synchronously.
     func canEditFest() async -> Bool {
-        (try? await supabase.rpc("can_edit_fest").execute().value) ?? false
+        let result: Bool = (try? await supabase.rpc("can_edit_fest").execute().value) ?? false
+        userCanEditFest = result
+        return result
     }
 
     /// Re-fetch everything after an edit so the display arrays update.
@@ -419,6 +424,35 @@ final class FestContentService {
         try await supabase.from("fest_config").upsert(p, onConflict: "fest_year").execute()
     }
 
+    /// Updates a schedule item's location, description, and lead assignment inline
+    /// (used by FestScheduleEditSheet; admin / canEditFest / assigned lead only).
+    func updateScheduleItem(
+        itemId: UUID,
+        location: String?,
+        description: String?,
+        leadName: String?,
+        leadUserId: UUID?,
+        leadPhone: String?
+    ) async throws {
+        var payload: [String: AnyJSON] = [
+            "location":     j(location),
+            "description":  j(description),
+            "lead_name":    j(leadName),
+            "lead_phone":   j(leadPhone),
+            "lead_user_id": leadUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
+        ]
+        if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
+        try await supabase.from("fest_schedule_items").update(payload).eq("id", value: itemId.uuidString).execute()
+    }
+
+    /// Updates only the crew_user_ids on a dinner (admin / canEditFest / chef only).
+    func updateDinnerCrew(dinnerId: UUID, crewUserIds: [UUID]) async throws {
+        let payload: [String: AnyJSON] = [
+            "crew_user_ids": .array(crewUserIds.map { AnyJSON.string($0.uuidString) })
+        ]
+        try await supabase.from("fest_dinners").update(payload).eq("id", value: dinnerId.uuidString).execute()
+    }
+
     func deleteSchedule(id: UUID) async throws { try await delete("fest_schedule_items", id: id) }
     func deleteDinner(id: UUID) async throws { try await delete("fest_dinners", id: id) }
     func deleteDues(id: UUID) async throws { try await delete("fest_dues", id: id) }
@@ -448,7 +482,8 @@ final class FestContentService {
                 location: r.location?.nilIfBlank ?? "TBD",
                 description: r.description,
                 isPrivate: r.isPrivate,
-                leads: [r.leadName].compactMap { $0?.nilIfBlank }
+                leads: [r.leadName].compactMap { $0?.nilIfBlank },
+                leadUserId: r.leadUserId
             )
         }
     }
@@ -569,11 +604,13 @@ private struct ScheduleRow: Decodable {
     let description: String?
     let isPrivate: Bool
     let leadName: String?
+    let leadUserId: UUID?
     enum CodingKeys: String, CodingKey {
         case id, day, title, emoji, location, description
-        case startTime = "start_time"
-        case isPrivate = "is_private"
-        case leadName = "lead_name"
+        case startTime  = "start_time"
+        case isPrivate  = "is_private"
+        case leadName   = "lead_name"
+        case leadUserId = "lead_user_id"
     }
 }
 

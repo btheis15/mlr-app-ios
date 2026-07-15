@@ -15,6 +15,7 @@ struct ScheduleItem: Identifiable {
     let description: String?
     let isPrivate: Bool
     let leads: [String]
+    var leadUserId: UUID? = nil
 }
 
 // MARK: - Dinner

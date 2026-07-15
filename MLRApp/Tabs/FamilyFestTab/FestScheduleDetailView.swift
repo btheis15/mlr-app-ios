@@ -200,6 +200,14 @@ struct ExpandableScheduleRow: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isExpanded = false
+    @State private var showEditSheet = false
+
+    private var canEditItem: Bool {
+        guard env.isSignedIn else { return false }
+        return env.isAdmin
+            || env.festContentService.userCanEditFest
+            || (item.leadUserId != nil && item.leadUserId == env.currentProfile?.id)
+    }
 
     private var hasDetail: Bool {
         (item.description?.isEmpty == false) || item.location != nil || !item.leads.isEmpty
@@ -209,7 +217,7 @@ struct ExpandableScheduleRow: View {
         VStack(spacing: 0) {
             Button(action: toggle) { header }
                 .buttonStyle(.plain)
-                .disabled(!hasDetail)
+                .disabled(!hasDetail && !canEditItem)
 
             if isExpanded { expanded }
         }
@@ -219,6 +227,13 @@ struct ExpandableScheduleRow: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
         .accessibilityHint(hasDetail ? "Double tap to \(isExpanded ? "collapse" : "expand") details" : "")
+        .sheet(isPresented: $showEditSheet) {
+            NavigationStack {
+                FestScheduleEditSheet(item: item) {
+                    await env.festContentService.reload()
+                }
+            }
+        }
     }
 
     private var header: some View {
@@ -304,6 +319,18 @@ struct ExpandableScheduleRow: View {
                     }
                 }
             }
+
+            if canEditItem {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                Button { showEditSheet = true } label: {
+                    Label("Edit event", systemImage: "pencil")
+                        .font(.mlrScaled(13, weight: .medium))
+                        .foregroundStyle(Color.mlrFest)
+                }
+                .buttonStyle(.plain)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+            }
         }
     }
 
@@ -323,6 +350,21 @@ struct ExpandableDinnerRow: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isExpanded = false
+    @State private var showEditSheet = false
+    @State private var showCrewSheet = false
+
+    private var canEditDinner: Bool {
+        guard env.isSignedIn, let uid = env.currentProfile?.id else { return false }
+        return env.isAdmin
+            || env.festContentService.userCanEditFest
+            || dinner.chefUserId == uid
+            || dinner.crewUserIds.contains(uid)
+    }
+
+    private var canManageCrew: Bool {
+        guard env.isSignedIn, let uid = env.currentProfile?.id else { return false }
+        return env.isAdmin || env.festContentService.userCanEditFest || dinner.chefUserId == uid
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -336,6 +378,16 @@ struct ExpandableDinnerRow: View {
         .accessibilityAddTraits(.isButton)
         .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
         .accessibilityHint("Double tap to \(isExpanded ? "collapse" : "expand") the dinner")
+        .sheet(isPresented: $showEditSheet) {
+            NavigationStack {
+                FestDinnerEditSheet(dinner: dinner, onSaved: { await env.festContentService.reload() })
+            }
+        }
+        .sheet(isPresented: $showCrewSheet) {
+            NavigationStack {
+                FestCrewAssignSheet(dinner: dinner, onSaved: { await env.festContentService.reload() })
+            }
+        }
     }
 
     private var header: some View {
@@ -423,6 +475,29 @@ struct ExpandableDinnerRow: View {
                         ProtectedField(message: "Sign in to see crew")
                     }
                 }
+            }
+
+            if canEditDinner {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                HStack(spacing: 0) {
+                    Button { showEditSheet = true } label: {
+                        Label("Edit menu & details", systemImage: "pencil")
+                            .font(.mlrScaled(13, weight: .medium))
+                            .foregroundStyle(Color.mlrFest)
+                    }
+                    .buttonStyle(.plain)
+                    if canManageCrew {
+                        Spacer()
+                        Button { showCrewSheet = true } label: {
+                            Label("Manage crew", systemImage: "person.badge.plus")
+                                .font(.mlrScaled(13, weight: .medium))
+                                .foregroundStyle(Color.mlrFest)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
             }
         }
     }
