@@ -249,26 +249,35 @@ final class FestContentService {
     // MARK: - Callout completions (migration 0098)
 
     /// Fetches the callout IDs the signed-in user has permanently marked "done".
-    /// Called from HomeCalloutsStack on appear when signed in.
+    /// Merges UserDefaults local cache with the DB so completions survive even when
+    /// the `home_callout_completions` table isn't deployed or the fetch races sign-in.
     func fetchMyCalloutCompletions(userId: UUID) async {
         struct CompletionRow: Decodable {
             let calloutId: String
             enum CodingKeys: String, CodingKey { case calloutId = "callout_id" }
         }
+        let local = Self.localCompletions()
+        if !local.isEmpty { completedCalloutIds = local }
         do {
             let rows: [CompletionRow] = try await supabase
                 .from("home_callout_completions")
                 .select("callout_id")
                 .eq("user_id", value: userId.uuidString)
                 .execute().value
-            completedCalloutIds = Set(rows.map(\.calloutId))
+            completedCalloutIds = local.union(rows.map(\.calloutId))
         } catch {
+            // Table may not exist yet — local cache is already applied.
             print("[FestContentService] fetchMyCalloutCompletions error: \(error)")
         }
     }
 
     /// Permanently marks a callout done for the signed-in user (upserted so double-tap is safe).
+    /// Also writes to UserDefaults so the completion survives if the DB write fails.
     func markCalloutDone(calloutId: String, userId: UUID) async {
+        var local = Self.localCompletions()
+        local.insert(calloutId)
+        UserDefaults.standard.set(Array(local), forKey: Self.completionsKey)
+
         struct Payload: Encodable { let callout_id: String; let user_id: String }
         do {
             try await supabase
@@ -279,6 +288,11 @@ final class FestContentService {
         } catch {
             print("[FestContentService] markCalloutDone error: \(error)")
         }
+    }
+
+    private static let completionsKey = "mlr_completed_callout_ids"
+    private static func localCompletions() -> Set<String> {
+        Set(UserDefaults.standard.stringArray(forKey: completionsKey) ?? [])
     }
 
     // MARK: - Dinner crew self-edit (migration 0099)

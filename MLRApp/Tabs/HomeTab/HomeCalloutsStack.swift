@@ -57,12 +57,16 @@ struct HomeCalloutsStack: View {
             // Permanent base — FamilyFestSpotlight is never dismissable.
             FamilyFestSpotlight(season: season)
         }
-        .task {
-            // Load permanent completions when the user is signed in.
-            if env.isSignedIn, let uid = await env.authService.userId {
-                await env.festContentService.fetchMyCalloutCompletions(userId: uid)
-            }
+        .task { await fetchCompletions() }
+        .onChange(of: env.isSignedIn) { _, nowSignedIn in
+            guard nowSignedIn else { return }
+            Task { await fetchCompletions() }
         }
+    }
+
+    private func fetchCompletions() async {
+        guard env.isSignedIn, let uid = await env.authService.userId else { return }
+        await env.festContentService.fetchMyCalloutCompletions(userId: uid)
     }
 
     // MARK: - Card stack
@@ -191,6 +195,11 @@ struct HomeCalloutCard: View {
             // Image (optional flyer / artwork)
             if let url = callout.imageUrl?.nilIfEmpty.flatMap(URL.init) {
                 KFImage(url)
+                    .placeholder {
+                        Color.mlrSurface
+                            .frame(maxWidth: .infinity, minHeight: 160)
+                            .overlay(ProgressView())
+                    }
                     .resizable()
                     .scaledToFit()
                     .frame(maxWidth: .infinity)

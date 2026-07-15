@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import Kingfisher
 
 // MARK: - AdminCalloutsView
 // Manage Home callout cards (migration 0083 / 0093). Lists current callouts with
@@ -110,6 +112,8 @@ struct CalloutComposerView: View {
     @State private var endsOn = ""
     @State private var isActive = true
     @State private var isSaving = false
+    @State private var isUploadingImage = false
+    @State private var selectedImage: PhotosPickerItem? = nil
     @State private var saveError: String?
     @State private var showDeleteAlert = false
 
@@ -127,12 +131,54 @@ struct CalloutComposerView: View {
                         .multilineTextAlignment(.trailing)
                         .lineLimit(2...3)
                 }
-                LabeledContent("Image URL") {
+            }
+
+            Section {
+                if isUploadingImage {
+                    HStack(spacing: 10) {
+                        ProgressView()
+                        Text("Uploading image…")
+                            .font(.mlrScaled(13))
+                            .foregroundStyle(Color.mlrTextMuted)
+                    }
+                } else {
+                    PhotosPicker(selection: $selectedImage, matching: .images) {
+                        Label(imageUrl.isEmpty ? "Upload image" : "Replace image",
+                              systemImage: imageUrl.isEmpty ? "photo.badge.plus" : "photo")
+                            .font(.mlrScaled(14))
+                            .foregroundStyle(Color.mlrPrimary)
+                    }
+                    .onChange(of: selectedImage) { _, item in
+                        guard let item else { return }
+                        Task { await uploadImage(item) }
+                    }
+                }
+                LabeledContent("URL") {
                     TextField("https://…", text: $imageUrl)
                         .multilineTextAlignment(.trailing)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                 }
+                if let url = imageUrl.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank.flatMap(URL.init) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let img):
+                            img.resizable().scaledToFit()
+                        case .failure:
+                            Label("Image failed to load", systemImage: "exclamationmark.triangle")
+                                .foregroundStyle(Color.mlrDanger)
+                                .font(.mlrScaled(13))
+                        case .empty:
+                            ProgressView().frame(maxWidth: .infinity)
+                        @unknown default:
+                            EmptyView()
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: 200)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                }
+            } header: {
+                Text("Image")
             }
 
             Section {
@@ -205,7 +251,7 @@ struct CalloutComposerView: View {
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             ToolbarItem(placement: .confirmationAction) {
-                if isSaving {
+                if isSaving || isUploadingImage {
                     ProgressView()
                 } else {
                     Button("Save") { Task { await save() } }
@@ -229,6 +275,21 @@ struct CalloutComposerView: View {
         startsOn = c.startsOn ?? ""
         endsOn   = c.endsOn ?? ""
         isActive = c.isActive
+    }
+
+    private func uploadImage(_ item: PhotosPickerItem) async {
+        isUploadingImage = true
+        defer { isUploadingImage = false }
+        do {
+            guard let data = try? await item.loadTransferable(type: Data.self),
+                  let uiImage = UIImage(data: data) else {
+                saveError = "Couldn't load image from library."
+                return
+            }
+            imageUrl = try await MediaService().uploadSiteImage(image: uiImage, key: "callout")
+        } catch {
+            saveError = "Upload failed. Paste a URL instead."
+        }
     }
 
     private func save() async {
@@ -290,5 +351,12 @@ struct CalloutComposerView: View {
         } catch {
             saveError = "Delete failed."
         }
+    }
+}
+
+private extension String {
+    var nilIfBlank: String? {
+        let t = trimmingCharacters(in: .whitespacesAndNewlines)
+        return t.isEmpty ? nil : t
     }
 }
