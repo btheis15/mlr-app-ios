@@ -238,7 +238,7 @@ struct FamilyFestSpotlight: View {
                         .foregroundStyle(Color.mlrFest)
                     Text(statusLine)
                         .font(.mlrScaled(12))
-                        .foregroundStyle(Color.mlrFest.opacity(0.7))
+                        .foregroundStyle(Color.mlrFest.opacity(0.85))
                         .lineLimit(1)
                 }
 
@@ -246,7 +246,7 @@ struct FamilyFestSpotlight: View {
 
                 Image(systemName: "chevron.right")
                     .font(.mlrScaled(13, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.4))
+                    .foregroundStyle(Color.mlrFest.opacity(0.6))
             }
             .padding(14)
             .contentShape(Rectangle())

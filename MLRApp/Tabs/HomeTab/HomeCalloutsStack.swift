@@ -51,16 +51,42 @@ struct HomeCalloutsStack: View {
     }
 
     var body: some View {
-        VStack(spacing: 12) {
-            // Overlapping card stack — top card is fully interactive (swipeable),
-            // cards behind it peek out below for a physical deck effect.
-            if !visibleCallouts.isEmpty {
-                cardStack
-            }
-
-            // Permanent base — FamilyFestSpotlight is never dismissable.
+        let visible = visibleCallouts
+        let maxDepth = min(visible.count, 3)
+        // All callout cards are in one ForEach so they form a single ZStack layer
+        // group, guaranteed to render in front of FestSpotlight. Cards are iterated
+        // deepest-first so ZStack's back-to-front order puts card 0 on top.
+        let deckCards = Array(visible.prefix(maxDepth).reversed())
+        ZStack(alignment: .top) {
+            // FestSpotlight is always declared first = always at the back.
             FamilyFestSpotlight(season: season)
+                .offset(y: CGFloat(maxDepth) * 10)
+                .scaleEffect(max(1.0 - CGFloat(maxDepth) * 0.04, 0.88), anchor: .top)
+
+            ForEach(deckCards, id: \.id) { callout in
+                if let idx = visible.firstIndex(where: { $0.id == callout.id }) {
+                    if idx == 0 {
+                        SwipeableCalloutCard(
+                            callout: callout,
+                            isMarkingDone: markingDoneId == callout.id,
+                            onDismiss: {
+                                withAnimation(.easeInOut(duration: 0.22)) {
+                                    dismissed.insert(callout.dismissId)
+                                }
+                            },
+                            onMarkDone: { markDone(callout) }
+                        )
+                    } else {
+                        HomeCalloutCard(callout: callout)
+                            .offset(y: CGFloat(idx) * 10)
+                            .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
+                            .allowsHitTesting(false)
+                            .accessibilityHidden(true)
+                    }
+                }
+            }
         }
+        .padding(.bottom, CGFloat(maxDepth) * 10)
         .task { await fetchCompletions() }
         .onChange(of: env.isSignedIn) { _, nowSignedIn in
             guard nowSignedIn else { return }
@@ -71,40 +97,6 @@ struct HomeCalloutsStack: View {
     private func fetchCompletions() async {
         guard env.isSignedIn, let uid = await env.authService.userId else { return }
         await env.festContentService.fetchMyCalloutCompletions(userId: uid)
-    }
-
-    // MARK: - Card stack
-
-    private var cardStack: some View {
-        let visible = visibleCallouts
-        let maxDepth = min(visible.count, 3)
-        return ZStack(alignment: .top) {
-            ForEach(Array(visible.prefix(maxDepth).enumerated()), id: \.element.id) { idx, callout in
-                if idx == 0 {
-                    // Top card: fully interactive and swipeable.
-                    SwipeableCalloutCard(
-                        callout: callout,
-                        isMarkingDone: markingDoneId == callout.id,
-                        onDismiss: {
-                            withAnimation(.easeInOut(duration: 0.22)) {
-                                dismissed.insert(callout.dismissId)
-                            }
-                        },
-                        onMarkDone: { markDone(callout) }
-                    )
-                    .zIndex(Double(maxDepth))
-                } else {
-                    // Background cards: scaled back and peeking from below.
-                    HomeCalloutCard(callout: callout)
-                        .offset(y: CGFloat(idx) * 10)
-                        .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
-                        .zIndex(Double(maxDepth - idx))
-                        .allowsHitTesting(false)
-                        .accessibilityHidden(true)
-                }
-            }
-        }
-        .padding(.bottom, CGFloat(maxDepth - 1) * 10)
     }
 
     private func markDone(_ callout: HomeCallout) {
@@ -197,7 +189,8 @@ struct HomeCalloutCard: View {
     }
 
     private var hasImage: Bool {
-        !imageLoadFailed && callout.imageUrl?.nilIfEmpty != nil
+        guard !imageLoadFailed, let url = callout.imageUrl else { return false }
+        return !url.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
     }
 
     var body: some View {
