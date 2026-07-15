@@ -187,6 +187,8 @@ struct HomeCalloutCard: View {
     /// (migration 0098), unlike the swipe/✕ which only lasts the session.
     var onMarkDone: (() -> Void)? = nil
 
+    @State private var imageLoadFailed = false
+
     private var hasText: Bool {
         callout.title?.nilIfEmpty != nil
             || callout.body?.nilIfEmpty != nil
@@ -194,19 +196,25 @@ struct HomeCalloutCard: View {
             || callout.endsOn != nil
     }
 
+    private var hasImage: Bool {
+        !imageLoadFailed && callout.imageUrl?.nilIfEmpty != nil
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // Image (optional flyer / artwork)
-            if let url = callout.imageUrl?.nilIfEmpty.flatMap(URL.init) {
+            if !imageLoadFailed, let url = callout.imageUrl?.nilIfEmpty.flatMap(URL.init) {
                 KFImage(url)
                     .placeholder {
                         Color.mlrSurface
-                            .frame(maxWidth: .infinity, minHeight: 160)
+                            .frame(maxWidth: .infinity, minHeight: 200)
                             .overlay(ProgressView())
                     }
+                    .onFailure { _ in imageLoadFailed = true }
                     .resizable()
                     .scaledToFit()
-                    .frame(maxWidth: .infinity)
+                    // Cap height so a tall portrait image doesn't push all content off-screen.
+                    .frame(maxWidth: .infinity, maxHeight: 360)
                     .clipped()
                     // Dismiss X in top-right corner over the image
                     .overlay(alignment: .topTrailing) {
@@ -227,7 +235,7 @@ struct HomeCalloutCard: View {
             if hasText {
                 VStack(alignment: .leading, spacing: 6) {
                     // Header row: title + dismiss X (when no image)
-                    if callout.imageUrl?.nilIfEmpty == nil, let dismiss = onDismiss {
+                    if !hasImage, let dismiss = onDismiss {
                         HStack(alignment: .top) {
                             if let title = callout.title?.nilIfEmpty {
                                 Text(title)
