@@ -23,8 +23,13 @@ enum HelpContact {
 // app's /help page. Linked from the sign-in sheet and Home's "App & Help".
 
 struct HelpView: View {
+    @Environment(AppEnvironment.self) private var env
     @State private var composeState: MessageComposeState?
     @State private var showGuide = false
+
+    private var contactName:  String { env.helpContactName }
+    private var contactPhone: String { env.helpContactPhone }
+    private var contactEmail: String { env.helpContactEmail }
 
     var body: some View {
         ScrollView {
@@ -64,7 +69,7 @@ struct HelpView: View {
                         bullet("Still nothing? On the sign-in screen, tap \u{201C}Resend code.\u{201D}")
                         bullet("Make sure the email you typed is correct — tap \u{201C}Use a different email\u{201D} to fix it.")
                         bullet("The code expires after a while. If it says expired, just resend a fresh one.")
-                        bullet("Still stuck? Text \(HelpContact.name) (top of this page).")
+                        bullet("Still stuck? Text \(contactName) (top of this page).")
                     }
                 }
 
@@ -90,7 +95,7 @@ struct HelpView: View {
             Text("Help & how-to")
                 .font(.mlrScaled(24, weight: .bold))
                 .foregroundStyle(Color.mlrText)
-            Text("New here, or stuck on something? Start below — and you can always just text \(HelpContact.name).")
+            Text("New here, or stuck on something? Start below — and you can always just text \(contactName).")
                 .font(.subheadline)
                 .foregroundStyle(Color.mlrTextMuted)
         }
@@ -100,17 +105,17 @@ struct HelpView: View {
 
     private var contactCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Need a hand? Text \(HelpContact.name).")
+            Text("Need a hand? Text \(contactName).")
                 .font(.mlrScaled(16, weight: .bold))
                 .foregroundStyle(Color.mlrText)
-            Text("If anything here doesn't work or doesn't make sense, send a quick text and \(HelpContact.name) will help you out.")
+            Text("If anything here doesn't work or doesn't make sense, send a quick text and \(contactName) will help you out.")
                 .font(.subheadline)
                 .foregroundStyle(Color.mlrTextMuted)
             HStack(spacing: 10) {
                 Button {
-                    composeState = MessageComposeState(recipients: [HelpContact.phone], body: "")
+                    composeState = MessageComposeState(recipients: [contactPhone], body: "")
                 } label: {
-                    Label("Text \(HelpContact.name)", systemImage: "message.fill")
+                    Label("Text \(contactName)", systemImage: "message.fill")
                         .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(.white)
                         .frame(maxWidth: .infinity)
@@ -120,9 +125,9 @@ struct HelpView: View {
                 }
                 .buttonStyle(.plain)
 
-                if let tel = URL(string: "tel://\(HelpContact.phone)") {
+                if let tel = URL(string: "tel://\(contactPhone)") {
                     Link(destination: tel) {
-                        Label("Call \(HelpContact.name)", systemImage: "phone.fill")
+                        Label("Call \(contactName)", systemImage: "phone.fill")
                             .font(.mlrScaled(14, weight: .semibold))
                             .foregroundStyle(Color.mlrPrimary)
                             .frame(maxWidth: .infinity)
@@ -132,8 +137,8 @@ struct HelpView: View {
                     }
                 }
             }
-            if let mail = URL(string: "mailto:\(HelpContact.email)?subject=\("MLR app — I need help".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
-                Link("Prefer email? \(HelpContact.email)", destination: mail)
+            if let mail = URL(string: "mailto:\(contactEmail)?subject=\("MLR app — I need help".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+                Link("Prefer email? \(contactEmail)", destination: mail)
                     .font(.caption)
                     .foregroundStyle(Color.mlrTextMuted)
             }

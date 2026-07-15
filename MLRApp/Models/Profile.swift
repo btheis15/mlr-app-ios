@@ -73,6 +73,8 @@ struct Profile: Codable, Identifiable, Equatable {
     var betaTester: Bool
     var willingToHelp: Bool
     var introSeen: Bool
+    var invitedVia: String? = nil           // migration 0085: "invite_link" for admin-invited members
+    var mjtDuesPaidYear: Int? = nil         // migration 0086: year member self-marked MJT dues paid
     var createdAt: Date?
 
     enum CodingKeys: String, CodingKey {
@@ -102,6 +104,8 @@ struct Profile: Codable, Identifiable, Equatable {
         case betaTester = "beta_tester"
         case willingToHelp = "willing_to_help"
         case introSeen = "intro_seen"
+        case invitedVia = "invited_via"
+        case mjtDuesPaidYear = "mjt_dues_paid_year"
         case createdAt = "created_at"
     }
 
@@ -169,6 +173,8 @@ extension Profile {
         betaTester      = (try? c.decode(Bool.self, forKey: .betaTester)) ?? false
         willingToHelp   = (try? c.decode(Bool.self, forKey: .willingToHelp)) ?? false
         introSeen       = (try? c.decode(Bool.self, forKey: .introSeen)) ?? false
+        invitedVia      = try? c.decodeIfPresent(String.self, forKey: .invitedVia)
+        mjtDuesPaidYear = try? c.decodeIfPresent(Int.self, forKey: .mjtDuesPaidYear)
         createdAt       = try? c.decodeIfPresent(Date.self, forKey: .createdAt)
     }
 }

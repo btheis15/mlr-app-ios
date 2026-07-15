@@ -27,6 +27,10 @@ struct ProfileView: View {
     /// Member's preferred way to be paid (so others see it first). Empty = none.
     @State private var payPreferred: String = ""
 
+    // Collapsed sections (starts closed — mirrors web CollapsibleSection)
+    @State private var isProfileExpanded = false
+    @State private var isPaymentExpanded = false
+
     // UI state
     @State private var showEmailChange = false
     @State private var isSaving = false
@@ -121,7 +125,10 @@ struct ProfileView: View {
             // 4b. Appearance (light / dark / system)
             appearanceSection
 
-            // 5. Features (all signed-in members)
+            // 5. Ask for Help (willing to help toggle + log)
+            askForHelpSection
+
+            // 6. Features (Siri/Spotlight)
             featuresSection
 
             // 6. Admin hub (admins only)
@@ -196,71 +203,77 @@ struct ProfileView: View {
     // MARK: - Edit profile section
 
     private var editProfileSection: some View {
-        Section("Profile") {
-            LabeledContent("Name") {
-                TextField("Your name", text: $name)
-                    .multilineTextAlignment(.trailing)
-                    .autocorrectionDisabled()
-            }
-
-            LabeledContent("Phone") {
-                TextField("(715) 555-1234", text: $phone)
-                    .multilineTextAlignment(.trailing)
-                    .keyboardType(.phonePad)
-                    .textContentType(.telephoneNumber)
-            }
-
-            LabeledContent("Address") {
-                HStack(spacing: 8) {
-                    TextField("Street, City, ST", text: $address)
+        Section {
+            DisclosureGroup(isExpanded: $isProfileExpanded) {
+                LabeledContent("Name") {
+                    TextField("Your name", text: $name)
                         .multilineTextAlignment(.trailing)
-                        .textContentType(.fullStreetAddress)
-                    let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
-                    if !trimmed.isEmpty {
-                        Button {
-                            MapsHelper.show(address: trimmed)
-                        } label: {
-                            Image(systemName: "map.fill")
-                                .foregroundStyle(Color.mlrPrimary)
+                        .autocorrectionDisabled()
+                }
+
+                LabeledContent("Phone") {
+                    TextField("(715) 555-1234", text: $phone)
+                        .multilineTextAlignment(.trailing)
+                        .keyboardType(.phonePad)
+                        .textContentType(.telephoneNumber)
+                }
+
+                LabeledContent("Address") {
+                    HStack(spacing: 8) {
+                        TextField("Street, City, ST", text: $address)
+                            .multilineTextAlignment(.trailing)
+                            .textContentType(.fullStreetAddress)
+                        let trimmed = address.trimmingCharacters(in: .whitespacesAndNewlines)
+                        if !trimmed.isEmpty {
+                            Button {
+                                MapsHelper.show(address: trimmed)
+                            } label: {
+                                Image(systemName: "map.fill")
+                                    .foregroundStyle(Color.mlrPrimary)
+                            }
+                            .buttonStyle(.plain)
+                            .accessibilityLabel("Open address in Maps")
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("Open address in Maps")
                     }
                 }
-            }
 
-            // Birthday picker
-            Toggle(isOn: $hasBirthday) {
-                Text("Birthday")
-            }
-            .tint(Color.mlrPrimary)
-
-            if hasBirthday {
-                DatePicker(
-                    "Date",
-                    selection: $birthday,
-                    in: ...Date.now,
-                    displayedComponents: .date
-                )
-                .datePickerStyle(.compact)
+                // Birthday picker
+                Toggle(isOn: $hasBirthday) {
+                    Text("Birthday")
+                }
                 .tint(Color.mlrPrimary)
-            }
 
-            VStack(alignment: .leading, spacing: 6) {
-                Text("Bio")
-                    .font(.mlrScaled(13))
-                    .foregroundStyle(Color.mlrTextMuted)
-                TextEditor(text: $bio)
-                    .frame(minHeight: 80)
-                    .onChange(of: bio) { _, val in
-                        if val.count > 200 { bio = String(val.prefix(200)) }
-                    }
-                HStack {
-                    Spacer()
-                    Text("\(bio.count)/200")
-                        .font(.caption2)
-                        .foregroundStyle(Color.mlrTextSubtle)
+                if hasBirthday {
+                    DatePicker(
+                        "Date",
+                        selection: $birthday,
+                        in: ...Date.now,
+                        displayedComponents: .date
+                    )
+                    .datePickerStyle(.compact)
+                    .tint(Color.mlrPrimary)
                 }
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("Bio")
+                        .font(.mlrScaled(13))
+                        .foregroundStyle(Color.mlrTextMuted)
+                    TextEditor(text: $bio)
+                        .frame(minHeight: 80)
+                        .onChange(of: bio) { _, val in
+                            if val.count > 200 { bio = String(val.prefix(200)) }
+                        }
+                    HStack {
+                        Spacer()
+                        Text("\(bio.count)/200")
+                            .font(.caption2)
+                            .foregroundStyle(Color.mlrTextSubtle)
+                    }
+                }
+            } label: {
+                Text("Profile")
+                    .font(.mlrScaled(15, weight: .semibold))
+                    .foregroundStyle(Color.mlrText)
             }
         }
     }
@@ -269,69 +282,75 @@ struct ProfileView: View {
 
     private var paymentSection: some View {
         Section {
-            LabeledContent {
-                TextField("@username", text: $venmo)
-                    .multilineTextAlignment(.trailing)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-            } label: {
-                Label("Venmo", systemImage: "v.circle.fill")
-                    .foregroundStyle(Color.mlrPrimary)
-            }
-
-            // Zelle & Apple Cash are tied to a phone or email — offer to reuse
-            // the member's existing ones instead of retyping (the ⌄ menu).
-            LabeledContent {
-                HStack(spacing: 6) {
-                    TextField("Phone or email", text: $zelle)
+            DisclosureGroup(isExpanded: $isPaymentExpanded) {
+                LabeledContent {
+                    TextField("@username", text: $venmo)
                         .multilineTextAlignment(.trailing)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
-                    reuseMenu(into: $zelle)
+                } label: {
+                    Label("Venmo", systemImage: "v.circle.fill")
+                        .foregroundStyle(Color.mlrPrimary)
                 }
-            } label: {
-                Label("Zelle", systemImage: "z.circle.fill")
-                    .foregroundStyle(Color.mlrInfo)
-            }
 
-            LabeledContent {
-                HStack(spacing: 6) {
-                    TextField("Phone or email", text: $appleCash)
+                // Zelle & Apple Cash are tied to a phone or email — offer to reuse
+                // the member's existing ones instead of retyping (the ⌄ menu).
+                LabeledContent {
+                    HStack(spacing: 6) {
+                        TextField("Phone or email", text: $zelle)
+                            .multilineTextAlignment(.trailing)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                        reuseMenu(into: $zelle)
+                    }
+                } label: {
+                    Label("Zelle", systemImage: "z.circle.fill")
+                        .foregroundStyle(Color.mlrInfo)
+                }
+
+                LabeledContent {
+                    HStack(spacing: 6) {
+                        TextField("Phone or email", text: $appleCash)
+                            .multilineTextAlignment(.trailing)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                        reuseMenu(into: $appleCash)
+                    }
+                } label: {
+                    Label("Apple Cash", systemImage: "applelogo")
+                        .foregroundStyle(Color.mlrText)
+                }
+
+                LabeledContent {
+                    TextField("Email or @handle", text: $paypal)
                         .multilineTextAlignment(.trailing)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
-                    reuseMenu(into: $appleCash)
+                } label: {
+                    Label("PayPal", systemImage: "p.circle.fill")
+                        .foregroundStyle(Color.mlrInfo)
                 }
+
+                // Preferred — surfaced first when others go to pay this member.
+                Picker(selection: $payPreferred) {
+                    Text("None").tag("")
+                    ForEach(Self.preferredOptions, id: \.self) { opt in
+                        Text(opt).tag(opt)
+                    }
+                } label: {
+                    Label("Preferred", systemImage: "star.fill")
+                        .foregroundStyle(Color.mlrPrimary)
+                }
+                .tint(Color.mlrPrimary)
             } label: {
-                Label("Apple Cash", systemImage: "applelogo")
+                Text("Payment Handles")
+                    .font(.mlrScaled(15, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
             }
-
-            LabeledContent {
-                TextField("Email or @handle", text: $paypal)
-                    .multilineTextAlignment(.trailing)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-            } label: {
-                Label("PayPal", systemImage: "p.circle.fill")
-                    .foregroundStyle(Color.mlrInfo)
-            }
-
-            // Preferred — surfaced first when others go to pay this member.
-            Picker(selection: $payPreferred) {
-                Text("None").tag("")
-                ForEach(Self.preferredOptions, id: \.self) { opt in
-                    Text(opt).tag(opt)
-                }
-            } label: {
-                Label("Preferred", systemImage: "star.fill")
-                    .foregroundStyle(Color.mlrPrimary)
-            }
-            .tint(Color.mlrPrimary)
-        } header: {
-            Text("Payment Handles")
         } footer: {
-            Text("Zelle & Apple Cash use a phone or email — tap ⌄ to reuse yours. Your Preferred method shows first when others pay you.")
+            if isPaymentExpanded {
+                Text("Zelle & Apple Cash use a phone or email — tap ⌄ to reuse yours. Your Preferred method shows first when others pay you.")
+            }
         }
     }
 
@@ -386,13 +405,7 @@ struct ProfileView: View {
                 Label("Push notifications", systemImage: "app.badge.fill")
                     .foregroundStyle(Color.mlrText)
             }
-        }
-    }
 
-    // MARK: - Account section
-
-    private var accountSection: some View {
-        Section("Account") {
             Toggle(isOn: Binding(
                 get: { profile?.emailAlerts ?? true },
                 set: { on in Task { await saveEmailAlerts(on) } }
@@ -400,7 +413,7 @@ struct ProfileView: View {
                 Label {
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Email me alerts").font(.mlrScaled(15))
-                        Text("Admin announcements sent to your email")
+                        Text("Get an email for admin alerts, in case you miss it in the app")
                             .font(.caption).foregroundStyle(Color.mlrTextMuted)
                     }
                 } icon: {
@@ -408,7 +421,13 @@ struct ProfileView: View {
                 }
             }
             .tint(Color.mlrPrimary)
+        }
+    }
 
+    // MARK: - Account section
+
+    private var accountSection: some View {
+        Section("Account") {
             Button {
                 showEmailChange = true
             } label: {
@@ -440,12 +459,24 @@ struct ProfileView: View {
         }
     }
 
+    // MARK: - Ask for Help section
+
+    private var askForHelpSection: some View {
+        Section("Ask for Help") {
+            WillingToHelpRow()
+            NavigationLink {
+                HelpRequestsView()
+            } label: {
+                Label("Ask for Help log", systemImage: "hand.raised.fill")
+                    .foregroundStyle(Color.mlrText)
+            }
+        }
+    }
+
     // MARK: - Features section
 
     private var featuresSection: some View {
         Section("Features") {
-            WillingToHelpRow()
-
             VStack(alignment: .leading, spacing: 4) {
                 Toggle(isOn: $spotlightEnabled) {
                     Label("Siri & Spotlight search", systemImage: "magnifyingglass")

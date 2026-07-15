@@ -13,6 +13,7 @@ struct WorkChecklistCard: View {
 
     @State private var cardOpen = false
     @State private var showAll = false
+    @State private var doneExpanded = false
     @State private var checking: UUID? = nil
     @State private var composing = false
     @State private var opened: WorkItem? = nil
@@ -98,12 +99,50 @@ struct WorkChecklistCard: View {
 
                 if !done.isEmpty && !open.isEmpty {
                     Divider()
-                    Text("✅ \(done.count) item\(done.count == 1 ? "" : "s") done")
-                        .font(.caption)
-                        .foregroundStyle(Color.mlrTextMuted)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { doneExpanded.toggle() }
+                    } label: {
+                        HStack {
+                            Text("✅ \(done.count) item\(done.count == 1 ? "" : "s") done")
+                                .font(.caption)
+                                .foregroundStyle(Color.mlrTextMuted)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.mlrScaled(11, weight: .semibold))
+                                .foregroundStyle(Color.mlrTextSubtle)
+                                .rotationEffect(.degrees(doneExpanded ? 90 : 0))
+                        }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.plain)
+                    if doneExpanded {
+                        ForEach(done) { item in
+                            Divider().padding(.leading, 14)
+                            HStack(alignment: .top, spacing: 10) {
+                                Image(systemName: "checkmark.circle.fill")
+                                    .font(.mlrScaled(13))
+                                    .foregroundStyle(Color.mlrSuccess)
+                                    .padding(.top, 1)
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(item.title)
+                                        .font(.mlrScaled(13))
+                                        .foregroundStyle(Color.mlrTextMuted)
+                                        .strikethrough(color: Color.mlrTextMuted)
+                                    if let name = item.completedByName {
+                                        let ago = item.completedAt.map { relativeTime($0) } ?? ""
+                                        Text("By \(name)\(ago.isEmpty ? "" : " · \(ago)")")
+                                            .font(.mlrScaled(11))
+                                            .foregroundStyle(Color.mlrTextSubtle)
+                                    }
+                                }
+                            }
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 8)
+                            .contentShape(Rectangle())
+                            .onTapGesture { opened = item }
+                        }
+                    }
                 }
             }
         }
@@ -218,5 +257,11 @@ struct WorkChecklistCard: View {
         } catch {
             await env.workItemsService.fetchItems()
         }
+    }
+
+    private func relativeTime(_ date: Date) -> String {
+        let f = RelativeDateTimeFormatter()
+        f.unitsStyle = .abbreviated
+        return f.localizedString(for: date, relativeTo: Date())
     }
 }

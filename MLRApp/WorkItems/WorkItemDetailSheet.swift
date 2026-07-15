@@ -130,9 +130,17 @@ struct WorkItemDetailSheet: View {
                 .disabled(marking)
                 .padding(.top, 2)
             } else if current.isDone {
-                Label("Done", systemImage: "checkmark.circle.fill")
-                    .font(.mlrScaled(14, weight: .semibold))
-                    .foregroundStyle(Color.mlrSuccess)
+                VStack(alignment: .leading, spacing: 2) {
+                    Label("Done", systemImage: "checkmark.circle.fill")
+                        .font(.mlrScaled(14, weight: .semibold))
+                        .foregroundStyle(Color.mlrSuccess)
+                    if let name = current.completedByName {
+                        let ago = current.completedAt.map { MLRFormat.relativeTime($0) } ?? ""
+                        Text("By \(name)\(ago.isEmpty ? "" : " · \(ago)")")
+                            .font(.mlrScaled(12))
+                            .foregroundStyle(Color.mlrTextMuted)
+                    }
+                }
             }
         }
     }

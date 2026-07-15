@@ -38,6 +38,9 @@ struct HouseHubView: View {
                     }
                 }
 
+                // MJT House dues reminder — self-hides for other houses and outside the fest window.
+                MjtHouseDuesCard(house: house)
+
                 // Calendar
                 NavigationLink(destination: HouseCalendarView(house: house)) {
                     HomeTile(

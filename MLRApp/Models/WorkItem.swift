@@ -23,6 +23,9 @@ struct WorkItem: Codable, Identifiable, Equatable {
     var createdBy: UUID?
     var createdAt: Date
     var updatedAt: Date
+    var completedBy: UUID?       // migration 0088
+    var completedAt: Date?       // migration 0088
+    var completedByName: String? // from completed_by_profile join
 
     enum CodingKeys: String, CodingKey {
         case id, title, notes, category, status, urgency
@@ -33,6 +36,9 @@ struct WorkItem: Codable, Identifiable, Equatable {
         case createdBy = "created_by"
         case createdAt = "created_at"
         case updatedAt = "updated_at"
+        case completedBy = "completed_by"
+        case completedAt = "completed_at"
+        case completedByProfile = "completed_by_profile"
     }
 
     var isDone: Bool { status == .done }
@@ -57,6 +63,10 @@ struct WorkItem: Codable, Identifiable, Equatable {
         createdBy    = try? c.decodeIfPresent(UUID.self, forKey: .createdBy)
         createdAt    = try c.decode(Date.self, forKey: .createdAt)
         updatedAt    = try c.decode(Date.self, forKey: .updatedAt)
+        completedBy  = try? c.decodeIfPresent(UUID.self, forKey: .completedBy)
+        completedAt  = try? c.decodeIfPresent(Date.self, forKey: .completedAt)
+        struct NameRef: Decodable { let displayName: String?; enum CodingKeys: String, CodingKey { case displayName = "display_name" } }
+        completedByName = (try? c.decodeIfPresent(NameRef.self, forKey: .completedByProfile))?.displayName
     }
 
     func encode(to encoder: Encoder) throws {

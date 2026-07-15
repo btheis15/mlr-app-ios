@@ -254,7 +254,7 @@ private struct FestDinnerEditor: View {
     private func newDraft() -> FestDinnerDraft {
         let day = FestDays.options(env.festContentService.config).first ?? FamilyFestConfig.startDate
         return FestDinnerDraft(id: nil, day: day, title: "Dinner", emoji: "🍽️", chefUserId: nil, chefName: nil,
-                               chefPhone: nil, houses: [], menu: nil, servedTime: nil, servedLocation: nil,
+                               chefPhone: nil, crewUserIds: [], houses: [], menu: nil, servedTime: nil, servedLocation: nil,
                                prepTime: nil, prepLocation: nil, position: items.count)
     }
     private func load() async { loading = true; items = await env.festContentService.editableDinners(); loading = false }

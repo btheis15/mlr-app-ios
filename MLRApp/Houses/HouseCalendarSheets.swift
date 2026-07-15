@@ -165,7 +165,7 @@ struct HouseDaySheet: View {
 // A simple wrapping row of pill chips (guest names). Uses a lightweight flow
 // layout so any number of names wrap cleanly.
 
-struct FlowChips: View {
+private struct FlowChips: View {
     let items: [String]
 
     var body: some View {
@@ -184,7 +184,7 @@ struct FlowChips: View {
 }
 
 // A minimal flow layout (iOS 16+) so chips wrap without a dependency.
-struct FlowLayout: Layout {
+private struct FlowLayout: Layout {
     var spacing: CGFloat = 6
 
     func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {

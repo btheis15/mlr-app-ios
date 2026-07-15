@@ -43,14 +43,20 @@ struct HomeView: View {
 
                         VStack(alignment: .leading, spacing: 20) {
 
-                            // ── 2. Announcement banner ────────────────────
-                            // AnnouncementBannerStack manages its own fetch + dismiss via env
+                            // ── 2. Weather — "what's it like Up North right now" ──
+                            // Self-hides on load failure — never leaves an empty gap.
+                            HomeWeatherCard()
+
+                            // ── 3. Announcement banner ────────────────────
                             AnnouncementBannerStack()
 
-                            // ── 3. Fest spotlight ─────────────────────────
-                            FamilyFestSpotlight(season: festSeason)
+                            // ── 4. Callout cards + fest spotlight ─────────
+                            // Admin-managed swipeable callout cards (home_callouts,
+                            // migration 0083) stack above the permanent FamilyFestSpotlight
+                            // base — same shape as the web's HomeSpotlight/CalloutStack.
+                            HomeCalloutsStack(season: festSeason)
 
-                            // ── 4. Upcoming event ─────────────────────────
+                            // ── 5. Upcoming event ─────────────────────────
                             if let event = spotlightEvent {
                                 UpcomingEventCard(
                                     event: event,
@@ -62,22 +68,27 @@ struct HomeView: View {
                                 )
                             }
 
-                            // ── 5. Work Checklist (standalone collapsible card) ──
-                            // Kept directly under the Family Fest summary card.
-                            WorkChecklistCard()
-
-                            // ── 6. Communication ──────────────────────────
-                            communicationSection
-
-                            // ── 7. Around the Resort ─────────────────────
-                            aroundResortSection
-
-                            // ── Your house — hub for calendar, chat & to-do ──
+                            // ── 5. Your house — hub for calendar, chat & to-do ──
                             // Self-hides for guests and anyone not in a house.
-                            // Sits near the bottom, just above App & Help.
+                            // Promoted above checklist to match web layout (Jul 2026).
                             HouseHubHomeCard()
 
-                            // ── 8. App & Help ────────────────────────────
+                            // ── 6. Work Checklist (standalone collapsible card) ──
+                            WorkChecklistCard()
+
+                            // ── 6b. Polls — self-hides when no open poll ──────────
+                            PollHomeCard()
+
+                            // ── 7. Quick actions — every destination, always visible ──
+                            // Replaces the two collapsed accordions (Communication /
+                            // Around the Resort) — nothing buried behind a tap.
+                            quickActionsGrid
+
+                            // ── 8. Delight cards — birthdays & who's up north ─────
+                            UpcomingBirthdaysCard()
+                            WhosUpNorthCard()
+
+                            // ── 9. App & Help ────────────────────────────
                             appHelpSection
 
                             // ── 8. Heritage footer ────────────────────────
@@ -102,6 +113,7 @@ struct HomeView: View {
             festSeason = FestSeason.current()
             await env.appImagesService.load()
             await env.festContentService.load()
+            await env.loadHelpContact()
             await env.eventsService.fetchEvents()
             if let userId = env.currentProfile?.id {
                 await env.eventsService.fetchAttendance(userId: userId)
@@ -119,6 +131,40 @@ struct HomeView: View {
     }
 
     // MARK: - Subviews
+
+    // 2-column grid of the six primary destinations — always visible, no tap
+    // to expand. Row order matches web HomeQuickActions (Brian's ordering):
+    // Events · Committees / People · Ask for Help / Local Places · Cabin Stay.
+    private var quickActionsGrid: some View {
+        let cols = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
+        return LazyVGrid(columns: cols, spacing: 12) {
+            NavigationLink(destination: EventsView()) {
+                HomeTile(icon: "calendar", title: "Events",
+                         subtitle: "RSVP — gatherings & work weekends.", tint: Color.mlrPrimary)
+            }
+            NavigationLink(destination: CommitteesView()) {
+                HomeTile(icon: "person.3.fill", title: "Committees",
+                         subtitle: "Join a crew — there's a spot for you.", tint: Color.mlrAccent)
+            }
+            NavigationLink(destination: PeopleDirectoryView()) {
+                HomeTile(icon: "person.2.fill", title: "People",
+                         subtitle: "Find & contact everyone.", tint: Color.mlrInfo)
+            }
+            NavigationLink(destination: HelpRequestsView()) {
+                HomeTile(icon: "hand.raised.fill", title: "Ask for Help",
+                         subtitle: "Request a hand at the resort.", tint: Color.mlrPrimary)
+            }
+            NavigationLink(destination: LocalPlacesView()) {
+                HomeTile(icon: "mappin.and.ellipse", title: "Local Places",
+                         subtitle: "Tee times, food & favorites.", tint: Color.mlrInfo)
+            }
+            NavigationLink(destination: CabinBookingsView()) {
+                HomeTile(icon: "house.lodge.fill", title: "Cabin Stay",
+                         subtitle: "Reserve a room for any week.", tint: Color.mlrPrimary)
+            }
+        }
+        .buttonStyle(.plain)
+    }
 
     @ViewBuilder
     private func logoHero(geometry: GeometryProxy) -> some View {
@@ -143,89 +189,6 @@ struct HomeView: View {
             }
             .accessibilityLabel("Search Up North")
             .padding(.trailing, 4)
-        }
-    }
-
-    // "Communication" — People · Committees · Ask for Help
-    private var communicationSection: some View {
-        CollapsibleHomeSection(
-            title: "Communication",
-            emoji: "💬",
-            subtitle: "People · Committees · Ask for Help"
-        ) {
-            HStack(spacing: 12) {
-                NavigationLink(destination: PeopleDirectoryView()) {
-                    HomeTile(
-                        icon: "person.2.fill",
-                        title: "People",
-                        subtitle: "Find & contact everyone at the resort.",
-                        tint: Color.mlrInfo
-                    )
-                }
-                .frame(maxWidth: .infinity)
-
-                NavigationLink(destination: CommitteesView()) {
-                    HomeTile(
-                        icon: "person.3.fill",
-                        title: "Committees",
-                        subtitle: "Join a crew and pitch in — there's a spot for everyone.",
-                        tint: Color.mlrPrimary
-                    )
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .fixedSize(horizontal: false, vertical: true)
-
-            NavigationLink(destination: HelpRequestsView()) {
-                HomeTile(
-                    icon: "hand.raised.fill",
-                    title: "Ask for Help",
-                    subtitle: "Need a hand at the resort? Ask — or help out.",
-                    tint: Color.mlrPrimary,
-                    fullWidth: true
-                )
-            }
-        }
-    }
-
-    // "Around the Resort" — Events · Cabin Stay · Local Places · Work Checklist
-    private var aroundResortSection: some View {
-        CollapsibleHomeSection(
-            title: "Around the Resort",
-            emoji: "🧭",
-            subtitle: "Events · Cabin Stay · Local Places"
-        ) {
-            NavigationLink(destination: EventsView()) {
-                HomeTile(
-                    icon: "calendar",
-                    title: "Events & Work Weekends",
-                    subtitle: "See what's coming up — RSVP to gatherings and grab a spot on a work weekend.",
-                    tint: Color.mlrPrimary,
-                    fullWidth: true
-                )
-            }
-            HStack(spacing: 12) {
-                NavigationLink(destination: CabinBookingsView()) {
-                    HomeTile(
-                        icon: "house.lodge.fill",
-                        title: "Cabin Stay",
-                        subtitle: "Reserve a room for any week.",
-                        tint: Color.mlrPrimary
-                    )
-                }
-                .frame(maxWidth: .infinity)
-
-                NavigationLink(destination: LocalPlacesView()) {
-                    HomeTile(
-                        icon: "mappin.and.ellipse",
-                        title: "Local Places",
-                        subtitle: "Tee times, food & favorites nearby.",
-                        tint: Color.mlrAccent
-                    )
-                }
-                .frame(maxWidth: .infinity)
-            }
-            .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -323,7 +286,8 @@ struct HomeView: View {
 }
 
 // MARK: - HomeTile
-// A reusable card tile used on the Home grid.
+// A reusable card tile used on the Home grid. Icon sits inside a tinted
+// rounded square (matching web HomeQuickActions icon-box style).
 
 struct HomeTile: View {
     let icon: String
@@ -331,29 +295,29 @@ struct HomeTile: View {
     let subtitle: String
     let tint: Color
     var fullWidth: Bool = false
-    // When set, gives the tile a shared minimum height so a column of full-width
-    // tiles lines up cleanly regardless of subtitle length. Default nil leaves
-    // Home's grid tiles unchanged.
     var minHeight: CGFloat? = nil
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
+        VStack(alignment: .leading, spacing: 8) {
             Image(systemName: icon)
-                .font(.mlrScaled(20, weight: .semibold))
+                .font(.mlrScaled(22, weight: .semibold))
                 .foregroundStyle(tint)
+                .frame(width: 44, height: 44)
+                .background(tint.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
 
             Text(title)
-                .font(.mlrScaled(15, weight: .semibold))
+                .font(.mlrScaled(14, weight: .semibold))
                 .foregroundStyle(Color.mlrText)
 
             Text(subtitle)
-                .font(.caption)
+                .font(.mlrScaled(11))
                 .foregroundStyle(Color.mlrTextMuted)
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(14)
-        .frame(maxWidth: .infinity, minHeight: minHeight, maxHeight: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, minHeight: minHeight ?? 88, maxHeight: .infinity, alignment: .leading)
         .cardStyle()
     }
 }

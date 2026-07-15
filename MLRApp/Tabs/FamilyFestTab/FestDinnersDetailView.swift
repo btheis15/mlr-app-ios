@@ -6,16 +6,41 @@ struct FestDinnersDetailView: View {
     let dinner: FestDinner
     @Environment(AppEnvironment.self) private var env
 
+    @State private var currentUserId: UUID? = nil
+    @State private var showEditSheet = false
+
+    /// True when the signed-in user is this dinner's chef or an assigned crew member.
+    private var canEdit: Bool {
+        guard env.isSignedIn, let uid = currentUserId else { return false }
+        return dinner.chefUserId == uid || dinner.crewUserIds.contains(uid)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
 
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
-                    Text(dinner.title)
-                        .font(.festSerif(26, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
-                        .fixedSize(horizontal: false, vertical: true)
+                    HStack(alignment: .top) {
+                        Text(dinner.title)
+                            .font(.festSerif(26, weight: .bold))
+                            .foregroundStyle(Color.mlrFest)
+                            .fixedSize(horizontal: false, vertical: true)
+                        Spacer()
+                        if canEdit {
+                            Button { showEditSheet = true } label: {
+                                Text("✏️ Edit")
+                                    .font(.mlrScaled(12, weight: .semibold))
+                                    .foregroundStyle(Color.mlrFest)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.mlrFest.opacity(0.1))
+                                    .clipShape(Capsule())
+                                    .overlay(Capsule().strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1))
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
 
                     HStack(spacing: 16) {
                         Label(dinner.day, systemImage: "calendar")
@@ -128,5 +153,16 @@ struct FestDinnersDetailView: View {
         .navigationTitle(dinner.day)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
+        .task {
+            if env.isSignedIn { currentUserId = await env.authService.userId }
+        }
+        .sheet(isPresented: $showEditSheet) {
+            NavigationStack {
+                FestDinnerEditSheet(dinner: dinner) {
+                    // Reload fest content so menu/times refresh immediately.
+                    await env.festContentService.reload()
+                }
+            }
+        }
     }
 }

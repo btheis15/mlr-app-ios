@@ -120,14 +120,6 @@
 		D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE72FF419F700603CE7 /* AppImagesService.swift */; };
 		D33F9EEA2FF41A0A00603CE7 /* AppImagesAdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */; };
 		D33F9EEC2FF4502100603CE7 /* RosterEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EEB2FF4502100603CE7 /* RosterEditSheet.swift */; };
-		D33F9EF42FF5BD4E00603CE7 /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D33F9EF32FF5BD4E00603CE7 /* WidgetKit.framework */; };
-		D33F9EF62FF5BD4E00603CE7 /* SwiftUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D33F9EF52FF5BD4E00603CE7 /* SwiftUI.framework */; };
-		D33F9F052FF5BD4F00603CE7 /* MLRWidgetExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D33F9EF12FF5BD4E00603CE7 /* MLRWidgetExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
-		D33F9F112FF5C32100603CE7 /* FestActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EC62FEC184500603CE7 /* FestActivityAttributes.swift */; };
-		D33F9F122FF5C32A00603CE7 /* PulsingLiveDot.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EC72FEC184500603CE7 /* PulsingLiveDot.swift */; };
-		D33F9F132FF5C33000603CE7 /* SharedStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9EC82FEC184500603CE7 /* SharedStore.swift */; };
-		D33F9F142FF5C37100603CE7 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E282FEC086700603CE7 /* Colors.swift */; };
-		D33F9F152FF5C38E00603CE7 /* FestSeason.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E2C2FEC086700603CE7 /* FestSeason.swift */; };
 		D33F9F182FF844AA00603CE7 /* House.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F172FF844AA00603CE7 /* House.swift */; };
 		D33F9F1A2FF8457100603CE7 /* HousesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F192FF8457100603CE7 /* HousesService.swift */; };
 		D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F1B2FF846D300603CE7 /* WorkItemDetailSheet.swift */; };
@@ -135,6 +127,10 @@
 		D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */; };
 		D33F9F232FF84B0500603CE7 /* WorkItemIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */; };
 		D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F242FF84C1C00603CE7 /* AppEntities.swift */; };
+		D3512BE430057B41008BBC44 /* MjtHouseDuesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3512BE330057B41008BBC44 /* MjtHouseDuesView.swift */; };
+		D3512BE630057B63008BBC44 /* HomeWeatherCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3512BE530057B63008BBC44 /* HomeWeatherCard.swift */; };
+		D3512BFA30058DCC008BBC44 /* AdminInviteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3512BF930058DCC008BBC44 /* AdminInviteView.swift */; };
+		D3512BFD30059D0B008BBC44 /* WeatherKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = D3512BFB30059D08008BBC44 /* WeatherKit.framework */; };
 		D3533C0B2FE9EC60001AD887 /* Auth in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0A2FE9EC60001AD887 /* Auth */; };
 		D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0C2FE9EC60001AD887 /* Functions */; };
 		D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */ = {isa = PBXBuildFile; productRef = D3533C0E2FE9EC60001AD887 /* PostgREST */; };
@@ -160,7 +156,6 @@
 		D36347682FFDEF09001D52C8 /* SnippetViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347672FFDEF09001D52C8 /* SnippetViews.swift */; };
 		D363476A2FFDF098001D52C8 /* IntentDonations.swift in Sources */ = {isa = PBXBuildFile; fileRef = D36347692FFDF098001D52C8 /* IntentDonations.swift */; };
 		D363476D2FFEA947001D52C8 /* GlobalSearchView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363476C2FFEA947001D52C8 /* GlobalSearchView.swift */; };
-		D363476F2FFEAA14001D52C8 /* OpenEntityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D363476E2FFEAA14001D52C8 /* OpenEntityIntents.swift */; };
 		D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */ = {isa = PBXBuildFile; fileRef = D39BD8902FFC47C000B1E74D /* ChatMedia.swift */; };
 		D3A0000000000000000000B1 /* HouseStay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A1 /* HouseStay.swift */; };
 		D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A2 /* HouseCalendarView.swift */; };
@@ -168,17 +163,17 @@
 		D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A4 /* HouseStayComposer.swift */; };
 		D3A0000000000000000000B5 /* HouseHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A5 /* HouseHubView.swift */; };
 		D3E4FD3D2FFFE7340008DA06 /* FestDuesCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */; };
+		D3F9D8633006C1B3006874DA /* HomeCalloutsStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */; };
+		D3F9D8653006C201006874DA /* AdminCommitteesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8643006C201006874DA /* AdminCommitteesView.swift */; };
+		D3F9D8673006C288006874DA /* AdminHelpContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8663006C288006874DA /* AdminHelpContactView.swift */; };
+		D3F9D8693006C577006874DA /* HomeDelightCards.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8683006C577006874DA /* HomeDelightCards.swift */; };
+		D3F9D86B3006CC02006874DA /* AdminCalloutsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D86A3006CC02006874DA /* AdminCalloutsView.swift */; };
+		D3F9D86D3006E599006874DA /* FestDinnerEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D86C3006E599006874DA /* FestDinnerEditSheet.swift */; };
+		D3F9D86F30071027006874DA /* Poll.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D86E30071027006874DA /* Poll.swift */; };
+		D3F9D87130071059006874DA /* EditCabinBookingSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87030071059006874DA /* EditCabinBookingSheet.swift */; };
+		D3F9D87330071069006874DA /* PollsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87230071069006874DA /* PollsService.swift */; };
+		D3F9D876300710BC006874DA /* PollsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D875300710BC006874DA /* PollsView.swift */; };
 /* End PBXBuildFile section */
-
-/* Begin PBXContainerItemProxy section */
-		D33F9F032FF5BD4F00603CE7 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 000000000000000000000000 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = D33F9EF02FF5BD4E00603CE7;
-			remoteInfo = MLRWidgetExtension;
-		};
-/* End PBXContainerItemProxy section */
 
 /* Begin PBXCopyFilesBuildPhase section */
 		D33F9F062FF5BD4F00603CE7 /* Embed Foundation Extensions */ = {
@@ -186,7 +181,6 @@
 			dstPath = "";
 			dstSubfolder = PlugIns;
 			files = (
-				D33F9F052FF5BD4F00603CE7 /* MLRWidgetExtension.appex in Embed Foundation Extensions */,
 			);
 			name = "Embed Foundation Extensions";
 		};
@@ -307,10 +301,8 @@
 		D33F9EE72FF419F700603CE7 /* AppImagesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppImagesService.swift; sourceTree = "<group>"; };
 		D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppImagesAdminView.swift; sourceTree = "<group>"; };
 		D33F9EEB2FF4502100603CE7 /* RosterEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RosterEditSheet.swift; sourceTree = "<group>"; };
-		D33F9EF12FF5BD4E00603CE7 /* MLRWidgetExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = MLRWidgetExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D33F9EF32FF5BD4E00603CE7 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
 		D33F9EF52FF5BD4E00603CE7 /* SwiftUI.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SwiftUI.framework; path = System/Library/Frameworks/SwiftUI.framework; sourceTree = SDKROOT; };
-		D33F9F162FF5C83700603CE7 /* MLRWidgetExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = MLRWidgetExtension.entitlements; sourceTree = "<group>"; };
 		D33F9F172FF844AA00603CE7 /* House.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = House.swift; sourceTree = "<group>"; };
 		D33F9F192FF8457100603CE7 /* HousesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HousesService.swift; sourceTree = "<group>"; };
 		D33F9F1B2FF846D300603CE7 /* WorkItemDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemDetailSheet.swift; sourceTree = "<group>"; };
@@ -318,6 +310,10 @@
 		D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminHousesView.swift; sourceTree = "<group>"; };
 		D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemIntents.swift; sourceTree = "<group>"; };
 		D33F9F242FF84C1C00603CE7 /* AppEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntities.swift; sourceTree = "<group>"; };
+		D3512BE330057B41008BBC44 /* MjtHouseDuesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MjtHouseDuesView.swift; sourceTree = "<group>"; };
+		D3512BE530057B63008BBC44 /* HomeWeatherCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeWeatherCard.swift; sourceTree = "<group>"; };
+		D3512BF930058DCC008BBC44 /* AdminInviteView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminInviteView.swift; sourceTree = "<group>"; };
+		D3512BFB30059D08008BBC44 /* WeatherKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WeatherKit.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS27.0.sdk/System/Library/Frameworks/WeatherKit.framework; sourceTree = DEVELOPER_DIR; };
 		D36347492FFD37F9001D52C8 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		D363474B2FFDD8DC001D52C8 /* FestQueryIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestQueryIntents.swift; sourceTree = "<group>"; };
 		D363474D2FFDD91D001D52C8 /* ResortQueryIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResortQueryIntents.swift; sourceTree = "<group>"; };
@@ -336,7 +332,6 @@
 		D36347672FFDEF09001D52C8 /* SnippetViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SnippetViews.swift; sourceTree = "<group>"; };
 		D36347692FFDF098001D52C8 /* IntentDonations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IntentDonations.swift; sourceTree = "<group>"; };
 		D363476C2FFEA947001D52C8 /* GlobalSearchView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GlobalSearchView.swift; sourceTree = "<group>"; };
-		D363476E2FFEAA14001D52C8 /* OpenEntityIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OpenEntityIntents.swift; sourceTree = "<group>"; };
 		D39BD8902FFC47C000B1E74D /* ChatMedia.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMedia.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A1 /* HouseStay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStay.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A2 /* HouseCalendarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarView.swift; sourceTree = "<group>"; };
@@ -344,33 +339,23 @@
 		D3A0000000000000000000A4 /* HouseStayComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStayComposer.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A5 /* HouseHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseHubView.swift; sourceTree = "<group>"; };
 		D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDuesCalculator.swift; sourceTree = "<group>"; };
+		D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeCalloutsStack.swift; sourceTree = "<group>"; };
+		D3F9D8643006C201006874DA /* AdminCommitteesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCommitteesView.swift; sourceTree = "<group>"; };
+		D3F9D8663006C288006874DA /* AdminHelpContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminHelpContactView.swift; sourceTree = "<group>"; };
+		D3F9D8683006C577006874DA /* HomeDelightCards.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeDelightCards.swift; sourceTree = "<group>"; };
+		D3F9D86A3006CC02006874DA /* AdminCalloutsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCalloutsView.swift; sourceTree = "<group>"; };
+		D3F9D86C3006E599006874DA /* FestDinnerEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDinnerEditSheet.swift; sourceTree = "<group>"; };
+		D3F9D86E30071027006874DA /* Poll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Poll.swift; sourceTree = "<group>"; };
+		D3F9D87030071059006874DA /* EditCabinBookingSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditCabinBookingSheet.swift; sourceTree = "<group>"; };
+		D3F9D87230071069006874DA /* PollsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollsService.swift; sourceTree = "<group>"; };
+		D3F9D875300710BC006874DA /* PollsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
-
-/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
-		D33F9F092FF5BD4F00603CE7 /* Exceptions for "MLRWidget" folder in "MLRWidgetExtension" target */ = {
-			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
-			membershipExceptions = (
-				Info.plist,
-			);
-			target = D33F9EF02FF5BD4E00603CE7 /* MLRWidgetExtension */;
-		};
-/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
-
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		D33F9EF72FF5BD4E00603CE7 /* MLRWidget */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			exceptions = (
-				D33F9F092FF5BD4F00603CE7 /* Exceptions for "MLRWidget" folder in "MLRWidgetExtension" target */,
-			);
-			path = MLRWidget;
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
 
 /* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				D3512BFD30059D0B008BBC44 /* WeatherKit.framework in Frameworks */,
 				D3533C0F2FE9EC60001AD887 /* PostgREST in Frameworks */,
 				D3533C0D2FE9EC60001AD887 /* Functions in Frameworks */,
 				D3533C182FE9EC81001AD887 /* Kingfisher in Frameworks */,
@@ -380,23 +365,14 @@
 				D3533C112FE9EC60001AD887 /* Realtime in Frameworks */,
 			);
 		};
-		D33F9EEE2FF5BD4E00603CE7 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			files = (
-				D33F9EF62FF5BD4E00603CE7 /* SwiftUI.framework in Frameworks */,
-				D33F9EF42FF5BD4E00603CE7 /* WidgetKit.framework in Frameworks */,
-			);
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
-				D33F9F162FF5C83700603CE7 /* MLRWidgetExtension.entitlements */,
 				D33F9EC92FEC184500603CE7 /* AppGroup */,
 				D33F9E5B2FEC086700603CE7 /* MLRApp */,
-				D33F9EF72FF5BD4E00603CE7 /* MLRWidget */,
 				D33F9EF22FF5BD4E00603CE7 /* Frameworks */,
 				000000000000000000000020 /* Products */,
 			);
@@ -406,7 +382,6 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000120 /* MLR App.app */,
-				D33F9EF12FF5BD4E00603CE7 /* MLRWidgetExtension.appex */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -444,6 +419,7 @@
 			children = (
 				D33F9DE92FEC086700603CE7 /* CabinBookingsView.swift */,
 				D33F9DEA2FEC086700603CE7 /* CabinRequestSheet.swift */,
+				D3F9D87030071059006874DA /* EditCabinBookingSheet.swift */,
 			);
 			path = Cabins;
 			sourceTree = "<group>";
@@ -505,7 +481,6 @@
 				D36347652FFDEE12001D52C8 /* CabinIntents.swift */,
 				D36347672FFDEF09001D52C8 /* SnippetViews.swift */,
 				D36347692FFDF098001D52C8 /* IntentDonations.swift */,
-				D363476E2FFEAA14001D52C8 /* OpenEntityIntents.swift */,
 			);
 			path = Intents;
 			sourceTree = "<group>";
@@ -533,6 +508,7 @@
 				D33F9F172FF844AA00603CE7 /* House.swift */,
 				D3A0000000000000000000A1 /* HouseStay.swift */,
 				D39BD8902FFC47C000B1E74D /* ChatMedia.swift */,
+				D3F9D86E30071027006874DA /* Poll.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -576,6 +552,7 @@
 				D33F9EE32FF4075B00603CE7 /* FestContentService.swift */,
 				D33F9EE72FF419F700603CE7 /* AppImagesService.swift */,
 				D33F9F192FF8457100603CE7 /* HousesService.swift */,
+				D3F9D87230071069006874DA /* PollsService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -649,6 +626,7 @@
 				D33F9E3B2FEC086700603CE7 /* FestStatus.swift */,
 				D33F9EE52FF40A9E00603CE7 /* FamilyFestPlannerView.swift */,
 				D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */,
+				D3F9D86C3006E599006874DA /* FestDinnerEditSheet.swift */,
 			);
 			path = FamilyFestTab;
 			sourceTree = "<group>";
@@ -674,6 +652,9 @@
 				D33F9E472FEC086700603CE7 /* HomeView.swift */,
 				D33F9E492FEC086700603CE7 /* UpcomingEventCard.swift */,
 				D33F9ED82FF317A800603CE7 /* WorkChecklistCard.swift */,
+				D3512BE530057B63008BBC44 /* HomeWeatherCard.swift */,
+				D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */,
+				D3F9D8683006C577006874DA /* HomeDelightCards.swift */,
 			);
 			path = HomeTab;
 			sourceTree = "<group>";
@@ -689,6 +670,10 @@
 				D33F9E512FEC086700603CE7 /* AdminView.swift */,
 				D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */,
 				D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */,
+				D3512BF930058DCC008BBC44 /* AdminInviteView.swift */,
+				D3F9D8643006C201006874DA /* AdminCommitteesView.swift */,
+				D3F9D8663006C288006874DA /* AdminHelpContactView.swift */,
+				D3F9D86A3006CC02006874DA /* AdminCalloutsView.swift */,
 			);
 			path = Admin;
 			sourceTree = "<group>";
@@ -750,6 +735,7 @@
 				D33F9F1D2FF8475E00603CE7 /* Houses */,
 				D36347492FFD37F9001D52C8 /* PrivacyInfo.xcprivacy */,
 				D363476B2FFEA947001D52C8 /* Search */,
+				D3F9D874300710BC006874DA /* Polls */,
 			);
 			path = MLRApp;
 			sourceTree = "<group>";
@@ -786,6 +772,7 @@
 		D33F9EF22FF5BD4E00603CE7 /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				D3512BFB30059D08008BBC44 /* WeatherKit.framework */,
 				D33F9EF32FF5BD4E00603CE7 /* WidgetKit.framework */,
 				D33F9EF52FF5BD4E00603CE7 /* SwiftUI.framework */,
 			);
@@ -800,6 +787,7 @@
 				D3A0000000000000000000A3 /* HouseCalendarSheets.swift */,
 				D3A0000000000000000000A4 /* HouseStayComposer.swift */,
 				D3A0000000000000000000A5 /* HouseHubView.swift */,
+				D3512BE330057B41008BBC44 /* MjtHouseDuesView.swift */,
 			);
 			path = Houses;
 			sourceTree = "<group>";
@@ -810,6 +798,14 @@
 				D363476C2FFEA947001D52C8 /* GlobalSearchView.swift */,
 			);
 			path = Search;
+			sourceTree = "<group>";
+		};
+		D3F9D874300710BC006874DA /* Polls */ = {
+			isa = PBXGroup;
+			children = (
+				D3F9D875300710BC006874DA /* PollsView.swift */,
+			);
+			path = Polls;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -826,9 +822,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-				D33F9F042FF5BD4F00603CE7 /* PBXTargetDependency */,
-			);
 			name = "MLR App";
 			packageProductDependencies = (
 				D3533C0A2FE9EC60001AD887 /* Auth */,
@@ -843,24 +836,6 @@
 			productReference = 000000000000000000000120 /* MLR App.app */;
 			productType = "com.apple.product-type.application";
 		};
-		D33F9EF02FF5BD4E00603CE7 /* MLRWidgetExtension */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D33F9F0A2FF5BD4F00603CE7 /* Build configuration list for PBXNativeTarget "MLRWidgetExtension" */;
-			buildPhases = (
-				D33F9EED2FF5BD4E00603CE7 /* Sources */,
-				D33F9EEE2FF5BD4E00603CE7 /* Frameworks */,
-				D33F9EEF2FF5BD4E00603CE7 /* Resources */,
-			);
-			buildRules = (
-			);
-			fileSystemSynchronizedGroups = (
-				D33F9EF72FF5BD4E00603CE7 /* MLRWidget */,
-			);
-			name = MLRWidgetExtension;
-			productName = MLRWidgetExtension;
-			productReference = D33F9EF12FF5BD4E00603CE7 /* MLRWidgetExtension.appex */;
-			productType = "com.apple.product-type.app-extension";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -873,9 +848,6 @@
 				TargetAttributes = {
 					000000000000000100000000 = {
 						CreatedOnToolsVersion = 26.3;
-					};
-					D33F9EF02FF5BD4E00603CE7 = {
-						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -898,7 +870,6 @@
 			projectRoot = "";
 			targets = (
 				000000000000000100000000 /* MLR App */,
-				D33F9EF02FF5BD4E00603CE7 /* MLRWidgetExtension */,
 			);
 		};
 /* End PBXProject section */
@@ -911,11 +882,6 @@
 				D33F9ECE2FEC33AB00603CE7 /* Assets.xcassets in Resources */,
 			);
 		};
-		D33F9EEF2FF5BD4E00603CE7 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			files = (
-			);
-		};
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
@@ -923,15 +889,19 @@
 			isa = PBXSourcesBuildPhase;
 			files = (
 				D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */,
+				D3512BE430057B41008BBC44 /* MjtHouseDuesView.swift in Sources */,
 				D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */,
 				D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */,
 				D33F9E602FEC086700603CE7 /* FestLiveActivityController.swift in Sources */,
+				D3F9D86B3006CC02006874DA /* AdminCalloutsView.swift in Sources */,
 				D33F9EEA2FF41A0A00603CE7 /* AppImagesAdminView.swift in Sources */,
 				D33F9ECA2FEC184500603CE7 /* FestActivityAttributes.swift in Sources */,
+				D3F9D86D3006E599006874DA /* FestDinnerEditSheet.swift in Sources */,
 				D33F9ECB2FEC184500603CE7 /* PulsingLiveDot.swift in Sources */,
 				D36347522FFDD9CE001D52C8 /* MemberQueryIntents.swift in Sources */,
 				D33F9ECC2FEC184500603CE7 /* SharedStore.swift in Sources */,
 				D36347622FFDED75001D52C8 /* PlaceIntents.swift in Sources */,
+				D3F9D8693006C577006874DA /* HomeDelightCards.swift in Sources */,
 				D33F9ED02FF3170900603CE7 /* WorkItem.swift in Sources */,
 				D33F9E612FEC086700603CE7 /* WelcomeIntroView.swift in Sources */,
 				D33F9E622FEC086700603CE7 /* EventsService.swift in Sources */,
@@ -945,6 +915,7 @@
 				D33F9E692FEC086700603CE7 /* EventWeatherBadge.swift in Sources */,
 				D36347502FFDD9C0001D52C8 /* FestEntities.swift in Sources */,
 				D33F9E6A2FEC086700603CE7 /* PeopleDirectoryView.swift in Sources */,
+				D3512BFA30058DCC008BBC44 /* AdminInviteView.swift in Sources */,
 				D33F9E6B2FEC086700603CE7 /* AttendanceControl.swift in Sources */,
 				D33F9E6C2FEC086700603CE7 /* HelpRequest.swift in Sources */,
 				D33F9EE22FF3FC8600603CE7 /* GuideView.swift in Sources */,
@@ -952,6 +923,7 @@
 				D33F9E6E2FEC086700603CE7 /* AvatarView.swift in Sources */,
 				D33F9E6F2FEC086700603CE7 /* CabinBookingsView.swift in Sources */,
 				D33F9E702FEC086700603CE7 /* FestScheduleDetailView.swift in Sources */,
+				D3F9D87130071059006874DA /* EditCabinBookingSheet.swift in Sources */,
 				D33F9E712FEC086700603CE7 /* NotificationRow.swift in Sources */,
 				D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */,
 				D33F9E722FEC086700603CE7 /* AuthService.swift in Sources */,
@@ -969,8 +941,10 @@
 				D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */,
 				D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */,
 				D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */,
+				D3F9D8653006C201006874DA /* AdminCommitteesView.swift in Sources */,
 				D33F9E7D2FEC086700603CE7 /* FestDinnersView.swift in Sources */,
 				D3E4FD3D2FFFE7340008DA06 /* FestDuesCalculator.swift in Sources */,
+				D3F9D8673006C288006874DA /* AdminHelpContactView.swift in Sources */,
 				D363475C2FFDE656001D52C8 /* ResortLifeIntents.swift in Sources */,
 				D33F9E7E2FEC086700603CE7 /* FestCountdownIntent.swift in Sources */,
 				D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */,
@@ -1001,6 +975,7 @@
 				D33F9E902FEC086700603CE7 /* Committee.swift in Sources */,
 				D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */,
 				D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */,
+				D3F9D876300710BC006874DA /* PollsView.swift in Sources */,
 				D33F9F182FF844AA00603CE7 /* House.swift in Sources */,
 				D33F9E932FEC086700603CE7 /* AppEnvironment.swift in Sources */,
 				D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */,
@@ -1018,8 +993,10 @@
 				D33F9E9E2FEC086700603CE7 /* CabinService.swift in Sources */,
 				D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */,
 				D36347582FFDE088001D52C8 /* CommitteeActionIntents.swift in Sources */,
+				D3F9D86F30071027006874DA /* Poll.swift in Sources */,
 				D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */,
 				D33F9EA02FEC086700603CE7 /* AdminNotificationComposer.swift in Sources */,
+				D3F9D8633006C1B3006874DA /* HomeCalloutsStack.swift in Sources */,
 				D33F9EA22FEC086700603CE7 /* NotifPrefsView.swift in Sources */,
 				D33F9EA32FEC086700603CE7 /* GuardView.swift in Sources */,
 				D33F9EA42FEC086700603CE7 /* HelpService.swift in Sources */,
@@ -1028,6 +1005,7 @@
 				D33F9EA62FEC086700603CE7 /* EventComposer.swift in Sources */,
 				D33F9EA72FEC086700603CE7 /* HomeNavigationStubs.swift in Sources */,
 				D33F9EA82FEC086700603CE7 /* MentionText.swift in Sources */,
+				D3512BE630057B63008BBC44 /* HomeWeatherCard.swift in Sources */,
 				D33F9EA92FEC086700603CE7 /* Payments.swift in Sources */,
 				D33F9EAA2FEC086700603CE7 /* ActivitiesView.swift in Sources */,
 				D33F9EAB2FEC086700603CE7 /* WeatherService.swift in Sources */,
@@ -1050,10 +1028,10 @@
 				D36347542FFDDF3D001D52C8 /* ChatSearchIntents.swift in Sources */,
 				D33F9EB72FEC086700603CE7 /* PostComposer.swift in Sources */,
 				D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */,
-				D363476F2FFEAA14001D52C8 /* OpenEntityIntents.swift in Sources */,
 				D33F9EB82FEC086700603CE7 /* PushService.swift in Sources */,
 				D33F9EB92FEC086700603CE7 /* PostsView.swift in Sources */,
 				D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */,
+				D3F9D87330071069006874DA /* PollsService.swift in Sources */,
 				D33F9EBA2FEC086700603CE7 /* ProfileView.swift in Sources */,
 				D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */,
 				D33F9F1A2FF8457100603CE7 /* HousesService.swift in Sources */,
@@ -1068,25 +1046,7 @@
 				D36347562FFDDFA5001D52C8 /* ContentIndexer.swift in Sources */,
 			);
 		};
-		D33F9EED2FF5BD4E00603CE7 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			files = (
-				D33F9F132FF5C33000603CE7 /* SharedStore.swift in Sources */,
-				D33F9F142FF5C37100603CE7 /* Colors.swift in Sources */,
-				D33F9F152FF5C38E00603CE7 /* FestSeason.swift in Sources */,
-				D33F9F112FF5C32100603CE7 /* FestActivityAttributes.swift in Sources */,
-				D33F9F122FF5C32A00603CE7 /* PulsingLiveDot.swift in Sources */,
-			);
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		D33F9F042FF5BD4F00603CE7 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = D33F9EF02FF5BD4E00603CE7 /* MLRWidgetExtension */;
-			targetProxy = D33F9F032FF5BD4F00603CE7 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		000000000000000011000000 /* Debug configuration for PBXProject "MLR App" */ = {
@@ -1126,7 +1086,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = dwarf;
-				DRIVERKIT_DEPLOYMENT_TARGET = 27.0;
+				DRIVERKIT_DEPLOYMENT_TARGET = "$(RECOMMENDED_DRIVERKIT_DEPLOYMENT_TARGET)";
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -1148,9 +1108,9 @@
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "MLR uses Contacts to help you find and connect with family members.";
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
@@ -1158,8 +1118,8 @@
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
-				WATCHOS_DEPLOYMENT_TARGET = 27.0;
-				XROS_DEPLOYMENT_TARGET = 27.0;
+				WATCHOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_WATCHOS_DEPLOYMENT_TARGET)";
+				XROS_DEPLOYMENT_TARGET = "$(RECOMMENDED_XROS_DEPLOYMENT_TARGET)";
 			};
 			name = Debug;
 		};
@@ -1200,7 +1160,7 @@
 				COPY_PHASE_STRIP = NO;
 				DEAD_CODE_STRIPPING = YES;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
-				DRIVERKIT_DEPLOYMENT_TARGET = 27.0;
+				DRIVERKIT_DEPLOYMENT_TARGET = "$(RECOMMENDED_DRIVERKIT_DEPLOYMENT_TARGET)";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -1216,16 +1176,16 @@
 				INFOPLIST_KEY_NSCalendarsUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSCalendarsWriteOnlyAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
 				INFOPLIST_KEY_NSContactsUsageDescription = "MLR uses Contacts to help you find and connect with family members.";
-				IPHONEOS_DEPLOYMENT_TARGET = 27.0;
+				IPHONEOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_IPHONEOS_DEPLOYMENT_TARGET)";
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
-				MACOSX_DEPLOYMENT_TARGET = 27.0;
+				MACOSX_DEPLOYMENT_TARGET = "$(RECOMMENDED_MACOSX_DEPLOYMENT_TARGET)";
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				PROJECT_UNIQUE_VALUE = V07UD9HX;
 				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
-				WATCHOS_DEPLOYMENT_TARGET = 27.0;
-				XROS_DEPLOYMENT_TARGET = 27.0;
+				WATCHOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_WATCHOS_DEPLOYMENT_TARGET)";
+				XROS_DEPLOYMENT_TARGET = "$(RECOMMENDED_XROS_DEPLOYMENT_TARGET)";
 			};
 			name = Release;
 		};
@@ -1261,10 +1221,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.4;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
+				OTHER_LDFLAGS = (
+					"-framework",
+					WeatherKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -1274,6 +1238,7 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -1312,10 +1277,14 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.2;
+				MARKETING_VERSION = 1.4;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
+				OTHER_LDFLAGS = (
+					"-framework",
+					WeatherKit,
+				);
 				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -1325,76 +1294,10 @@
 				SWIFT_APPROACHABLE_CONCURRENCY = YES;
 				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
 				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_ENABLE_EXPLICIT_MODULES = NO;
 				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Release;
-		};
-		D33F9F072FF5BD4F00603CE7 /* Debug configuration for PBXNativeTarget "MLRWidgetExtension" */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = MLRWidgetExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = UBM722BP54;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = MLRWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = MLRWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr.MLRWidget;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-			};
-			name = Debug;
-		};
-		D33F9F082FF5BD4F00603CE7 /* Release configuration for PBXNativeTarget "MLRWidgetExtension" */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME = WidgetBackground;
-				CODE_SIGN_ENTITLEMENTS = MLRWidgetExtension.entitlements;
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = UBM722BP54;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = MLRWidget/Info.plist;
-				INFOPLIST_KEY_CFBundleDisplayName = MLRWidget;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-					"@executable_path/../../Frameworks",
-				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr.MLRWidget;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SDKROOT = iphoneos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = "1,2";
-				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
@@ -1414,14 +1317,6 @@
 			buildConfigurations = (
 				000000000000000111000000 /* Debug configuration for PBXNativeTarget "MLR App" */,
 				000000000000000112000000 /* Release configuration for PBXNativeTarget "MLR App" */,
-			);
-			defaultConfigurationName = Release;
-		};
-		D33F9F0A2FF5BD4F00603CE7 /* Build configuration list for PBXNativeTarget "MLRWidgetExtension" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D33F9F072FF5BD4F00603CE7 /* Debug configuration for PBXNativeTarget "MLRWidgetExtension" */,
-				D33F9F082FF5BD4F00603CE7 /* Release configuration for PBXNativeTarget "MLRWidgetExtension" */,
 			);
 			defaultConfigurationName = Release;
 		};

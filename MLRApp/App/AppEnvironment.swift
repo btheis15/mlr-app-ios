@@ -40,11 +40,30 @@ final class AppEnvironment {
     var housesService: HousesService
     var festContentService: FestContentService
     var appImagesService: AppImagesService
+    var pollsService: PollsService
 
     // Resolved once per session
     var currentProfile: Profile?
     var isAdmin: Bool { currentProfile?.isAdmin ?? false }
     var isSignedIn: Bool { authService.isSignedIn }
+
+    // Help contact — loaded from resort_config (migration 0082), falls back to
+    // the HelpContact enum so the Help page always shows something.
+    var helpContactName:  String = HelpContact.name
+    var helpContactPhone: String = HelpContact.phone
+    var helpContactEmail: String = HelpContact.email
+
+    @MainActor
+    func loadHelpContact() async {
+        guard let data = try? await supabase
+            .from("resort_config").select("help_contact_name,help_contact_phone,help_contact_email")
+            .limit(1).single().execute().data,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+        if let v = json["help_contact_name"]  as? String, !v.isEmpty { helpContactName  = v }
+        if let v = json["help_contact_phone"] as? String, !v.isEmpty { helpContactPhone = v }
+        if let v = json["help_contact_email"] as? String, !v.isEmpty { helpContactEmail = v }
+    }
 
     // Dismissed announcement IDs (persisted in UserDefaults)
     var dismissedAnnouncementIds: Set<String> {
@@ -78,6 +97,7 @@ final class AppEnvironment {
         housesService        = HousesService()
         festContentService   = FestContentService()
         appImagesService     = AppImagesService()
+        pollsService         = PollsService()
 
         AppEnvironment.activeEventsService    = eventsService
         AppEnvironment.activeHelpService      = helpService
@@ -185,3 +205,4 @@ final class AppEnvironment {
         housesService.myHouse = nil
     }
 }
+

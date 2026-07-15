@@ -69,9 +69,10 @@ struct CabinBooking: Codable, Identifiable, Equatable {
         case createdAt = "created_at"
     }
 
-    // Optionally hydrated from a joined `cabins` row; excluded from CodingKeys
-    // above so it isn't required when decoding a bare booking row.
+    // Optionally hydrated from joined rows; excluded from CodingKeys above so
+    // they aren't required when decoding a bare booking row.
     var cabin: Cabin? = nil
+    var bookedByName: String? = nil  // profiles!booked_by join (migration 0087)
 
     var checkInDate: Date? {
         isoFormatter.date(from: checkIn)
@@ -117,3 +118,39 @@ private let isoFormatter: DateFormatter = {
     f.dateFormat = "yyyy-MM-dd"
     return f
 }()
+
+// MARK: - Cabin Room (migration 0092)
+
+struct CabinRoom: Codable, Identifiable, Equatable {
+    let id: UUID
+    let cabinId: UUID
+    var name: String
+    var beds: Int
+    var active: Bool
+    var sortOrder: Int
+    var description: String?   // migration 0094
+
+    enum CodingKeys: String, CodingKey {
+        case id
+        case cabinId    = "cabin_id"
+        case name, beds, active, description
+        case sortOrder  = "sort_order"
+    }
+}
+
+// MARK: - Cabin Room Availability (from cabin_room_availability RPC)
+
+struct CabinRoomAvailability: Codable, Identifiable, Equatable {
+    let roomId: UUID
+    let name: String
+    let beds: Int
+    let active: Bool
+    let available: Bool
+
+    var id: UUID { roomId }
+
+    enum CodingKeys: String, CodingKey {
+        case roomId   = "room_id"
+        case name, beds, active, available
+    }
+}

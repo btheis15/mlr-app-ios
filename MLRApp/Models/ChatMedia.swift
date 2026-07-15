@@ -80,6 +80,62 @@ func chatReactionCounts(_ reactions: [ChatReaction]) -> [(emoji: String, count: 
     return order.map { (emoji: $0, count: counts[$0] ?? 0) }
 }
 
+// MARK: - ChatReactionsSheet
+//
+// "Who reacted" list (Facebook/Messenger-style): every reactor with their
+// avatar, name, and the emoji they used. Tapping your own row removes your
+// reaction. Names/avatars are resolved from the chat's roster.
+
+struct ChatReactionsSheet: View {
+    let reactions: [ChatReaction]
+    let roster: [Profile]
+    var myUserId: UUID?
+    var onToggle: (String) -> Void = { _ in }
+
+    @Environment(\.dismiss) private var dismiss
+
+    private func profile(_ id: UUID) -> Profile? { roster.first { $0.id == id } }
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(reactions) { r in
+                        let isMe = r.userId == myUserId
+                        HStack(spacing: 12) {
+                            AvatarView(url: profile(r.userId)?.avatarUrl, size: .small)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text(isMe ? "You" : (profile(r.userId)?.name ?? "Member"))
+                                    .font(.mlrScaled(15, weight: .medium))
+                                    .foregroundStyle(Color.mlrText)
+                                if isMe {
+                                    Text("Tap to remove")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.mlrTextMuted)
+                                }
+                            }
+                            Spacer()
+                            Text(r.emoji).font(.mlrScaled(22))
+                        }
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            if isMe { onToggle(r.emoji); dismiss() }
+                        }
+                    }
+                } header: {
+                    Text("\(reactions.count) \(reactions.count == 1 ? "reaction" : "reactions")")
+                }
+            }
+            .navigationTitle("Reactions")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
 // Build media-row inserts for a chat message's attachments — the shared shape
 // for both committee_message_media and house_message_media.
 func chatMediaRows(messageId: UUID, media: [ChatMedia]) -> [[String: AnyJSON]] {

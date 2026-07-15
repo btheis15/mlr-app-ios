@@ -2,40 +2,29 @@ import SwiftUI
 import Supabase
 
 // MARK: - AdminCabinBookings
-// Shows all cabin booking requests grouped by status (Pending first),
-// with Approve/Deny actions for pending items and a realtime subscription.
+// Shows all cabin booking requests grouped by status (Pending first).
+// Approve / Deny with optional admin note; Cancel for pending and approved stays;
+// Edit dates / guests / notes via EditCabinBookingSheet (migration 0095).
+// Mirrors web AdminCabinBookings + EditBookingSheet.
 
 struct AdminCabinBookings: View {
     @Environment(AppEnvironment.self) private var env
 
-    @State private var bookings: [CabinBooking] = []
-    @State private var cabins: [UUID: Cabin] = [:]
     @State private var isLoading = false
-    @State private var error: String? = nil
     @State private var actionError: String? = nil
+    @State private var editingBooking: CabinBooking? = nil
 
-    // Group order: pending first
     private let statusOrder: [BookingStatus] = [.pending, .approved, .denied, .cancelled]
 
     private var grouped: [(status: BookingStatus, items: [CabinBooking])] {
         statusOrder.compactMap { status in
-            let items = bookings.filter { $0.status == status }
+            let items = env.cabinService.allBookings.filter { $0.status == status }
             return items.isEmpty ? nil : (status: status, items: items)
         }
     }
 
-    // MARK: - Body
-
     var body: some View {
         List {
-            if let error {
-                Section {
-                    Label(error, systemImage: "exclamationmark.triangle")
-                        .foregroundStyle(Color.mlrDanger)
-                        .font(.subheadline)
-                }
-            }
-
             if let actionError {
                 Section {
                     Label(actionError, systemImage: "xmark.circle")
@@ -44,11 +33,9 @@ struct AdminCabinBookings: View {
                 }
             }
 
-            if isLoading && bookings.isEmpty {
-                ForEach(0..<4, id: \.self) { _ in
-                    bookingSkeleton
-                }
-            } else if !isLoading && bookings.isEmpty && error == nil {
+            if isLoading && env.cabinService.allBookings.isEmpty {
+                ForEach(0..<4, id: \.self) { _ in bookingSkeleton }
+            } else if !isLoading && env.cabinService.allBookings.isEmpty {
                 emptyState
             } else {
                 ForEach(grouped, id: \.status.rawValue) { group in
@@ -56,27 +43,30 @@ struct AdminCabinBookings: View {
                         ForEach(group.items) { booking in
                             BookingRow(
                                 booking: booking,
-                                cabin: cabins[booking.cabinId],
-                                onApprove: { note in Task { await approveBooking(booking, note: note) } },
-                                onDeny:    { note in Task { await denyBooking(booking, note: note) } }
+                                onApprove: { note in Task { await approve(booking, note: note) } },
+                                onDeny:    { note in Task { await deny(booking, note: note) } },
+                                onCancel:  { Task { await cancel(booking) } },
+                                onEdit:    { editingBooking = booking }
                             )
                         }
-                    } header: {
-                        statusHeader(group.status)
-                    }
+                    } header: { statusHeader(group.status) }
                 }
             }
         }
         .listStyle(.insetGrouped)
         .navigationTitle("Cabin Bookings")
         .navigationBarTitleDisplayMode(.large)
-        .refreshable {
-            await loadBookings()
-        }
+        .refreshable { await load() }
         .task {
-            await loadCabins()
-            await loadBookings()
+            await load()
             subscribeRealtime()
+        }
+        .sheet(item: $editingBooking) { booking in
+            NavigationStack {
+                EditCabinBookingSheet(booking: booking) {
+                    Task { await load() }
+                }
+            }
         }
     }
 
@@ -126,90 +116,52 @@ struct AdminCabinBookings: View {
     // MARK: - Data
 
     @MainActor
-    private func loadCabins() async {
-        do {
-            let result: [Cabin] = try await supabase
-                .from("cabins")
-                .select("*")
-                .execute()
-                .value
-            cabins = Dictionary(uniqueKeysWithValues: result.map { ($0.id, $0) })
-        } catch {
-            // Non-fatal — booking rows will just omit cabin names
-        }
-    }
-
-    @MainActor
-    private func loadBookings() async {
+    private func load() async {
         isLoading = true
-        error = nil
         defer { isLoading = false }
-        do {
-            let result: [CabinBooking] = try await supabase
-                .from("cabin_bookings")
-                .select("*")
-                .order("created_at", ascending: false)
-                .execute()
-                .value
-            bookings = result
-        } catch {
-            self.error = "Couldn't load booking requests."
-        }
+        await env.cabinService.fetchAllBookings()
     }
 
     @MainActor
-    private func approveBooking(_ booking: CabinBooking, note: String) async {
+    private func approve(_ booking: CabinBooking, note: String) async {
         actionError = nil
         do {
-            try await supabase
-                .rpc("admin_update_booking", params: [
-                    "p_booking_id": booking.id.uuidString,
-                    "p_status": BookingStatus.approved.rawValue,
-                    "p_admin_note": note
-                ])
-                .execute()
-            if let idx = bookings.firstIndex(where: { $0.id == booking.id }) {
-                bookings[idx].status = .approved
-                bookings[idx].adminNote = note.isEmpty ? nil : note
-            }
+            try await env.cabinService.approveBooking(bookingId: booking.id, adminNote: note.isEmpty ? nil : note)
         } catch {
             actionError = "Couldn't approve booking."
         }
     }
 
     @MainActor
-    private func denyBooking(_ booking: CabinBooking, note: String) async {
+    private func deny(_ booking: CabinBooking, note: String) async {
         actionError = nil
         do {
-            try await supabase
-                .rpc("admin_update_booking", params: [
-                    "p_booking_id": booking.id.uuidString,
-                    "p_status": BookingStatus.denied.rawValue,
-                    "p_admin_note": note
-                ])
-                .execute()
-            if let idx = bookings.firstIndex(where: { $0.id == booking.id }) {
-                bookings[idx].status = .denied
-                bookings[idx].adminNote = note.isEmpty ? nil : note
-            }
+            try await env.cabinService.denyBooking(bookingId: booking.id, adminNote: note.isEmpty ? nil : note)
         } catch {
             actionError = "Couldn't deny booking."
+        }
+    }
+
+    @MainActor
+    private func cancel(_ booking: CabinBooking) async {
+        actionError = nil
+        do {
+            try await env.cabinService.cancelBooking(bookingId: booking.id)
+            await load()
+        } catch {
+            actionError = "Couldn't cancel booking."
         }
     }
 
     private func subscribeRealtime() {
         Task {
             let channel = supabase.channel("admin-cabin-bookings")
-            channel.onPostgresChange(AnyAction.self, schema: "public", table: "cabin_bookings") { [self] _ in
-                Task { @MainActor in
-                    await loadBookings()
-                }
+            channel.onPostgresChange(AnyAction.self, schema: "public", table: "cabin_bookings") { _ in
+                Task { @MainActor in await self.load() }
             }
             await channel.subscribe()
         }
     }
-
-    // MARK: - Helpers
 
     private func statusColor(_ status: BookingStatus) -> Color {
         switch status {
@@ -225,21 +177,27 @@ struct AdminCabinBookings: View {
 
 private struct BookingRow: View {
     let booking: CabinBooking
-    let cabin: Cabin?
     let onApprove: (String) -> Void
     let onDeny:    (String) -> Void
+    let onCancel:  () -> Void
+    let onEdit:    () -> Void
 
     @State private var adminNote: String = ""
-    @State private var isExpanded = false
+    @State private var showReviewForm = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
-            // Header row
+            // Header
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(booking.requesterName ?? "Member")
                         .font(.mlrScaled(15, weight: .semibold))
-                    if let cabin {
+                    if let bookedBy = booking.bookedByName {
+                        Text("Booked by \(bookedBy)")
+                            .font(.caption)
+                            .foregroundStyle(Color.mlrInfo)
+                    }
+                    if let cabin = booking.cabin {
                         Text(cabin.name)
                             .font(.mlrScaled(13))
                             .foregroundStyle(Color.mlrTextMuted)
@@ -251,15 +209,13 @@ private struct BookingRow: View {
                         .font(.caption)
                         .foregroundStyle(Color.mlrTextSubtle)
                 }
-
                 Spacer()
-
                 Text(MLRFormat.relativeTime(booking.createdAt))
                     .font(.caption2)
                     .foregroundStyle(Color.mlrTextSubtle)
             }
 
-            // Requester note
+            // Requester's note
             if let note = booking.note, !note.isEmpty {
                 Text("\u{201C}\(note)\u{201D}")
                     .font(.caption)
@@ -271,75 +227,98 @@ private struct BookingRow: View {
                     .clipShape(RoundedRectangle(cornerRadius: 6))
             }
 
-            // Admin note (existing)
-            if let adminNote = booking.adminNote, !adminNote.isEmpty {
+            // Existing admin note
+            if let note = booking.adminNote, !note.isEmpty {
                 HStack(spacing: 4) {
-                    Image(systemName: "person.fill.checkmark")
-                        .font(.caption2)
-                    Text("Admin: \(adminNote)")
-                        .font(.caption)
+                    Image(systemName: "person.fill.checkmark").font(.caption2)
+                    Text("Admin: \(note)").font(.caption)
                 }
                 .foregroundStyle(Color.mlrTextMuted)
             }
 
-            // Pending: action UI
-            if booking.status == .pending {
-                if isExpanded {
-                    VStack(alignment: .leading, spacing: 8) {
-                        TextField("Admin note (optional)", text: $adminNote)
-                            .font(.mlrScaled(13))
-                            .padding(8)
-                            .background(Color.mlrCard)
-                            .clipShape(RoundedRectangle(cornerRadius: 6))
-
-                        HStack(spacing: 10) {
-                            Button {
-                                onApprove(adminNote)
-                                isExpanded = false
-                            } label: {
-                                Label("Approve", systemImage: "checkmark.circle.fill")
-                                    .font(.mlrScaled(13, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity, minHeight: 36)
-                                    .background(Color.mlrSuccess)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                            }
-
-                            Button {
-                                onDeny(adminNote)
-                                isExpanded = false
-                            } label: {
-                                Label("Deny", systemImage: "xmark.circle.fill")
-                                    .font(.mlrScaled(13, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .frame(maxWidth: .infinity, minHeight: 36)
-                                    .background(Color.mlrDanger)
-                                    .clipShape(RoundedRectangle(cornerRadius: 8))
-                            }
-                        }
-
-                        Button("Cancel") { isExpanded = false }
-                            .font(.caption)
-                            .foregroundStyle(Color.mlrTextMuted)
-                    }
-                } else {
-                    Button {
-                        isExpanded = true
-                    } label: {
-                        Text("Review request")
-                            .font(.mlrScaled(13, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
-                            .frame(maxWidth: .infinity, minHeight: 32)
-                            .overlay(
-                                RoundedRectangle(cornerRadius: 8)
-                                    .stroke(Color.mlrPrimary.opacity(0.4), lineWidth: 1)
-                            )
-                    }
-                }
+            // Action controls by status
+            switch booking.status {
+            case .pending:  pendingActions
+            case .approved: approvedActions
+            default:        EmptyView()
             }
         }
         .padding(.vertical, 8)
         .onAppear { adminNote = booking.adminNote ?? "" }
+    }
+
+    @ViewBuilder
+    private var pendingActions: some View {
+        if showReviewForm {
+            VStack(alignment: .leading, spacing: 8) {
+                TextField("Admin note (optional)", text: $adminNote)
+                    .font(.mlrScaled(13))
+                    .padding(8)
+                    .background(Color.mlrCard)
+                    .clipShape(RoundedRectangle(cornerRadius: 6))
+
+                HStack(spacing: 10) {
+                    filledButton("Approve", icon: "checkmark.circle.fill", color: Color.mlrSuccess) {
+                        onApprove(adminNote); showReviewForm = false
+                    }
+                    filledButton("Deny", icon: "xmark.circle.fill", color: Color.mlrDanger) {
+                        onDeny(adminNote); showReviewForm = false
+                    }
+                }
+
+                HStack(spacing: 16) {
+                    Button("Edit") { onEdit() }
+                        .font(.mlrScaled(12, weight: .medium))
+                        .foregroundStyle(Color.mlrPrimary)
+                    Button("Cancel booking") { onCancel(); showReviewForm = false }
+                        .font(.mlrScaled(12, weight: .medium))
+                        .foregroundStyle(Color.mlrDanger)
+                    Spacer()
+                    Button("Close") { showReviewForm = false }
+                        .font(.caption)
+                        .foregroundStyle(Color.mlrTextMuted)
+                }
+            }
+        } else {
+            Button { showReviewForm = true } label: {
+                Text("Review request")
+                    .font(.mlrScaled(13, weight: .semibold))
+                    .foregroundStyle(Color.mlrPrimary)
+                    .frame(maxWidth: .infinity, minHeight: 32)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.mlrPrimary.opacity(0.4), lineWidth: 1))
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var approvedActions: some View {
+        HStack(spacing: 10) {
+            outlineButton("Edit", icon: "pencil", color: Color.mlrPrimary, action: onEdit)
+            outlineButton("Cancel booking", icon: "xmark.circle", color: Color.mlrDanger, action: onCancel)
+        }
+    }
+
+    private func filledButton(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.mlrScaled(13, weight: .semibold))
+                .foregroundStyle(.white)
+                .frame(maxWidth: .infinity, minHeight: 36)
+                .background(color)
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func outlineButton(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Label(title, systemImage: icon)
+                .font(.mlrScaled(13, weight: .semibold))
+                .foregroundStyle(color)
+                .frame(maxWidth: .infinity, minHeight: 32)
+                .overlay(RoundedRectangle(cornerRadius: 8).stroke(color.opacity(0.4), lineWidth: 1))
+        }
+        .buttonStyle(.plain)
     }
 
     private var dateRange: String {
@@ -348,8 +327,6 @@ private struct BookingRow: View {
 }
 
 #Preview {
-    NavigationStack {
-        AdminCabinBookings()
-    }
-    .environment(AppEnvironment())
+    NavigationStack { AdminCabinBookings() }
+        .environment(AppEnvironment())
 }

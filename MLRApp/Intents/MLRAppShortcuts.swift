@@ -52,9 +52,6 @@ struct MLRAppShortcuts: AppShortcutsProvider {
             shortTitle: "Who's Making Dinner",
             systemImageName: "fork.knife"
         )
-        // Search is exposed through the `.system.searchInApp` assistant schema
-        // (SearchUpNorthIntent, iOS 27+) so free-form Siri / Apple Intelligence
-        // reaches it without a shortcut — no App Shortcut entry needed here.
         AppShortcut(
             intent: FestCountdownIntent(),
             phrases: [

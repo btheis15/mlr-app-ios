@@ -34,8 +34,12 @@ extension Color {
     // Parchment becomes a dark warm brown in dark mode so the section still reads
     // as a distinct "Renaissance" world rather than the resort's pure-black canvas.
     static let mlrFest          = Color(light: "#801c32", dark: "#D85A77")
-    static let mlrFestLight     = Color(light: "#fdf6f0", dark: "#2A211C")
+    static let mlrFestLight     = Color(light: "#fdf6f0", dark: "#302820")
     static let mlrFestParchment = Color(light: "#f5ede0", dark: "#221B15")
+    /// Raised card surface inside the Fest section — white on parchment (light),
+    /// clearly elevated warm brown in dark mode. Use for day-section cards, info
+    /// cards, and utility links so they stand out against the parchment page bg.
+    static let mlrFestCard      = Color(light: "#ffffff", dark: "#3A2E22")
 
     // Surfaces — match the web app's palette in light mode (warm birch page /
     // white raised cards / soft hairline border); fall back to Apple semantics

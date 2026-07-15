@@ -19,9 +19,11 @@ struct FestOverviewView: View {
     private var content: FestContentService { env.festContentService }
 
     /// Timed items grouped by day, ordered by real date (falls back to weekday
-    /// order when a day has no ISO date, e.g. the offline seed).
+    /// order when a day has no ISO date, e.g. the offline seed). During the
+    /// live week, today is omitted — FestStatus shows it in full at the top.
     private var dayGroups: [(day: String, isoDate: String?, items: [ScheduleItem])] {
-        let timed = content.schedule.filter { $0.day != "Anytime" }
+        let todayName = festSeason.phase == .live ? Self.todayWeekday : nil
+        let timed = content.schedule.filter { $0.day != "Anytime" && $0.day != todayName }
         return Dictionary(grouping: timed, by: \.day)
             .map { (day: $0.key, isoDate: $0.value.compactMap(\.isoDate).first, items: $0.value) }
             .sorted { a, b in
@@ -41,6 +43,14 @@ struct FestOverviewView: View {
     static func weekdayIndex(_ day: String) -> Int {
         ["Sunday": 0, "Monday": 1, "Tuesday": 2, "Wednesday": 3,
          "Thursday": 4, "Friday": 5, "Saturday": 6][day] ?? 99
+    }
+
+    static var todayWeekday: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "EEEE"
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.timeZone = TimeZone(identifier: "America/Chicago")
+        return fmt.string(from: .now)
     }
 
     var body: some View {
@@ -184,11 +194,11 @@ private struct FestDaySection: View {
                     ExpandableDinnerRow(dinner: dinner)
                 }
             }
-            .background(Color.mlrFestParchment)
+            .background(Color.mlrFestCard)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.mlrFest.opacity(0.15), lineWidth: 1)
+                    .strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1)
             )
         }
     }
@@ -225,10 +235,10 @@ private struct FestUtilityLink<Destination: View>: View {
             .padding(.vertical, 13)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.mlrFest.opacity(0.06))
+                    .fill(Color.mlrFestCard)
                     .overlay(
                         RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.mlrFest.opacity(0.18), lineWidth: 1)
+                            .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
                     )
             )
         }
@@ -298,10 +308,10 @@ private struct FestInfoCard<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 12)
-                .fill(Color.mlrFest.opacity(0.06))
+                .fill(Color.mlrFestCard)
                 .overlay(
                     RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.mlrFest.opacity(0.18), lineWidth: 1)
+                        .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
                 )
         )
     }

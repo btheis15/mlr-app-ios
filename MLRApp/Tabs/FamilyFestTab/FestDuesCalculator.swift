@@ -14,6 +14,7 @@ struct FestDuesCalculator: View {
     let dues: [FestDuesTier]
     @Binding var totalAmount: Int
     @Binding var note: String
+    var noteLabel: String = "Family Fest"
 
     @State private var counts: [UUID: Int] = [:]
     @State private var days: Int = 1
@@ -168,6 +169,6 @@ struct FestDuesCalculator: View {
             let inner = dailyPicked.map { "\(counts[$0.id] ?? 0) \($0.label)" }.joined(separator: ", ")
             parts.append("\(days) day\(days == 1 ? "" : "s"): \(inner)")
         }
-        note = parts.isEmpty ? "Family Fest" : "Family Fest — " + parts.joined(separator: "; ")
+        note = parts.isEmpty ? noteLabel : noteLabel + " — " + parts.joined(separator: "; ")
     }
 }

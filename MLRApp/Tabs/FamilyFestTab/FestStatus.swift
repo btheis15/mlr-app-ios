@@ -45,7 +45,7 @@ private struct OffSeasonCard: View {
         .padding(.vertical, 14)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFestParchment)
+                .fill(Color.mlrFestCard)
                 .overlay(
                     RoundedRectangle(cornerRadius: 14)
                         .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
@@ -79,11 +79,9 @@ private struct PlanningCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFest.opacity(0.07))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1.5)
-                )
+                .fill(Color.mlrFestCard)
+                .overlay(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1.5))
         )
     }
 }
@@ -128,14 +126,14 @@ private struct LiveCard: View {
                     .clipShape(Capsule())
             }
 
-            Text("Today at the Fest")
-                .font(.festSerif(13))
-                .foregroundStyle(Color.mlrFest.opacity(0.75))
+            // Today's schedule items and tonight's dinner — everything you
+            // need for today, right in the status card so nobody has to scroll.
+            let todayName = FestOverviewView.todayWeekday
+            let todayItems = env.festContentService.schedule.filter { $0.day == todayName && $0.day != "Anytime" }
+            let dinner = env.festContentService.dinners.first { $0.day == todayName }
 
-            // Today's schedule items
-            let todayItems = todayScheduleItems()
-            if !todayItems.isEmpty {
-                VStack(alignment: .leading, spacing: 4) {
+            if !todayItems.isEmpty || dinner != nil {
+                VStack(alignment: .leading, spacing: 6) {
                     ForEach(todayItems) { item in
                         HStack(spacing: 6) {
                             Text(MLRFormat.time(item.time))
@@ -145,34 +143,49 @@ private struct LiveCard: View {
                             Text(item.title)
                                 .font(.mlrScaled(13, weight: .medium))
                                 .foregroundStyle(Color.mlrFest)
+                                .lineLimit(1)
+                        }
+                    }
+                    if let d = dinner {
+                        // Tonight's dinner — plain card, no tint (matches web PR #291).
+                        HStack(spacing: 6) {
+                            Text(d.time == "TBD" ? "Dinner" : MLRFormat.time(d.time))
+                                .font(.mlrScaled(12, weight: .medium))
+                                .foregroundStyle(Color.mlrFest.opacity(0.6))
+                                .frame(width: 60, alignment: .leading)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("🍽️ Dinner · \(d.title)")
+                                    .font(.mlrScaled(13, weight: .medium))
+                                    .foregroundStyle(Color.mlrFest)
+                                    .lineLimit(1)
+                                if d.menu != "TBD" {
+                                    Text(d.menu)
+                                        .font(.mlrScaled(11))
+                                        .foregroundStyle(Color.mlrFest.opacity(0.6))
+                                        .lineLimit(1)
+                                }
+                            }
                         }
                     }
                 }
-                .padding(.top, 4)
+                .padding(.top, 6)
+            } else {
+                Text("Check the schedule below for today's activities.")
+                    .font(.festSerif(13))
+                    .foregroundStyle(Color.mlrFest.opacity(0.75))
             }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFest.opacity(0.07))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(Color.mlrFest.opacity(0.3), lineWidth: 1.5)
-                )
+                .fill(Color.mlrFestCard)
+                .overlay(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.3), lineWidth: 1.5))
         )
         .onAppear { dotPulse = true }
     }
 
-    private func todayScheduleItems() -> [ScheduleItem] {
-        // Today's weekday name (resort-local) — schedule items are keyed by weekday.
-        let fmt = DateFormatter()
-        fmt.dateFormat = "EEEE"
-        fmt.locale = Locale(identifier: "en_US_POSIX")
-        fmt.timeZone = TimeZone(identifier: "America/Chicago")
-        let todayName = fmt.string(from: .now)
-        return env.festContentService.schedule.filter { $0.day == todayName }
-    }
 }
 
 // MARK: - Wrap
@@ -199,11 +212,9 @@ private struct WrapCard: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFest.opacity(0.08))
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1.5)
-                )
+                .fill(Color.mlrFestCard)
+                .overlay(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.08)))
+                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1.5))
         )
     }
 }

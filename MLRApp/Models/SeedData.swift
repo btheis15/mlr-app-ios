@@ -24,6 +24,11 @@ struct FestDinner: Identifiable {
     let day: String
     let title: String
     let chef: String
+    /// UUID of the chef's profile, if they're a real app member (migration 0053).
+    let chefUserId: UUID?
+    /// Members explicitly assigned to help with this dinner (migration 0099) —
+    /// distinct from `crew` (house names). These users can self-edit the dinner.
+    let crewUserIds: [UUID]
     let menu: String
     let location: String?
     let time: String
@@ -213,56 +218,21 @@ extension FestDinner {
     // Head chefs are real; menus, crew, times, and locations are still being set
     // (they read "TBD" — no placeholders).
     static let seed: [FestDinner] = [
-        FestDinner(
-            id: "d-mon",
-            day: "Monday",
-            title: "Monday Dinner",
-            chef: "Jessica Stewart",
-            menu: "TBD",
-            location: "TBD",
-            time: "TBD",
-            crew: []
-        ),
-        FestDinner(
-            id: "d-tue",
-            day: "Tuesday",
-            title: "Tuesday Dinner",
-            chef: "Natalie de Pareja & Karen",
-            menu: "TBD",
-            location: "TBD",
-            time: "TBD",
-            crew: []
-        ),
-        FestDinner(
-            id: "d-wed",
-            day: "Wednesday",
-            title: "Wednesday Dinner",
-            chef: "Lauren Zerfas",
-            menu: "TBD",
-            location: "TBD",
-            time: "TBD",
-            crew: []
-        ),
-        FestDinner(
-            id: "d-thu",
-            day: "Thursday",
-            title: "Thursday Dinner",
-            chef: "Rob & Joe",
-            menu: "TBD",
-            location: "TBD",
-            time: "TBD",
-            crew: []
-        ),
-        FestDinner(
-            id: "d-fri",
-            day: "Friday",
-            title: "Friday Dinner",
-            chef: "TBD",
-            menu: "TBD",
-            location: "TBD",
-            time: "TBD",
-            crew: []
-        ),
+        FestDinner(id: "d-mon", day: "Monday", title: "Monday Dinner",
+                   chef: "Jessica Stewart", chefUserId: nil, crewUserIds: [],
+                   menu: "TBD", location: "TBD", time: "TBD", crew: []),
+        FestDinner(id: "d-tue", day: "Tuesday", title: "Tuesday Dinner",
+                   chef: "Natalie de Pareja & Karen", chefUserId: nil, crewUserIds: [],
+                   menu: "TBD", location: "TBD", time: "TBD", crew: []),
+        FestDinner(id: "d-wed", day: "Wednesday", title: "Wednesday Dinner",
+                   chef: "Lauren Zerfas", chefUserId: nil, crewUserIds: [],
+                   menu: "TBD", location: "TBD", time: "TBD", crew: []),
+        FestDinner(id: "d-thu", day: "Thursday", title: "Thursday Dinner",
+                   chef: "Rob & Joe", chefUserId: nil, crewUserIds: [],
+                   menu: "TBD", location: "TBD", time: "TBD", crew: []),
+        FestDinner(id: "d-fri", day: "Friday", title: "Friday Dinner",
+                   chef: "TBD", chefUserId: nil, crewUserIds: [],
+                   menu: "TBD", location: "TBD", time: "TBD", crew: []),
     ]
 }
 

@@ -16,6 +16,7 @@ struct CabinRequestSheet: View {
     @State private var checkOut: Date = Calendar.current.date(byAdding: .day, value: 2, to: .now) ?? .now
     @State private var guests = 2
     @State private var note = ""
+    @State private var selectedRoomIds: Set<UUID> = []
     @State private var isSubmitting = false
     @State private var submitError: String?
     @State private var didSubmit = false
@@ -26,12 +27,15 @@ struct CabinRequestSheet: View {
     @State private var loadingAvailability = false
 
     private var cabins: [Cabin] { env.cabinService.cabins }
+    private var roomAvailability: [CabinRoomAvailability] { env.cabinService.roomAvailability }
+    private var hasRooms: Bool { !roomAvailability.isEmpty }
 
     private var nightCount: Int {
         max(0, Calendar.current.dateComponents([.day], from: checkIn, to: checkOut).day ?? 0)
     }
 
-    private var availabilityKey: String { "\(checkIn.isoDateString)|\(checkOut.isoDateString)" }
+    // Include cabinId so room availability reloads when the cabin changes.
+    private var availabilityKey: String { "\(selectedCabin?.id.uuidString ?? "")|\(checkIn.isoDateString)|\(checkOut.isoDateString)" }
 
     /// Rooms free in the selected cabin for the chosen dates (nil until loaded).
     private var selectedAvailable: Int? {
@@ -40,7 +44,9 @@ struct CabinRequestSheet: View {
     }
 
     private var canSubmit: Bool {
-        selectedCabin != nil && nightCount > 0 && !isSubmitting && (selectedAvailable ?? 1) > 0
+        guard selectedCabin != nil, nightCount > 0, !isSubmitting else { return false }
+        if hasRooms { return !selectedRoomIds.isEmpty }
+        return (selectedAvailable ?? 1) > 0
     }
 
     var body: some View {
@@ -143,21 +149,49 @@ struct CabinRequestSheet: View {
                 .padding(16)
                 .cardStyle()
 
-                // Guests
-                VStack(alignment: .leading, spacing: 12) {
-                    SectionLabel(text: "Guests")
-                    Stepper(value: $guests, in: 1...maxGuests) {
-                        Text("\(guests) guest\(guests == 1 ? "" : "s")")
-                            .foregroundStyle(Color.mlrText)
-                    }
-                    if let cabin = selectedCabin {
-                        Text("Sleeps up to \(cabin.maxGuests ?? 12).")
-                            .font(.mlrCaption)
-                            .foregroundStyle(Color.mlrTextMuted)
+                // Room picker — shown when the selected cabin has named rooms.
+                if hasRooms {
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionLabel(text: "Which room(s)?")
+                        VStack(spacing: 0) {
+                            ForEach(roomAvailability) { room in
+                                RoomPickRow(
+                                    room: room,
+                                    isSelected: selectedRoomIds.contains(room.id),
+                                    onToggle: {
+                                        if selectedRoomIds.contains(room.id) {
+                                            selectedRoomIds.remove(room.id)
+                                        } else if room.available {
+                                            selectedRoomIds.insert(room.id)
+                                        }
+                                    }
+                                )
+                                if room.id != roomAvailability.last?.id {
+                                    Divider().padding(.leading, 16)
+                                }
+                            }
+                        }
+                        .cardStyle()
                     }
                 }
-                .padding(16)
-                .cardStyle()
+
+                // Guests — only show when no named rooms (rooms imply occupancy)
+                if !hasRooms {
+                    VStack(alignment: .leading, spacing: 12) {
+                        SectionLabel(text: "Guests")
+                        Stepper(value: $guests, in: 1...maxGuests) {
+                            Text("\(guests) guest\(guests == 1 ? "" : "s")")
+                                .foregroundStyle(Color.mlrText)
+                        }
+                        if let cabin = selectedCabin {
+                            Text("Sleeps up to \(cabin.maxGuests ?? 12).")
+                                .font(.mlrCaption)
+                                .foregroundStyle(Color.mlrTextMuted)
+                        }
+                    }
+                    .padding(16)
+                    .cardStyle()
+                }
 
                 // Note
                 VStack(alignment: .leading, spacing: 10) {
@@ -226,6 +260,20 @@ struct CabinRequestSheet: View {
             checkIn: checkIn.isoDateString, checkOut: checkOut.isoDateString
         )
         availability = Dictionary(rows.map { ($0.cabinId, $0.available) }, uniquingKeysWith: { a, _ in a })
+        // Load per-room availability when a cabin is selected.
+        if let cabinId = selectedCabin?.id {
+            await env.cabinService.fetchRoomAvailability(
+                cabinId: cabinId,
+                checkIn: checkIn.isoDateString,
+                checkOut: checkOut.isoDateString
+            )
+            // Clear selected rooms that are no longer available.
+            selectedRoomIds = selectedRoomIds.filter { rid in
+                env.cabinService.roomAvailability.first { $0.id == rid }?.available ?? false
+            }
+        } else {
+            env.cabinService.roomAvailability = []
+        }
     }
 
     private func pickFamilyFestDates() {
@@ -250,13 +298,15 @@ struct CabinRequestSheet: View {
         defer { isSubmitting = false }
 
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
+        let roomIds = selectedRoomIds.isEmpty ? nil : Array(selectedRoomIds)
         do {
             try await env.cabinService.requestStay(
                 cabinId: cabin.id,
                 checkIn: checkIn.isoDateString,
                 checkOut: checkOut.isoDateString,
                 guests: guests,
-                note: trimmedNote.isEmpty ? nil : trimmedNote
+                note: trimmedNote.isEmpty ? nil : trimmedNote,
+                roomIds: roomIds
             )
             if let userId = await env.authService.userId {
                 await env.cabinService.fetchMyBookings(userId: userId)
@@ -266,6 +316,50 @@ struct CabinRequestSheet: View {
             submitError = "Couldn't submit your request. Check your connection and try again."
             print("[CabinRequest] submit error: \(error)")
         }
+    }
+}
+
+// MARK: - Room Pick Row
+
+private struct RoomPickRow: View {
+    let room: CabinRoomAvailability
+    let isSelected: Bool
+    let onToggle: () -> Void
+
+    var body: some View {
+        Button(action: onToggle) {
+            HStack(spacing: 12) {
+                Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                    .font(.mlrScaled(18))
+                    .foregroundStyle(isSelected ? Color.mlrPrimary : (room.available ? Color.mlrTextSubtle : Color.mlrDanger))
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(room.name)
+                        .font(.mlrScaled(14, weight: .medium))
+                        .foregroundStyle(room.available ? Color.mlrText : Color.mlrTextMuted)
+                    Text("\(room.beds) bed\(room.beds == 1 ? "" : "s")")
+                        .font(.mlrScaled(12))
+                        .foregroundStyle(Color.mlrTextMuted)
+                }
+
+                Spacer()
+
+                if !room.active {
+                    Text("Closed")
+                        .font(.mlrScaled(11, weight: .semibold))
+                        .foregroundStyle(Color.mlrDanger)
+                } else if !room.available {
+                    Text("Booked")
+                        .font(.mlrScaled(11, weight: .semibold))
+                        .foregroundStyle(Color.mlrWarning)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .opacity(room.available ? 1 : 0.5)
+        }
+        .buttonStyle(.plain)
+        .disabled(!room.available)
     }
 }
 

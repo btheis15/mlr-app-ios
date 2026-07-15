@@ -50,6 +50,7 @@ struct FestDinnerDraft: Identifiable, Equatable {
     var chefUserId: UUID?
     var chefName: String?
     var chefPhone: String?
+    var crewUserIds: [UUID]
     var houses: [String]
     var menu: String?
     var servedTime: String?
@@ -71,6 +72,56 @@ struct Payee: Identifiable, Equatable {
     var note: String?
 }
 
+// MARK: - HomeCallout
+// An admin-managed Home call-out card (migration 0083, `home_callouts` table).
+// Swipeable cards stacked above FamilyFestSpotlight on the Home screen.
+// Mirrors web HomeCallout interface in lib/festContent.ts.
+//
+// Migration 0093: link_href / link_label columns dropped; replaced by `links`
+// JSONB array so a single callout can carry multiple independent action buttons.
+
+struct CalloutLink: Equatable {
+    var href: String    // tel:… / mailto:… / https:…
+    var label: String?
+}
+
+struct HomeCallout: Identifiable, Equatable {
+    let id: String
+    var title: String?
+    var body: String?
+    var imageUrl: String?
+    var links: [CalloutLink]    // migration 0093 — replaces single linkHref/linkLabel
+    var startsOn: String?   // yyyy-MM-dd, nil = show immediately
+    var endsOn: String?     // yyyy-MM-dd inclusive, nil = open-ended
+    var dismissId: String
+    var position: Int
+    var isActive: Bool
+
+    /// Whether this callout should be shown today (yyyy-MM-dd string).
+    func isLive(today: String) -> Bool {
+        guard isActive else { return false }
+        if let s = startsOn, today < s { return false }
+        if let e = endsOn,   today > e { return false }
+        return true
+    }
+}
+
+/// Seed callout — the t-shirt flyer, identical to the 0083 DB seed row.
+/// Used only when the `home_callouts` table doesn't exist yet (pre-migration /
+/// no backend). An empty table means "no callouts", not "show the seed".
+private let seedCallout = HomeCallout(
+    id: "tshirt-order-jul15-2026",
+    title: nil,
+    body: nil,
+    imageUrl: nil,
+    links: [CalloutLink(href: "tel:7153653195", label: "📞 Call Tricia at Metro to order")],
+    startsOn: nil,
+    endsOn: "2026-07-15",
+    dismissId: "tshirt-order-jul15-2026",
+    position: 0,
+    isActive: true
+)
+
 // MARK: - FestContentService
 //
 // Loads the editable Family Fest content (migration 0053) — schedule, dinners,
@@ -88,6 +139,10 @@ final class FestContentService {
     var dinners: [FestDinner] = FestDinner.seed
     var payees: [Payee] = FestContentService.seedPayees
     var dues: [FestDuesTier] = FestContentService.seedDues
+    /// Admin-managed Home callout cards (migration 0083). Empty until loaded.
+    var callouts: [HomeCallout] = []
+    /// Callout IDs the signed-in user has permanently marked "done" (migration 0098).
+    var completedCalloutIds: Set<String> = []
     var loaded = false
     /// True when the DB fetch was empty/unreachable and we're showing the in-code
     /// "TBD" seed instead of live content — surfaced as a subtle overview caption.
@@ -118,18 +173,19 @@ final class FestContentService {
             async let pays = fetchPayees()
             async let acts = fetchActivities()
             async let duesTiers = fetchDues()
+            async let co = fetchCallouts()
 
-            let (c, s, d, p, a, du) = try await (cfg, sched, dins, pays, acts, duesTiers)
+            let (c, s, d, p, a, du, calloutRows) = try await (cfg, sched, dins, pays, acts, duesTiers, co)
 
             if let c { config = c }
             if !du.isEmpty { dues = du }
-            // Timed schedule items + anytime activities, both as ScheduleItem so
-            // the existing views (which group by weekday / filter "Anytime") work.
             let combined = s + a
             if !combined.isEmpty { schedule = combined }
             if !d.isEmpty { dinners = d }
             if !p.isEmpty { payees = p }
-            // If the schedule came back empty, we're still on the TBD seed.
+            // calloutRows nil means the table doesn't exist yet → show seed fallback.
+            // Empty array means "no callouts" — don't show the seed.
+            callouts = calloutRows ?? [seedCallout]
             usingSeedFallback = combined.isEmpty
             loaded = true
         } catch {
@@ -157,6 +213,100 @@ final class FestContentService {
         return rows.map { FestDuesTier(id: $0.id, label: $0.label, amount: $0.amount, note: $0.note, perDay: $0.perDay ?? false) }
     }
 
+    /// Returns nil when the `home_callouts` table doesn't exist yet (pre-migration),
+    /// so the caller can fall back to the seed. Returns [] when the table exists but
+    /// has no active rows — that means "no callouts", not "show the seed".
+    private func fetchCallouts() async throws -> [HomeCallout]? {
+        do {
+            let rows: [CalloutRow] = try await supabase
+                .from("home_callouts")
+                .select("*")
+                .eq("is_active", value: true)
+                .order("position", ascending: true)
+                .execute().value
+            return rows.map { row in
+                HomeCallout(
+                    id: row.id.uuidString,
+                    title: row.title,
+                    body: row.body,
+                    imageUrl: row.imageUrl,
+                    links: (row.links ?? []).map { CalloutLink(href: $0.href, label: $0.label) },
+                    startsOn: row.startsOn,
+                    endsOn: row.endsOn,
+                    dismissId: row.dismissId ?? row.id.uuidString,
+                    position: row.position ?? 0,
+                    isActive: row.isActive ?? true
+                )
+            }
+        } catch {
+            // Table doesn't exist yet (pre-migration 0083) → return nil so caller shows seed.
+            return nil
+        }
+    }
+
+    // MARK: - Callout completions (migration 0098)
+
+    /// Fetches the callout IDs the signed-in user has permanently marked "done".
+    /// Called from HomeCalloutsStack on appear when signed in.
+    func fetchMyCalloutCompletions(userId: UUID) async {
+        struct CompletionRow: Decodable {
+            let calloutId: String
+            enum CodingKeys: String, CodingKey { case calloutId = "callout_id" }
+        }
+        do {
+            let rows: [CompletionRow] = try await supabase
+                .from("home_callout_completions")
+                .select("callout_id")
+                .eq("user_id", value: userId.uuidString)
+                .execute().value
+            completedCalloutIds = Set(rows.map(\.calloutId))
+        } catch {
+            print("[FestContentService] fetchMyCalloutCompletions error: \(error)")
+        }
+    }
+
+    /// Permanently marks a callout done for the signed-in user (upserted so double-tap is safe).
+    func markCalloutDone(calloutId: String, userId: UUID) async {
+        struct Payload: Encodable { let callout_id: String; let user_id: String }
+        do {
+            try await supabase
+                .from("home_callout_completions")
+                .upsert(Payload(callout_id: calloutId, user_id: userId.uuidString),
+                        onConflict: "callout_id,user_id")
+                .execute()
+        } catch {
+            print("[FestContentService] markCalloutDone error: \(error)")
+        }
+    }
+
+    // MARK: - Dinner crew self-edit (migration 0099)
+
+    /// Lets a dinner's chef or an assigned crew member update the operational details
+    /// (menu, served time/location, prep time/location). RLS authorises it on the server.
+    func updateDinnerDetails(
+        dinnerId: String,
+        menu: String?,
+        servedTime: String?,
+        servedLocation: String?,
+        prepTime: String?,
+        prepLocation: String?
+    ) async throws {
+        struct Payload: Encodable {
+            let menu: String?
+            let served_time: String?
+            let served_location: String?
+            let prep_time: String?
+            let prep_location: String?
+        }
+        try await supabase
+            .from("fest_dinners")
+            .update(Payload(menu: menu, served_time: servedTime,
+                            served_location: servedLocation,
+                            prep_time: prepTime, prep_location: prepLocation))
+            .eq("id", value: dinnerId)
+            .execute()
+    }
+
     // MARK: - Editing (admin / fest committee; RLS enforces can_edit_fest)
 
     /// True if the signed-in user may edit fest content (server-authoritative).
@@ -178,7 +328,7 @@ final class FestContentService {
 
         Task {
             for table in ["fest_config", "fest_dues", "fest_schedule_items",
-                          "fest_dinners", "fest_payees", "fest_activities"] {
+                          "fest_dinners", "fest_payees", "fest_activities", "home_callouts"] {
                 channel.onPostgresChange(AnyAction.self, schema: "public", table: table) { [weak self] _ in
                     guard let self else { return }
                     Task { @MainActor in await self.reload() }
@@ -234,6 +384,7 @@ final class FestContentService {
             "fest_year": .integer(year), "day": .string(d.day), "title": .string(d.title),
             "emoji": j(d.emoji), "chef_name": j(d.chefName), "chef_phone": j(d.chefPhone),
             "chef_user_id": d.chefUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
+            "crew_user_ids": .array(d.crewUserIds.map { AnyJSON.string($0.uuidString) }),
             "houses": .array(d.houses.map(AnyJSON.string)),
             "menu": j(d.menu), "served_time": j(d.servedTime), "served_location": j(d.servedLocation),
             "prep_time": j(d.prepTime), "prep_location": j(d.prepLocation), "position": .integer(d.position),
@@ -335,6 +486,8 @@ final class FestContentService {
                 day: Self.weekday(from: r.day) ?? r.day,
                 title: r.title,
                 chef: r.chefName?.nilIfBlank ?? "TBD",
+                chefUserId: r.chefUserId,
+                crewUserIds: r.crewUserIds ?? [],
                 menu: r.menu?.nilIfBlank ?? "TBD",
                 location: r.servedLocation?.nilIfBlank,
                 time: r.servedTime?.nilIfBlank ?? "TBD",
@@ -437,16 +590,20 @@ private struct DinnerRow: Decodable {
     let id: UUID
     let day: String
     let title: String
+    let chefUserId: UUID?
     let chefName: String?
     let menu: String?
     let servedTime: String?
     let servedLocation: String?
+    let crewUserIds: [UUID]?   // migration 0099
     let houses: [String]?
     enum CodingKeys: String, CodingKey {
         case id, day, title, menu, houses
+        case chefUserId = "chef_user_id"
         case chefName = "chef_name"
         case servedTime = "served_time"
         case servedLocation = "served_location"
+        case crewUserIds = "crew_user_ids"
     }
 }
 
@@ -460,6 +617,34 @@ private struct PayeeRow: Decodable {
     let paypal: String?
     let amount: Int?
     let note: String?
+}
+
+private struct CalloutRow: Decodable {
+    let id: UUID
+    let title: String?
+    let body: String?
+    let imageUrl: String?
+    let links: [CalloutLinkRow]?   // migration 0093 — jsonb array [{href, label}]
+    let startsOn: String?
+    let endsOn: String?
+    let dismissId: String?
+    let position: Int?
+    let isActive: Bool?
+
+    struct CalloutLinkRow: Decodable {
+        let href: String
+        let label: String?
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case id, title, body, links
+        case imageUrl  = "image_url"
+        case startsOn  = "starts_on"
+        case endsOn    = "ends_on"
+        case dismissId = "dismiss_id"
+        case position
+        case isActive  = "is_active"
+    }
 }
 
 // Full rows for the editor (all editable columns).
@@ -494,6 +679,7 @@ private struct DinnerRowFull: Decodable {
     let chef_user_id: UUID?
     let chef_name: String?
     let chef_phone: String?
+    let crew_user_ids: [UUID]?   // migration 0099
     let houses: [String]?
     let menu: String?
     let served_time: String?
@@ -503,7 +689,8 @@ private struct DinnerRowFull: Decodable {
     let position: Int
     var draft: FestDinnerDraft {
         FestDinnerDraft(id: id, day: day, title: title, emoji: emoji, chefUserId: chef_user_id,
-                        chefName: chef_name, chefPhone: chef_phone, houses: houses ?? [], menu: menu,
+                        chefName: chef_name, chefPhone: chef_phone, crewUserIds: crew_user_ids ?? [],
+                        houses: houses ?? [], menu: menu,
                         servedTime: served_time, servedLocation: served_location, prepTime: prep_time,
                         prepLocation: prep_location, position: position)
     }

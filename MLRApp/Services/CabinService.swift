@@ -9,6 +9,7 @@ final class CabinService {
     var cabins: [Cabin] = []
     var myBookings: [CabinBooking] = []
     var allBookings: [CabinBooking] = []   // admin only
+    var roomAvailability: [CabinRoomAvailability] = []  // per-room for selected cabin + dates
     var isLoading: Bool = false
     var error: String? = nil
 
@@ -55,12 +56,35 @@ final class CabinService {
 
     // MARK: - Bookings
 
+    func fetchRoomAvailability(cabinId: UUID, checkIn: String, checkOut: String) async {
+        struct RoomAvailParams: Encodable {
+            let p_cabin_id: String
+            let p_check_in: String
+            let p_check_out: String
+        }
+        do {
+            let rows: [CabinRoomAvailability] = try await supabase
+                .rpc("cabin_room_availability", params: RoomAvailParams(
+                    p_cabin_id: cabinId.uuidString,
+                    p_check_in: checkIn,
+                    p_check_out: checkOut
+                ))
+                .execute()
+                .value
+            roomAvailability = rows
+        } catch {
+            roomAvailability = []
+            print("[CabinService] fetchRoomAvailability error: \(error)")
+        }
+    }
+
     func requestStay(
         cabinId: UUID,
         checkIn: String,
         checkOut: String,
         guests: Int,
-        note: String?
+        note: String?,
+        roomIds: [UUID]? = nil
     ) async throws {
         struct StayParams: Encodable {
             let p_cabin: String
@@ -68,6 +92,7 @@ final class CabinService {
             let p_check_out: String
             let p_guests: Int
             let p_notes: String?
+            let p_room_ids: [String]?
         }
         try await supabase
             .rpc("request_cabin_stay", params: StayParams(
@@ -75,7 +100,8 @@ final class CabinService {
                 p_check_in: checkIn,
                 p_check_out: checkOut,
                 p_guests: guests,
-                p_notes: note
+                p_notes: note,
+                p_room_ids: roomIds?.map { $0.uuidString }
             ))
             .execute()
     }
@@ -106,7 +132,8 @@ final class CabinService {
                 .select("""
                     *,
                     cabins!cabin_id(id, slug, name, room_count, sort_order),
-                    profiles!user_id(display_name)
+                    profiles!user_id(display_name),
+                    booked_by_profile:profiles!booked_by(display_name)
                 """)
                 .order("check_in", ascending: true)
                 .execute()
@@ -158,6 +185,37 @@ final class CabinService {
             .execute()
         myBookings.removeAll { $0.id == bookingId }
         allBookings.removeAll { $0.id == bookingId }
+    }
+
+    func editBooking(
+        bookingId: UUID,
+        checkIn: String,
+        checkOut: String,
+        guests: Int,
+        notes: String?
+    ) async throws {
+        struct EditParams: Encodable {
+            let p_booking: String
+            let p_check_in: String
+            let p_check_out: String
+            let p_guests: Int
+            let p_notes: String?
+        }
+        try await supabase
+            .rpc("admin_update_cabin_booking", params: EditParams(
+                p_booking: bookingId.uuidString,
+                p_check_in: checkIn,
+                p_check_out: checkOut,
+                p_guests: guests,
+                p_notes: notes
+            ))
+            .execute()
+        func applyEdit(_ b: inout CabinBooking) {
+            b.checkIn = checkIn; b.checkOut = checkOut
+            b.guests = guests; b.note = notes
+        }
+        if let idx = allBookings.firstIndex(where: { $0.id == bookingId }) { applyEdit(&allBookings[idx]) }
+        if let idx = myBookings.firstIndex(where: { $0.id == bookingId }) { applyEdit(&myBookings[idx]) }
     }
 
     // MARK: - Realtime
@@ -221,6 +279,12 @@ private struct CabinBookingAdminRow: Decodable {
     let createdAt: Date
     let cabins: CabinInfo?
     let profiles: RequesterInfo?
+    let bookedByProfile: BookedByInfo?
+
+    struct BookedByInfo: Decodable {
+        let name: String?
+        enum CodingKeys: String, CodingKey { case name = "display_name" }
+    }
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -234,6 +298,7 @@ private struct CabinBookingAdminRow: Decodable {
         case adminNote = "review_note"
         case createdAt = "created_at"
         case cabins, profiles
+        case bookedByProfile = "booked_by_profile"
     }
 
     struct CabinInfo: Decodable {
@@ -264,6 +329,7 @@ private struct CabinBookingAdminRow: Decodable {
                 maxGuests: nil, imageUrl: nil, sortOrder: c.sortOrder
             )
         }
+        booking.bookedByName = bookedByProfile?.name
         return booking
     }
 }

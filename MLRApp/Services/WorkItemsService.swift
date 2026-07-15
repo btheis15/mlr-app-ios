@@ -30,7 +30,7 @@ final class WorkItemsService {
         do {
             let rows: [WorkItem] = try await supabase
                 .from("work_items")
-                .select("*, work_item_media(*), work_item_comments(id)")
+                .select("*, work_item_media(*), work_item_comments(id), completed_by_profile:profiles!completed_by(display_name)")
                 .order("status", ascending: true)        // 'done' sorts after 'open'
                 .order("created_at", ascending: false)
                 .execute()

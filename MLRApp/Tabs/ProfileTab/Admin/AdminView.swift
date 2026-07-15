@@ -4,11 +4,21 @@ import SwiftUI
 // Admin hub — entry point to all admin sub-screens.
 
 struct AdminView: View {
+    @State private var showInvite = false
+
     var body: some View {
         List {
             Section("Members & Access") {
-                // Per-member admin actions (make admin, assign house, remove) now live on
-                // each member's profile in the People tab — no separate Members list.
+                // Per-member actions (make admin, assign house) live on individual profile
+                // sheets in the People tab; this row is the directory + overview.
+                adminLink(
+                    destination: PeopleDirectoryView(),
+                    icon: "person.2.fill",
+                    iconColor: Color.mlrPrimary,
+                    title: "Members",
+                    description: "Directory · promote admins · edit a member's info"
+                )
+
                 adminLink(
                     destination: AdminHousesView(),
                     icon: "house.fill",
@@ -18,12 +28,32 @@ struct AdminView: View {
                 )
 
                 adminLink(
+                    destination: AdminCommitteesView(),
+                    icon: "person.3.fill",
+                    iconColor: Color.mlrInfo,
+                    title: "Committees & Join Requests",
+                    description: "Rosters and pending join request queue"
+                )
+
+                adminLink(
                     destination: AdminSignInsView(),
                     icon: "clock.arrow.circlepath",
                     iconColor: Color.mlrInfo,
                     title: "Recent Sign-Ins",
                     description: "See who has signed in and from where"
                 )
+
+                Button {
+                    showInvite = true
+                } label: {
+                    adminRow(
+                        icon: "envelope.badge.fill",
+                        iconColor: Color.mlrPrimary,
+                        title: "Invite People",
+                        description: "Branded welcome email · signs them straight in"
+                    )
+                }
+                .buttonStyle(.plain)
             }
 
             Section("Content & Moderation") {
@@ -36,7 +66,15 @@ struct AdminView: View {
                 )
             }
 
-            Section("Communications") {
+            Section("Alerts & Notifications") {
+                adminLink(
+                    destination: AdminCalloutsView(),
+                    icon: "rectangle.stack.fill",
+                    iconColor: Color.mlrFest,
+                    title: "Home Callouts",
+                    description: "Swipeable cards above the fest spotlight"
+                )
+
                 adminLink(
                     destination: AdminAlertComposer(),
                     icon: "megaphone.fill",
@@ -63,12 +101,36 @@ struct AdminView: View {
                     description: "Approve or deny cabin stay requests"
                 )
             }
+
+            Section("Tools") {
+                adminLink(
+                    destination: AdminHelpContactView(),
+                    icon: "phone.fill",
+                    iconColor: Color.mlrAccent,
+                    title: "Help Contact",
+                    description: "Who the Help page says to text or call"
+                )
+
+                if let url = URL(string: "https://docs.google.com/forms/create") {
+                    Link(destination: url) {
+                        adminRow(
+                            icon: "doc.text.fill",
+                            iconColor: Color.mlrInfo,
+                            title: "Create a Google Form",
+                            description: "Survey, poll, or sign-up — then link it from a callout"
+                        )
+                    }
+                }
+            }
         }
         .navigationTitle("Admin")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showInvite) {
+            AdminInviteView()
+        }
     }
 
-    // MARK: - Admin link builder
+    // MARK: - Row builders
 
     private func adminLink<D: View>(
         destination: D,
@@ -78,25 +140,34 @@ struct AdminView: View {
         description: String
     ) -> some View {
         NavigationLink(destination: destination) {
-            HStack(spacing: 14) {
-                Image(systemName: icon)
-                    .font(.mlrScaled(18, weight: .semibold))
-                    .foregroundStyle(iconColor)
-                    .frame(width: 36, height: 36)
-                    .background(iconColor.opacity(0.12))
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
-
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.mlrScaled(15, weight: .semibold))
-                        .foregroundStyle(Color.mlrText)
-                    Text(description)
-                        .font(.caption)
-                        .foregroundStyle(Color.mlrTextMuted)
-                }
-            }
-            .padding(.vertical, 4)
+            adminRow(icon: icon, iconColor: iconColor, title: title, description: description)
         }
+    }
+
+    private func adminRow(
+        icon: String,
+        iconColor: Color,
+        title: String,
+        description: String
+    ) -> some View {
+        HStack(spacing: 14) {
+            Image(systemName: icon)
+                .font(.mlrScaled(18, weight: .semibold))
+                .foregroundStyle(iconColor)
+                .frame(width: 36, height: 36)
+                .background(iconColor.opacity(0.12))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.mlrScaled(15, weight: .semibold))
+                    .foregroundStyle(Color.mlrText)
+                Text(description)
+                    .font(.caption)
+                    .foregroundStyle(Color.mlrTextMuted)
+            }
+        }
+        .padding(.vertical, 4)
     }
 }
 

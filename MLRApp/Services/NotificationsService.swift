@@ -103,13 +103,20 @@ final class NotificationsService {
 
     // MARK: - Admin broadcast
 
+    /// Send a broadcast notification to the chosen audience.
+    /// - Parameters:
+    ///   - eventId: Optional event ID; when set with `excludeNotAttending`, members who
+    ///     RSVP'd "Can't make it" to that event are skipped (migration 0096).
+    ///   - excludeNotAttending: Only has effect when `eventId` is non-nil.
     func sendBroadcast(
         title: String,
         body: String?,
         audience: BroadcastAudience,
         mirrorBanner: Bool,
         url: String? = nil,
-        expiresAt: Date? = nil
+        expiresAt: Date? = nil,
+        eventId: String? = nil,
+        excludeNotAttending: Bool = false
     ) async throws {
         struct BroadcastParams: Encodable {
             let p_title: String
@@ -117,6 +124,8 @@ final class NotificationsService {
             let p_url: String?
             let p_audience: String
             let p_expires_at: String?
+            let p_event_id: String?
+            let p_exclude_not_attending: Bool
         }
         let iso = ISO8601DateFormatter()
         let expiresStr = expiresAt.map { iso.string(from: $0) }
@@ -126,7 +135,9 @@ final class NotificationsService {
                 p_body: body,
                 p_url: url,
                 p_audience: audience.rawValue,
-                p_expires_at: expiresStr
+                p_expires_at: expiresStr,
+                p_event_id: eventId,
+                p_exclude_not_attending: excludeNotAttending
             ))
             .execute()
 
@@ -144,6 +155,10 @@ final class NotificationsService {
                 "expires_at": .string(iso.string(from: bannerExpiry))
             ]
             if let uid { params["author_id"] = .string(uid.uuidString) }
+            if let eventId {
+                params["event_id"] = .string(eventId)
+                params["exclude_not_attending"] = .bool(excludeNotAttending)
+            }
             try await supabase
                 .from("announcements")
                 .insert(params)

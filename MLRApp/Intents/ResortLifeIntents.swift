@@ -3,7 +3,7 @@ import Foundation
 
 // MARK: - Resort life intents (Siri / Apple Intelligence)
 //
-// Practical day-to-day questions about being up north: the weather at the lake,
+// Practical day-to-day questions about being up north: the weather up north,
 // which cabins are free, Family Fest dues + who to pay, how to pay a person, and
 // whether anyone needs a hand. All read live and speak an answer.
 
@@ -16,7 +16,7 @@ private func isoDay(_ date: Date) -> String {
     return f.string(from: date)
 }
 
-// MARK: - Weather at the lake
+// MARK: - Weather up north
 
 struct WeatherUpNorthIntent: AppIntent {
     static var title: LocalizedStringResource = "Weather Up North"

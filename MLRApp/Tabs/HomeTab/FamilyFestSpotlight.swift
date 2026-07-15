@@ -51,43 +51,41 @@ struct FamilyFestSpotlight: View {
         }
     }
 
+    // Today as yyyy-MM-dd in Chicago time (for event isoDate matching).
+    private var todayISO: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "America/Chicago")!
+        return f.string(from: Date())
+    }
+
+    // Today's weekday name ("Monday"…) for dinner matching.
+    private var todayWeekday: String {
+        let f = DateFormatter()
+        f.dateFormat = "EEEE"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "America/Chicago")!
+        return f.string(from: Date())
+    }
+
+    // Timed schedule items for today (live phase only).
+    private var todayEvents: [ScheduleItem] {
+        env.festContentService.schedule.filter { $0.isoDate == todayISO }
+    }
+
+    // Tonight's dinner (live phase only).
+    private var todayDinner: FestDinner? {
+        env.festContentService.dinners.first { $0.day == todayWeekday }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            NavigationLink(destination: FestOverviewView()) {
-                HStack(spacing: 12) {
-                    ZStack {
-                        RoundedRectangle(cornerRadius: 12)
-                            .fill(Color.mlrFest.opacity(0.12))
-                            .frame(width: 46, height: 46)
-                        if season.phase == .live {
-                            PulsingDot(color: Color.mlrFest)
-                        } else {
-                            Image(systemName: iconName)
-                                .font(.mlrScaled(20))
-                                .foregroundStyle(Color.mlrFest)
-                        }
-                    }
-
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Family Fest 2026")
-                            .font(.festSerif(16, weight: .bold))
-                            .foregroundStyle(Color.mlrFest)
-                        Text(statusLine)
-                            .font(.mlrScaled(12))
-                            .foregroundStyle(Color.mlrFest.opacity(0.7))
-                            .lineLimit(1)
-                    }
-
-                    Spacer()
-
-                    Image(systemName: "chevron.right")
-                        .font(.mlrScaled(13, weight: .semibold))
-                        .foregroundStyle(Color.mlrFest.opacity(0.4))
-                }
-                .padding(14)
-                .contentShape(Rectangle())
+            if season.phase == .live {
+                liveDayCard
+            } else {
+                compactCard
             }
-            .buttonStyle(.plain)
 
             // Only non-members get a shortcut (to join). Members don't need a
             // redirect — the Feed/Chats tab is where their chats live now.
@@ -119,6 +117,141 @@ struct FamilyFestSpotlight: View {
                 CommitteeJoinSheet(committee: ff, onRequested: {})
             }
         }
+    }
+
+    // MARK: - Live day card (shows today's full schedule inline)
+
+    private var liveDayCard: some View {
+        NavigationLink(destination: FestOverviewView()) {
+            VStack(alignment: .leading, spacing: 10) {
+                // Header row
+                HStack(spacing: 8) {
+                    PulsingDot(color: Color.mlrFest)
+                    Text("FAMILY FEST · HAPPENING NOW")
+                        .font(.mlrScaled(10, weight: .bold))
+                        .foregroundStyle(Color.mlrFest)
+                        .tracking(0.8)
+                    Spacer()
+                }
+
+                if let day = season.dayNumber {
+                    Text("Day \(day) of \(season.totalDays) Up North 🎆")
+                        .font(.festSerif(17, weight: .bold))
+                        .foregroundStyle(Color.mlrFest)
+                }
+
+                // Today's events
+                if !todayEvents.isEmpty || todayDinner != nil {
+                    VStack(spacing: 6) {
+                        ForEach(todayEvents) { event in
+                            liveEventRow(event)
+                        }
+                        if let dinner = todayDinner {
+                            liveDinnerRow(dinner)
+                        }
+                    }
+                } else {
+                    Text("See everything planned for this week →")
+                        .font(.mlrScaled(13))
+                        .foregroundStyle(Color.mlrFest.opacity(0.7))
+                }
+
+                Text("Open Family Fest for more →")
+                    .font(.mlrScaled(11, weight: .semibold))
+                    .foregroundStyle(Color.mlrFest.opacity(0.7))
+            }
+            .padding(14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+
+    private func liveEventRow(_ event: ScheduleItem) -> some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.title)
+                    .font(.mlrScaled(13, weight: .medium))
+                    .foregroundStyle(Color.mlrFest)
+                    .lineLimit(1)
+                if let loc = event.location, env.isSignedIn {
+                    Text("📍 \(loc)")
+                        .font(.mlrScaled(11))
+                        .foregroundStyle(Color.mlrFest.opacity(0.6))
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+            Text(event.time)
+                .font(.mlrScaled(11, weight: .medium))
+                .foregroundStyle(Color.mlrFest.opacity(0.7))
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color.mlrFest.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    private func liveDinnerRow(_ dinner: FestDinner) -> some View {
+        HStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text("🍽️ Dinner · \(dinner.title)")
+                    .font(.mlrScaled(13, weight: .medium))
+                    .foregroundStyle(Color.mlrFest)
+                    .lineLimit(1)
+                if dinner.menu != "TBD" {
+                    Text(dinner.menu)
+                        .font(.mlrScaled(11))
+                        .foregroundStyle(Color.mlrFest.opacity(0.6))
+                        .lineLimit(1)
+                }
+            }
+            Spacer()
+            if dinner.time != "TBD" {
+                Text(dinner.time)
+                    .font(.mlrScaled(11, weight: .medium))
+                    .foregroundStyle(Color.mlrFest.opacity(0.7))
+            }
+        }
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
+        .background(Color.mlrFest.opacity(0.06))
+        .clipShape(RoundedRectangle(cornerRadius: 8))
+    }
+
+    // MARK: - Compact card (off-season / planning / wrap)
+
+    private var compactCard: some View {
+        NavigationLink(destination: FestOverviewView()) {
+            HStack(spacing: 12) {
+                ZStack {
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color.mlrFest.opacity(0.12))
+                        .frame(width: 46, height: 46)
+                    Image(systemName: iconName)
+                        .font(.mlrScaled(20))
+                        .foregroundStyle(Color.mlrFest)
+                }
+
+                VStack(alignment: .leading, spacing: 3) {
+                    Text("Family Fest 2026")
+                        .font(.festSerif(16, weight: .bold))
+                        .foregroundStyle(Color.mlrFest)
+                    Text(statusLine)
+                        .font(.mlrScaled(12))
+                        .foregroundStyle(Color.mlrFest.opacity(0.7))
+                        .lineLimit(1)
+                }
+
+                Spacer()
+
+                Image(systemName: "chevron.right")
+                    .font(.mlrScaled(13, weight: .semibold))
+                    .foregroundStyle(Color.mlrFest.opacity(0.4))
+            }
+            .padding(14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 
     // MARK: - Smart shortcut

@@ -35,11 +35,21 @@ struct AdminNotificationComposer: View {
     @State private var audience: BroadcastAudience = .everyone
     @State private var alsoBanner: Bool = false
     @State private var bannerExpiry: ExpiryWindow = .sixHours
+    // Event targeting (migration 0096)
+    @State private var selectedEventId: String? = nil
+    @State private var excludeNotAttending: Bool = true
     @State private var isSending = false
     @State private var error: String? = nil
     @State private var sent = false
 
     private var canSend: Bool { !title.trimmingCharacters(in: .whitespaces).isEmpty }
+
+    private var upcomingEvents: [ResortEvent] { env.eventsService.upcomingEvents }
+
+    private var selectedEventTitle: String? {
+        guard let id = selectedEventId else { return nil }
+        return upcomingEvents.first { $0.id == id }?.title
+    }
 
     // MARK: - Body
 
@@ -85,6 +95,44 @@ struct AdminNotificationComposer: View {
                                 }
                             }
                         }
+                    }
+                }
+
+                // Event targeting — filters out declined RSVPs (migration 0096)
+                Section {
+                    Picker("Link to event", selection: $selectedEventId) {
+                        Text("No specific event").tag(String?.none)
+                        ForEach(upcomingEvents) { event in
+                            Text(event.title).tag(String?.some(event.id))
+                        }
+                    }
+                    .onChange(of: selectedEventId) { _, newValue in
+                        // Default exclude to ON when picking an event for the first time.
+                        if newValue != nil { excludeNotAttending = true }
+                    }
+
+                    if selectedEventId != nil {
+                        Toggle(isOn: $excludeNotAttending) {
+                            Label {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text("Skip people who declined")
+                                    Text("Don't send to anyone who RSVP'd \"Can't make it\"")
+                                        .font(.caption)
+                                        .foregroundStyle(Color.mlrTextMuted)
+                                }
+                            } icon: {
+                                Image(systemName: "person.slash.fill")
+                                    .foregroundStyle(Color.mlrTextSubtle)
+                            }
+                        }
+                        .tint(Color.mlrPrimary)
+                    }
+                } header: {
+                    Text("Event filter")
+                } footer: {
+                    if selectedEventId == nil {
+                        Text("Optionally link this notification to an event — lets you skip people who RSVP'd they can't attend.")
+                            .font(.caption)
                     }
                 }
 
@@ -170,6 +218,12 @@ struct AdminNotificationComposer: View {
                 Text("Notification sent to \(audience.label.lowercased()).")
             }
         }
+        .task {
+            // Ensure events are loaded for the event picker.
+            if env.eventsService.events.isEmpty {
+                await env.eventsService.fetchEvents()
+            }
+        }
     }
 
     // MARK: - Preview
@@ -201,6 +255,11 @@ struct AdminNotificationComposer: View {
                         .font(.mlrScaled(10))
                     Text("→ \(audience.label)")
                         .font(.caption2)
+                    if let eventTitle = selectedEventTitle {
+                        Text("· \(eventTitle)")
+                            .font(.caption2)
+                            .lineLimit(1)
+                    }
                 }
                 .foregroundStyle(Color.mlrTextSubtle)
             }
@@ -228,15 +287,15 @@ struct AdminNotificationComposer: View {
 
         let trimmedUrl = linkUrl.trimmingCharacters(in: .whitespaces)
         do {
-            // sendBroadcast also inserts the banner (announcements) when mirrorBanner
-            // is set, using expiresAt — no separate insert needed here.
             try await env.notificationsService.sendBroadcast(
                 title: trimmedTitle,
                 body: trimmedBody.isEmpty ? nil : trimmedBody,
                 audience: audience,
                 mirrorBanner: postBanner,
                 url: trimmedUrl.isEmpty ? nil : trimmedUrl,
-                expiresAt: postBanner ? bannerExpiry.expiresAt : nil
+                expiresAt: postBanner ? bannerExpiry.expiresAt : nil,
+                eventId: selectedEventId,
+                excludeNotAttending: excludeNotAttending
             )
             sent = true
         } catch {

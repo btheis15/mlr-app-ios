@@ -213,7 +213,7 @@ struct ExpandableScheduleRow: View {
 
             if isExpanded { expanded }
         }
-        .background(Color.mlrFestParchment)
+        .background(Color.mlrFestCard)
         .sensoryFeedback(.selection, trigger: isExpanded)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
@@ -331,7 +331,6 @@ struct ExpandableDinnerRow: View {
 
             if isExpanded { expanded }
         }
-        .background(Color.mlrFest.opacity(0.04))
         .sensoryFeedback(.selection, trigger: isExpanded)
         .accessibilityElement(children: .combine)
         .accessibilityAddTraits(.isButton)
