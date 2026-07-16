@@ -73,6 +73,8 @@ struct FestOverviewView: View {
                             seedFallbackNote
                         }
 
+                        GoldOrnamentDivider()
+
                         // The week, day by day — activities + that night's dinner.
                         ForEach(dayGroups, id: \.day) { group in
                             FestDaySection(
@@ -81,17 +83,24 @@ struct FestOverviewView: View {
                                 items: group.items,
                                 dinner: dinner(for: group.day)
                             )
+                            .scrollTransition { content, phase in
+                                content
+                                    .opacity(phase.isIdentity ? 1 : 0.3)
+                                    .scaleEffect(phase.isIdentity ? 1 : 0.96)
+                            }
                         }
 
                         // All-week, no-set-time activities (scavenger hunt, etc.)
                         FestAnytimeCard()
+
+                        GoldOrnamentDivider()
 
                         // Secondary sections.
                         moreSection
 
                         Text("Leo & Dorothy Theis · Est. 1987 · Tomahawk, WI")
                             .font(.festSerif(11))
-                            .foregroundStyle(Color.mlrFest.opacity(0.6))
+                            .foregroundStyle(Color.mlrFestInk.opacity(0.65))
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.top, 4)
                     }
@@ -135,8 +144,7 @@ struct FestOverviewView: View {
     private var moreSection: some View {
         VStack(alignment: .leading, spacing: 8) {
             Text("More")
-                .font(.festSerif(15, weight: .bold))
-                .foregroundStyle(Color.mlrFest)
+                .festHeadingStyle(size: 15)
                 .padding(.horizontal, 4)
                 .padding(.top, 4)
 
@@ -154,7 +162,7 @@ struct FestOverviewView: View {
             Text("Showing offline defaults — the schedule may be out of date.")
                 .font(.mlrScaled(12))
         }
-        .foregroundStyle(Color.mlrFest.opacity(0.6))
+        .foregroundStyle(Color.mlrFestInk.opacity(0.7))
         .frame(maxWidth: .infinity, alignment: .center)
     }
 }
@@ -194,12 +202,7 @@ private struct FestDaySection: View {
                     ExpandableDinnerRow(dinner: dinner)
                 }
             }
-            .background(Color.mlrFestCard)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1)
-            )
+            .festCardStyle(cornerRadius: 12)
         }
     }
 }
@@ -233,14 +236,7 @@ private struct FestUtilityLink<Destination: View>: View {
             .foregroundStyle(Color.mlrFest)
             .padding(.horizontal, 14)
             .padding(.vertical, 13)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(Color.mlrFestCard)
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 12)
-                            .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
-                    )
-            )
+            .festCardStyle(cornerRadius: 12)
         }
         .buttonStyle(.plain)
     }
@@ -258,8 +254,10 @@ private struct FestCoverImage: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1)
+                    .strokeBorder(LinearGradient.festHeraldic, lineWidth: 1.5)
             )
+            .background { FestHeroGlow() }
+            .shadow(color: .mlrFest.opacity(0.18), radius: 16, x: 0, y: 8)
             .accessibilityLabel("Family Fest 2026 — Ye Olde Family Feste")
     }
 }
@@ -279,11 +277,11 @@ private struct FestCoverCaption: View {
 
             Text("\(FamilyFestConfig.dateRangeLabel), \(String(FamilyFestConfig.year))")
                 .font(.festSerif(15, weight: .bold))
-                .foregroundStyle(Color.mlrFest.opacity(0.85))
+                .foregroundStyle(Color.mlrFest)
 
             Text("Muskellunge Lake Resort · Tomahawk, WI")
-                .font(.festSerif(12))
-                .foregroundStyle(Color.mlrFest.opacity(0.6))
+                .font(.mlrScaled(12))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.7))
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
@@ -306,14 +304,7 @@ private struct FestInfoCard<Content: View>: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(Color.mlrFestCard)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 12)
-                        .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
-                )
-        )
+        .festCardStyle(cornerRadius: 12)
     }
 }
 
@@ -334,7 +325,7 @@ private struct FestAnytimeCard: View {
                             if let desc = item.description {
                                 Text(desc)
                                     .font(.mlrScaled(12))
-                                    .foregroundStyle(Color.mlrFest.opacity(0.65))
+                                    .foregroundStyle(Color.mlrFestInk.opacity(0.75))
                                     .fixedSize(horizontal: false, vertical: true)
                             }
                         }

@@ -96,10 +96,17 @@ struct FamilyFestSpotlight: View {
         }
         .background(Color.mlrFestParchment)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(alignment: .top) {
+            // Heraldic wine→gold accent bar across the top edge.
+            LinearGradient.festHeraldic
+                .frame(height: 4)
+                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 16, topTrailingRadius: 16))
+        }
         .overlay(
             RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
+                .strokeBorder(Color.mlrFestGold.opacity(0.4), lineWidth: 1.25)
         )
+        .shadow(color: .mlrFest.opacity(0.12), radius: 10, x: 0, y: 4)
         .task {
             // Make sure committee membership is known so the shortcut points the
             // right way. Cheap + guarded so it doesn't refetch on every appearance.
@@ -138,6 +145,7 @@ struct FamilyFestSpotlight: View {
                     Text("Day \(day) of \(season.totalDays) Up North 🎆")
                         .font(.festSerif(17, weight: .bold))
                         .foregroundStyle(Color.mlrFest)
+                        .contentTransition(.numericText())
                 }
 
                 // Today's events
@@ -238,7 +246,7 @@ struct FamilyFestSpotlight: View {
                         .foregroundStyle(Color.mlrFest)
                     Text(statusLine)
                         .font(.mlrScaled(12))
-                        .foregroundStyle(Color.mlrFest.opacity(0.85))
+                        .foregroundStyle(Color.mlrFestInk.opacity(0.85))
                         .lineLimit(1)
                 }
 

@@ -227,6 +227,7 @@ struct HomeView: View {
     @ViewBuilder
     private func logoHero(geometry: GeometryProxy) -> some View {
         let logoWidth = min(geometry.size.width * 0.46, 180.0)
+        VStack(spacing: 0) {
         HStack {
             Spacer()
             SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
@@ -263,6 +264,13 @@ struct HomeView: View {
                 .accessibilityLabel("View Home as a date")
                 .padding(.leading, 4)
             }
+        }
+
+            // Script wordmark under the logo (Yellowtail) — the resort's signature.
+            Text("Muskellunge Lake Resort")
+                .scriptStyle(size: 26)
+                .padding(.bottom, 6)
+                .accessibilityAddTraits(.isHeader)
         }
     }
 
