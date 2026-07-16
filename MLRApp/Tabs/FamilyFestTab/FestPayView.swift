@@ -56,14 +56,14 @@ struct FestPayView: View {
             if dues.isEmpty {
                 Text("Dues amounts are still being set — check back soon.")
                     .font(.mlrScaled(13))
-                    .foregroundStyle(Color.mlrFest.opacity(0.65))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.75))
             } else {
                 FestDuesCalculator(dues: dues, totalAmount: $calcAmount, note: $calcNote)
             }
 
             Text("Dues cover shared meals, activities, and resort costs for the week. Note \u{201C}Family Fest 2026\u{201D} with your payment.")
                 .font(.mlrScaled(13))
-                .foregroundStyle(Color.mlrFest.opacity(0.65))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.75))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(16)
@@ -141,7 +141,7 @@ private struct PayeeCard: View {
                 if let role = payee.role, !role.isEmpty {
                     Text(role)
                         .font(.mlrScaled(12))
-                        .foregroundStyle(Color.mlrFest.opacity(0.6))
+                        .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                 }
                 if let amount = payee.amount {
                     Text("$\(amount)")
@@ -153,7 +153,7 @@ private struct PayeeCard: View {
             if let venmo = payee.venmo?.trimmedNonEmpty {
                 let handle = venmo.replacingOccurrences(of: "@", with: "")
                 handleRow(label: "Venmo", value: "@\(handle)", icon: "v.circle.fill",
-                          openURL: venmoURL(handle: handle))
+                          openURL: venmoURL(handle: handle), tint: .mlrVenmo)
             }
             if let zelle = payee.zelle?.trimmedNonEmpty {
                 handleRow(label: "Zelle", value: zelle, icon: "z.circle.fill", openURL: nil)
@@ -178,12 +178,13 @@ private struct PayeeCard: View {
             }
             if let paypal = payee.paypal?.trimmedNonEmpty {
                 handleRow(label: "PayPal", value: paypal, icon: "p.circle.fill",
-                          openURL: URL(string: "https://www.paypal.com/paypalme/\(paypal.replacingOccurrences(of: "@", with: ""))"))
+                          openURL: URL(string: "https://www.paypal.com/paypalme/\(paypal.replacingOccurrences(of: "@", with: ""))"),
+                          tint: .mlrPaypal)
             }
             if let note = payee.note?.trimmedNonEmpty {
                 Text(note)
                     .font(.mlrScaled(12))
-                    .foregroundStyle(Color.mlrFest.opacity(0.6))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.7))
             }
         }
         .padding(16)
@@ -210,42 +211,44 @@ private struct PayeeCard: View {
     }
 
     @ViewBuilder
-    private func handleRow(label: String, value: String, icon: String, openURL: URL?) -> some View {
+    private func handleRow(label: String, value: String, icon: String, openURL: URL?,
+                           tint: Color = .mlrFest) -> some View {
         HStack(spacing: 10) {
             Image(systemName: icon)
                 .font(.mlrScaled(18))
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(tint)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 1) {
                 Text(label)
                     .font(.mlrScaled(11))
-                    .foregroundStyle(Color.mlrFest.opacity(0.6))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                 Text(value)
                     .font(.mlrScaled(14, weight: .medium, design: .monospaced))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestInk)
                     .lineLimit(1)
             }
             Spacer()
             Button {
                 UIPasteboard.general.string = value
+                Haptics.tap()
                 copied = label
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) { if copied == label { copied = nil } }
             } label: {
                 Image(systemName: copied == label ? "checkmark" : "doc.on.doc")
                     .font(.mlrScaled(13, weight: .semibold))
-                    .foregroundStyle(copied == label ? Color.mlrSuccess : Color.mlrFest.opacity(0.7))
+                    .foregroundStyle(copied == label ? Color.mlrSuccess : Color.mlrFestInk.opacity(0.7))
             }
             .buttonStyle(.plain)
             if let openURL {
                 Link(destination: openURL) {
                     Image(systemName: "arrow.up.right.square")
                         .font(.mlrScaled(15))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(tint)
                 }
             }
         }
         .padding(10)
-        .background(Color.mlrFest.opacity(0.06))
+        .background(tint.opacity(0.10))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

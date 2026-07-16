@@ -60,11 +60,11 @@ private struct DinnerCard: View {
                     Text(dinner.chef)
                         .font(.mlrScaled(13))
                 }
-                .foregroundStyle(Color.mlrFest.opacity(0.65))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.75))
 
                 Text(MLRFormat.time(dinner.time))
                     .font(.mlrScaled(12))
-                    .foregroundStyle(Color.mlrFest.opacity(0.5))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.6))
             }
 
             Spacer()
