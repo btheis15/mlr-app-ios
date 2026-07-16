@@ -109,6 +109,22 @@ private struct PlanningCard: View {
 private struct LiveCard: View {
     @Environment(AppEnvironment.self) private var env
     let season: FestSeason
+    @State private var editingItem: ScheduleItem?
+    @State private var editingDinner: FestDinner?
+
+    /// Admin / committee runner, or this event's own lead or crew (migration 0110).
+    private func canEditItem(_ item: ScheduleItem) -> Bool {
+        guard env.isSignedIn, let me = env.currentProfile?.id else { return false }
+        return env.isAdmin || env.festContentService.userCanEditFest
+            || item.leadUserId == me || item.crewUserIds.contains(me)
+    }
+
+    /// Admin / committee runner, or tonight's chef or crew (migration 0099).
+    private func canEditDinner(_ d: FestDinner) -> Bool {
+        guard env.isSignedIn, let me = env.currentProfile?.id else { return false }
+        return env.isAdmin || env.festContentService.userCanEditFest
+            || d.chefUserId == me || d.crewUserIds.contains(me)
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -160,6 +176,15 @@ private struct LiveCard: View {
                                 .font(.mlrScaled(13, weight: .medium))
                                 .foregroundStyle(Color.mlrFestInk)
                                 .lineLimit(1)
+                            Spacer(minLength: 4)
+                            if canEditItem(item) {
+                                Button { editingItem = item } label: {
+                                    Image(systemName: "pencil")
+                                        .font(.mlrScaled(11, weight: .semibold))
+                                        .foregroundStyle(Color.mlrFest)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                     if let d = dinner {
@@ -180,6 +205,15 @@ private struct LiveCard: View {
                                         .lineLimit(1)
                                 }
                             }
+                            Spacer(minLength: 4)
+                            if canEditDinner(d) {
+                                Button { editingDinner = d } label: {
+                                    Image(systemName: "pencil")
+                                        .font(.mlrScaled(11, weight: .semibold))
+                                        .foregroundStyle(Color.mlrFest)
+                                }
+                                .buttonStyle(.plain)
+                            }
                         }
                     }
                 }
@@ -190,6 +224,16 @@ private struct LiveCard: View {
             }
         }
         .festStatusCard(accent: true)
+        .sheet(item: $editingItem) { item in
+            NavigationStack {
+                FestScheduleEditSheet(item: item) { await env.festContentService.reload() }
+            }
+        }
+        .sheet(item: $editingDinner) { d in
+            NavigationStack {
+                FestDinnerEditSheet(dinner: d) { await env.festContentService.reload() }
+            }
+        }
     }
 }
 
