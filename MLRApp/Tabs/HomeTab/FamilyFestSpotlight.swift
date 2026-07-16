@@ -96,12 +96,6 @@ struct FamilyFestSpotlight: View {
         }
         .background(Color.mlrFestParchment)
         .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(alignment: .top) {
-            // Heraldic wine→gold accent bar across the top edge.
-            LinearGradient.festHeraldic
-                .frame(height: 4)
-                .clipShape(UnevenRoundedRectangle(topLeadingRadius: 16, topTrailingRadius: 16))
-        }
         .overlay(
             RoundedRectangle(cornerRadius: 16)
                 .strokeBorder(Color.mlrFestGold.opacity(0.4), lineWidth: 1.25)
