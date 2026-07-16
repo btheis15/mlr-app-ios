@@ -90,6 +90,14 @@ struct AdminView: View {
                     title: "Send Notification",
                     description: "Broadcast to everyone or just admins"
                 )
+
+                adminLink(
+                    destination: AdminScheduledBroadcasts(),
+                    icon: "clock.badge.checkmark",
+                    iconColor: Color.mlrInfo,
+                    title: "Scheduled",
+                    description: "Upcoming & recent scheduled broadcasts"
+                )
             }
 
             Section("Bookings") {

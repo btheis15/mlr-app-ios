@@ -176,6 +176,9 @@
 		D3F9D8783007189A006874DA /* FestInlineEditSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */; };
 		D3F9D87B30091A65006874DA /* FestDecor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87A30091A65006874DA /* FestDecor.swift */; };
 		D3F9D87D300934F0006874DA /* AdminCabinDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */; };
+		D3F9D87F30093C6C006874DA /* ScheduleSendPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */; };
+		D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */; };
+		D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -356,6 +359,9 @@
 		D3F9D879300918B1006874DA /* MLR-App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "MLR-App-Info.plist"; sourceTree = "<group>"; };
 		D3F9D87A30091A65006874DA /* FestDecor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDecor.swift; sourceTree = "<group>"; };
 		D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCabinDetails.swift; sourceTree = "<group>"; };
+		D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSendPicker.swift; sourceTree = "<group>"; };
+		D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminScheduledBroadcasts.swift; sourceTree = "<group>"; };
+		D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledBroadcast.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -518,6 +524,7 @@
 				D3A0000000000000000000A1 /* HouseStay.swift */,
 				D39BD8902FFC47C000B1E74D /* ChatMedia.swift */,
 				D3F9D86E30071027006874DA /* Poll.swift */,
+				D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -578,6 +585,7 @@
 				D33F9E232FEC086700603CE7 /* MLRSheet.swift */,
 				D33F9E242FEC086700603CE7 /* SkeletonView.swift */,
 				D33F9E252FEC086700603CE7 /* WelcomeCard.swift */,
+				D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -685,6 +693,7 @@
 				D3F9D8643006C201006874DA /* AdminCommitteesView.swift */,
 				D3F9D8663006C288006874DA /* AdminHelpContactView.swift */,
 				D3F9D86A3006CC02006874DA /* AdminCalloutsView.swift */,
+				D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */,
 			);
 			path = Admin;
 			sourceTree = "<group>";
@@ -1000,9 +1009,11 @@
 				D33F9E982FEC086700603CE7 /* FamilyFestSpotlight.swift in Sources */,
 				D33F9E992FEC086700603CE7 /* HomeView.swift in Sources */,
 				D33F9E9A2FEC086700603CE7 /* Formatters.swift in Sources */,
+				D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */,
 				D33F9E9B2FEC086700603CE7 /* FestPayView.swift in Sources */,
 				D33F9E9C2FEC086700603CE7 /* SeedData.swift in Sources */,
 				D33F9E9D2FEC086700603CE7 /* NextEventIntent.swift in Sources */,
+				D3F9D87F30093C6C006874DA /* ScheduleSendPicker.swift in Sources */,
 				D33F9E9E2FEC086700603CE7 /* CabinService.swift in Sources */,
 				D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */,
 				D36347582FFDE088001D52C8 /* CommitteeActionIntents.swift in Sources */,
@@ -1017,6 +1028,7 @@
 				D33F9EA52FEC086700603CE7 /* MLRApp.swift in Sources */,
 				D36347682FFDEF09001D52C8 /* SnippetViews.swift in Sources */,
 				D33F9EA62FEC086700603CE7 /* EventComposer.swift in Sources */,
+				D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */,
 				D33F9EA72FEC086700603CE7 /* HomeNavigationStubs.swift in Sources */,
 				D33F9EA82FEC086700603CE7 /* MentionText.swift in Sources */,
 				D3512BE630057B63008BBC44 /* HomeWeatherCard.swift in Sources */,

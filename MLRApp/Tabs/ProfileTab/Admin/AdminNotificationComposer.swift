@@ -38,6 +38,7 @@ struct AdminNotificationComposer: View {
     // Event targeting (migration 0096)
     @State private var selectedEventId: String? = nil
     @State private var excludeNotAttending: Bool = true
+    @State private var scheduleAt: Date? = nil   // nil = send now (migration 0097)
     @State private var isSending = false
     @State private var error: String? = nil
     @State private var sent = false
@@ -165,6 +166,12 @@ struct AdminNotificationComposer: View {
                     }
                 }
 
+                // Send now / schedule for later
+                Section("When") {
+                    ScheduleSendPicker(selection: $scheduleAt)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                }
+
                 // Preview
                 Section("Preview") {
                     notificationPreview
@@ -189,7 +196,8 @@ struct AdminNotificationComposer: View {
                             if isSending {
                                 ProgressView().tint(.white)
                             } else {
-                                Label("Send to \(audience.label)", systemImage: "paperplane.fill")
+                                Label(scheduleAt == nil ? "Send to \(audience.label)" : "Schedule for \(audience.label)",
+                                      systemImage: scheduleAt == nil ? "paperplane.fill" : "clock.badge.checkmark")
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.white)
                             }
@@ -286,6 +294,29 @@ struct AdminNotificationComposer: View {
         let postBanner   = audience == .everyone && alsoBanner
 
         let trimmedUrl = linkUrl.trimmingCharacters(in: .whitespaces)
+
+        // Scheduled path — queue it (migration 0097) instead of sending now.
+        if let scheduleAt {
+            do {
+                let payload = BroadcastPayload(
+                    title: trimmedTitle,
+                    body: trimmedBody.isEmpty ? nil : trimmedBody,
+                    url: trimmedUrl.isEmpty ? nil : trimmedUrl,
+                    audience: audience.rawValue,
+                    expiryHours: postBanner ? bannerExpiry.hours : nil,
+                    alsoBanner: postBanner,
+                    eventId: selectedEventId,
+                    excludeNotAttending: selectedEventId != nil ? excludeNotAttending : nil
+                )
+                try await env.notificationsService.scheduleBroadcast(
+                    kind: .notification, payload: payload, scheduledAt: scheduleAt)
+                sent = true
+            } catch {
+                self.error = "Couldn't schedule the notification. Please try again."
+            }
+            return
+        }
+
         do {
             try await env.notificationsService.sendBroadcast(
                 title: trimmedTitle,

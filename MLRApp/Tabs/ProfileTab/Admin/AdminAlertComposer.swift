@@ -33,6 +33,9 @@ enum ExpiryWindow: String, CaseIterable, Identifiable {
     }
 
     var expiresAt: Date { Date.now.addingTimeInterval(seconds) }
+
+    /// Whole hours — for the scheduled-broadcast payload's `expiryHours`.
+    var hours: Int { Int(seconds / 3600) }
 }
 
 // MARK: - AdminAlertComposer
@@ -46,6 +49,7 @@ struct AdminAlertComposer: View {
     @State private var kind: AnnouncementKind = .info
     @State private var expiry: ExpiryWindow = .sixHours
     @State private var mirrorToNotif: Bool = false
+    @State private var scheduleAt: Date? = nil   // nil = post now (migration 0097)
     @State private var isPosting = false
     @State private var error: String? = nil
     @State private var posted = false
@@ -114,6 +118,12 @@ struct AdminAlertComposer: View {
                     .tint(Color.mlrPrimary)
                 }
 
+                // Send now / schedule for later
+                Section("When") {
+                    ScheduleSendPicker(selection: $scheduleAt)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 16, bottom: 8, trailing: 16))
+                }
+
                 // Preview
                 Section("Preview") {
                     announcementPreview
@@ -139,7 +149,8 @@ struct AdminAlertComposer: View {
                                 ProgressView()
                                     .tint(.white)
                             } else {
-                                Label("Post Announcement", systemImage: "megaphone.fill")
+                                Label(scheduleAt == nil ? "Post Announcement" : "Schedule Announcement",
+                                      systemImage: scheduleAt == nil ? "megaphone.fill" : "clock.badge.checkmark")
                                     .fontWeight(.semibold)
                                     .foregroundStyle(.white)
                             }
@@ -249,10 +260,35 @@ struct AdminAlertComposer: View {
         error = nil
         defer { isPosting = false }
 
+        let trimmedTitle = title.trimmingCharacters(in: .whitespaces)
+        let trimmedBody = messageBody.trimmingCharacters(in: .whitespaces)
+
+        // Scheduled path — queue it (migration 0097) instead of posting now. The
+        // scheduled send always uses severity 'alert' server-side, so the style
+        // picker only applies to send-now posts (matches web).
+        if let scheduleAt {
+            do {
+                let payload: BroadcastPayload = mirrorToNotif
+                    ? BroadcastPayload(title: trimmedTitle, body: trimmedBody.isEmpty ? nil : trimmedBody,
+                                       audience: "everyone", expiryHours: expiry.hours, alsoBanner: true)
+                    : BroadcastPayload(title: trimmedTitle, body: trimmedBody.isEmpty ? nil : trimmedBody,
+                                       expiryHours: expiry.hours)
+                try await env.notificationsService.scheduleBroadcast(
+                    kind: mirrorToNotif ? .notification : .announcement,
+                    payload: payload,
+                    scheduledAt: scheduleAt
+                )
+                posted = true
+            } catch {
+                self.error = "Couldn't schedule the announcement. Please try again."
+            }
+            return
+        }
+
         let fmt = ISO8601DateFormatter()
         let params: [String: String] = [
-            "title": title.trimmingCharacters(in: .whitespaces),
-            "body": messageBody.trimmingCharacters(in: .whitespaces),
+            "title": trimmedTitle,
+            "body": trimmedBody,
             "severity": kind.severity,
             "expires_at": fmt.string(from: expiry.expiresAt)
         ]
