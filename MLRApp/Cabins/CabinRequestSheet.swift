@@ -18,6 +18,11 @@ struct CabinRequestSheet: View {
     @State private var note = ""
     @State private var selectedRoomIds: Set<UUID> = []
     @State private var notSureYet = false   // skip room pick even when the cabin has rooms
+    // Admin book-on-behalf (migration 0087): place a booking under another member,
+    // auto-approved, with an optional confirmation email.
+    @State private var forUser: Profile?
+    @State private var showMemberPicker = false
+    @State private var emailForUser = true
     @State private var isSubmitting = false
     @State private var submitError: String?
     @State private var didSubmit = false
@@ -80,6 +85,9 @@ struct CabinRequestSheet: View {
             }
             .task { await loadCabins() }
             .task(id: availabilityKey) { await loadAvailability() }
+            .sheet(isPresented: $showMemberPicker) {
+                FestMemberPicker { forUser = $0 }
+            }
         }
     }
 
@@ -88,6 +96,37 @@ struct CabinRequestSheet: View {
     private var form: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 24) {
+                // Admin: book on behalf of another member (auto-approved).
+                if env.isAdmin {
+                    VStack(alignment: .leading, spacing: 10) {
+                        SectionLabel(text: "Booking for")
+                        Button { showMemberPicker = true } label: {
+                            HStack(spacing: 10) {
+                                Image(systemName: forUser == nil ? "person.crop.circle.badge.plus" : "person.crop.circle.fill")
+                                    .foregroundStyle(Color.mlrPrimary)
+                                Text(forUser?.name ?? "Myself")
+                                    .foregroundStyle(Color.mlrText)
+                                Spacer()
+                                if forUser != nil {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .foregroundStyle(Color.mlrTextSubtle)
+                                        .onTapGesture { forUser = nil }
+                                } else {
+                                    Image(systemName: "chevron.right").font(.mlrScaled(13)).foregroundStyle(Color.mlrTextSubtle)
+                                }
+                            }
+                            .padding(14).background(Color.mlrCard).clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.plain)
+                        if forUser != nil {
+                            Toggle("Email them a confirmation", isOn: $emailForUser)
+                                .font(.mlrScaled(13)).tint(Color.mlrPrimary)
+                            Text("Placed under their account and approved right away.")
+                                .font(.mlrCaption).foregroundStyle(Color.mlrTextMuted)
+                        }
+                    }
+                }
+
                 // Cabin picker
                 VStack(alignment: .leading, spacing: 10) {
                     SectionLabel(text: "Choose a cabin")
@@ -315,14 +354,19 @@ struct CabinRequestSheet: View {
         let trimmedNote = note.trimmingCharacters(in: .whitespacesAndNewlines)
         let roomIds = selectedRoomIds.isEmpty ? nil : Array(selectedRoomIds)
         do {
-            try await env.cabinService.requestStay(
+            let newId = try await env.cabinService.requestStay(
                 cabinId: cabin.id,
                 checkIn: checkIn.isoDateString,
                 checkOut: checkOut.isoDateString,
                 guests: guests,
                 note: trimmedNote.isEmpty ? nil : trimmedNote,
-                roomIds: roomIds
+                roomIds: roomIds,
+                forUserId: forUser?.id
             )
+            // Book-on-behalf: auto-approve the just-created booking (0087/0104).
+            if forUser != nil, let newId {
+                try await env.cabinService.approveBooking(bookingId: newId, adminNote: nil, notify: emailForUser)
+            }
             if let userId = await env.authService.userId {
                 await env.cabinService.fetchMyBookings(userId: userId)
             }

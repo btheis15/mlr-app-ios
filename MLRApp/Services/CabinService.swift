@@ -82,6 +82,7 @@ final class CabinService {
     /// admin-only, enforced server-side; the booking lands under that member's id
     /// with `booked_by` stamped to the admin (migration 0087). Pass `roomIds` for
     /// a cabin broken into named rooms (migration 0092).
+    @discardableResult
     func requestStay(
         cabinId: UUID,
         checkIn: String,
@@ -90,7 +91,7 @@ final class CabinService {
         note: String?,
         roomIds: [UUID]? = nil,
         forUserId: UUID? = nil
-    ) async throws {
+    ) async throws -> UUID? {
         struct StayParams: Encodable {
             let p_cabin: String
             let p_check_in: String
@@ -100,7 +101,10 @@ final class CabinService {
             let p_for_user: String?
             let p_room_ids: [String]?
         }
-        try await supabase
+        // Throws on a real RPC failure (so submit() still surfaces errors); the
+        // RPC returns the new booking's id, decoded best-effort for the
+        // book-on-behalf auto-approve that follows.
+        let response = try await supabase
             .rpc("request_cabin_stay", params: StayParams(
                 p_cabin: cabinId.uuidString,
                 p_check_in: checkIn,
@@ -111,6 +115,7 @@ final class CabinService {
                 p_room_ids: (roomIds?.isEmpty == false) ? roomIds?.map { $0.uuidString } : nil
             ))
             .execute()
+        return try? JSONDecoder().decode(UUID.self, from: response.data)
     }
 
     func fetchMyBookings(userId: UUID) async {
