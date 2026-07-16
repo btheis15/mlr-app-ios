@@ -36,8 +36,9 @@ struct EventSheet: View {
     @State private var calendarAdded = false
     @State private var calendarError: String?
 
-    // Family Fest day labels (Sun–Sat across the fest window)
-    private let festDays = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+    // Per-day RSVP labels — derived from the event's actual [start, end] span
+    // (de-hardcoded from the old fixed Sun–Sat fest week).
+    private var festDays: [String] { event.dayLabels }
 
     private var accent: Color {
         EventKindStyle.color(for: event.kind)

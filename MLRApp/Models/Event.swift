@@ -41,6 +41,31 @@ struct ResortEvent: Codable, Identifiable, Equatable {
     }
 
     var isFamilyFest: Bool { kind == .familyFest }
+
+    /// Weekday labels ("Sunday"…) for each date the event actually spans, used by
+    /// the per-day RSVP control. Derived from the real [start, end] range rather
+    /// than assuming a fixed Sun–Sat fest week. Falls back to the full week if the
+    /// dates can't be parsed.
+    var dayLabels: [String] {
+        let full = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"]
+        guard let start = startDateParsed else { return full }
+        let end = endDateParsed ?? start
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Chicago") ?? .current
+        let fmt = DateFormatter()
+        fmt.dateFormat = "EEEE"
+        fmt.locale = Locale(identifier: "en_US_POSIX")
+        fmt.timeZone = cal.timeZone
+        var labels: [String] = []
+        var d = cal.startOfDay(for: start)
+        let last = cal.startOfDay(for: end)
+        while d <= last && labels.count < 14 {
+            labels.append(fmt.string(from: d))
+            guard let next = cal.date(byAdding: .day, value: 1, to: d) else { break }
+            d = next
+        }
+        return labels.isEmpty ? full : labels
+    }
 }
 
 enum EventKind: String, Codable {
