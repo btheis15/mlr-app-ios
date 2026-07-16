@@ -104,9 +104,10 @@ struct HomeView: View {
                             // Around the Resort) — nothing buried behind a tap.
                             quickActionsGrid
 
-                            // ── 8. Delight cards — birthdays & who's up north ─────
+                            // ── 8. Delight cards — birthdays, who's up north, memory ─
                             UpcomingBirthdaysCard()
                             WhosUpNorthCard()
+                            OnThisDayCard()
 
                             // ── 9. App & Help ────────────────────────────
                             appHelpSection

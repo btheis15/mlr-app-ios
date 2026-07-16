@@ -179,6 +179,7 @@
 		D3F9D87F30093C6C006874DA /* ScheduleSendPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */; };
 		D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */; };
 		D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */; };
+		D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88430093D9E006874DA /* OnThisDayCard.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -362,6 +363,7 @@
 		D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSendPicker.swift; sourceTree = "<group>"; };
 		D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminScheduledBroadcasts.swift; sourceTree = "<group>"; };
 		D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledBroadcast.swift; sourceTree = "<group>"; };
+		D3F9D88430093D9E006874DA /* OnThisDayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDayCard.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -674,6 +676,7 @@
 				D3512BE530057B63008BBC44 /* HomeWeatherCard.swift */,
 				D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */,
 				D3F9D8683006C577006874DA /* HomeDelightCards.swift */,
+				D3F9D88430093D9E006874DA /* OnThisDayCard.swift */,
 			);
 			path = HomeTab;
 			sourceTree = "<group>";
@@ -1059,6 +1062,7 @@
 				D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */,
 				D3F9D87330071069006874DA /* PollsService.swift in Sources */,
 				D33F9EBA2FEC086700603CE7 /* ProfileView.swift in Sources */,
+				D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */,
 				D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */,
 				D33F9F1A2FF8457100603CE7 /* HousesService.swift in Sources */,
 				D33F9EBB2FEC086700603CE7 /* FestPhotosView.swift in Sources */,

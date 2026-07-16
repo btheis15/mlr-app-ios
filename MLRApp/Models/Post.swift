@@ -78,6 +78,15 @@ struct PostReaction: Codable, Identifiable, Equatable {
     }
 }
 
+// MARK: - Post Reactor (who reacted, with name)
+
+struct PostReactor: Identifiable, Equatable {
+    let userId: UUID
+    let name: String
+    let emoji: String
+    var id: String { "\(userId.uuidString)-\(emoji)" }
+}
+
 // MARK: - Content Status
 
 enum ContentStatus: String, Codable {
