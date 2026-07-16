@@ -204,9 +204,11 @@ struct ExpandableScheduleRow: View {
 
     private var canEditItem: Bool {
         guard env.isSignedIn else { return false }
+        let me = env.currentProfile?.id
         return env.isAdmin
             || env.festContentService.userCanEditFest
-            || (item.leadUserId != nil && item.leadUserId == env.currentProfile?.id)
+            || (item.leadUserId != nil && item.leadUserId == me)
+            || (me != nil && item.crewUserIds.contains(me!))   // crew self-edit (migration 0110)
     }
 
     private var hasDetail: Bool {

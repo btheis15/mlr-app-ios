@@ -16,6 +16,7 @@ struct ScheduleItem: Identifiable {
     let isPrivate: Bool
     let leads: [String]
     var leadUserId: UUID? = nil
+    var crewUserIds: [UUID] = []   // migration 0110 — event/activity crew self-edit
 }
 
 // MARK: - Dinner

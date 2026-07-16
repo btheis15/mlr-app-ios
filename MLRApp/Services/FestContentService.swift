@@ -502,7 +502,8 @@ final class FestContentService {
                 description: r.description,
                 isPrivate: r.isPrivate,
                 leads: [r.leadName].compactMap { $0?.nilIfBlank },
-                leadUserId: r.leadUserId
+                leadUserId: r.leadUserId,
+                crewUserIds: r.crewUserIds ?? []
             )
         }
     }
@@ -624,12 +625,14 @@ private struct ScheduleRow: Decodable {
     let isPrivate: Bool
     let leadName: String?
     let leadUserId: UUID?
+    let crewUserIds: [UUID]?   // migration 0110 — crew can self-edit the event
     enum CodingKeys: String, CodingKey {
         case id, day, title, emoji, location, description
-        case startTime  = "start_time"
-        case isPrivate  = "is_private"
-        case leadName   = "lead_name"
-        case leadUserId = "lead_user_id"
+        case startTime   = "start_time"
+        case isPrivate   = "is_private"
+        case leadName    = "lead_name"
+        case leadUserId  = "lead_user_id"
+        case crewUserIds = "crew_user_ids"
     }
 }
 
