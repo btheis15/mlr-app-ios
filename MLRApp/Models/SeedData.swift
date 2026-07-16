@@ -54,11 +54,12 @@ struct LocalPlace: Identifiable {
     let address: String?
     let website: String?
     let menuUrl: String?
-    let orderUrl: String?
+    let orderUrl: String?          // online ordering, or a golf tee-time booking link
+    var ratesUrl: String? = nil    // rates-only golf course ("See Rates" pill)
     let description: String?
 
     enum PlaceCategory: String {
-        case dining, grocery, activity, marina, medical, golf
+        case dining, grocery, activity, marina, medical, golf, coffee
     }
 }
 
@@ -76,6 +77,7 @@ struct ResortActivity: Identifiable {
 
 extension LocalPlace {
     static let all: [LocalPlace] = [
+        // ── Golf ──
         LocalPlace(
             id: "inshalla",
             name: "Inshalla Country Club",
@@ -85,8 +87,77 @@ extension LocalPlace {
             website: "https://inshallacc.com",
             menuUrl: nil,
             orderUrl: "https://stage.foreupsoftware.com/index.php/booking/19715/2251?booking_class_id=2431&schedule_id=2251#/teetimes",
-            description: "Public 18-hole course with a pro shop, driving range, and bar & grill."
+            description: "Public 18-hole course with a pro shop, driving range, and bar & grill. Book your tee time online."
         ),
+        LocalPlace(
+            id: "edgewater",
+            name: "Edgewater Country Club",
+            category: .golf,
+            phone: "+17154533320",
+            address: "Tomahawk, WI",
+            website: "https://edgewaterccgolf.com",
+            menuUrl: nil,
+            orderUrl: nil,
+            ratesUrl: "https://edgewaterccgolf.com/rates",
+            description: "Family-friendly public 9-hole course tucked along the shores of Lake Alice, just outside town."
+        ),
+        LocalPlace(
+            id: "pinewood",
+            name: "Pinewood Country Club",
+            category: .golf,
+            phone: "+17152825500",
+            address: "Harshaw, WI",
+            website: nil,
+            menuUrl: nil,
+            orderUrl: nil,
+            ratesUrl: "https://www.pinewoodcc.com",
+            description: "Public 18-hole course open April through October, with a pro shop and online tee-time booking."
+        ),
+        LocalPlace(
+            id: "merrill-golf",
+            name: "Merrill Golf Club",
+            category: .golf,
+            phone: "+17155362529",
+            address: "Merrill, WI",
+            website: "https://www.merrillgolfclub.com",
+            menuUrl: nil,
+            orderUrl: "https://merrill-golf-club.book.teeitup.com/?course=17053",
+            description: "18-hole championship public course with a pro shop, lessons, and a bar & grill."
+        ),
+        LocalPlace(
+            id: "timber-ridge",
+            name: "Timber Ridge Golf Club",
+            category: .golf,
+            phone: "+17153569502",
+            address: "Minocqua, WI",
+            website: "https://timberridgegolfclub.com",
+            menuUrl: nil,
+            orderUrl: "https://www.chronogolf.com/club/19672/widget?medium=widget&source=club",
+            description: "Scenic 18-hole, par-72 Northwoods course with rolling elevation changes, a short drive south of Minocqua."
+        ),
+        LocalPlace(
+            id: "northwood-golf",
+            name: "Northwood Golf Club",
+            category: .golf,
+            phone: "+17152826565",
+            address: "Rhinelander, WI",
+            website: "https://northwoodgolfclub.com",
+            menuUrl: nil,
+            orderUrl: "https://foreupsoftware.com/index.php/booking/22872/12171#/teetimes",
+            description: "18-hole public course carved out of ancient rock and timber, with a full clubhouse, restaurant, and bar."
+        ),
+        LocalPlace(
+            id: "trout-lake",
+            name: "Trout Lake Golf Club",
+            category: .golf,
+            phone: "+17153852189",
+            address: "Arbor Vitae, WI",
+            website: "https://troutlakegolf.com",
+            menuUrl: nil,
+            orderUrl: "https://foreupsoftware.com/index.php/booking/19524/1784#/teetimes",
+            description: "The Northwoods' oldest 18-hole course (est. 1924), freshly renovated, with a driving range and a historic clubhouse."
+        ),
+        // ── Food & Drink ──
         LocalPlace(
             id: "billy-bobs",
             name: "Billy Bob's Sports Bar & Grill",
@@ -130,6 +201,40 @@ extension LocalPlace {
             menuUrl: "https://www.sidewayswineandcraftbeer.com/menu",
             orderUrl: nil,
             description: "Wine, Wisconsin craft beer, flatbreads, and charcuterie — a relaxed night out."
+        ),
+        // ── Coffee ──
+        LocalPlace(
+            id: "northwoods-cafe",
+            name: "Northwoods Cafe & Coffeehouse",
+            category: .coffee,
+            phone: "+17154536280",
+            address: "Tomahawk, WI",
+            website: "https://northwoods-cafe.square.site",
+            menuUrl: nil,
+            orderUrl: nil,
+            description: "A cozy, family-run downtown cafe serving breakfast, lunch, and specialty coffee drinks."
+        ),
+        LocalPlace(
+            id: "whats-brewin",
+            name: "What's Brewin' Coffee Shop",
+            category: .coffee,
+            phone: "+17154533555",
+            address: "Downtown Tomahawk, WI",
+            website: "https://www.facebook.com/whatsbrewintomahawk/",
+            menuUrl: nil,
+            orderUrl: nil,
+            description: "Downtown coffee shop pairing gourmet coffee and cold brew with homemade soups, sandwiches, baked goods, and fudge."
+        ),
+        LocalPlace(
+            id: "rise-coffee",
+            name: "Rise Coffee Co.",
+            category: .coffee,
+            phone: "+17159661311",
+            address: "Tomahawk, WI",
+            website: "https://risecoffeetomahawk.com",
+            menuUrl: nil,
+            orderUrl: nil,
+            description: "A friendly mother-daughter drive-thru serving fresh espresso and coffee on the go."
         ),
     ]
 }
