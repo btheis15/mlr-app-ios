@@ -187,6 +187,9 @@
 		D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */; };
 		D3F9D89130094CD9006874DA /* EventTargetPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D89030094CD9006874DA /* EventTargetPicker.swift */; };
 		D3F9D8933009816D006874DA /* FestActivityEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */; };
+		D3F9D8973009822D006874DA /* Cinzel-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */; };
+		D3F9D8983009822D006874DA /* Yellowtail-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */; };
+		D3F9D8993009822D006874DA /* Cinzel-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -378,6 +381,9 @@
 		D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminEditMemberSheet.swift; sourceTree = "<group>"; };
 		D3F9D89030094CD9006874DA /* EventTargetPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTargetPicker.swift; sourceTree = "<group>"; };
 		D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestActivityEditSheet.swift; sourceTree = "<group>"; };
+		D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cinzel-Bold.ttf"; sourceTree = "<group>"; };
+		D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cinzel-Regular.ttf"; sourceTree = "<group>"; };
+		D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Yellowtail-Regular.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -400,6 +406,9 @@
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */,
+				D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */,
+				D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */,
 				D3F9D879300918B1006874DA /* MLR-App-Info.plist */,
 				D33F9EC92FEC184500603CE7 /* AppGroup */,
 				D33F9E5B2FEC086700603CE7 /* MLRApp */,
@@ -924,6 +933,9 @@
 			files = (
 				D363474A2FFD37F9001D52C8 /* PrivacyInfo.xcprivacy in Resources */,
 				D33F9ECE2FEC33AB00603CE7 /* Assets.xcassets in Resources */,
+				D3F9D8973009822D006874DA /* Cinzel-Regular.ttf in Resources */,
+				D3F9D8983009822D006874DA /* Yellowtail-Regular.ttf in Resources */,
+				D3F9D8993009822D006874DA /* Cinzel-Bold.ttf in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
