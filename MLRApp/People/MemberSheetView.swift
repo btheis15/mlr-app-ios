@@ -211,7 +211,8 @@ struct MemberSheetView: View {
                     VStack(spacing: 10) {
                         ForEach(payMethods) { m in
                             contactRow(m.label, m.value, m.icon, url: m.url,
-                                       preferred: m.key.lowercased() == pref)
+                                       preferred: m.key.lowercased() == pref,
+                                       tint: payTint(m.key))
                         }
                     }
                 }
@@ -261,10 +262,19 @@ struct MemberSheetView: View {
 
     // MARK: - Row helper
 
+    /// Brand tint for a payment method's row icon (Venmo/PayPal), else the app green.
+    private func payTint(_ key: String) -> Color {
+        switch key.lowercased() {
+        case "venmo":  return .mlrVenmo
+        case "paypal": return .mlrPaypal
+        default:       return .mlrPrimary
+        }
+    }
+
     @ViewBuilder
     private func contactRow(_ label: String, _ value: String, _ icon: String, url: String?,
-                            preferred: Bool = false) -> some View {
-        let row = contactRowLabel(label, value, icon, showsChevron: url != nil, preferred: preferred)
+                            preferred: Bool = false, tint: Color = .mlrPrimary) -> some View {
+        let row = contactRowLabel(label, value, icon, showsChevron: url != nil, preferred: preferred, tint: tint)
 
         if let url, let link = URL(string: url) {
             Link(destination: link) { row }
@@ -274,11 +284,12 @@ struct MemberSheetView: View {
     }
 
     private func contactRowLabel(_ label: String, _ value: String, _ icon: String,
-                                 showsChevron: Bool, preferred: Bool = false) -> some View {
+                                 showsChevron: Bool, preferred: Bool = false,
+                                 tint: Color = .mlrPrimary) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.mlrScaled(16))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(tint)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
