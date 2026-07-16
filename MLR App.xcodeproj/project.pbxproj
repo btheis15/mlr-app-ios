@@ -190,6 +190,7 @@
 		D3F9D8973009822D006874DA /* Cinzel-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */; };
 		D3F9D8983009822D006874DA /* Yellowtail-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */; };
 		D3F9D8993009822D006874DA /* Cinzel-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */; };
+		D3F9D89B3009870A006874DA /* AdminMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D89A3009870A006874DA /* AdminMembersView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -384,6 +385,7 @@
 		D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cinzel-Bold.ttf"; sourceTree = "<group>"; };
 		D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cinzel-Regular.ttf"; sourceTree = "<group>"; };
 		D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Yellowtail-Regular.ttf"; sourceTree = "<group>"; };
+		D3F9D89A3009870A006874DA /* AdminMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminMembersView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -727,6 +729,7 @@
 				D3F9D86A3006CC02006874DA /* AdminCalloutsView.swift */,
 				D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */,
 				D3F9D88A300948A5006874DA /* PreviewAsView.swift */,
+				D3F9D89A3009870A006874DA /* AdminMembersView.swift */,
 			);
 			path = Admin;
 			sourceTree = "<group>";
@@ -1040,6 +1043,7 @@
 				D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */,
 				D3F9D876300710BC006874DA /* PollsView.swift in Sources */,
 				D33F9F182FF844AA00603CE7 /* House.swift in Sources */,
+				D3F9D89B3009870A006874DA /* AdminMembersView.swift in Sources */,
 				D33F9E932FEC086700603CE7 /* AppEnvironment.swift in Sources */,
 				D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */,
 				D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */,

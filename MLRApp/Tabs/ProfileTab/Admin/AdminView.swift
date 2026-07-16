@@ -12,11 +12,11 @@ struct AdminView: View {
                 // Per-member actions (make admin, assign house) live on individual profile
                 // sheets in the People tab; this row is the directory + overview.
                 adminLink(
-                    destination: PeopleDirectoryView(),
+                    destination: AdminMembersView(),
                     icon: "person.2.fill",
                     iconColor: Color.mlrPrimary,
                     title: "Members",
-                    description: "Directory · promote admins · edit a member's info"
+                    description: "Directory with emails · promote admins · edit a member's info"
                 )
 
                 adminLink(
