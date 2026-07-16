@@ -35,6 +35,15 @@ struct RootView: View {
                 }
             }
         }
+        // Admin "view as" preview — a floating banner over everything while active.
+        .overlay(alignment: .bottom) {
+            if !showSplash && env.isPreviewing {
+                PreviewBanner()
+                    .padding(.bottom, 58)   // float above the tab bar
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(.spring(response: 0.35, dampingFraction: 0.8), value: env.isPreviewing)
         .onReceive(NotificationCenter.default.publisher(for: .notificationTapped)) { note in
             handleNotificationTap(note.userInfo)
         }

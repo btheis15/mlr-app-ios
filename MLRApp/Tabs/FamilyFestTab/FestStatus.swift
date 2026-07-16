@@ -3,6 +3,11 @@ import SwiftUI
 // MARK: - FestStatus
 // Phase-aware status card shown at the top of FestOverviewView.
 // Mirrors the FestStatus component from the web app.
+//
+// Design: headings in Cinzel wine (`mlrFest`); running body text in a readable
+// system font colored `mlrFestInk` (sepia/cream) so it stops reading as low-
+// contrast tinted grey. The live card carries a heraldic wine→gold accent bar
+// and a pulsing live glyph for the "it's happening now" moment.
 
 struct FestStatus: View {
     @Environment(AppEnvironment.self) private var env
@@ -22,35 +27,54 @@ struct FestStatus: View {
     }
 }
 
+// MARK: - Shared heraldic card chrome
+
+private extension View {
+    /// The Fest status-card surface: parchment card, a faint wine wash, and a
+    /// gilded hairline. `accent` draws a heraldic wine→gold bar across the top.
+    func festStatusCard(accent: Bool = false) -> some View {
+        self
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(Color.mlrFestCard)
+                    .overlay(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.06)))
+                    .overlay(alignment: .top) {
+                        if accent {
+                            LinearGradient.festHeraldic
+                                .frame(height: 4)
+                                .clipShape(UnevenRoundedRectangle(
+                                    topLeadingRadius: 14, topTrailingRadius: 14))
+                        }
+                    }
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 14)
+                            .strokeBorder(Color.mlrFestGold.opacity(0.4), lineWidth: 1.25))
+            )
+            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+    }
+}
+
 // MARK: - Off-Season
 
 private struct OffSeasonCard: View {
     var body: some View {
         HStack(spacing: 12) {
-            Image(systemName: "star.fill")
+            Image(systemName: "crown.fill")
                 .font(.mlrScaled(18))
-                .foregroundStyle(Color.mlrFest.opacity(0.5))
+                .foregroundStyle(Color.mlrFestGold)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("Family Fest 2026")
-                    .font(.festSerif(15, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
+                    .festHeadingStyle(size: 15)
                 Text("\(FamilyFestConfig.dateRangeLabel) · Tomahawk, WI")
-                    .font(.festSerif(12))
-                    .foregroundStyle(Color.mlrFest.opacity(0.65))
+                    .font(.mlrScaled(12))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.7))
             }
             Spacer()
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFestCard)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 14)
-                        .strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1)
-                )
-        )
+        .festStatusCard()
     }
 }
 
@@ -68,21 +92,15 @@ private struct PlanningCard: View {
                 Text("\(season.daysUntilStart) days until the Fest")
                     .font(.festSerif(16, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
+                    .contentTransition(.numericText())
                 Spacer()
             }
 
             Text("Planning is underway — check the schedule below for what's taking shape.")
-                .font(.festSerif(13))
-                .foregroundStyle(Color.mlrFest.opacity(0.75))
+                .font(.mlrScaled(13))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.8))
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFestCard)
-                .overlay(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.08)))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1.5))
-        )
+        .festStatusCard(accent: true)
     }
 }
 
@@ -91,27 +109,22 @@ private struct PlanningCard: View {
 private struct LiveCard: View {
     @Environment(AppEnvironment.self) private var env
     let season: FestSeason
-    @State private var dotPulse = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(alignment: .center, spacing: 10) {
-                // Live pulsing dot
-                ZStack {
-                    Circle()
-                        .fill(Color.mlrSuccess.opacity(0.3))
-                        .frame(width: 20, height: 20)
-                        .scaleEffect(dotPulse ? 1.5 : 1)
-                        .animation(.easeInOut(duration: 1).repeatForever(autoreverses: true), value: dotPulse)
-                    Circle()
-                        .fill(Color.mlrSuccess)
-                        .frame(width: 10, height: 10)
-                }
+                // Live pulsing glyph — SF Symbol effect, respects Reduce Motion.
+                Image(systemName: "circle.fill")
+                    .font(.mlrScaled(11))
+                    .foregroundStyle(Color.mlrSuccess)
+                    .symbolEffect(.pulse.wholeSymbol, options: .repeating)
+                    .accessibilityHidden(true)
 
                 if let day = season.dayNumber {
                     Text("Day \(day) of \(season.totalDays)")
                         .font(.festSerif(20, weight: .bold))
                         .foregroundStyle(Color.mlrFest)
+                        .contentTransition(.numericText())
                 }
 
                 Spacer()
@@ -133,59 +146,51 @@ private struct LiveCard: View {
             let dinner = env.festContentService.dinners.first { $0.day == todayName }
 
             if !todayItems.isEmpty || dinner != nil {
+                GoldOrnamentDivider()
+                    .padding(.vertical, 2)
+
                 VStack(alignment: .leading, spacing: 6) {
                     ForEach(todayItems) { item in
                         HStack(spacing: 6) {
                             Text(MLRFormat.time(item.time))
                                 .font(.mlrScaled(12, weight: .medium))
-                                .foregroundStyle(Color.mlrFest.opacity(0.6))
+                                .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                                 .frame(width: 60, alignment: .leading)
                             Text(item.title)
                                 .font(.mlrScaled(13, weight: .medium))
-                                .foregroundStyle(Color.mlrFest)
+                                .foregroundStyle(Color.mlrFestInk)
                                 .lineLimit(1)
                         }
                     }
                     if let d = dinner {
-                        // Tonight's dinner — plain card, no tint (matches web PR #291).
                         HStack(spacing: 6) {
                             Text(d.time == "TBD" ? "Dinner" : MLRFormat.time(d.time))
                                 .font(.mlrScaled(12, weight: .medium))
-                                .foregroundStyle(Color.mlrFest.opacity(0.6))
+                                .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                                 .frame(width: 60, alignment: .leading)
                             VStack(alignment: .leading, spacing: 1) {
                                 Text("🍽️ Dinner · \(d.title)")
                                     .font(.mlrScaled(13, weight: .medium))
-                                    .foregroundStyle(Color.mlrFest)
+                                    .foregroundStyle(Color.mlrFestInk)
                                     .lineLimit(1)
                                 if d.menu != "TBD" {
                                     Text(d.menu)
                                         .font(.mlrScaled(11))
-                                        .foregroundStyle(Color.mlrFest.opacity(0.6))
+                                        .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                                         .lineLimit(1)
                                 }
                             }
                         }
                     }
                 }
-                .padding(.top, 6)
             } else {
                 Text("Check the schedule below for today's activities.")
-                    .font(.festSerif(13))
-                    .foregroundStyle(Color.mlrFest.opacity(0.75))
+                    .font(.mlrScaled(13))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.8))
             }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFestCard)
-                .overlay(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.08)))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.3), lineWidth: 1.5))
-        )
-        .onAppear { dotPulse = true }
+        .festStatusCard(accent: true)
     }
-
 }
 
 // MARK: - Wrap
@@ -205,16 +210,10 @@ private struct WrapCard: View {
             }
 
             Text("\(season.wrapDaysLeft) day\(season.wrapDaysLeft == 1 ? "" : "s") left to post photos")
-                .font(.festSerif(13))
-                .foregroundStyle(Color.mlrFest.opacity(0.75))
+                .font(.mlrScaled(13))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.8))
+                .contentTransition(.numericText())
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFestCard)
-                .overlay(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.08)))
-                .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1.5))
-        )
+        .festStatusCard(accent: true)
     }
 }

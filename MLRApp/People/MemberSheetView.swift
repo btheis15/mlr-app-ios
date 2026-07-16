@@ -211,7 +211,8 @@ struct MemberSheetView: View {
                     VStack(spacing: 10) {
                         ForEach(payMethods) { m in
                             contactRow(m.label, m.value, m.icon, url: m.url,
-                                       preferred: m.key.lowercased() == pref)
+                                       preferred: m.key.lowercased() == pref,
+                                       tint: payTint(m.key))
                         }
                     }
                 }
@@ -261,10 +262,19 @@ struct MemberSheetView: View {
 
     // MARK: - Row helper
 
+    /// Brand tint for a payment method's row icon (Venmo/PayPal), else the app green.
+    private func payTint(_ key: String) -> Color {
+        switch key.lowercased() {
+        case "venmo":  return .mlrVenmo
+        case "paypal": return .mlrPaypal
+        default:       return .mlrPrimary
+        }
+    }
+
     @ViewBuilder
     private func contactRow(_ label: String, _ value: String, _ icon: String, url: String?,
-                            preferred: Bool = false) -> some View {
-        let row = contactRowLabel(label, value, icon, showsChevron: url != nil, preferred: preferred)
+                            preferred: Bool = false, tint: Color = .mlrPrimary) -> some View {
+        let row = contactRowLabel(label, value, icon, showsChevron: url != nil, preferred: preferred, tint: tint)
 
         if let url, let link = URL(string: url) {
             Link(destination: link) { row }
@@ -274,11 +284,12 @@ struct MemberSheetView: View {
     }
 
     private func contactRowLabel(_ label: String, _ value: String, _ icon: String,
-                                 showsChevron: Bool, preferred: Bool = false) -> some View {
+                                 showsChevron: Bool, preferred: Bool = false,
+                                 tint: Color = .mlrPrimary) -> some View {
         HStack(spacing: 12) {
             Image(systemName: icon)
                 .font(.mlrScaled(16))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(tint)
                 .frame(width: 24)
             VStack(alignment: .leading, spacing: 1) {
                 HStack(spacing: 6) {
@@ -368,6 +379,7 @@ private struct MemberAdminCard: View {
     @State private var working = false
     @State private var errorText: String?
     @State private var showRemove = false
+    @State private var showEditInfo = false
 
     init(member: Profile, onRemoved: @escaping () -> Void) {
         self.member = member
@@ -409,6 +421,14 @@ private struct MemberAdminCard: View {
 
                 Divider().padding(.leading, 44)
 
+                Button { showEditInfo = true } label: {
+                    row("Edit member info", icon: "pencil")
+                }
+                .buttonStyle(.plain)
+                .disabled(working)
+
+                Divider().padding(.leading, 44)
+
                 Button(role: .destructive) { showRemove = true } label: {
                     row("Remove member", icon: "trash.fill", tint: Color.mlrDanger)
                 }
@@ -422,6 +442,9 @@ private struct MemberAdminCard: View {
         .padding(16)
         .cardStyle()
         .task { if env.housesService.houses.isEmpty { await env.housesService.fetchHouses() } }
+        .sheet(isPresented: $showEditInfo) {
+            AdminEditMemberSheet(member: member) {}
+        }
         .alert("Remove member?", isPresented: $showRemove) {
             Button("Remove \(member.name)", role: .destructive) { Task { await remove() } }
             Button("Cancel", role: .cancel) {}

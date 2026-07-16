@@ -204,9 +204,11 @@ struct ExpandableScheduleRow: View {
 
     private var canEditItem: Bool {
         guard env.isSignedIn else { return false }
+        let me = env.currentProfile?.id
         return env.isAdmin
             || env.festContentService.userCanEditFest
-            || (item.leadUserId != nil && item.leadUserId == env.currentProfile?.id)
+            || (item.leadUserId != nil && item.leadUserId == me)
+            || (me != nil && item.crewUserIds.contains(me!))   // crew self-edit (migration 0110)
     }
 
     private var hasDetail: Bool {
@@ -240,7 +242,7 @@ struct ExpandableScheduleRow: View {
         HStack(alignment: .top, spacing: 14) {
             Text(MLRFormat.time(item.time))
                 .font(.mlrScaled(12, weight: .medium, design: .monospaced))
-                .foregroundStyle(Color.mlrFest.opacity(0.6))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                 .frame(width: 62, alignment: .leading)
                 .padding(.top, 1)
 
@@ -404,7 +406,7 @@ struct ExpandableDinnerRow: View {
                     .foregroundStyle(Color.mlrFest)
                 Text("\(dinner.chef) · \(MLRFormat.time(dinner.time))")
                     .font(.mlrScaled(12))
-                    .foregroundStyle(Color.mlrFest.opacity(0.6))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                     .lineLimit(1)
             }
 

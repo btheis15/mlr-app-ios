@@ -26,6 +26,8 @@ struct PostCard: View {
     @State private var comments: [PostComment] = []
     @State private var commentsLoaded = false
     @State private var shareState: ShareState?
+    @State private var showReactors = false
+    @State private var reactors: [PostReactor] = []
 
     private var canEdit: Bool {
         env.isAdmin || env.currentProfile?.id == post.authorId
@@ -179,20 +181,65 @@ struct PostCard: View {
     // MARK: - Reaction row
 
     private var reactionRow: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                ForEach(reactionEmojis, id: \.self) { emoji in
-                    ReactionButton(
-                        emoji: emoji,
-                        count: reactionCount(for: emoji),
-                        isSelected: isMineReaction(emoji: emoji),
-                        onTap: {
-                            Haptics.tap()
-                            Task { await onReactionToggle(emoji) }
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        ForEach(reactionEmojis, id: \.self) { emoji in
+                            ReactionButton(
+                                emoji: emoji,
+                                count: reactionCount(for: emoji),
+                                isSelected: isMineReaction(emoji: emoji),
+                                onTap: {
+                                    Haptics.tap()
+                                    Task { await onReactionToggle(emoji) }
+                                }
+                            )
                         }
-                    )
+                    }
+                }
+                // "Who reacted" toggle — only when there are reactions.
+                if !reactions.isEmpty {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) { showReactors.toggle() }
+                        if showReactors { Task { reactors = await env.postsService.fetchReactors(postId: post.id) } }
+                    } label: {
+                        Image(systemName: showReactors ? "chevron.up" : "person.2.fill")
+                            .font(.mlrScaled(11, weight: .semibold))
+                            .foregroundStyle(Color.mlrTextMuted)
+                            .padding(6)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(showReactors ? "Hide who reacted" : "See who reacted")
                 }
             }
+
+            if showReactors {
+                VStack(alignment: .leading, spacing: 3) {
+                    ForEach(reactorLines, id: \.emoji) { line in
+                        HStack(alignment: .top, spacing: 6) {
+                            Text(line.emoji).font(.mlrScaled(13))
+                            Text(line.names)
+                                .font(.mlrScaled(12))
+                                .foregroundStyle(Color.mlrTextMuted)
+                                .fixedSize(horizontal: false, vertical: true)
+                        }
+                    }
+                }
+                .padding(.leading, 2)
+                .transition(.opacity)
+            }
+        }
+    }
+
+    /// Reactor names grouped by emoji ("You" for self), in the standard emoji order.
+    private var reactorLines: [(emoji: String, names: String)] {
+        let myId = env.currentProfile?.id
+        return reactionEmojis.compactMap { emoji in
+            let group = reactors.filter { $0.emoji == emoji }
+            guard !group.isEmpty else { return nil }
+            let names = group.map { $0.userId == myId ? "You" : $0.name }
+            return (emoji, names.joined(separator: ", "))
         }
     }
 

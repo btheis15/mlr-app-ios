@@ -166,6 +166,88 @@ final class NotificationsService {
         }
     }
 
+    // MARK: - Scheduled broadcasts (migration 0097)
+
+    private var isoStamp: ISO8601DateFormatter { ISO8601DateFormatter() }
+
+    /// Queue a broadcast to fire at a future time. Returns nothing; throws on error.
+    func scheduleBroadcast(kind: BroadcastKind, payload: BroadcastPayload, scheduledAt: Date) async throws {
+        struct Params: Encodable {
+            let p_kind: String
+            let p_payload: BroadcastPayload
+            let p_scheduled_at: String
+        }
+        try await supabase
+            .rpc("schedule_broadcast", params: Params(
+                p_kind: kind.rawValue,
+                p_payload: payload,
+                p_scheduled_at: isoStamp.string(from: scheduledAt)
+            ))
+            .execute()
+    }
+
+    /// Edit a still-pending queued item's content + send time (migration 0101).
+    func updateScheduledBroadcast(id: UUID, payload: BroadcastPayload, scheduledAt: Date) async throws {
+        struct Params: Encodable {
+            let p_id: String
+            let p_payload: BroadcastPayload
+            let p_scheduled_at: String
+        }
+        try await supabase
+            .rpc("update_scheduled_broadcast", params: Params(
+                p_id: id.uuidString,
+                p_payload: payload,
+                p_scheduled_at: isoStamp.string(from: scheduledAt)
+            ))
+            .execute()
+    }
+
+    /// Pull one out of the queue before it fires.
+    func cancelScheduledBroadcast(id: UUID) async throws {
+        struct Params: Encodable { let p_id: String }
+        try await supabase
+            .rpc("cancel_scheduled_broadcast", params: Params(p_id: id.uuidString))
+            .execute()
+    }
+
+    /// The admin queue — pending + recently sent/failed, soonest first. Excludes
+    /// cancelled rows.
+    func fetchScheduledBroadcasts() async -> [ScheduledBroadcast] {
+        do {
+            return try await supabase
+                .from("scheduled_broadcasts")
+                .select("id, kind, payload, scheduled_at, sent_at, cancelled_at, error, created_at")
+                .is("cancelled_at", value: nil as Bool?)
+                .order("scheduled_at", ascending: true)
+                .limit(100)
+                .execute()
+                .value
+        } catch {
+            print("[NotificationsService] fetchScheduledBroadcasts error: \(error)")
+            return []
+        }
+    }
+
+    /// Pending/recent reminders attached to one event/callout (payload.sourceType
+    /// + sourceId), soonest first — for the ReminderScheduler list.
+    func fetchScheduledBroadcastsBySource(sourceType: String, sourceId: String) async -> [ScheduledBroadcast] {
+        // JSONB containment: payload @> {"sourceType":…,"sourceId":…}
+        let json = "{\"sourceType\":\"\(sourceType)\",\"sourceId\":\"\(sourceId)\"}"
+        do {
+            return try await supabase
+                .from("scheduled_broadcasts")
+                .select("id, kind, payload, scheduled_at, sent_at, cancelled_at, error, created_at")
+                .is("cancelled_at", value: nil as Bool?)
+                .contains("payload", value: json)
+                .order("scheduled_at", ascending: true)
+                .execute()
+                .value
+        } catch {
+            print("[NotificationsService] fetchScheduledBroadcastsBySource error: \(error)")
+            return []
+        }
+    }
+
     // MARK: - Realtime
 
     func subscribeToRealtime(userId: UUID) {

@@ -84,14 +84,58 @@ extension View {
 
     /// Opaque adaptive card with a soft hairline border — matches the web app's
     /// `bg-card rounded-2xl ring-1 ring-border` tile pattern.
-    func cardStyle() -> some View {
+    ///
+    /// Pass `elevated: true` for the raised `WelcomeCard` recipe: a soft ambient
+    /// shadow that lifts the card off the birch page. The shadow is a warm-neutral
+    /// black at low opacity so it stays subtle in light and effectively invisible
+    /// on the OLED-black dark canvas (where borders carry the separation instead).
+    func cardStyle(cornerRadius: CGFloat = 16, elevated: Bool = false) -> some View {
         self
             .background(Color.mlrCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .overlay(
-                RoundedRectangle(cornerRadius: 16)
+                RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(Color.mlrBorder, lineWidth: 1)
             )
+            .shadow(color: .black.opacity(elevated ? 0.06 : 0),
+                    radius: elevated ? 10 : 0, x: 0, y: elevated ? 4 : 0)
+    }
+
+    /// Family Fest card surface — raised parchment card with an aged-gold hairline
+    /// and a warm soft shadow. Use for day-section cards, info cards, and utility
+    /// links inside the Fest section so they read as gilded manuscript panels
+    /// rather than flat tiles.
+    func festCardStyle(cornerRadius: CGFloat = 16) -> some View {
+        self
+            .background(Color.mlrFestCard)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(Color.mlrFestGold.opacity(0.35), lineWidth: 1)
+            )
+            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+    }
+}
+
+// MARK: - Brand gradients
+//
+// Reusable multi-stop gradients for hero banners and layered surfaces. Kept as
+// static factories so call sites read declaratively (`.northwoodsSunset`).
+
+@MainActor
+extension LinearGradient {
+    /// Warm→cool "campfire → sun → dusk" sweep for Home / section heroes.
+    static var northwoodsSunset: LinearGradient {
+        LinearGradient(
+            colors: [.mlrCampfire, .mlrSun, .mlrDusk],
+            startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
+    /// Heraldic wine→gold gradient for the Family Fest hero banner.
+    static var festHeraldic: LinearGradient {
+        LinearGradient(
+            colors: [.mlrFest, .mlrFestGold],
+            startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 }
 

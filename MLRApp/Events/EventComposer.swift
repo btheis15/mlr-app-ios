@@ -96,6 +96,26 @@ struct EventComposer: View {
 
     private var isEditing: Bool { existing != nil }
 
+    /// The moment a reminder counts down to — the event's start date + start time
+    /// (date-only when the event has no set time).
+    private var reminderAnchor: ReminderAnchor? {
+        guard let existing else { return nil }
+        var cal = Calendar(identifier: .gregorian)
+        cal.timeZone = TimeZone(identifier: "America/Chicago") ?? .current
+        let iso = DateFormatter()
+        iso.dateFormat = "yyyy-MM-dd"
+        iso.timeZone = cal.timeZone
+        guard let day = iso.date(from: existing.startDate) else { return nil }
+        if let hhmm = existing.startTime {
+            let parts = hhmm.split(separator: ":")
+            let h = Int(parts.first ?? "0") ?? 0
+            let m = parts.count > 1 ? Int(parts[1]) ?? 0 : 0
+            let dt = cal.date(bySettingHour: h, minute: m, second: 0, of: day) ?? day
+            return ReminderAnchor(date: dt, hasTime: true)
+        }
+        return ReminderAnchor(date: day, hasTime: false)
+    }
+
     private var canSave: Bool {
         !title.trimmingCharacters(in: .whitespaces).isEmpty && !isSaving
     }
@@ -176,6 +196,21 @@ struct EventComposer: View {
                         Text("Work items")
                     } footer: {
                         Text("Check off tasks from the work checklist to plan them for this event.")
+                    }
+                }
+
+                // Reminders — only for a saved event (needs a real id to attach to).
+                if let existing {
+                    Section {
+                        ReminderScheduler(
+                            sourceType: "event",
+                            sourceId: existing.id,
+                            sourceLabel: existing.title,
+                            anchor: reminderAnchor,
+                            eventId: existing.id
+                        )
+                        .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                        .listRowBackground(Color.clear)
                     }
                 }
 

@@ -27,8 +27,18 @@ extension Color {
     /// Pale fill used behind secondary buttons / tint chips. Dim green in dark.
     static let mlrPrimaryLight = Color(light: "#e8f2ec", dark: "#16352A")
 
-    // Accent — vintage chestnut
-    static let mlrAccent       = Color(light: "#804020", dark: "#C98A5E")
+    // Accent — campfire orange (was a dull chestnut #804020, which read muddy).
+    // The warm orange gives CTAs/highlights the "Northwoods sunset" energy the web
+    // app has, and reads cleanly on both the birch light bg and OLED dark.
+    static let mlrAccent       = Color(light: "#c2410c", dark: "#F08A4B")
+
+    // MARK: Northwoods accent palette
+    // A small warm→cool set used for gradient heroes, garnish icons, and status
+    // pops. Each is an adaptive pair (brightened on dark for OLED contrast).
+    static let mlrLake         = Color(light: "#1d6a8c", dark: "#5FB0D4")  // deep lake blue
+    static let mlrCampfire     = Color(light: "#c2410c", dark: "#F08A4B")  // campfire orange
+    static let mlrSun          = Color(light: "#e0a416", dark: "#FACC46")  // afternoon sun gold
+    static let mlrDusk         = Color(light: "#4338ca", dark: "#8B92EA")  // twilight indigo
 
     // Family Fest heraldic wine + parchment (the FF section's identity).
     // Parchment becomes a dark warm brown in dark mode so the section still reads
@@ -40,6 +50,17 @@ extension Color {
     /// clearly elevated warm brown in dark mode. Use for day-section cards, info
     /// cards, and utility links so they stand out against the parchment page bg.
     static let mlrFestCard      = Color(light: "#ffffff", dark: "#3A2E22")
+    /// Fest BODY text — warm sepia ink on light parchment, warm cream on dark.
+    /// Reserve `mlrFest` (wine) for headings/accents; body should use this so it
+    /// stops reading as low-contrast tinted grey. (Renaissance manuscript ink.)
+    static let mlrFestInk       = Color(light: "#3a2a18", dark: "#EDE3D3")
+    /// Aged-gold heraldic accent — ornamental dividers, crest motifs, gilt rules.
+    static let mlrFestGold      = Color(light: "#a67c1a", dark: "#D9B24C")
+
+    // Payment brand colors (Fest pay rows, member pay links). Brand-fixed hues,
+    // nudged lighter on dark so the pills stay legible on OLED.
+    static let mlrVenmo        = Color(light: "#3d95ce", dark: "#4FA8DE")
+    static let mlrPaypal       = Color(light: "#003087", dark: "#4DA8E0")
 
     // Surfaces — match the web app's palette in light mode (warm birch page /
     // white raised cards / soft hairline border); fall back to Apple semantics

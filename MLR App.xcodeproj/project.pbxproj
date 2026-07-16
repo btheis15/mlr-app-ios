@@ -174,6 +174,22 @@
 		D3F9D87330071069006874DA /* PollsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87230071069006874DA /* PollsService.swift */; };
 		D3F9D876300710BC006874DA /* PollsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D875300710BC006874DA /* PollsView.swift */; };
 		D3F9D8783007189A006874DA /* FestInlineEditSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */; };
+		D3F9D87B30091A65006874DA /* FestDecor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87A30091A65006874DA /* FestDecor.swift */; };
+		D3F9D87D300934F0006874DA /* AdminCabinDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */; };
+		D3F9D87F30093C6C006874DA /* ScheduleSendPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */; };
+		D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */; };
+		D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */; };
+		D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88430093D9E006874DA /* OnThisDayCard.swift */; };
+		D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */; };
+		D3F9D889300947FA006874DA /* PickMyRoomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */; };
+		D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88A300948A5006874DA /* PreviewAsView.swift */; };
+		D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88C30094A70006874DA /* ReminderScheduler.swift */; };
+		D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */; };
+		D3F9D89130094CD9006874DA /* EventTargetPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D89030094CD9006874DA /* EventTargetPicker.swift */; };
+		D3F9D8933009816D006874DA /* FestActivityEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */; };
+		D3F9D8973009822D006874DA /* Cinzel-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */; };
+		D3F9D8983009822D006874DA /* Yellowtail-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */; };
+		D3F9D8993009822D006874DA /* Cinzel-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -351,6 +367,23 @@
 		D3F9D87230071069006874DA /* PollsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollsService.swift; sourceTree = "<group>"; };
 		D3F9D875300710BC006874DA /* PollsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PollsView.swift; sourceTree = "<group>"; };
 		D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestInlineEditSheets.swift; sourceTree = "<group>"; };
+		D3F9D879300918B1006874DA /* MLR-App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "MLR-App-Info.plist"; sourceTree = "<group>"; };
+		D3F9D87A30091A65006874DA /* FestDecor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDecor.swift; sourceTree = "<group>"; };
+		D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCabinDetails.swift; sourceTree = "<group>"; };
+		D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSendPicker.swift; sourceTree = "<group>"; };
+		D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminScheduledBroadcasts.swift; sourceTree = "<group>"; };
+		D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledBroadcast.swift; sourceTree = "<group>"; };
+		D3F9D88430093D9E006874DA /* OnThisDayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDayCard.swift; sourceTree = "<group>"; };
+		D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyCommitteeAreasSheet.swift; sourceTree = "<group>"; };
+		D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickMyRoomSheet.swift; sourceTree = "<group>"; };
+		D3F9D88A300948A5006874DA /* PreviewAsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewAsView.swift; sourceTree = "<group>"; };
+		D3F9D88C30094A70006874DA /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
+		D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminEditMemberSheet.swift; sourceTree = "<group>"; };
+		D3F9D89030094CD9006874DA /* EventTargetPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTargetPicker.swift; sourceTree = "<group>"; };
+		D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestActivityEditSheet.swift; sourceTree = "<group>"; };
+		D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cinzel-Bold.ttf"; sourceTree = "<group>"; };
+		D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cinzel-Regular.ttf"; sourceTree = "<group>"; };
+		D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Yellowtail-Regular.ttf"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -373,6 +406,10 @@
 		000000000000000000000001 = {
 			isa = PBXGroup;
 			children = (
+				D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */,
+				D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */,
+				D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */,
+				D3F9D879300918B1006874DA /* MLR-App-Info.plist */,
 				D33F9EC92FEC184500603CE7 /* AppGroup */,
 				D33F9E5B2FEC086700603CE7 /* MLRApp */,
 				D33F9EF22FF5BD4E00603CE7 /* Frameworks */,
@@ -422,6 +459,8 @@
 				D33F9DE92FEC086700603CE7 /* CabinBookingsView.swift */,
 				D33F9DEA2FEC086700603CE7 /* CabinRequestSheet.swift */,
 				D3F9D87030071059006874DA /* EditCabinBookingSheet.swift */,
+				D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */,
+				D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */,
 			);
 			path = Cabins;
 			sourceTree = "<group>";
@@ -435,6 +474,7 @@
 				D33F9EDA2FF319D600603CE7 /* CommitteeEmailComposer.swift */,
 				D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */,
 				D33F9EEB2FF4502100603CE7 /* RosterEditSheet.swift */,
+				D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */,
 			);
 			path = Committees;
 			sourceTree = "<group>";
@@ -511,6 +551,7 @@
 				D3A0000000000000000000A1 /* HouseStay.swift */,
 				D39BD8902FFC47C000B1E74D /* ChatMedia.swift */,
 				D3F9D86E30071027006874DA /* Poll.swift */,
+				D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -535,6 +576,7 @@
 			children = (
 				D33F9E112FEC086700603CE7 /* MemberSheetView.swift */,
 				D33F9E122FEC086700603CE7 /* PeopleDirectoryView.swift */,
+				D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */,
 			);
 			path = People;
 			sourceTree = "<group>";
@@ -571,6 +613,9 @@
 				D33F9E232FEC086700603CE7 /* MLRSheet.swift */,
 				D33F9E242FEC086700603CE7 /* SkeletonView.swift */,
 				D33F9E252FEC086700603CE7 /* WelcomeCard.swift */,
+				D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */,
+				D3F9D88C30094A70006874DA /* ReminderScheduler.swift */,
+				D3F9D89030094CD9006874DA /* EventTargetPicker.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -630,6 +675,8 @@
 				D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */,
 				D3F9D86C3006E599006874DA /* FestDinnerEditSheet.swift */,
 				D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */,
+				D3F9D87A30091A65006874DA /* FestDecor.swift */,
+				D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */,
 			);
 			path = FamilyFestTab;
 			sourceTree = "<group>";
@@ -658,6 +705,7 @@
 				D3512BE530057B63008BBC44 /* HomeWeatherCard.swift */,
 				D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */,
 				D3F9D8683006C577006874DA /* HomeDelightCards.swift */,
+				D3F9D88430093D9E006874DA /* OnThisDayCard.swift */,
 			);
 			path = HomeTab;
 			sourceTree = "<group>";
@@ -677,6 +725,8 @@
 				D3F9D8643006C201006874DA /* AdminCommitteesView.swift */,
 				D3F9D8663006C288006874DA /* AdminHelpContactView.swift */,
 				D3F9D86A3006CC02006874DA /* AdminCalloutsView.swift */,
+				D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */,
+				D3F9D88A300948A5006874DA /* PreviewAsView.swift */,
 			);
 			path = Admin;
 			sourceTree = "<group>";
@@ -883,6 +933,9 @@
 			files = (
 				D363474A2FFD37F9001D52C8 /* PrivacyInfo.xcprivacy in Resources */,
 				D33F9ECE2FEC33AB00603CE7 /* Assets.xcassets in Resources */,
+				D3F9D8973009822D006874DA /* Cinzel-Regular.ttf in Resources */,
+				D3F9D8983009822D006874DA /* Yellowtail-Regular.ttf in Resources */,
+				D3F9D8993009822D006874DA /* Cinzel-Bold.ttf in Resources */,
 			);
 		};
 /* End PBXResourcesBuildPhase section */
@@ -927,6 +980,7 @@
 				D33F9E6F2FEC086700603CE7 /* CabinBookingsView.swift in Sources */,
 				D33F9E702FEC086700603CE7 /* FestScheduleDetailView.swift in Sources */,
 				D3F9D87130071059006874DA /* EditCabinBookingSheet.swift in Sources */,
+				D3F9D889300947FA006874DA /* PickMyRoomSheet.swift in Sources */,
 				D33F9E712FEC086700603CE7 /* NotificationRow.swift in Sources */,
 				D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */,
 				D3F9D8783007189A006874DA /* FestInlineEditSheets.swift in Sources */,
@@ -943,6 +997,7 @@
 				D33F9E782FEC086700603CE7 /* InstallPrompt.swift in Sources */,
 				D33F9E7A2FEC086700603CE7 /* FestDinnersDetailView.swift in Sources */,
 				D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */,
+				D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */,
 				D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */,
 				D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */,
 				D3F9D8653006C201006874DA /* AdminCommitteesView.swift in Sources */,
@@ -954,6 +1009,7 @@
 				D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */,
 				D3A0000000000000000000B1 /* HouseStay.swift in Sources */,
 				D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */,
+				D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */,
 				D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */,
 				D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */,
 				D3A0000000000000000000B5 /* HouseHubView.swift in Sources */,
@@ -970,8 +1026,10 @@
 				D33F9E872FEC086700603CE7 /* CabinRequestSheet.swift in Sources */,
 				D33F9E882FEC086700603CE7 /* CalendarService.swift in Sources */,
 				D33F9E892FEC086700603CE7 /* AdminCabinBookings.swift in Sources */,
+				D3F9D87B30091A65006874DA /* FestDecor.swift in Sources */,
 				D33F9E8A2FEC086700603CE7 /* MediaService.swift in Sources */,
 				D33F9E8B2FEC086700603CE7 /* CommitteeChatView.swift in Sources */,
+				D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */,
 				D33F9E8C2FEC086700603CE7 /* FestCrewView.swift in Sources */,
 				D33F9E8D2FEC086700603CE7 /* PostCard.swift in Sources */,
 				D33F9E8E2FEC086700603CE7 /* AskForHelpHomeCard.swift in Sources */,
@@ -979,6 +1037,7 @@
 				D33F9E902FEC086700603CE7 /* Committee.swift in Sources */,
 				D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */,
 				D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */,
+				D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */,
 				D3F9D876300710BC006874DA /* PollsView.swift in Sources */,
 				D33F9F182FF844AA00603CE7 /* House.swift in Sources */,
 				D33F9E932FEC086700603CE7 /* AppEnvironment.swift in Sources */,
@@ -991,15 +1050,20 @@
 				D33F9E982FEC086700603CE7 /* FamilyFestSpotlight.swift in Sources */,
 				D33F9E992FEC086700603CE7 /* HomeView.swift in Sources */,
 				D33F9E9A2FEC086700603CE7 /* Formatters.swift in Sources */,
+				D3F9D8933009816D006874DA /* FestActivityEditSheet.swift in Sources */,
+				D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */,
 				D33F9E9B2FEC086700603CE7 /* FestPayView.swift in Sources */,
 				D33F9E9C2FEC086700603CE7 /* SeedData.swift in Sources */,
 				D33F9E9D2FEC086700603CE7 /* NextEventIntent.swift in Sources */,
+				D3F9D87F30093C6C006874DA /* ScheduleSendPicker.swift in Sources */,
 				D33F9E9E2FEC086700603CE7 /* CabinService.swift in Sources */,
 				D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */,
 				D36347582FFDE088001D52C8 /* CommitteeActionIntents.swift in Sources */,
 				D3F9D86F30071027006874DA /* Poll.swift in Sources */,
 				D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */,
+				D3F9D87D300934F0006874DA /* AdminCabinDetails.swift in Sources */,
 				D33F9EA02FEC086700603CE7 /* AdminNotificationComposer.swift in Sources */,
+				D3F9D89130094CD9006874DA /* EventTargetPicker.swift in Sources */,
 				D3F9D8633006C1B3006874DA /* HomeCalloutsStack.swift in Sources */,
 				D33F9EA22FEC086700603CE7 /* NotifPrefsView.swift in Sources */,
 				D33F9EA32FEC086700603CE7 /* GuardView.swift in Sources */,
@@ -1007,6 +1071,7 @@
 				D33F9EA52FEC086700603CE7 /* MLRApp.swift in Sources */,
 				D36347682FFDEF09001D52C8 /* SnippetViews.swift in Sources */,
 				D33F9EA62FEC086700603CE7 /* EventComposer.swift in Sources */,
+				D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */,
 				D33F9EA72FEC086700603CE7 /* HomeNavigationStubs.swift in Sources */,
 				D33F9EA82FEC086700603CE7 /* MentionText.swift in Sources */,
 				D3512BE630057B63008BBC44 /* HomeWeatherCard.swift in Sources */,
@@ -1037,6 +1102,7 @@
 				D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */,
 				D3F9D87330071069006874DA /* PollsService.swift in Sources */,
 				D33F9EBA2FEC086700603CE7 /* ProfileView.swift in Sources */,
+				D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */,
 				D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */,
 				D33F9F1A2FF8457100603CE7 /* HousesService.swift in Sources */,
 				D33F9EBB2FEC086700603CE7 /* FestPhotosView.swift in Sources */,
@@ -1205,6 +1271,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "MLR-App-Info.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";
@@ -1261,6 +1328,7 @@
 				ENABLE_PREVIEWS = YES;
 				ENABLE_USER_SELECTED_FILES = readonly;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "MLR-App-Info.plist";
 				INFOPLIST_KEY_ITSAppUsesNonExemptEncryption = NO;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.social-networking";
 				INFOPLIST_KEY_NSCalendarsFullAccessUsageDescription = "MLR uses Calendar to add family events to your calendar.";

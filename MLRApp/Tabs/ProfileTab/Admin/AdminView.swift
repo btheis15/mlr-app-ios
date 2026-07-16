@@ -43,6 +43,14 @@ struct AdminView: View {
                     description: "See who has signed in and from where"
                 )
 
+                adminLink(
+                    destination: PreviewAsView(),
+                    icon: "eye.fill",
+                    iconColor: Color.mlrWarning,
+                    title: "Preview As",
+                    description: "See the app as a member or a guest"
+                )
+
                 Button {
                     showInvite = true
                 } label: {
@@ -90,6 +98,14 @@ struct AdminView: View {
                     title: "Send Notification",
                     description: "Broadcast to everyone or just admins"
                 )
+
+                adminLink(
+                    destination: AdminScheduledBroadcasts(),
+                    icon: "clock.badge.checkmark",
+                    iconColor: Color.mlrInfo,
+                    title: "Scheduled",
+                    description: "Upcoming & recent scheduled broadcasts"
+                )
             }
 
             Section("Bookings") {
@@ -99,6 +115,13 @@ struct AdminView: View {
                     iconColor: Color.mlrWarning,
                     title: "Cabin Bookings",
                     description: "Approve or deny cabin stay requests"
+                )
+                adminLink(
+                    destination: AdminCabinDetails(),
+                    icon: "house.lodge",
+                    iconColor: Color.mlrPrimary,
+                    title: "Cabins",
+                    description: "Edit cabins, rooms, beds, and availability"
                 )
             }
 

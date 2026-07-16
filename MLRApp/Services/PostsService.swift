@@ -155,6 +155,16 @@ final class PostsService {
         return row.toComment
     }
 
+    /// Delete a comment (author within the edit window, or admin — enforced by
+    /// RLS). Hard delete, matching the web PostsView.
+    func deleteComment(commentId: UUID) async throws {
+        try await supabase
+            .from("post_comments")
+            .delete()
+            .eq("id", value: commentId.uuidString)
+            .execute()
+    }
+
     // MARK: - Reactions
 
     func addReaction(postId: UUID, emoji: String, userId: UUID) async throws {
@@ -179,6 +189,36 @@ final class PostsService {
             .eq("user_id", value: userId.uuidString)
             .eq("emoji", value: emoji)
             .execute()
+    }
+
+    /// Who reacted, with display names (joined) — for the tap-to-expand reactor
+    /// list under a post's reaction row. Mirrors chat's who-reacted affordance.
+    func fetchReactors(postId: UUID) async -> [PostReactor] {
+        struct Row: Decodable {
+            let userId: UUID
+            let emoji: String
+            let profiles: P?
+            struct P: Decodable {
+                let name: String?
+                enum CodingKeys: String, CodingKey { case name = "display_name" }
+            }
+            enum CodingKeys: String, CodingKey {
+                case userId = "user_id"
+                case emoji, profiles
+            }
+        }
+        do {
+            let rows: [Row] = try await supabase
+                .from("post_reactions")
+                .select("user_id, emoji, profiles!user_id(display_name)")
+                .eq("post_id", value: postId.uuidString)
+                .execute()
+                .value
+            return rows.map { PostReactor(userId: $0.userId, name: $0.profiles?.name ?? "Member", emoji: $0.emoji) }
+        } catch {
+            print("[PostsService] fetchReactors error: \(error)")
+            return []
+        }
     }
 
     func fetchReactions(postId: UUID) async throws -> [PostReaction] {

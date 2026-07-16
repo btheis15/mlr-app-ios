@@ -130,8 +130,12 @@ struct CommentsView: View {
                         comment: comment,
                         isSignedIn: env.isSignedIn,
                         canReport: env.isSignedIn && comment.authorId != env.currentProfile?.id,
+                        canDelete: canDelete(comment),
                         onReport: {
                             await reportComment(comment)
+                        },
+                        onDelete: {
+                            await deleteComment(comment)
                         }
                     )
                     .listRowSeparator(.hidden)
@@ -257,6 +261,23 @@ struct CommentsView: View {
         isSending = false
     }
 
+    /// Author within the 24h window, or an admin anytime (RLS is the real gate).
+    private func canDelete(_ comment: PostComment) -> Bool {
+        guard env.isSignedIn else { return false }
+        if env.isAdmin { return true }
+        guard comment.authorId == env.currentProfile?.id else { return false }
+        return Date.now.timeIntervalSince(comment.createdAt) <= 24 * 3600
+    }
+
+    private func deleteComment(_ comment: PostComment) async {
+        do {
+            try await env.postsService.deleteComment(commentId: comment.id)
+            comments.removeAll { $0.id == comment.id }
+        } catch {
+            print("[Comments] delete error: \(error)")
+        }
+    }
+
     private func reportComment(_ comment: PostComment) async {
         guard let userId = env.currentProfile?.id else { return }
         try? await env.postsService.reportContent(
@@ -301,7 +322,9 @@ struct CommentRow: View {
     let comment: PostComment
     let isSignedIn: Bool
     let canReport: Bool
+    var canDelete: Bool = false
     let onReport: () async -> Void
+    var onDelete: (() async -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -316,12 +339,21 @@ struct CommentRow: View {
                         .font(.caption2)
                         .foregroundStyle(Color.mlrTextMuted)
                     Spacer()
-                    if canReport {
+                    if canReport || canDelete {
                         Menu {
-                            Button(role: .destructive) {
-                                Task { await onReport() }
-                            } label: {
-                                Label("Report comment", systemImage: "flag")
+                            if canDelete {
+                                Button(role: .destructive) {
+                                    Task { await onDelete?() }
+                                } label: {
+                                    Label("Delete comment", systemImage: "trash")
+                                }
+                            }
+                            if canReport {
+                                Button(role: .destructive) {
+                                    Task { await onReport() }
+                                } label: {
+                                    Label("Report comment", systemImage: "flag")
+                                }
                             }
                         } label: {
                             Image(systemName: "ellipsis")

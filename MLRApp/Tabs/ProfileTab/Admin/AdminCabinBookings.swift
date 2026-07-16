@@ -43,8 +43,8 @@ struct AdminCabinBookings: View {
                         ForEach(group.items) { booking in
                             BookingRow(
                                 booking: booking,
-                                onApprove: { note in Task { await approve(booking, note: note) } },
-                                onDeny:    { note in Task { await deny(booking, note: note) } },
+                                onApprove: { note, notify in Task { await approve(booking, note: note, notify: notify) } },
+                                onDeny:    { note, notify in Task { await deny(booking, note: note, notify: notify) } },
                                 onCancel:  { Task { await cancel(booking) } },
                                 onEdit:    { editingBooking = booking }
                             )
@@ -123,20 +123,20 @@ struct AdminCabinBookings: View {
     }
 
     @MainActor
-    private func approve(_ booking: CabinBooking, note: String) async {
+    private func approve(_ booking: CabinBooking, note: String, notify: Bool) async {
         actionError = nil
         do {
-            try await env.cabinService.approveBooking(bookingId: booking.id, adminNote: note.isEmpty ? nil : note)
+            try await env.cabinService.approveBooking(bookingId: booking.id, adminNote: note.isEmpty ? nil : note, notify: notify)
         } catch {
             actionError = "Couldn't approve booking."
         }
     }
 
     @MainActor
-    private func deny(_ booking: CabinBooking, note: String) async {
+    private func deny(_ booking: CabinBooking, note: String, notify: Bool) async {
         actionError = nil
         do {
-            try await env.cabinService.denyBooking(bookingId: booking.id, adminNote: note.isEmpty ? nil : note)
+            try await env.cabinService.denyBooking(bookingId: booking.id, adminNote: note.isEmpty ? nil : note, notify: notify)
         } catch {
             actionError = "Couldn't deny booking."
         }
@@ -177,13 +177,14 @@ struct AdminCabinBookings: View {
 
 private struct BookingRow: View {
     let booking: CabinBooking
-    let onApprove: (String) -> Void
-    let onDeny:    (String) -> Void
+    let onApprove: (String, Bool) -> Void
+    let onDeny:    (String, Bool) -> Void
     let onCancel:  () -> Void
     let onEdit:    () -> Void
 
     @State private var adminNote: String = ""
     @State private var showReviewForm = false
+    @State private var emailConfirm = true   // "Email them a confirmation" (migration 0104)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -257,12 +258,16 @@ private struct BookingRow: View {
                     .background(Color.mlrCard)
                     .clipShape(RoundedRectangle(cornerRadius: 6))
 
+                Toggle("Email them a confirmation", isOn: $emailConfirm)
+                    .font(.mlrScaled(13))
+                    .tint(Color.mlrPrimary)
+
                 HStack(spacing: 10) {
                     filledButton("Approve", icon: "checkmark.circle.fill", color: Color.mlrSuccess) {
-                        onApprove(adminNote); showReviewForm = false
+                        onApprove(adminNote, emailConfirm); showReviewForm = false
                     }
                     filledButton("Deny", icon: "xmark.circle.fill", color: Color.mlrDanger) {
-                        onDeny(adminNote); showReviewForm = false
+                        onDeny(adminNote, emailConfirm); showReviewForm = false
                     }
                 }
 

@@ -129,11 +129,14 @@ struct CabinBookingsView: View {
 // MARK: - Booking Card
 
 private struct BookingCard: View {
+    @Environment(AppEnvironment.self) private var env
     let booking: CabinBooking
     let isCancelling: Bool
     let onCancel: () -> Void
 
     @State private var calendarAdded = false
+    @State private var canPickRoom = false   // cabin has named rooms + none assigned yet
+    @State private var showPickRoom = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -201,6 +204,21 @@ private struct BookingCard: View {
                 .disabled(isCancelling)
             }
 
+            // Self-service room pick (migration 0106) — when the cabin has named
+            // rooms and this booking hasn't been assigned one yet.
+            if canPickRoom && (booking.status == .pending || booking.status == .approved) {
+                Button { showPickRoom = true } label: {
+                    Label("Choose your room", systemImage: "bed.double.fill")
+                        .font(.mlrScaled(14, weight: .semibold))
+                        .foregroundStyle(Color.mlrPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
+                        .background(Color.mlrPrimary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+            }
+
             if booking.status == .approved {
                 Button { Task { await addStayToCalendar() } } label: {
                     Label(calendarAdded ? "Added to Calendar ✓" : "Add to Calendar",
@@ -219,6 +237,29 @@ private struct BookingCard: View {
         .padding(16)
         .background(Color.mlrCard)
         .clipShape(RoundedRectangle(cornerRadius: 16))
+        .task(id: booking.id) { await checkRoomEligibility() }
+        .sheet(isPresented: $showPickRoom) {
+            PickMyRoomSheet(booking: booking) {
+                Task {
+                    if let uid = env.currentProfile?.id {
+                        await env.cabinService.fetchMyBookings(userId: uid)
+                    }
+                    await checkRoomEligibility()
+                }
+            }
+        }
+    }
+
+    /// Show "Choose your room" only when the cabin is broken into named rooms and
+    /// this booking has none attached yet (cancelled/denied excluded).
+    private func checkRoomEligibility() async {
+        guard booking.status == .pending || booking.status == .approved else {
+            canPickRoom = false; return
+        }
+        let rooms = await env.cabinService.fetchCabinRooms(cabinId: booking.cabinId)
+        guard !rooms.isEmpty else { canPickRoom = false; return }
+        let held = await env.cabinService.fetchBookingRooms(bookingId: booking.id)
+        canPickRoom = held.isEmpty
     }
 
     private func addStayToCalendar() async {

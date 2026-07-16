@@ -44,8 +44,43 @@ final class AppEnvironment {
 
     // Resolved once per session
     var currentProfile: Profile?
-    var isAdmin: Bool { currentProfile?.isAdmin ?? false }
-    var isSignedIn: Bool { authService.isSignedIn }
+
+    // MARK: - Admin "view as" preview (device-local, UI-only)
+    //
+    // Changes only what the app SHOWS — never the account or any data write.
+    // guest → the signed-out/guest experience; member → a regular member view
+    // (admin controls hidden); off → the real account. Entering requires being a
+    // real admin; exiting is always allowed. Persisted device-locally.
+    enum PreviewMode: String { case off, member, guest }
+    static let previewKey = "mlr-preview-as"
+
+    var previewMode: PreviewMode = {
+        guard let raw = UserDefaults.standard.string(forKey: AppEnvironment.previewKey),
+              let m = PreviewMode(rawValue: raw) else { return .off }
+        return m
+    }()
+
+    /// Whether an admin is currently viewing the app as someone else.
+    var isPreviewing: Bool { previewMode != .off }
+
+    /// The signed-in account's REAL admin flag, ignoring any active preview — the
+    /// gate for entering a preview (and for showing the Preview-As entry).
+    var realIsAdmin: Bool { currentProfile?.isAdmin ?? false }
+
+    /// Effective admin — false while previewing so admin-only UI hides.
+    var isAdmin: Bool { previewMode == .off ? realIsAdmin : false }
+
+    /// Effective sign-in — false while previewing as a guest so guest gating shows.
+    var isSignedIn: Bool { previewMode == .guest ? false : authService.isSignedIn }
+
+    /// Switch the preview. Entering (member/guest) is admin-only; exiting is free.
+    func setPreview(_ mode: PreviewMode) {
+        if mode != .off && !realIsAdmin { return }
+        previewMode = mode
+        let defaults = UserDefaults.standard
+        if mode == .off { defaults.removeObject(forKey: Self.previewKey) }
+        else { defaults.set(mode.rawValue, forKey: Self.previewKey) }
+    }
 
     // Help contact — loaded from resort_config (migration 0082), falls back to
     // the HelpContact enum so the Help page always shows something.
