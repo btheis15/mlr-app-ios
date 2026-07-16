@@ -181,6 +181,7 @@
 		D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */; };
 		D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88430093D9E006874DA /* OnThisDayCard.swift */; };
 		D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */; };
+		D3F9D889300947FA006874DA /* PickMyRoomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -366,6 +367,7 @@
 		D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledBroadcast.swift; sourceTree = "<group>"; };
 		D3F9D88430093D9E006874DA /* OnThisDayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDayCard.swift; sourceTree = "<group>"; };
 		D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyCommitteeAreasSheet.swift; sourceTree = "<group>"; };
+		D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickMyRoomSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -439,6 +441,7 @@
 				D33F9DEA2FEC086700603CE7 /* CabinRequestSheet.swift */,
 				D3F9D87030071059006874DA /* EditCabinBookingSheet.swift */,
 				D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */,
+				D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */,
 			);
 			path = Cabins;
 			sourceTree = "<group>";
@@ -950,6 +953,7 @@
 				D33F9E6F2FEC086700603CE7 /* CabinBookingsView.swift in Sources */,
 				D33F9E702FEC086700603CE7 /* FestScheduleDetailView.swift in Sources */,
 				D3F9D87130071059006874DA /* EditCabinBookingSheet.swift in Sources */,
+				D3F9D889300947FA006874DA /* PickMyRoomSheet.swift in Sources */,
 				D33F9E712FEC086700603CE7 /* NotificationRow.swift in Sources */,
 				D39BD8912FFC47C000B1E74D /* ChatMedia.swift in Sources */,
 				D3F9D8783007189A006874DA /* FestInlineEditSheets.swift in Sources */,
