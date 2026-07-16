@@ -311,24 +311,53 @@ private struct FestInfoCard<Content: View>: View {
 /// All-week, no-set-time activities (the scavenger hunt).
 private struct FestAnytimeCard: View {
     @Environment(AppEnvironment.self) private var env
+    @State private var editing: ScheduleItem?
     private var items: [ScheduleItem] { env.festContentService.schedule.filter { $0.day == "Anytime" } }
+
+    /// Admin / committee runner, or this activity's own lead or crew (migration 0110).
+    private func canEdit(_ item: ScheduleItem) -> Bool {
+        guard env.isSignedIn, let me = env.currentProfile?.id else { return false }
+        return env.isAdmin
+            || env.festContentService.userCanEditFest
+            || item.leadUserId == me
+            || item.crewUserIds.contains(me)
+    }
 
     var body: some View {
         if !items.isEmpty {
             FestInfoCard(title: "All week — anytime") {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(items) { item in
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(item.title)
-                                .font(.festSerif(14, weight: .bold))
-                                .foregroundStyle(Color.mlrFest)
-                            if let desc = item.description {
-                                Text(desc)
-                                    .font(.mlrScaled(12))
-                                    .foregroundStyle(Color.mlrFestInk.opacity(0.75))
-                                    .fixedSize(horizontal: false, vertical: true)
+                        HStack(alignment: .top, spacing: 8) {
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(item.title)
+                                    .font(.festSerif(14, weight: .bold))
+                                    .foregroundStyle(Color.mlrFest)
+                                if let desc = item.description {
+                                    Text(desc)
+                                        .font(.mlrScaled(12))
+                                        .foregroundStyle(Color.mlrFestInk.opacity(0.75))
+                                        .fixedSize(horizontal: false, vertical: true)
+                                }
+                            }
+                            Spacer(minLength: 0)
+                            if canEdit(item) {
+                                Button { editing = item } label: {
+                                    Image(systemName: "pencil")
+                                        .font(.mlrScaled(13, weight: .semibold))
+                                        .foregroundStyle(Color.mlrFest)
+                                        .padding(4)
+                                }
+                                .buttonStyle(.plain)
                             }
                         }
+                    }
+                }
+            }
+            .sheet(item: $editing) { item in
+                if let uuid = UUID(uuidString: item.id) {
+                    FestActivityEditSheet(activityId: uuid, title: item.title) {
+                        await env.festContentService.reload()
                     }
                 }
             }

@@ -186,6 +186,7 @@
 		D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88C30094A70006874DA /* ReminderScheduler.swift */; };
 		D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */; };
 		D3F9D89130094CD9006874DA /* EventTargetPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D89030094CD9006874DA /* EventTargetPicker.swift */; };
+		D3F9D8933009816D006874DA /* FestActivityEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -376,6 +377,7 @@
 		D3F9D88C30094A70006874DA /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
 		D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminEditMemberSheet.swift; sourceTree = "<group>"; };
 		D3F9D89030094CD9006874DA /* EventTargetPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTargetPicker.swift; sourceTree = "<group>"; };
+		D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestActivityEditSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -665,6 +667,7 @@
 				D3F9D86C3006E599006874DA /* FestDinnerEditSheet.swift */,
 				D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */,
 				D3F9D87A30091A65006874DA /* FestDecor.swift */,
+				D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */,
 			);
 			path = FamilyFestTab;
 			sourceTree = "<group>";
@@ -1035,6 +1038,7 @@
 				D33F9E982FEC086700603CE7 /* FamilyFestSpotlight.swift in Sources */,
 				D33F9E992FEC086700603CE7 /* HomeView.swift in Sources */,
 				D33F9E9A2FEC086700603CE7 /* Formatters.swift in Sources */,
+				D3F9D8933009816D006874DA /* FestActivityEditSheet.swift in Sources */,
 				D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */,
 				D33F9E9B2FEC086700603CE7 /* FestPayView.swift in Sources */,
 				D33F9E9C2FEC086700603CE7 /* SeedData.swift in Sources */,

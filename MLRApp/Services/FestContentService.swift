@@ -525,9 +525,32 @@ final class FestContentService {
                 location: r.location,
                 description: detail.isEmpty ? nil : detail,
                 isPrivate: false,
-                leads: []
+                leads: [],
+                leadUserId: r.leadUserId,
+                crewUserIds: r.crewUserIds ?? []
             )
         }
+    }
+
+    /// Update an "Anytime" activity's details subset (location + details) — the
+    /// self-editable fields for a lead/crew member (migration 0110). Writes the
+    /// fest_activities row directly; RLS gates who may.
+    func updateActivityDetails(activityId: UUID, location: String?, details: String?) async throws {
+        var payload: [String: AnyJSON] = [
+            "location": j(location),
+            "details":  j(details),
+        ]
+        if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
+        try await supabase.from("fest_activities").update(payload).eq("id", value: activityId.uuidString).execute()
+    }
+
+    /// The raw editable fields for one activity (for the inline edit sheet).
+    func fetchActivityRaw(activityId: UUID) async -> (location: String?, details: String?)? {
+        struct Raw: Decodable { let location: String?; let details: String? }
+        let row: Raw? = try? await supabase
+            .from("fest_activities").select("location, details")
+            .eq("id", value: activityId.uuidString).single().execute().value
+        return row.map { ($0.location, $0.details) }
     }
 
     private func fetchDinners() async throws -> [FestDinner] {
@@ -643,6 +666,13 @@ private struct ActivityRow: Decodable {
     let blurb: String?
     let details: String?
     let location: String?
+    let leadUserId: UUID?
+    let crewUserIds: [UUID]?
+    enum CodingKeys: String, CodingKey {
+        case id, title, emoji, blurb, details, location
+        case leadUserId = "lead_user_id"
+        case crewUserIds = "crew_user_ids"
+    }
 }
 
 private struct DinnerRow: Decodable {
