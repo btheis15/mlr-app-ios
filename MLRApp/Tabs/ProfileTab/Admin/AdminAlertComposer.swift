@@ -1,4 +1,5 @@
 import SwiftUI
+import Supabase
 
 // MARK: - ExpiryWindow
 // Available expiry presets for an announcement.
@@ -50,11 +51,14 @@ struct AdminAlertComposer: View {
     @State private var expiry: ExpiryWindow = .sixHours
     @State private var mirrorToNotif: Bool = false
     @State private var scheduleAt: Date? = nil   // nil = post now (migration 0097)
+    @State private var selectedEventId: String? = nil       // event targeting (0096)
+    @State private var excludeNotAttending: Bool = true
     @State private var isPosting = false
     @State private var error: String? = nil
     @State private var posted = false
 
     private var canPost: Bool { !title.trimmingCharacters(in: .whitespaces).isEmpty }
+    private var upcomingEvents: [ResortEvent] { env.eventsService.upcomingEvents }
 
     // MARK: - Body
 
@@ -118,6 +122,11 @@ struct AdminAlertComposer: View {
                     .tint(Color.mlrPrimary)
                 }
 
+                // Event targeting (migration 0096)
+                EventTargetPicker(events: upcomingEvents,
+                                  selectedEventId: $selectedEventId,
+                                  excludeNotAttending: $excludeNotAttending)
+
                 // Send now / schedule for later
                 Section("When") {
                     ScheduleSendPicker(selection: $scheduleAt)
@@ -167,6 +176,9 @@ struct AdminAlertComposer: View {
             }
             .navigationTitle("Post Announcement")
             .navigationBarTitleDisplayMode(.inline)
+            .task {
+                if env.eventsService.events.isEmpty { await env.eventsService.fetchEvents() }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
@@ -270,9 +282,13 @@ struct AdminAlertComposer: View {
             do {
                 let payload: BroadcastPayload = mirrorToNotif
                     ? BroadcastPayload(title: trimmedTitle, body: trimmedBody.isEmpty ? nil : trimmedBody,
-                                       audience: "everyone", expiryHours: expiry.hours, alsoBanner: true)
+                                       audience: "everyone", expiryHours: expiry.hours, alsoBanner: true,
+                                       eventId: selectedEventId,
+                                       excludeNotAttending: selectedEventId != nil ? excludeNotAttending : nil)
                     : BroadcastPayload(title: trimmedTitle, body: trimmedBody.isEmpty ? nil : trimmedBody,
-                                       expiryHours: expiry.hours)
+                                       expiryHours: expiry.hours,
+                                       eventId: selectedEventId,
+                                       excludeNotAttending: selectedEventId != nil ? excludeNotAttending : nil)
                 try await env.notificationsService.scheduleBroadcast(
                     kind: mirrorToNotif ? .notification : .announcement,
                     payload: payload,
@@ -286,12 +302,16 @@ struct AdminAlertComposer: View {
         }
 
         let fmt = ISO8601DateFormatter()
-        let params: [String: String] = [
-            "title": trimmedTitle,
-            "body": trimmedBody,
-            "severity": kind.severity,
-            "expires_at": fmt.string(from: expiry.expiresAt)
+        var params: [String: AnyJSON] = [
+            "title": .string(trimmedTitle),
+            "body": .string(trimmedBody),
+            "severity": .string(kind.severity),
+            "expires_at": .string(fmt.string(from: expiry.expiresAt))
         ]
+        if let eventId = selectedEventId {
+            params["event_id"] = .string(eventId)
+            params["exclude_not_attending"] = .bool(excludeNotAttending)
+        }
 
         do {
             try await supabase
@@ -299,14 +319,19 @@ struct AdminAlertComposer: View {
                 .insert(params)
                 .execute()
 
-            // Optionally mirror to in-app notifications
+            // Optionally mirror to in-app notifications (carry the event target).
             if mirrorToNotif {
+                var notifParams: [String: AnyJSON] = [
+                    "p_title": .string(trimmedTitle),
+                    "p_body": .string(trimmedBody),
+                    "p_audience": .string("everyone")
+                ]
+                if let eventId = selectedEventId {
+                    notifParams["p_event_id"] = .string(eventId)
+                    notifParams["p_exclude_not_attending"] = .bool(excludeNotAttending)
+                }
                 try await supabase
-                    .rpc("send_broadcast_notification", params: [
-                        "p_title": title.trimmingCharacters(in: .whitespaces),
-                        "p_body": messageBody.trimmingCharacters(in: .whitespaces),
-                        "p_audience": "everyone"
-                    ])
+                    .rpc("send_broadcast_notification", params: notifParams)
                     .execute()
             }
 

@@ -185,6 +185,7 @@
 		D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88A300948A5006874DA /* PreviewAsView.swift */; };
 		D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88C30094A70006874DA /* ReminderScheduler.swift */; };
 		D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */; };
+		D3F9D89130094CD9006874DA /* EventTargetPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D89030094CD9006874DA /* EventTargetPicker.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -374,6 +375,7 @@
 		D3F9D88A300948A5006874DA /* PreviewAsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewAsView.swift; sourceTree = "<group>"; };
 		D3F9D88C30094A70006874DA /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
 		D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminEditMemberSheet.swift; sourceTree = "<group>"; };
+		D3F9D89030094CD9006874DA /* EventTargetPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTargetPicker.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -602,6 +604,7 @@
 				D33F9E252FEC086700603CE7 /* WelcomeCard.swift */,
 				D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */,
 				D3F9D88C30094A70006874DA /* ReminderScheduler.swift */,
+				D3F9D89030094CD9006874DA /* EventTargetPicker.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1044,6 +1047,7 @@
 				D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */,
 				D3F9D87D300934F0006874DA /* AdminCabinDetails.swift in Sources */,
 				D33F9EA02FEC086700603CE7 /* AdminNotificationComposer.swift in Sources */,
+				D3F9D89130094CD9006874DA /* EventTargetPicker.swift in Sources */,
 				D3F9D8633006C1B3006874DA /* HomeCalloutsStack.swift in Sources */,
 				D33F9EA22FEC086700603CE7 /* NotifPrefsView.swift in Sources */,
 				D33F9EA32FEC086700603CE7 /* GuardView.swift in Sources */,

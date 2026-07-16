@@ -100,42 +100,9 @@ struct AdminNotificationComposer: View {
                 }
 
                 // Event targeting — filters out declined RSVPs (migration 0096)
-                Section {
-                    Picker("Link to event", selection: $selectedEventId) {
-                        Text("No specific event").tag(String?.none)
-                        ForEach(upcomingEvents) { event in
-                            Text(event.title).tag(String?.some(event.id))
-                        }
-                    }
-                    .onChange(of: selectedEventId) { _, newValue in
-                        // Default exclude to ON when picking an event for the first time.
-                        if newValue != nil { excludeNotAttending = true }
-                    }
-
-                    if selectedEventId != nil {
-                        Toggle(isOn: $excludeNotAttending) {
-                            Label {
-                                VStack(alignment: .leading, spacing: 2) {
-                                    Text("Skip people who declined")
-                                    Text("Don't send to anyone who RSVP'd \"Can't make it\"")
-                                        .font(.caption)
-                                        .foregroundStyle(Color.mlrTextMuted)
-                                }
-                            } icon: {
-                                Image(systemName: "person.slash.fill")
-                                    .foregroundStyle(Color.mlrTextSubtle)
-                            }
-                        }
-                        .tint(Color.mlrPrimary)
-                    }
-                } header: {
-                    Text("Event filter")
-                } footer: {
-                    if selectedEventId == nil {
-                        Text("Optionally link this notification to an event — lets you skip people who RSVP'd they can't attend.")
-                            .font(.caption)
-                    }
-                }
+                EventTargetPicker(events: upcomingEvents,
+                                  selectedEventId: $selectedEventId,
+                                  excludeNotAttending: $excludeNotAttending)
 
                 // Banner option — only available for Everyone
                 if audience == .everyone {
