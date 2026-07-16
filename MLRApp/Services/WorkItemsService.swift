@@ -28,18 +28,48 @@ final class WorkItemsService {
         error = nil
         defer { isLoading = false }
         do {
+            // NOTE: no `profiles!completed_by` embed here — there's no FK PostgREST
+            // can resolve between work_items.completed_by and profiles, so embedding
+            // it fails the WHOLE query (PGRST200) and empties the checklist. The
+            // completed-by name is resolved separately below.
             let rows: [WorkItem] = try await supabase
                 .from("work_items")
-                .select("*, work_item_media(*), work_item_comments(id), completed_by_profile:profiles!completed_by(display_name)")
+                .select("*, work_item_media(*), work_item_comments(id)")
                 .order("status", ascending: true)        // 'done' sorts after 'open'
                 .order("created_at", ascending: false)
                 .execute()
                 .value
             items = rows
+            await resolveCompletedByNames()
             writeTodoSnapshot()
         } catch {
             self.error = "Couldn't load the work checklist."
             print("[WorkItemsService] fetchItems error: \(error)")
+        }
+    }
+
+    /// Fill in the "completed by" display names via a plain profiles lookup —
+    /// replaces the fragile `profiles!completed_by` embed (no such FK relationship
+    /// exists for PostgREST to resolve). Best-effort; a failure just omits names.
+    private func resolveCompletedByNames() async {
+        let ids = Set(items.compactMap { $0.completedBy })
+        guard !ids.isEmpty else { return }
+        struct P: Decodable {
+            let id: UUID
+            let displayName: String?
+            enum CodingKeys: String, CodingKey { case id; case displayName = "display_name" }
+        }
+        let rows: [P] = (try? await supabase
+            .from("profiles")
+            .select("id, display_name")
+            .in("id", values: ids.map { $0.uuidString })
+            .execute()
+            .value) ?? []
+        let nameById = Dictionary(rows.map { ($0.id, $0.displayName) }, uniquingKeysWith: { a, _ in a })
+        for i in items.indices {
+            if let cb = items[i].completedBy, let name = nameById[cb] {
+                items[i].completedByName = name
+            }
         }
     }
 
