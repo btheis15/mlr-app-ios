@@ -368,6 +368,7 @@ private struct MemberAdminCard: View {
     @State private var working = false
     @State private var errorText: String?
     @State private var showRemove = false
+    @State private var showEditInfo = false
 
     init(member: Profile, onRemoved: @escaping () -> Void) {
         self.member = member
@@ -409,6 +410,14 @@ private struct MemberAdminCard: View {
 
                 Divider().padding(.leading, 44)
 
+                Button { showEditInfo = true } label: {
+                    row("Edit member info", icon: "pencil")
+                }
+                .buttonStyle(.plain)
+                .disabled(working)
+
+                Divider().padding(.leading, 44)
+
                 Button(role: .destructive) { showRemove = true } label: {
                     row("Remove member", icon: "trash.fill", tint: Color.mlrDanger)
                 }
@@ -422,6 +431,9 @@ private struct MemberAdminCard: View {
         .padding(16)
         .cardStyle()
         .task { if env.housesService.houses.isEmpty { await env.housesService.fetchHouses() } }
+        .sheet(isPresented: $showEditInfo) {
+            AdminEditMemberSheet(member: member) {}
+        }
         .alert("Remove member?", isPresented: $showRemove) {
             Button("Remove \(member.name)", role: .destructive) { Task { await remove() } }
             Button("Cancel", role: .cancel) {}

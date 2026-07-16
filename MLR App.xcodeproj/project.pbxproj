@@ -184,6 +184,7 @@
 		D3F9D889300947FA006874DA /* PickMyRoomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */; };
 		D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88A300948A5006874DA /* PreviewAsView.swift */; };
 		D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88C30094A70006874DA /* ReminderScheduler.swift */; };
+		D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -372,6 +373,7 @@
 		D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickMyRoomSheet.swift; sourceTree = "<group>"; };
 		D3F9D88A300948A5006874DA /* PreviewAsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewAsView.swift; sourceTree = "<group>"; };
 		D3F9D88C30094A70006874DA /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
+		D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminEditMemberSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -561,6 +563,7 @@
 			children = (
 				D33F9E112FEC086700603CE7 /* MemberSheetView.swift */,
 				D33F9E122FEC086700603CE7 /* PeopleDirectoryView.swift */,
+				D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */,
 			);
 			path = People;
 			sourceTree = "<group>";
@@ -1008,6 +1011,7 @@
 				D3F9D87B30091A65006874DA /* FestDecor.swift in Sources */,
 				D33F9E8A2FEC086700603CE7 /* MediaService.swift in Sources */,
 				D33F9E8B2FEC086700603CE7 /* CommitteeChatView.swift in Sources */,
+				D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */,
 				D33F9E8C2FEC086700603CE7 /* FestCrewView.swift in Sources */,
 				D33F9E8D2FEC086700603CE7 /* PostCard.swift in Sources */,
 				D33F9E8E2FEC086700603CE7 /* AskForHelpHomeCard.swift in Sources */,
