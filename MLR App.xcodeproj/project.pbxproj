@@ -182,6 +182,7 @@
 		D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88430093D9E006874DA /* OnThisDayCard.swift */; };
 		D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */; };
 		D3F9D889300947FA006874DA /* PickMyRoomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */; };
+		D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88A300948A5006874DA /* PreviewAsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -368,6 +369,7 @@
 		D3F9D88430093D9E006874DA /* OnThisDayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDayCard.swift; sourceTree = "<group>"; };
 		D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyCommitteeAreasSheet.swift; sourceTree = "<group>"; };
 		D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickMyRoomSheet.swift; sourceTree = "<group>"; };
+		D3F9D88A300948A5006874DA /* PreviewAsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewAsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -703,6 +705,7 @@
 				D3F9D8663006C288006874DA /* AdminHelpContactView.swift */,
 				D3F9D86A3006CC02006874DA /* AdminCalloutsView.swift */,
 				D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */,
+				D3F9D88A300948A5006874DA /* PreviewAsView.swift */,
 			);
 			path = Admin;
 			sourceTree = "<group>";
@@ -1008,6 +1011,7 @@
 				D33F9E902FEC086700603CE7 /* Committee.swift in Sources */,
 				D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */,
 				D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */,
+				D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */,
 				D3F9D876300710BC006874DA /* PollsView.swift in Sources */,
 				D33F9F182FF844AA00603CE7 /* House.swift in Sources */,
 				D33F9E932FEC086700603CE7 /* AppEnvironment.swift in Sources */,

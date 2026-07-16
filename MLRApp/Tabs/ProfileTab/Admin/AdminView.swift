@@ -43,6 +43,14 @@ struct AdminView: View {
                     description: "See who has signed in and from where"
                 )
 
+                adminLink(
+                    destination: PreviewAsView(),
+                    icon: "eye.fill",
+                    iconColor: Color.mlrWarning,
+                    title: "Preview As",
+                    description: "See the app as a member or a guest"
+                )
+
                 Button {
                     showInvite = true
                 } label: {
