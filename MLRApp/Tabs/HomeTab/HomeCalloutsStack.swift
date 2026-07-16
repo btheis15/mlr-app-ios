@@ -1,5 +1,16 @@
 import SwiftUI
 import Kingfisher
+import TipKit
+
+// MARK: - Callout swipe hint (TipKit)
+// Mirrors the web's one-time `.callout-wiggle` nudge — teaches that a callout
+// card can be swiped away. Shows once, then never again (TipKit persists this).
+
+struct CalloutSwipeTip: Tip {
+    var title: Text { Text("Swipe to dismiss") }
+    var message: Text? { Text("Swipe a card away when you're done with it.") }
+    var image: Image? { Image(systemName: "hand.draw") }
+}
 
 // MARK: - HomeCalloutsStack
 // Swipeable admin-managed callout cards stacked above FamilyFestSpotlight on
@@ -76,6 +87,7 @@ struct HomeCalloutsStack: View {
                             },
                             onMarkDone: { markDone(callout) }
                         )
+                        .popoverTip(CalloutSwipeTip())
                     } else {
                         HomeCalloutCard(callout: callout)
                             .offset(y: CGFloat(idx) * 10)
