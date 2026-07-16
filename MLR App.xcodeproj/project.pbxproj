@@ -180,6 +180,7 @@
 		D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */; };
 		D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */; };
 		D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88430093D9E006874DA /* OnThisDayCard.swift */; };
+		D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -364,6 +365,7 @@
 		D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminScheduledBroadcasts.swift; sourceTree = "<group>"; };
 		D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledBroadcast.swift; sourceTree = "<group>"; };
 		D3F9D88430093D9E006874DA /* OnThisDayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDayCard.swift; sourceTree = "<group>"; };
+		D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyCommitteeAreasSheet.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -450,6 +452,7 @@
 				D33F9EDA2FF319D600603CE7 /* CommitteeEmailComposer.swift */,
 				D33F9EDC2FF319F800603CE7 /* CommitteeMemberManageSheet.swift */,
 				D33F9EEB2FF4502100603CE7 /* RosterEditSheet.swift */,
+				D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */,
 			);
 			path = Committees;
 			sourceTree = "<group>";
@@ -963,6 +966,7 @@
 				D33F9E782FEC086700603CE7 /* InstallPrompt.swift in Sources */,
 				D33F9E7A2FEC086700603CE7 /* FestDinnersDetailView.swift in Sources */,
 				D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */,
+				D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */,
 				D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */,
 				D33F9EE62FF40A9E00603CE7 /* FamilyFestPlannerView.swift in Sources */,
 				D3F9D8653006C201006874DA /* AdminCommitteesView.swift in Sources */,

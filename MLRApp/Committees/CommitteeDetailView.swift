@@ -20,6 +20,9 @@ struct CommitteeDetailView: View {
     @State private var showEmail = false
     @State private var selectedProfile: Profile?
     @State private var reviewingIds: Set<UUID> = []
+    @State private var showMyAreas = false
+    @State private var confirmLeave = false
+    @State private var leaving = false
 
     /// Canonical area order for role-based committees (matches the web).
     private let festAreas = [
@@ -40,6 +43,19 @@ struct CommitteeDetailView: View {
         return roster.contains { $0.linkedUserId == me.id && $0.isLead }
     }
     private var canReview: Bool { env.isAdmin || iAmLead }
+
+    /// My own linked roster entry, if I'm on this committee's roster.
+    private var myEntry: CommitteeRosterEntry? {
+        guard let me = env.currentProfile else { return nil }
+        return roster.first { $0.linkedUserId == me.id }
+    }
+
+    /// The areas I currently work in (roster roles with the " · Lead" suffix stripped).
+    private var myAreas: [String] {
+        (myEntry?.roles ?? []).map {
+            $0.hasSuffix(" · Lead") ? String($0.dropLast(" · Lead".count)) : $0
+        }
+    }
 
     /// Pending join requests scoped to this committee.
     private var pendingForCommittee: [CommitteeJoinRequest] {
@@ -107,6 +123,10 @@ struct CommitteeDetailView: View {
                     joinRequestsSection
                 }
 
+                if myEntry != nil {
+                    selfServiceSection
+                }
+
                 rosterSection
             }
             .padding(20)
@@ -149,6 +169,73 @@ struct CommitteeDetailView: View {
         }
         .sheet(item: $selectedProfile) { profile in
             MemberSheetView(member: profile)
+        }
+        .sheet(isPresented: $showMyAreas) {
+            MyCommitteeAreasSheet(
+                committeeId: committee.id,
+                allAreas: festAreas,
+                current: myAreas
+            ) { Task { await load() } }
+        }
+        .confirmationDialog("Leave \(committee.name)?", isPresented: $confirmLeave, titleVisibility: .visible) {
+            Button("Leave committee", role: .destructive) { Task { await leave() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("You'll be removed from the roster and lose access to its chats. You can request to rejoin later.")
+        }
+    }
+
+    // MARK: - Self-service (my membership)
+
+    private var selfServiceSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Your membership")
+
+            if roleBased {
+                if !myAreas.isEmpty {
+                    FlowChips(items: myAreas)
+                }
+                Button { showMyAreas = true } label: {
+                    Label(myAreas.isEmpty ? "Choose your areas" : "Edit your areas",
+                          systemImage: "checklist")
+                        .font(.mlrScaled(15, weight: .semibold))
+                        .foregroundStyle(Color.mlrPrimary)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.mlrPrimary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.plain)
+            }
+
+            Button { confirmLeave = true } label: {
+                HStack {
+                    if leaving { ProgressView().tint(Color.mlrDanger) }
+                    Label("Leave committee", systemImage: "rectangle.portrait.and.arrow.right")
+                        .font(.mlrScaled(15, weight: .semibold))
+                        .foregroundStyle(Color.mlrDanger)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 12)
+                .background(Color.mlrDanger.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.plain)
+            .disabled(leaving)
+        }
+    }
+
+    private func leave() async {
+        leaving = true
+        defer { leaving = false }
+        do {
+            try await env.committeeService.leaveCommittee(committeeId: committee.id)
+            if let uid = env.currentProfile?.id {
+                await env.committeeService.fetchMyMemberships(userId: uid)
+            }
+            await load()
+        } catch {
+            print("[CommitteeDetail] leave error: \(error)")
         }
     }
 

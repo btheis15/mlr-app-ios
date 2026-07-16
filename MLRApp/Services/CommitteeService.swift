@@ -259,6 +259,28 @@ final class CommitteeService {
             .execute()
     }
 
+    /// Self-service: set the areas *I* work in — no lead/admin, no approval
+    /// (migration 0073). Distinct from `setCommitteeAreas`, which acts on another
+    /// member and requires a Lead/admin.
+    func setMyCommitteeAreas(committeeId: UUID, areas: [String]) async throws {
+        struct Params: Encodable {
+            let cid: String
+            let areas: [String]
+        }
+        try await supabase
+            .rpc("set_my_committee_areas", params: Params(cid: committeeId.uuidString, areas: areas))
+            .execute()
+    }
+
+    /// Leave a committee (self-service) — clears my membership AND unlinks my
+    /// roster row so roster-based chat access is revoked too (migration 0073).
+    func leaveCommittee(committeeId: UUID) async throws {
+        struct Params: Encodable { let cid: String }
+        try await supabase
+            .rpc("leave_committee", params: Params(cid: committeeId.uuidString))
+            .execute()
+    }
+
     // MARK: - Email recipients (committee member or admin, migration 0031)
 
     /// The committee's emailable roster ({id, name, email}), gated server-side.
