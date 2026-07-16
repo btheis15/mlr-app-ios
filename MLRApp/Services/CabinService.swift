@@ -192,10 +192,13 @@ final class CabinService {
         updateBookingStatus(id: bookingId, status: .denied, adminNote: adminNote, in: &allBookings)
     }
 
-    func cancelBooking(bookingId: UUID) async throws {
-        struct CancelParams: Encodable { let p_booking: String }
+    /// Cancel a request. `notify` (default true) only has an effect when an admin
+    /// cancels someone ELSE's booking — the RPC never emails a self-cancel
+    /// (migration 0109).
+    func cancelBooking(bookingId: UUID, notify: Bool = true) async throws {
+        struct CancelParams: Encodable { let p_booking: String; let p_notify: Bool }
         try await supabase
-            .rpc("cancel_cabin_stay", params: CancelParams(p_booking: bookingId.uuidString))
+            .rpc("cancel_cabin_stay", params: CancelParams(p_booking: bookingId.uuidString, p_notify: notify))
             .execute()
         myBookings.removeAll { $0.id == bookingId }
         allBookings.removeAll { $0.id == bookingId }

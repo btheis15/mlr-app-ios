@@ -1,24 +1,31 @@
 import SwiftUI
 
 // MARK: - LocalPlacesView
-// Nearby restaurants and businesses. Mirrors /local-places on the web.
+// Nearby golf, food & drink, and coffee. Mirrors /local-places on the web:
+// collapsible category sections (each a tappable "card"), with per-place quick
+// actions — tee-time booking / rates, menu, online order, call, website, and
+// Apple Maps directions.
 
 struct LocalPlacesView: View {
 
     private var golfPlaces: [LocalPlace]   { LocalPlace.all.filter { $0.category == .golf } }
     private var diningPlaces: [LocalPlace] { LocalPlace.all.filter { $0.category == .dining } }
+    private var coffeePlaces: [LocalPlace] { LocalPlace.all.filter { $0.category == .coffee } }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 28) {
+            VStack(alignment: .leading, spacing: 12) {
                 if !golfPlaces.isEmpty {
                     PlacesSection(title: "Golf", emoji: "⛳", places: golfPlaces)
                 }
                 if !diningPlaces.isEmpty {
                     PlacesSection(title: "Food & Drink", emoji: "🍽️", places: diningPlaces)
                 }
+                if !coffeePlaces.isEmpty {
+                    PlacesSection(title: "Coffee", emoji: "☕", places: coffeePlaces)
+                }
             }
-            .padding(.vertical, 20)
+            .padding(16)
         }
         .background(Color.mlrSurface)
         .navigationTitle("Local Places")
@@ -26,29 +33,48 @@ struct LocalPlacesView: View {
     }
 }
 
-// MARK: - Section
+// MARK: - Collapsible section (a tappable category card)
 
 private struct PlacesSection: View {
     let title: String
     let emoji: String
     let places: [LocalPlace]
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(spacing: 8) {
-                Text(emoji).font(.mlrScaled(22))
-                Text(title)
-                    .font(.mlrScaled(20, weight: .bold))
-                    .foregroundStyle(Color.mlrText)
-            }
-            .padding(.horizontal, 16)
+    @State private var expanded = false
 
-            VStack(spacing: 10) {
+    var body: some View {
+        VStack(spacing: 10) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.22)) { expanded.toggle() }
+            } label: {
+                HStack(spacing: 10) {
+                    Text(emoji).font(.mlrScaled(20))
+                    Text(title)
+                        .font(.mlrScaled(17, weight: .bold))
+                        .foregroundStyle(Color.mlrText)
+                    Text("\(places.count)")
+                        .font(.mlrScaled(12, weight: .semibold))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .padding(.horizontal, 8).padding(.vertical, 2)
+                        .background(Color.mlrPrimaryLight)
+                        .clipShape(Capsule())
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.mlrScaled(13, weight: .semibold))
+                        .foregroundStyle(Color.mlrTextSubtle)
+                        .rotationEffect(.degrees(expanded ? 90 : 0))
+                }
+                .padding(16)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .cardStyle()
+
+            if expanded {
                 ForEach(places) { place in
                     LocalPlaceCard(place: place)
                 }
             }
-            .padding(.horizontal, 16)
         }
     }
 }
@@ -81,23 +107,32 @@ private struct LocalPlaceCard: View {
             // Quick-action chips
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
+                    let isGolf = place.category == .golf
+                    if let raw = place.orderUrl, let url = URL(string: raw) {
+                        Link(destination: url) {
+                            PlaceChip(label: isGolf ? "Tee Times" : "Order",
+                                      icon:  isGolf ? "calendar"  : "cart")
+                        }
+                    }
+                    if let raw = place.ratesUrl, let url = URL(string: raw) {
+                        Link(destination: url) { PlaceChip(label: "See Rates", icon: "dollarsign.circle") }
+                    }
                     if let raw = place.menuUrl, let url = URL(string: raw) {
                         Link(destination: url) { PlaceChip(label: "Menu", icon: "list.bullet") }
-                    }
-                    if let raw = place.orderUrl, let url = URL(string: raw) {
-                        let isGolf = place.category == .golf
-                        Link(destination: url) {
-                            PlaceChip(
-                                label: isGolf ? "Tee Times" : "Order",
-                                icon:  isGolf ? "calendar"  : "cart"
-                            )
-                        }
                     }
                     if let phone = place.phone, let url = URL(string: "tel:\(phone)") {
                         Link(destination: url) { PlaceChip(label: "Call", icon: "phone") }
                     }
                     if let raw = place.website, let url = URL(string: raw) {
                         Link(destination: url) { PlaceChip(label: "Website", icon: "safari") }
+                    }
+                    if let address = place.address {
+                        Button {
+                            MapsHelper.directions(toAddress: "\(place.name), \(address)")
+                        } label: {
+                            PlaceChip(label: "Directions", icon: "map")
+                        }
+                        .buttonStyle(.plain)
                     }
                 }
             }
