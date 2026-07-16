@@ -245,6 +245,20 @@ struct CalloutComposerView: View {
                     .font(.mlrScaled(12))
             }
 
+            // Reminders — only for a saved callout (needs a real id to attach to).
+            if let existing {
+                Section {
+                    ReminderScheduler(
+                        sourceType: "callout",
+                        sourceId: existing.id,
+                        sourceLabel: title.isEmpty ? "callout" : title,
+                        anchor: hasDeadline ? ReminderAnchor(date: deadlineDate, hasTime: true) : nil
+                    )
+                    .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                    .listRowBackground(Color.clear)
+                }
+            }
+
             if let saveError {
                 Section {
                     Text(saveError)

@@ -183,6 +183,7 @@
 		D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */; };
 		D3F9D889300947FA006874DA /* PickMyRoomSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */; };
 		D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88A300948A5006874DA /* PreviewAsView.swift */; };
+		D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88C30094A70006874DA /* ReminderScheduler.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -370,6 +371,7 @@
 		D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyCommitteeAreasSheet.swift; sourceTree = "<group>"; };
 		D3F9D888300947FA006874DA /* PickMyRoomSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PickMyRoomSheet.swift; sourceTree = "<group>"; };
 		D3F9D88A300948A5006874DA /* PreviewAsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewAsView.swift; sourceTree = "<group>"; };
+		D3F9D88C30094A70006874DA /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -596,6 +598,7 @@
 				D33F9E242FEC086700603CE7 /* SkeletonView.swift */,
 				D33F9E252FEC086700603CE7 /* WelcomeCard.swift */,
 				D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */,
+				D3F9D88C30094A70006874DA /* ReminderScheduler.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -985,6 +988,7 @@
 				D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */,
 				D3A0000000000000000000B1 /* HouseStay.swift in Sources */,
 				D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */,
+				D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */,
 				D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */,
 				D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */,
 				D3A0000000000000000000B5 /* HouseHubView.swift in Sources */,
