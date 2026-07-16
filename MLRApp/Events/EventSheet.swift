@@ -28,6 +28,7 @@ struct EventSheet: View {
     @State private var dayStatuses: [String: AttendanceStatus] = [:]
     @State private var isSaving = false
     @State private var attendees: [Profile] = []
+    @State private var dayAttendees: [FestAttendee] = []   // per-day roster (day_rsvp events)
     @State private var loadingAttendees = true
     @State private var showEditor = false
     @State private var showDeleteConfirm = false
@@ -373,9 +374,42 @@ struct EventSheet: View {
                     .font(.mlrCaption)
                     .foregroundStyle(Color.mlrTextMuted)
             }
+
+            // Per-day breakdown for day-RSVP events.
+            if event.dayRsvp && !dayAttendees.isEmpty {
+                perDayRoster
+            }
         }
         .padding(16)
         .cardStyle()
+    }
+
+    @ViewBuilder
+    private var perDayRoster: some View {
+        Divider().padding(.vertical, 2)
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(event.dayLabels, id: \.self) { day in
+                let names = dayAttendees
+                    .filter { $0.goingDays(allDays: event.dayLabels).contains(day) }
+                    .map { $0.profile.name }
+                HStack(alignment: .top, spacing: 8) {
+                    Text(day)
+                        .font(.mlrScaled(12, weight: .semibold))
+                        .foregroundStyle(Color.mlrText)
+                        .frame(width: 82, alignment: .leading)
+                    Text(names.isEmpty ? "—" : names.joined(separator: ", "))
+                        .font(.mlrScaled(12))
+                        .foregroundStyle(names.isEmpty ? Color.mlrTextSubtle : Color.mlrTextMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                    Spacer(minLength: 0)
+                    if !names.isEmpty {
+                        Text("\(names.count)")
+                            .font(.mlrScaled(11, weight: .bold))
+                            .foregroundStyle(Color.mlrSuccess)
+                    }
+                }
+            }
+        }
     }
 
     // MARK: - Admin
@@ -422,6 +456,10 @@ struct EventSheet: View {
             attendees = try await env.eventsService.fetchWhoIsGoing(eventId: event.id)
         } catch {
             print("[EventSheet] whoIsGoing error: \(error)")
+        }
+        // Per-day roster for day-RSVP events (Family Fest week, etc.).
+        if event.dayRsvp {
+            dayAttendees = await env.eventsService.fetchAttendeesWithDays(eventId: event.id)
         }
         loadingAttendees = false
     }
