@@ -35,7 +35,7 @@ struct FestDuesCalculator: View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Use +/- for how many you're paying for — the total fills in below.")
                 .font(.mlrScaled(11))
-                .foregroundStyle(Color.mlrFest.opacity(0.55))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                 .padding(.bottom, 4)
 
             // Flat tiers
@@ -49,10 +49,10 @@ struct FestDuesCalculator: View {
                 Divider().background(Color.mlrFest.opacity(0.12)).padding(.vertical, 6)
                 Text("Paying by the day?")
                     .font(.mlrScaled(12, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.7))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.75))
                 Text("Only for someone not staying the whole week. Set the days once — it applies to everyone below.")
                     .font(.mlrScaled(11))
-                    .foregroundStyle(Color.mlrFest.opacity(0.5))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 6)
                 HStack {
@@ -73,7 +73,7 @@ struct FestDuesCalculator: View {
             // Running total
             if anySelected || total > 0 {
                 HStack {
-                    Text("Your total").font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrFest.opacity(0.75))
+                    Text("Your total").font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrFestInk.opacity(0.8))
                     Spacer()
                     Text("$\(total)").font(.festSerif(18, weight: .bold)).foregroundStyle(Color.mlrFest)
                 }
@@ -84,7 +84,7 @@ struct FestDuesCalculator: View {
 
                 Button("Reset") { reset() }
                     .font(.mlrScaled(12, weight: .medium))
-                    .foregroundStyle(Color.mlrFest.opacity(0.55))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                     .frame(maxWidth: .infinity)
                     .padding(.top, 6)
             }
@@ -100,11 +100,11 @@ struct FestDuesCalculator: View {
             VStack(alignment: .leading, spacing: 1) {
                 Text(tier.label).font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrFest)
                 if let note = tier.note, !note.isEmpty {
-                    Text(note).font(.mlrScaled(11)).foregroundStyle(Color.mlrFest.opacity(0.55))
+                    Text(note).font(.mlrScaled(11)).foregroundStyle(Color.mlrFestInk.opacity(0.6))
                 }
                 Text(tier.amount.map { "$\($0)\(perDaySuffix ? "/day" : "")" } ?? "TBD")
                     .font(.mlrScaled(12, weight: .bold))
-                    .foregroundStyle(tier.amount == nil ? Color.mlrFest.opacity(0.5) : Color.mlrFest)
+                    .foregroundStyle(tier.amount == nil ? Color.mlrFestInk.opacity(0.6) : Color.mlrFest)
             }
             Spacer()
             if tier.amount != nil {

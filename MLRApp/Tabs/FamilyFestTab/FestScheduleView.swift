@@ -127,7 +127,7 @@ private struct ScheduleRow: View {
             // Time column
             Text(MLRFormat.time(item.time))
                 .font(.mlrScaled(12, weight: .medium, design: .monospaced))
-                .foregroundStyle(Color.mlrFest.opacity(0.6))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                 .frame(width: 62, alignment: .leading)
                 .padding(.top, 1)
 
@@ -142,7 +142,7 @@ private struct ScheduleRow: View {
                     if isSignedIn {
                         Label(location, systemImage: "mappin.and.ellipse")
                             .font(.mlrScaled(12))
-                            .foregroundStyle(Color.mlrFest.opacity(0.6))
+                            .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                     } else {
                         Label("Sign in to see location", systemImage: "lock.fill")
                             .font(.mlrScaled(12))

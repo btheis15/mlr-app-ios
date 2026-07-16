@@ -45,10 +45,10 @@ struct FestDinnersDetailView: View {
                     HStack(spacing: 16) {
                         Label(dinner.day, systemImage: "calendar")
                             .font(.mlrScaled(14))
-                            .foregroundStyle(Color.mlrFest.opacity(0.7))
+                            .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                         Label(MLRFormat.time(dinner.time), systemImage: "clock")
                             .font(.mlrScaled(14))
-                            .foregroundStyle(Color.mlrFest.opacity(0.7))
+                            .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                     }
                 }
                 .padding(.horizontal, 20)
@@ -101,11 +101,11 @@ struct FestDinnersDetailView: View {
                         if let loc = dinner.location {
                             Text(loc)
                                 .font(.mlrScaled(15))
-                                .foregroundStyle(Color.mlrFest.opacity(0.85))
+                                .foregroundStyle(Color.mlrFestInk.opacity(0.85))
                         } else {
                             Text("TBD")
                                 .font(.mlrScaled(15))
-                                .foregroundStyle(Color.mlrFest.opacity(0.5))
+                                .foregroundStyle(Color.mlrFestInk.opacity(0.5))
                         }
                     } else {
                         ProtectedField(message: "Sign in to see location")
@@ -120,7 +120,7 @@ struct FestDinnersDetailView: View {
                         if dinner.crew.isEmpty {
                             Text("No crew assigned yet")
                                 .font(.mlrScaled(14))
-                                .foregroundStyle(Color.mlrFest.opacity(0.5))
+                                .foregroundStyle(Color.mlrFestInk.opacity(0.5))
                         } else {
                             VStack(alignment: .leading, spacing: 8) {
                                 ForEach(dinner.crew, id: \.self) { member in
