@@ -155,6 +155,16 @@ final class PostsService {
         return row.toComment
     }
 
+    /// Delete a comment (author within the edit window, or admin — enforced by
+    /// RLS). Hard delete, matching the web PostsView.
+    func deleteComment(commentId: UUID) async throws {
+        try await supabase
+            .from("post_comments")
+            .delete()
+            .eq("id", value: commentId.uuidString)
+            .execute()
+    }
+
     // MARK: - Reactions
 
     func addReaction(postId: UUID, emoji: String, userId: UUID) async throws {
