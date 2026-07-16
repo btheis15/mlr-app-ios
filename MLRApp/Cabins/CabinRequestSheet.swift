@@ -17,6 +17,7 @@ struct CabinRequestSheet: View {
     @State private var guests = 2
     @State private var note = ""
     @State private var selectedRoomIds: Set<UUID> = []
+    @State private var notSureYet = false   // skip room pick even when the cabin has rooms
     @State private var isSubmitting = false
     @State private var submitError: String?
     @State private var didSubmit = false
@@ -45,7 +46,7 @@ struct CabinRequestSheet: View {
 
     private var canSubmit: Bool {
         guard selectedCabin != nil, nightCount > 0, !isSubmitting else { return false }
-        if hasRooms { return !selectedRoomIds.isEmpty }
+        if hasRooms && !notSureYet { return !selectedRoomIds.isEmpty }
         return (selectedAvailable ?? 1) > 0
     }
 
@@ -153,25 +154,39 @@ struct CabinRequestSheet: View {
                 if hasRooms {
                     VStack(alignment: .leading, spacing: 10) {
                         SectionLabel(text: "Which room(s)?")
-                        VStack(spacing: 0) {
-                            ForEach(roomAvailability) { room in
-                                RoomPickRow(
-                                    room: room,
-                                    isSelected: selectedRoomIds.contains(room.id),
-                                    onToggle: {
-                                        if selectedRoomIds.contains(room.id) {
-                                            selectedRoomIds.remove(room.id)
-                                        } else if room.available {
-                                            selectedRoomIds.insert(room.id)
+                        if !notSureYet {
+                            VStack(spacing: 0) {
+                                ForEach(roomAvailability) { room in
+                                    RoomPickRow(
+                                        room: room,
+                                        isSelected: selectedRoomIds.contains(room.id),
+                                        onToggle: {
+                                            if selectedRoomIds.contains(room.id) {
+                                                selectedRoomIds.remove(room.id)
+                                            } else if room.available {
+                                                selectedRoomIds.insert(room.id)
+                                            }
                                         }
+                                    )
+                                    if room.id != roomAvailability.last?.id {
+                                        Divider().padding(.leading, 16)
                                     }
-                                )
-                                if room.id != roomAvailability.last?.id {
-                                    Divider().padding(.leading, 16)
                                 }
                             }
+                            .cardStyle()
                         }
-                        .cardStyle()
+
+                        // "Not sure yet" — submit without picking a room; an admin
+                        // (or you, later) can assign one. Mirrors the web flow.
+                        Toggle(isOn: $notSureYet.animation()) {
+                            Text("Not sure yet — decide my room later")
+                                .font(.mlrScaled(14))
+                                .foregroundStyle(Color.mlrText)
+                        }
+                        .tint(Color.mlrPrimary)
+                        .onChange(of: notSureYet) { _, on in
+                            if on { selectedRoomIds.removeAll() }
+                        }
                     }
                 }
 
@@ -321,7 +336,9 @@ struct CabinRequestSheet: View {
 
 // MARK: - Room Pick Row
 
-private struct RoomPickRow: View {
+/// Shared selectable room row (used by the request sheet and the admin edit
+/// sheet's room-reassignment section).
+struct RoomPickRow: View {
     let room: CabinRoomAvailability
     let isSelected: Bool
     let onToggle: () -> Void

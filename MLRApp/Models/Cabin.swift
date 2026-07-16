@@ -11,6 +11,9 @@ struct Cabin: Codable, Identifiable, Equatable {
     var maxGuests: Int?       // not in DB yet; views fall back to ?? 12
     var imageUrl: String?     // not in DB yet; always nil
     var sortOrder: Int
+    var bedCount: Int? = nil     // migration 0089
+    var notes: String? = nil     // member-facing notes (migration 0089)
+    var active: Bool = true      // archived cabins hidden from members (migration 0089)
 
     enum CodingKeys: String, CodingKey {
         case id, slug, name, description
@@ -18,6 +21,35 @@ struct Cabin: Codable, Identifiable, Equatable {
         case maxGuests = "max_guests"
         case imageUrl = "image_url"
         case sortOrder = "sort_order"
+        case bedCount = "bed_count"
+        case notes, active
+    }
+
+    // Custom decode so the extra columns degrade gracefully when a query only
+    // selects the base fields (e.g. the admin booking join builds a Cabin from a
+    // narrower projection). Present in `select("*")` reads; absent elsewhere.
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(UUID.self, forKey: .id)
+        slug = try c.decode(String.self, forKey: .slug)
+        name = try c.decode(String.self, forKey: .name)
+        description = try c.decodeIfPresent(String.self, forKey: .description)
+        roomCount = try c.decode(Int.self, forKey: .roomCount)
+        maxGuests = try c.decodeIfPresent(Int.self, forKey: .maxGuests)
+        imageUrl = try c.decodeIfPresent(String.self, forKey: .imageUrl)
+        sortOrder = try c.decode(Int.self, forKey: .sortOrder)
+        bedCount = try c.decodeIfPresent(Int.self, forKey: .bedCount)
+        notes = try c.decodeIfPresent(String.self, forKey: .notes)
+        active = try c.decodeIfPresent(Bool.self, forKey: .active) ?? true
+    }
+
+    // Memberwise init retained (custom `init(from:)` suppresses synthesis).
+    init(id: UUID, slug: String, name: String, description: String? = nil,
+         roomCount: Int, maxGuests: Int? = nil, imageUrl: String? = nil,
+         sortOrder: Int, bedCount: Int? = nil, notes: String? = nil, active: Bool = true) {
+        self.id = id; self.slug = slug; self.name = name; self.description = description
+        self.roomCount = roomCount; self.maxGuests = maxGuests; self.imageUrl = imageUrl
+        self.sortOrder = sortOrder; self.bedCount = bedCount; self.notes = notes; self.active = active
     }
 }
 
@@ -118,6 +150,15 @@ private let isoFormatter: DateFormatter = {
     f.dateFormat = "yyyy-MM-dd"
     return f
 }()
+
+// MARK: - Booked room link (cabin_booking_rooms join)
+
+/// A room a booking currently reserves (id + display name), from the
+/// cabin_booking_rooms join. Used to show/edit assigned rooms.
+struct BookedRoom: Identifiable, Equatable {
+    let id: UUID
+    let name: String
+}
 
 // MARK: - Cabin Room (migration 0092)
 

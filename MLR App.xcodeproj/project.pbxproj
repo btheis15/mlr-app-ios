@@ -175,6 +175,7 @@
 		D3F9D876300710BC006874DA /* PollsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D875300710BC006874DA /* PollsView.swift */; };
 		D3F9D8783007189A006874DA /* FestInlineEditSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */; };
 		D3F9D87B30091A65006874DA /* FestDecor.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87A30091A65006874DA /* FestDecor.swift */; };
+		D3F9D87D300934F0006874DA /* AdminCabinDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXCopyFilesBuildPhase section */
@@ -354,6 +355,7 @@
 		D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestInlineEditSheets.swift; sourceTree = "<group>"; };
 		D3F9D879300918B1006874DA /* MLR-App-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = "MLR-App-Info.plist"; sourceTree = "<group>"; };
 		D3F9D87A30091A65006874DA /* FestDecor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDecor.swift; sourceTree = "<group>"; };
+		D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCabinDetails.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -426,6 +428,7 @@
 				D33F9DE92FEC086700603CE7 /* CabinBookingsView.swift */,
 				D33F9DEA2FEC086700603CE7 /* CabinRequestSheet.swift */,
 				D3F9D87030071059006874DA /* EditCabinBookingSheet.swift */,
+				D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */,
 			);
 			path = Cabins;
 			sourceTree = "<group>";
@@ -1005,6 +1008,7 @@
 				D36347582FFDE088001D52C8 /* CommitteeActionIntents.swift in Sources */,
 				D3F9D86F30071027006874DA /* Poll.swift in Sources */,
 				D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */,
+				D3F9D87D300934F0006874DA /* AdminCabinDetails.swift in Sources */,
 				D33F9EA02FEC086700603CE7 /* AdminNotificationComposer.swift in Sources */,
 				D3F9D8633006C1B3006874DA /* HomeCalloutsStack.swift in Sources */,
 				D33F9EA22FEC086700603CE7 /* NotifPrefsView.swift in Sources */,

@@ -100,6 +100,13 @@ struct AdminView: View {
                     title: "Cabin Bookings",
                     description: "Approve or deny cabin stay requests"
                 )
+                adminLink(
+                    destination: AdminCabinDetails(),
+                    icon: "house.lodge",
+                    iconColor: Color.mlrPrimary,
+                    title: "Cabins",
+                    description: "Edit cabins, rooms, beds, and availability"
+                )
             }
 
             Section("Tools") {
