@@ -1,9 +1,8 @@
-// MLRCore — shared model + service layer for the MLR iOS and watchOS apps.
+// MLRCore — shared, UIKit-free core for the MLR iOS app.
 //
-// This package holds UIKit-free code shared across targets: the Supabase client,
-// Codable models, and networking services. UI (SwiftUI views) stays in each app
-// target. Files are moved here incrementally from MLRApp/ during the watch-app
-// extraction; this placeholder keeps the package valid until the first move.
+// Holds the Supabase client (see MLRSupabase.swift) so the app gets it via
+// `@_exported import MLRCore`. (Originally seeded for a watchOS companion, which
+// has been deferred to a later version; kept as the app's Supabase client home.)
 
 import Foundation
 

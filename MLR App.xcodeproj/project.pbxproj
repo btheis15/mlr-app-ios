@@ -7,10 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		D31B3482300A89D600A0D653 /* MLR App WatchOS Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = D31B3478300A89D400A0D653 /* MLR App WatchOS Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D31B348F300AB8E800A0D653 /* MLRCore in Frameworks */ = {isa = PBXBuildFile; productRef = D31B348E300AB8E800A0D653 /* MLRCore */; };
-		D31B3491300AB93800A0D653 /* MLRCore in Frameworks */ = {isa = PBXBuildFile; productRef = D31B3490300AB93800A0D653 /* MLRCore */; };
-		D31B3496300ABBC400A0D653 /* PhoneWatchSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B3495300ABBC400A0D653 /* PhoneWatchSync.swift */; };
 		D31B34B5300AC9CA00A0D653 /* CommitteeTaxonomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
@@ -198,23 +195,12 @@
 		D3F9D89B3009870A006874DA /* AdminMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D89A3009870A006874DA /* AdminMembersView.swift */; };
 /* End PBXBuildFile section */
 
-/* Begin PBXContainerItemProxy section */
-		D31B3480300A89D600A0D653 /* PBXContainerItemProxy */ = {
-			isa = PBXContainerItemProxy;
-			containerPortal = 000000000000000000000000 /* Project object */;
-			proxyType = 1;
-			remoteGlobalIDString = D31B3477300A89D400A0D653;
-			remoteInfo = "MLR App WatchOS Watch App";
-		};
-/* End PBXContainerItemProxy section */
-
 /* Begin PBXCopyFilesBuildPhase section */
 		D31B3483300A89D600A0D653 /* Embed Watch Content */ = {
 			isa = PBXCopyFilesBuildPhase;
 			dstPath = "$(CONTENTS_FOLDER_PATH)/Watch";
 			dstSubfolder = Product;
 			files = (
-				D31B3482300A89D600A0D653 /* MLR App WatchOS Watch App.app in Embed Watch Content */,
 			);
 			name = "Embed Watch Content";
 		};
@@ -230,8 +216,6 @@
 
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* MLR App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MLR App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		D31B3478300A89D400A0D653 /* MLR App WatchOS Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MLR App WatchOS Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		D31B3495300ABBC400A0D653 /* PhoneWatchSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneWatchSync.swift; sourceTree = "<group>"; };
 		D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeTaxonomy.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
@@ -415,14 +399,6 @@
 		D3F9D89A3009870A006874DA /* AdminMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminMembersView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
-/* Begin PBXFileSystemSynchronizedRootGroup section */
-		D31B3479300A89D400A0D653 /* MLR App WatchOS Watch App */ = {
-			isa = PBXFileSystemSynchronizedRootGroup;
-			path = "MLR App WatchOS Watch App";
-			sourceTree = "<group>";
-		};
-/* End PBXFileSystemSynchronizedRootGroup section */
-
 /* Begin PBXFrameworksBuildPhase section */
 		000000000000000130000000 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -438,12 +414,6 @@
 				D3533C112FE9EC60001AD887 /* Realtime in Frameworks */,
 			);
 		};
-		D31B3475300A89D400A0D653 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			files = (
-				D31B3491300AB93800A0D653 /* MLRCore in Frameworks */,
-			);
-		};
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
@@ -456,7 +426,6 @@
 				D3F9D879300918B1006874DA /* MLR-App-Info.plist */,
 				D33F9EC92FEC184500603CE7 /* AppGroup */,
 				D33F9E5B2FEC086700603CE7 /* MLRApp */,
-				D31B3479300A89D400A0D653 /* MLR App WatchOS Watch App */,
 				D33F9EF22FF5BD4E00603CE7 /* Frameworks */,
 				000000000000000000000020 /* Products */,
 			);
@@ -466,7 +435,6 @@
 			isa = PBXGroup;
 			children = (
 				000000000000000000000120 /* MLR App.app */,
-				D31B3478300A89D400A0D653 /* MLR App WatchOS Watch App.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -485,7 +453,6 @@
 				D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */,
 				D33F9DE22FEC086700603CE7 /* MLRApp.swift */,
 				D33F9DE32FEC086700603CE7 /* RootView.swift */,
-				D31B3495300ABBC400A0D653 /* PhoneWatchSync.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -925,9 +892,6 @@
 			);
 			buildRules = (
 			);
-			dependencies = (
-				D31B3481300A89D600A0D653 /* PBXTargetDependency */,
-			);
 			name = "MLR App";
 			packageProductDependencies = (
 				D3533C0A2FE9EC60001AD887 /* Auth */,
@@ -943,27 +907,6 @@
 			productReference = 000000000000000000000120 /* MLR App.app */;
 			productType = "com.apple.product-type.application";
 		};
-		D31B3477300A89D400A0D653 /* MLR App WatchOS Watch App */ = {
-			isa = PBXNativeTarget;
-			buildConfigurationList = D31B3486300A89D600A0D653 /* Build configuration list for PBXNativeTarget "MLR App WatchOS Watch App" */;
-			buildPhases = (
-				D31B3474300A89D400A0D653 /* Sources */,
-				D31B3475300A89D400A0D653 /* Frameworks */,
-				D31B3476300A89D400A0D653 /* Resources */,
-			);
-			buildRules = (
-			);
-			fileSystemSynchronizedGroups = (
-				D31B3479300A89D400A0D653 /* MLR App WatchOS Watch App */,
-			);
-			name = "MLR App WatchOS Watch App";
-			packageProductDependencies = (
-				D31B3490300AB93800A0D653 /* MLRCore */,
-			);
-			productName = "MLR App WatchOS Watch App";
-			productReference = D31B3478300A89D400A0D653 /* MLR App WatchOS Watch App.app */;
-			productType = "com.apple.product-type.application";
-		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
@@ -976,9 +919,6 @@
 				TargetAttributes = {
 					000000000000000100000000 = {
 						CreatedOnToolsVersion = 26.3;
-					};
-					D31B3477300A89D400A0D653 = {
-						CreatedOnToolsVersion = 27.0;
 					};
 				};
 			};
@@ -1002,7 +942,6 @@
 			projectRoot = "";
 			targets = (
 				000000000000000100000000 /* MLR App */,
-				D31B3477300A89D400A0D653 /* MLR App WatchOS Watch App */,
 			);
 		};
 /* End PBXProject section */
@@ -1016,11 +955,6 @@
 				D3F9D8973009822D006874DA /* Cinzel-Regular.ttf in Resources */,
 				D3F9D8983009822D006874DA /* Yellowtail-Regular.ttf in Resources */,
 				D3F9D8993009822D006874DA /* Cinzel-Bold.ttf in Resources */,
-			);
-		};
-		D31B3476300A89D400A0D653 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			files = (
 			);
 		};
 /* End PBXResourcesBuildPhase section */
@@ -1046,7 +980,6 @@
 				D33F9ED02FF3170900603CE7 /* WorkItem.swift in Sources */,
 				D33F9E612FEC086700603CE7 /* WelcomeIntroView.swift in Sources */,
 				D33F9E622FEC086700603CE7 /* EventsService.swift in Sources */,
-				D31B3496300ABBC400A0D653 /* PhoneWatchSync.swift in Sources */,
 				D33F9E632FEC086700603CE7 /* Cabin.swift in Sources */,
 				D33F9E642FEC086700603CE7 /* Typography.swift in Sources */,
 				D33F9E652FEC086700603CE7 /* AnnouncementBanner.swift in Sources */,
@@ -1204,20 +1137,7 @@
 				D36347562FFDDFA5001D52C8 /* ContentIndexer.swift in Sources */,
 			);
 		};
-		D31B3474300A89D400A0D653 /* Sources */ = {
-			isa = PBXSourcesBuildPhase;
-			files = (
-			);
-		};
 /* End PBXSourcesBuildPhase section */
-
-/* Begin PBXTargetDependency section */
-		D31B3481300A89D600A0D653 /* PBXTargetDependency */ = {
-			isa = PBXTargetDependency;
-			target = D31B3477300A89D400A0D653 /* MLR App WatchOS Watch App */;
-			targetProxy = D31B3480300A89D600A0D653 /* PBXContainerItemProxy */;
-		};
-/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		000000000000000011000000 /* Debug configuration for PBXProject "MLR App" */ = {
@@ -1474,77 +1394,6 @@
 			};
 			name = Release;
 		};
-		D31B3484300A89D600A0D653 /* Debug configuration for PBXNativeTarget "MLR App WatchOS Watch App" */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "MLR App WatchOS Watch App/MLR App WatchOS Watch App.entitlements";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = UBM722BP54;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "MLR App WatchOS";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.muskellungelakeresort.mlr;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.6;
-				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				WATCHOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_WATCHOS_DEPLOYMENT_TARGET)";
-			};
-			name = Debug;
-		};
-		D31B3485300A89D600A0D653 /* Release configuration for PBXNativeTarget "MLR App WatchOS Watch App" */ = {
-			isa = XCBuildConfiguration;
-			buildSettings = {
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CODE_SIGN_ENTITLEMENTS = "MLR App WatchOS Watch App/MLR App WatchOS Watch App.entitlements";
-				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
-				DEVELOPMENT_TEAM = UBM722BP54;
-				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_CFBundleDisplayName = "MLR App WatchOS";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
-				INFOPLIST_KEY_WKCompanionAppBundleIdentifier = com.muskellungelakeresort.mlr;
-				LD_RUNPATH_SEARCH_PATHS = (
-					"$(inherited)",
-					"@executable_path/Frameworks",
-				);
-				MARKETING_VERSION = 1.6;
-				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr.watchkitapp;
-				PRODUCT_NAME = "$(TARGET_NAME)";
-				REGISTER_APP_GROUPS = YES;
-				SDKROOT = watchos;
-				SKIP_INSTALL = YES;
-				STRING_CATALOG_GENERATE_SYMBOLS = YES;
-				SWIFT_APPROACHABLE_CONCURRENCY = YES;
-				SWIFT_DEFAULT_ACTOR_ISOLATION = MainActor;
-				SWIFT_EMIT_LOC_STRINGS = YES;
-				SWIFT_UPCOMING_FEATURE_MEMBER_IMPORT_VISIBILITY = YES;
-				SWIFT_VERSION = 5.0;
-				TARGETED_DEVICE_FAMILY = 4;
-				VALIDATE_PRODUCT = YES;
-				WATCHOS_DEPLOYMENT_TARGET = "$(RECOMMENDED_WATCHOS_DEPLOYMENT_TARGET)";
-			};
-			name = Release;
-		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -1561,14 +1410,6 @@
 			buildConfigurations = (
 				000000000000000111000000 /* Debug configuration for PBXNativeTarget "MLR App" */,
 				000000000000000112000000 /* Release configuration for PBXNativeTarget "MLR App" */,
-			);
-			defaultConfigurationName = Release;
-		};
-		D31B3486300A89D600A0D653 /* Build configuration list for PBXNativeTarget "MLR App WatchOS Watch App" */ = {
-			isa = XCConfigurationList;
-			buildConfigurations = (
-				D31B3484300A89D600A0D653 /* Debug configuration for PBXNativeTarget "MLR App WatchOS Watch App" */,
-				D31B3485300A89D600A0D653 /* Release configuration for PBXNativeTarget "MLR App WatchOS Watch App" */,
 			);
 			defaultConfigurationName = Release;
 		};
@@ -1603,11 +1444,6 @@
 /* Begin XCSwiftPackageProductDependency section */
 		D31B348E300AB8E800A0D653 /* MLRCore */ = {
 			isa = XCSwiftPackageProductDependency;
-			productName = MLRCore;
-		};
-		D31B3490300AB93800A0D653 /* MLRCore */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = D31B348D300AB8E800A0D653 /* XCLocalSwiftPackageReference "MLRCore" */;
 			productName = MLRCore;
 		};
 		D3533C0A2FE9EC60001AD887 /* Auth */ = {

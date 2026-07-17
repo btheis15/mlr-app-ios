@@ -3,14 +3,11 @@ import Foundation
 // API (SupabaseClient, auth, PostgREST, realtime) without a separate import.
 @_exported import Supabase
 
-// MARK: - Supabase client (shared by the iOS app + watch app)
+// MARK: - Supabase client
 //
-// Both are client-safe public values — the key is designed to ship in apps; RLS
-// gates all data access. Same values as NEXT_PUBLIC_SUPABASE_URL +
+// Client-safe public values — the key is designed to ship in apps; RLS gates all
+// data access. Same values as NEXT_PUBLIC_SUPABASE_URL +
 // NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in the web app's Vercel env.
-//
-// The watch app doesn't sign in on-device; it receives the session tokens from
-// the paired iPhone (WatchConnectivity) and calls `supabase.auth.setSession(...)`.
 
 private enum SupabaseConfig {
     static let url    = "https://vrksrpzlslrcjvbzchfg.supabase.co"
