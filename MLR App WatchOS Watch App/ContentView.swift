@@ -61,7 +61,10 @@ private extension Color {
 // MARK: - Home
 
 struct ContentView: View {
+    @Environment(WatchRouter.self) private var router
+
     var body: some View {
+        @Bindable var router = router
         NavigationStack {
             List {
                 Section {
@@ -78,6 +81,12 @@ struct ContentView: View {
                 }
             }
             .navigationTitle("MLR")
+            // A tapped (forwarded) notification routes here via WatchRouter.
+            .navigationDestination(item: $router.route) { route in
+                switch route {
+                case .work: WatchWorkItemsView()
+                }
+            }
         }
     }
 }
@@ -138,4 +147,5 @@ private struct FestCountdownCard: View {
 #Preview {
     ContentView()
         .environment(WatchSessionReceiver.shared)
+        .environment(WatchRouter.shared)
 }

@@ -11,12 +11,18 @@ struct MLR_App_WatchOS_Watch_AppApp: App {
     // so the watch can make authenticated queries. Shared into the environment
     // for the data screens (chats / fest / work) to gate on `isAuthed`.
     @State private var session = WatchSessionReceiver.shared
+    @State private var router = WatchRouter.shared
 
     var body: some Scene {
         WindowGroup {
             ContentView()
                 .environment(session)
-                .task { session.activate() }
+                .environment(router)
+                .task {
+                    session.activate()
+                    // Route taps on forwarded notifications into the watch app.
+                    WatchNotificationController.shared.activate()
+                }
         }
     }
 }
