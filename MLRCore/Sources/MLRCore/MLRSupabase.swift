@@ -1,5 +1,7 @@
 import Foundation
-import Supabase
+// Re-export Supabase so anything that `import MLRCore`s also gets the Supabase
+// API (SupabaseClient, auth, PostgREST, realtime) without a separate import.
+@_exported import Supabase
 
 // MARK: - Supabase client (shared by the iOS app + watch app)
 //

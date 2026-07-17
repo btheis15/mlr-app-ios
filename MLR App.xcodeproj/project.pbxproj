@@ -10,6 +10,7 @@
 		D31B3482300A89D600A0D653 /* MLR App WatchOS Watch App.app in Embed Watch Content */ = {isa = PBXBuildFile; fileRef = D31B3478300A89D400A0D653 /* MLR App WatchOS Watch App.app */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		D31B348F300AB8E800A0D653 /* MLRCore in Frameworks */ = {isa = PBXBuildFile; productRef = D31B348E300AB8E800A0D653 /* MLRCore */; };
 		D31B3491300AB93800A0D653 /* MLRCore in Frameworks */ = {isa = PBXBuildFile; productRef = D31B3490300AB93800A0D653 /* MLRCore */; };
+		D31B3496300ABBC400A0D653 /* PhoneWatchSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B3495300ABBC400A0D653 /* PhoneWatchSync.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -229,6 +230,7 @@
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* MLR App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MLR App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D31B3478300A89D400A0D653 /* MLR App WatchOS Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MLR App WatchOS Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		D31B3495300ABBC400A0D653 /* PhoneWatchSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneWatchSync.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -481,6 +483,7 @@
 				D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */,
 				D33F9DE22FEC086700603CE7 /* MLRApp.swift */,
 				D33F9DE32FEC086700603CE7 /* RootView.swift */,
+				D31B3495300ABBC400A0D653 /* PhoneWatchSync.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -1040,6 +1043,7 @@
 				D33F9ED02FF3170900603CE7 /* WorkItem.swift in Sources */,
 				D33F9E612FEC086700603CE7 /* WelcomeIntroView.swift in Sources */,
 				D33F9E622FEC086700603CE7 /* EventsService.swift in Sources */,
+				D31B3496300ABBC400A0D653 /* PhoneWatchSync.swift in Sources */,
 				D33F9E632FEC086700603CE7 /* Cabin.swift in Sources */,
 				D33F9E642FEC086700603CE7 /* Typography.swift in Sources */,
 				D33F9E652FEC086700603CE7 /* AnnouncementBanner.swift in Sources */,

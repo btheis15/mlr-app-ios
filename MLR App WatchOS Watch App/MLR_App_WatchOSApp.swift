@@ -2,16 +2,21 @@
 //  MLR_App_WatchOSApp.swift
 //  MLR App WatchOS Watch App
 //
-//  Created by Brian Theis on 7/17/26.
-//
 
 import SwiftUI
 
 @main
 struct MLR_App_WatchOS_Watch_AppApp: App {
+    // Receives the Supabase session pushed from the paired iPhone and applies it
+    // so the watch can make authenticated queries. Shared into the environment
+    // for the data screens (chats / fest / work) to gate on `isAuthed`.
+    @State private var session = WatchSessionReceiver.shared
+
     var body: some Scene {
         WindowGroup {
             ContentView()
+                .environment(session)
+                .task { session.activate() }
         }
     }
 }
