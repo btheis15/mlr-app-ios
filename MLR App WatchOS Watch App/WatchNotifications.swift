@@ -25,9 +25,14 @@ final class WatchNotificationController: NSObject {
     private func route(for userInfo: [AnyHashable: Any]) -> WatchRoute? {
         guard let target = userInfo["target_type"] as? String else { return nil }
         switch target {
-        case "work_item", "work": return .work
-        // Chats / Fest routes are added as those screens land.
-        default: return nil
+        case "work_item", "work":
+            return .work
+        case "committee", "committee_message", "committee_join_request",
+             "house", "house_message", "chat_mention", "post":
+            return .chats
+        // Fest route added when that screen lands.
+        default:
+            return nil
         }
     }
 }

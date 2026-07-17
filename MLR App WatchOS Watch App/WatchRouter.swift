@@ -10,7 +10,7 @@ import Foundation
 
 enum WatchRoute: Hashable {
     case work
-    // case chats(String)   // added when the Chats screen lands
+    case chats
     // case fest            // added when the Fest schedule screen lands
 }
 

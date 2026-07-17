@@ -74,17 +74,21 @@ struct ContentView: View {
                     .listRowBackground(Color.clear)
                 }
                 Section("Family") {
+                    NavigationLink { WatchChatsListView() } label: {
+                        Label("Chats", systemImage: "bubble.left.and.bubble.right.fill")
+                    }
                     NavigationLink { WatchWorkItemsView() } label: {
                         Label("Work Items", systemImage: "checklist")
                     }
-                    // Chats + Family Fest schedule land here next.
+                    // Family Fest schedule lands here next.
                 }
             }
             .navigationTitle("MLR")
             // A tapped (forwarded) notification routes here via WatchRouter.
             .navigationDestination(item: $router.route) { route in
                 switch route {
-                case .work: WatchWorkItemsView()
+                case .work:  WatchWorkItemsView()
+                case .chats: WatchChatsListView()
                 }
             }
         }
