@@ -1,14 +1,12 @@
 // swift-tools-version: 6.0
 import PackageDescription
 
-// MLRCore — shared model + service layer used by BOTH the iOS app and the
-// watchOS app. Contains the Supabase client, the Codable models, and the
-// networking services (no UIKit/SwiftUI). UI stays in each app target.
+// MLRCore — shared, UIKit-free core for the MLR iOS app. Holds the Supabase
+// client (a watchOS companion was deferred to a later version).
 let package = Package(
     name: "MLRCore",
     platforms: [
         .iOS(.v18),
-        .watchOS(.v10),
     ],
     products: [
         .library(name: "MLRCore", targets: ["MLRCore"]),

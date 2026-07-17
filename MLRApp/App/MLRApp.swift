@@ -39,11 +39,9 @@ struct MLRApp: App {
                         .displayFrequency(.immediate),
                         .datastoreLocation(.applicationDefault),
                     ])
-                    PhoneWatchSync.shared.activate()
                     await env.authService.restoreSession()
                     if env.authService.isSignedIn {
                         await env.loadProfile()
-                        await PhoneWatchSync.shared.pushSession()
                         // Re-register on launch when already authorized so the token
                         // is refreshed/issued; the AppDelegate callback saves it.
                         await env.pushService.registerIfAuthorized()
@@ -65,12 +63,10 @@ struct MLRApp: App {
                             await env.startNotificationsRealtime()
                             await ContentIndexer.reindexAll()
                             await ContentIndexer.publishWidgetSnapshots()
-                            await PhoneWatchSync.shared.pushSession()
                         }
                     } else {
                         // Signed out — pull all content back out of the index.
                         ContentIndexer.clear()
-                        PhoneWatchSync.shared.clear()
                     }
                 }
                 // The APNs token arrives asynchronously after registration — save

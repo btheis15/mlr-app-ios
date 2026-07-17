@@ -1,9 +1,8 @@
 import Foundation
 import Supabase
 // Re-export MLRCore app-wide so every file sees the shared `supabase` client
-// (and, as they migrate over, the shared models/services) without a per-file
-// `import MLRCore`. The Supabase client now lives in the MLRCore package so the
-// watch app can share it.
+// without a per-file `import MLRCore`. The Supabase client lives in the MLRCore
+// package.
 @_exported import MLRCore
 
 // MARK: - App Environment
