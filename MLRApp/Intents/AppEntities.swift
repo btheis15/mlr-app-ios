@@ -5,12 +5,13 @@ import AppIntents
 // Lightweight entity mirrors of the app's core content so Siri, the Shortcuts
 // app, and intent parameters can refer to real work items, events, committees,
 // and houses. Queries read via the app's Supabase session (intents run in the
-// app's process). Conforming to IndexedEntity makes them discoverable by
-// Spotlight / Apple Intelligence.
+// app's process). Spotlight discoverability comes from the hand-built
+// CSSearchableItems in ContentIndexer (IndexedEntity/associateAppEntity was
+// dropped — its default witnesses require iOS 26 and crashed on older OSes).
 
 // MARK: Work item
 
-struct WorkItemEntity: AppEntity, IndexedEntity {
+struct WorkItemEntity: AppEntity {
     let id: UUID
     let title: String
     let subtitle: String
@@ -45,7 +46,7 @@ struct WorkItemEntityQuery: EntityQuery {
 
 // MARK: Event
 
-struct EventEntity: AppEntity, IndexedEntity {
+struct EventEntity: AppEntity {
     let id: String
     let title: String
     let subtitle: String
@@ -81,7 +82,7 @@ struct EventEntityQuery: EntityStringQuery {
 
 // MARK: Committee
 
-struct CommitteeEntity: AppEntity, IndexedEntity {
+struct CommitteeEntity: AppEntity {
     let id: String       // committee slug
     let name: String
     let emoji: String
@@ -121,7 +122,7 @@ struct CommitteeEntityQuery: EntityStringQuery {
 
 // MARK: House
 
-struct HouseEntity: AppEntity, IndexedEntity {
+struct HouseEntity: AppEntity {
     let id: String       // house slug
     let name: String
     let emoji: String

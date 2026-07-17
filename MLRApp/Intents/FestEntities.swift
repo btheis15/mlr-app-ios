@@ -5,12 +5,12 @@ import Foundation
 //
 // Entity mirrors for Family Fest dinners + schedule and for family members, so
 // Apple Intelligence can resolve references like "the Monday dinner" or a person
-// by name ("Jessica") and intents can answer questions about them. Conforming to
-// IndexedEntity makes them discoverable in Spotlight's semantic index.
+// by name ("Jessica") and intents can answer questions about them.
+// (IndexedEntity was dropped — its default witnesses require iOS 26.)
 
 // MARK: Family Fest dinner
 
-struct FestDinnerEntity: AppEntity, IndexedEntity {
+struct FestDinnerEntity: AppEntity {
     let id: String
     let title: String
     let subtitle: String
@@ -44,7 +44,7 @@ struct FestDinnerEntityQuery: EntityQuery {
 
 // MARK: Family Fest schedule item
 
-struct FestScheduleEntity: AppEntity, IndexedEntity {
+struct FestScheduleEntity: AppEntity {
     let id: String
     let title: String
     let subtitle: String
@@ -78,7 +78,7 @@ struct FestScheduleEntityQuery: EntityQuery {
 
 // MARK: Member (resolvable by name for "when is Jessica's birthday")
 
-struct MemberEntity: AppEntity, IndexedEntity {
+struct MemberEntity: AppEntity {
     let id: UUID
     let name: String
     let birthday: String?
