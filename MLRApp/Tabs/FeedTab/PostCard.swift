@@ -137,26 +137,36 @@ struct PostCard: View {
     private var mediaContent: some View {
         let urls = post.mediaUrls
         if urls.count > 1 {
+            // Square (1:1) carousel — mirrors the web MediaGrid so portrait and
+            // landscape items share one uniform frame instead of a wide box.
             TabView {
                 ForEach(Array(urls.enumerated()), id: \.offset) { idx, url in
                     mediaThumb(url: url, index: idx)
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
-            .frame(height: 240)
+            .frame(maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let first = urls.first {
             mediaThumb(url: first, index: 0)
         }
     }
 
     // MARK: - Post media thumbnail (image or video poster) → tap opens the lightbox
+    //
+    // Uniform SQUARE frame (matches the web): a portrait photo center-crops to a
+    // square (still reads upright — tap for the full image in the lightbox)
+    // rather than being squeezed into a wide landscape slice. Videos sit on
+    // black so they're never cropped.
 
     @ViewBuilder
     private func mediaThumb(url: String, index: Int) -> some View {
         let shape = RoundedRectangle(cornerRadius: 12)
+        let isVideo = post.isVideo(at: index)
         ZStack {
-            shape.fill(Color.mlrCard)
-            if post.isVideo(at: index) {
+            shape.fill(isVideo ? Color.black : Color.mlrCard)
+            if isVideo {
                 Image(systemName: "play.circle.fill")
                     .font(.mlrScaled(46))
                     .foregroundStyle(.white.opacity(0.9))
@@ -172,7 +182,7 @@ struct PostCard: View {
             }
         }
         .frame(maxWidth: .infinity)
-        .frame(height: 240)
+        .aspectRatio(1, contentMode: .fit)
         .clipShape(shape)
         .contentShape(shape)
         .onTapGesture { lightbox = LightboxPresentation(startIndex: index) }
