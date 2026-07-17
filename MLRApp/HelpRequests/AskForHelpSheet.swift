@@ -1,5 +1,4 @@
 import SwiftUI
-import FoundationModels
 
 // MARK: - AskForHelpSheet
 // Compose an Ask-for-Help request: category, what (140 max), how many people,
@@ -25,12 +24,6 @@ struct AskForHelpSheet: View {
 
     @State private var isSubmitting = false
     @State private var submitError: String?
-    @State private var suggesting = false
-
-    private var aiAvailable: Bool {
-        if case .available = SystemLanguageModel.default.availability { return true }
-        return false
-    }
 
     private let maxWhat = 140
 
@@ -144,40 +137,6 @@ struct AskForHelpSheet: View {
                 .onChange(of: what) { _, new in
                     if new.count > maxWhat { what = String(new.prefix(maxWhat)) }
                 }
-            if aiAvailable && !what.trimmingCharacters(in: .whitespaces).isEmpty {
-                Button { Task { await suggest() } } label: {
-                    Label(suggesting ? "Thinking…" : "Suggest category & items",
-                          systemImage: "sparkles")
-                        .font(.mlrScaled(13, weight: .semibold))
-                        .foregroundStyle(Color.mlrFest)
-                }
-                .disabled(suggesting)
-            }
-        }
-    }
-
-    /// On-device: pick the best category and suggest supplies from the free text.
-    private func suggest() async {
-        suggesting = true
-        defer { suggesting = false }
-        let text = what.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
-        let categories = HelpCategory.allCases.map(\.label).joined(separator: ", ")
-        let session = LanguageModelSession(instructions: """
-            You help a family member fill out a "request for help" at a lake resort.
-            The available categories are: \(categories). Choose the single best-fitting one.
-            """)
-        let prompt = "Request: \"\(text)\". Pick the best category and suggest 0–5 short supplies to bring."
-        guard let response = try? await session.respond(to: prompt, generating: HelpDraft.self) else { return }
-        let draft = response.content
-        if let match = HelpCategory.allCases.first(where: {
-            $0.label.caseInsensitiveCompare(draft.category) == .orderedSame
-        }) {
-            category = match
-        }
-        for item in draft.items {
-            let trimmed = item.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !trimmed.isEmpty && !bringItems.contains(trimmed) { bringItems.append(trimmed) }
         }
     }
 
@@ -366,16 +325,6 @@ struct AskForHelpSheet: View {
             print("[AskForHelp] submit error: \(error)")
         }
     }
-}
-
-// MARK: - AI draft (guided generation)
-
-@Generable
-struct HelpDraft {
-    @Guide(description: "The single category label that best fits the request, taken from the provided list")
-    var category: String
-    @Guide(description: "Zero to five short physical supplies the helper should bring")
-    var items: [String]
 }
 
 // MARK: - Work Item Picker

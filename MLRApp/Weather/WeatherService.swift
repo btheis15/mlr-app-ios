@@ -1,7 +1,6 @@
 import Foundation
 import WeatherKit
 import CoreLocation
-import FoundationModels
 
 // MARK: - Weather Service (WeatherKit)
 //
@@ -196,53 +195,5 @@ struct EventForecast: Identifiable, Equatable {
         f.locale = Locale(identifier: "en_US_POSIX")
         f.dateFormat = "MMM d"
         return f.string(from: date)
-    }
-}
-
-// MARK: - Weather Summarizer (Apple Intelligence / FoundationModels)
-//
-// Turns a multi-day forecast into a short, friendly planning blurb using the
-// on-device model. Availability depends on the device supporting Apple
-// Intelligence and it being turned on; callers hide the summary when it returns
-// nil, so nothing breaks on unsupported devices.
-
-enum WeatherSummarizer {
-    /// Whether the on-device model is ready to generate text right now.
-    static var isAvailable: Bool {
-        if case .available = SystemLanguageModel.default.availability { return true }
-        return false
-    }
-
-    static func summarize(eventTitle: String, forecasts: [EventForecast]) async -> String? {
-        guard isAvailable, !forecasts.isEmpty else { return nil }
-
-        let lines = forecasts.map { f in
-            "\(f.weekdayLabel) \(f.shortDateLabel): \(f.condition), high \(f.highLabel()), low \(f.lowLabel()), \(f.precipPercent)% chance of precipitation"
-        }.joined(separator: "\n")
-
-        let session = LanguageModelSession(instructions: """
-            You write short, warm weather blurbs for a family lake-resort app in the \
-            northwoods of Wisconsin. Given a multi-day forecast for an event, write ONE \
-            to TWO sentences (under 45 words) that help a family plan: call out the \
-            nicest day, any rain to watch for, and a practical tip (layers, sunscreen, \
-            a rain backup). Be friendly and natural — do not just list each day.
-            """)
-
-        let prompt = """
-            Event: \(eventTitle)
-            Forecast:
-            \(lines)
-
-            Write the summary.
-            """
-
-        do {
-            let response = try await session.respond(to: prompt)
-            let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            return text.isEmpty ? nil : text
-        } catch {
-            print("[WeatherSummarizer] summarize error: \(error)")
-            return nil
-        }
     }
 }

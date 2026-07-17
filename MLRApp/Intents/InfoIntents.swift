@@ -71,9 +71,9 @@ struct DirectionsToResortIntent: AppIntent {
 
     func perform() async throws -> some IntentResult & OpensIntent & ProvidesDialog {
         let r = MapsHelper.resort
-        guard let url = URL(string: "http://maps.apple.com/?daddr=\(r.latitude),\(r.longitude)") else {
-            return .result(dialog: "I couldn't open directions.")
-        }
+        // Deterministic, always-valid Apple Maps URL (numeric coords) — force-unwrap
+        // keeps a single return type for the opaque `OpensIntent` result.
+        let url = URL(string: "http://maps.apple.com/?daddr=\(r.latitude),\(r.longitude)")!
         return .result(opensIntent: OpenURLIntent(url),
                        dialog: "Getting directions up north.")
     }

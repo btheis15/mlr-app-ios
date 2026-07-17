@@ -1,5 +1,4 @@
 import SwiftUI
-import FoundationModels
 
 // MARK: - HouseChatView
 //
@@ -27,9 +26,6 @@ struct HouseChatView: View {
     @State private var sending = false
     @State private var editingMessage: HouseChatMessage?
     @State private var subscribed = false
-    @State private var summary: String?
-    @State private var summarizing = false
-    @State private var showSummary = false
 
     private var isMember: Bool {
         assumeMember || env.isAdmin || env.currentProfile?.houseId == house.id
@@ -56,19 +52,12 @@ struct HouseChatView: View {
                         } label: {
                             Label("See members", systemImage: "person.2.fill")
                         }
-                        if ChatSummarizer.isAvailable && messages.count >= 3 {
-                            Button { Task { await catchUp() } } label: {
-                                Label("Catch me up", systemImage: "sparkles")
-                            }
-                            .disabled(summarizing)
-                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
                 }
             }
         }
-        .sheet(isPresented: $showSummary) { summarySheet }
         .sheet(isPresented: $showMembers) { membersSheet }
         .task { await initialLoad() }
         .onDisappear {
@@ -76,57 +65,6 @@ struct HouseChatView: View {
         }
     }
 
-    // MARK: - Catch me up (on-device summary)
-
-    private var summarySheet: some View {
-        NavigationStack {
-            ScrollView {
-                Text(summary ?? "Nothing to summarize yet.")
-                    .font(.mlrBody)
-                    .foregroundStyle(Color.mlrText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-            }
-            .navigationTitle("Catch me up")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { showSummary = false }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-
-    private func catchUp() async {
-        summarizing = true
-        defer { summarizing = false }
-        summary = await Self.summarize(house: house.name, messages: messages)
-        showSummary = summary != nil
-    }
-
-    /// On-device "catch me up" for the house room (mirrors ChatSummarizer).
-    private static func summarize(house: String, messages: [HouseChatMessage]) async -> String? {
-        guard ChatSummarizer.isAvailable else { return nil }
-        let recent = messages.suffix(40).filter { !$0.isDeleted && !$0.text.isEmpty }
-        guard !recent.isEmpty else { return nil }
-        let transcript = recent.map { "\($0.authorName): \($0.text)" }.joined(separator: "\n")
-        let session = LanguageModelSession(instructions: """
-            You summarize a family house group chat so someone can catch up fast.
-            Given the recent messages, write 2–4 short bullet points covering: decisions made,
-            open questions that still need answers, and anything actionable (who's doing what).
-            Warm and concise. No preamble, no restating that it's a summary.
-            """)
-        do {
-            let response = try await session.respond(
-                to: "House: \(house)\nRecent messages:\n\(transcript)\n\nCatch me up.")
-            let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            return text.isEmpty ? nil : text
-        } catch {
-            print("[HouseChat] summarize error: \(error)")
-            return nil
-        }
-    }
 
     // MARK: - Members ("who's in this chat")
 

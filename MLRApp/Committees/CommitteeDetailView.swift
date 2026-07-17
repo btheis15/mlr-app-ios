@@ -134,9 +134,6 @@ struct CommitteeDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(committee.name)
         .navigationBarTitleDisplayMode(.inline)
-        // Onscreen context for Apple Intelligence / Siri ("who's on this committee?",
-        // "email them") — associates the view with its entity.
-        .appEntityIdentifier(EntityIdentifier(for: CommitteeEntity.self, identifier: committee.slug))
         .refreshable { await load() }
         .task {
             await load()

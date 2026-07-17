@@ -1,5 +1,4 @@
 import SwiftUI
-import FoundationModels
 
 // MARK: - CommitteeChatView
 // Realtime committee chat. Own messages right (green), others left (gray).
@@ -31,9 +30,6 @@ struct CommitteeChatView: View {
     @State private var sending = false
     @State private var editingMessage: CommitteeChatMessage?
     @State private var subscribed = false
-    @State private var summary: String?
-    @State private var summarizing = false
-    @State private var showSummary = false
 
     private var rosterProfiles: [Profile] {
         members.compactMap(\.profile)
@@ -71,19 +67,12 @@ struct CommitteeChatView: View {
                         } label: {
                             Label(isMuted ? "Unmute" : "Mute", systemImage: isMuted ? "bell" : "bell.slash")
                         }
-                        if ChatSummarizer.isAvailable && messages.count >= 3 {
-                            Button { Task { await catchUp() } } label: {
-                                Label("Catch me up", systemImage: "sparkles")
-                            }
-                            .disabled(summarizing)
-                        }
                     } label: {
                         Image(systemName: isMuted ? "bell.slash.fill" : "ellipsis.circle")
                     }
                 }
             }
         }
-        .sheet(isPresented: $showSummary) { summarySheet }
         .sheet(isPresented: $showMembers) { membersSheet }
         .task { await initialLoad() }
         .onDisappear {
@@ -95,35 +84,6 @@ struct CommitteeChatView: View {
         isMuted.toggle()
         await env.committeeService.setAreaMute(committeeId: committee.id, area: area, muted: isMuted)
         Haptics.tap()
-    }
-
-    // MARK: - Catch me up (on-device summary)
-
-    private var summarySheet: some View {
-        NavigationStack {
-            ScrollView {
-                Text(summary ?? "Nothing to summarize yet.")
-                    .font(.mlrBody)
-                    .foregroundStyle(Color.mlrText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(20)
-            }
-            .navigationTitle("Catch me up")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Done") { showSummary = false }
-                }
-            }
-        }
-        .presentationDetents([.medium])
-    }
-
-    private func catchUp() async {
-        summarizing = true
-        defer { summarizing = false }
-        summary = await ChatSummarizer.summarize(committee: committee.name, messages: messages)
-        showSummary = summary != nil
     }
 
     // MARK: - Members ("who's in this chat")
@@ -395,40 +355,6 @@ struct CommitteeChatView: View {
             }
         } catch {
             print("[CommitteeChat] delete error: \(error)")
-        }
-    }
-}
-
-// MARK: - ChatSummarizer (on-device Apple Intelligence)
-// "Catch me up" — summarizes recent committee chat with the on-device model.
-// Availability-gated; the button only appears when the model is ready.
-
-enum ChatSummarizer {
-    static var isAvailable: Bool {
-        if case .available = SystemLanguageModel.default.availability { return true }
-        return false
-    }
-
-    static func summarize(committee: String, messages: [CommitteeChatMessage]) async -> String? {
-        guard isAvailable else { return nil }
-        let recent = messages.suffix(40).filter { !$0.isDeleted && !$0.text.isEmpty }
-        guard !recent.isEmpty else { return nil }
-        let transcript = recent.map { "\($0.authorName): \($0.text)" }.joined(separator: "\n")
-
-        let session = LanguageModelSession(instructions: """
-            You summarize a family committee group chat so someone can catch up fast.
-            Given the recent messages, write 2–4 short bullet points covering: decisions made,
-            open questions that still need answers, and anything actionable (who's doing what).
-            Warm and concise. No preamble, no restating that it's a summary.
-            """)
-        do {
-            let response = try await session.respond(
-                to: "Committee: \(committee)\nRecent messages:\n\(transcript)\n\nCatch me up.")
-            let text = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
-            return text.isEmpty ? nil : text
-        } catch {
-            print("[ChatSummarizer] error: \(error)")
-            return nil
         }
     }
 }
