@@ -24,6 +24,17 @@ struct MLRApp: App {
                 // override (System / Light / Dark) from Profile → Appearance.
                 .preferredColorScheme(appearance.appearance.colorScheme)
                 .task {
+                    #if DEBUG
+                    // Test hook: `-startRoute <host>` (e.g. `family-fest`) drives the
+                    // initial deep-link route so the app can be screen-tested on a
+                    // given OS (older-device checks) without taps. Release-inert.
+                    if let i = ProcessInfo.processInfo.arguments.firstIndex(of: "-startRoute"),
+                       i + 1 < ProcessInfo.processInfo.arguments.count,
+                       let u = URL(string: "mlr://\(ProcessInfo.processInfo.arguments[i + 1])"),
+                       let r = IntentRouter.Route(url: u) {
+                        IntentRouter.shared.requestRoute(r)
+                    }
+                    #endif
                     try? Tips.configure([
                         .displayFrequency(.immediate),
                         .datastoreLocation(.applicationDefault),
