@@ -137,45 +137,24 @@ struct PostCard: View {
     private var mediaContent: some View {
         let urls = post.mediaUrls
         if urls.count > 1 {
+            // Square (1:1) carousel — mirrors the web MediaGrid so portrait and
+            // landscape items share one uniform frame instead of a wide box.
             TabView {
                 ForEach(Array(urls.enumerated()), id: \.offset) { idx, url in
-                    mediaThumb(url: url, index: idx)
+                    PostMediaTile(url: url, isVideo: post.isVideo(at: idx)) {
+                        lightbox = LightboxPresentation(startIndex: idx)
+                    }
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: .always))
-            .frame(height: 240)
+            .frame(maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fit)
+            .clipShape(RoundedRectangle(cornerRadius: 12))
         } else if let first = urls.first {
-            mediaThumb(url: first, index: 0)
-        }
-    }
-
-    // MARK: - Post media thumbnail (image or video poster) → tap opens the lightbox
-
-    @ViewBuilder
-    private func mediaThumb(url: String, index: Int) -> some View {
-        let shape = RoundedRectangle(cornerRadius: 12)
-        ZStack {
-            shape.fill(Color.mlrCard)
-            if post.isVideo(at: index) {
-                Image(systemName: "play.circle.fill")
-                    .font(.mlrScaled(46))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .shadow(radius: 4)
-            } else if let imageURL = URL(string: url) {
-                KFImage(imageURL)
-                    .placeholder { ProgressView() }
-                    .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 1200, height: 1200)))
-                    .scaleFactor(UIScreen.main.scale)
-                    .fade(duration: 0.2)
-                    .resizable()
-                    .scaledToFill()
+            PostMediaTile(url: first, isVideo: post.isVideo(at: 0)) {
+                lightbox = LightboxPresentation(startIndex: 0)
             }
         }
-        .frame(maxWidth: .infinity)
-        .frame(height: 240)
-        .clipShape(shape)
-        .contentShape(shape)
-        .onTapGesture { lightbox = LightboxPresentation(startIndex: index) }
     }
 
     // MARK: - Reaction row
@@ -337,6 +316,79 @@ struct ReactionButton: View {
         .buttonStyle(.plain)
         .animation(.easeInOut(duration: 0.12), value: isSelected)
         .animation(.easeInOut(duration: 0.12), value: count)
+    }
+}
+
+// MARK: - PostMediaTile
+// A single feed media item in a uniform SQUARE frame (matches the web MediaGrid):
+// a portrait photo center-crops to a square (still reads upright — tap opens the
+// full image in the lightbox) instead of being squeezed into a wide landscape
+// slice. Videos sit on black so they're never cropped.
+//
+// Crucially, this owns a `failed` state: KFImage's `.placeholder` also shows on
+// FAILURE, so without this an image that 404s, is still transcoding, or won't
+// decode would spin forever. On failure we retry a couple times, then show a
+// tappable fallback that opens the original in the browser.
+
+private struct PostMediaTile: View {
+    let url: String
+    let isVideo: Bool
+    let onTap: () -> Void
+
+    @Environment(\.openURL) private var openURL
+    @State private var failed = false
+
+    var body: some View {
+        let shape = RoundedRectangle(cornerRadius: 12)
+        // `Color.clear` is the size anchor: full width, forced to 1:1 — so the
+        // tile is ALWAYS square regardless of the image's own aspect ratio.
+        // (A ZStack sized by the image let portrait photos render tall/native
+        // instead of the square center-crop the web uses.)
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fit)
+            .overlay {
+                if isVideo {
+                    Image(systemName: "play.circle.fill")
+                        .font(.mlrScaled(46))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .shadow(radius: 4)
+                } else if failed {
+                    failureView
+                } else if let imageURL = URL(string: url) {
+                    KFImage(imageURL)
+                        .placeholder { ProgressView() }
+                        .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 1200, height: 1200)))
+                        .scaleFactor(UIScreen.main.scale)
+                        .retry(maxCount: 2, interval: .seconds(2))
+                        .onFailure { _ in failed = true }
+                        .fade(duration: 0.2)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    failureView
+                }
+            }
+            .background(isVideo ? Color.black : Color.mlrCard)
+            .clipShape(shape)
+            .contentShape(shape)
+            .onTapGesture {
+                // A failed image can't open in the (same-loader) lightbox, so send
+                // the user to the original in the browser instead of a dead tap.
+                if failed, let u = URL(string: url) { openURL(u) } else { onTap() }
+            }
+    }
+
+    private var failureView: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "photo.badge.exclamationmark")
+                .font(.mlrScaled(34))
+                .foregroundStyle(Color.mlrTextSubtle)
+            Text("Couldn't load — tap to open")
+                .font(.mlrScaled(12))
+                .foregroundStyle(Color.mlrTextMuted)
+        }
+        .padding()
     }
 }
 

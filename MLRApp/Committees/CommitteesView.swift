@@ -239,6 +239,14 @@ struct CommitteeJoinSheet: View {
     @State private var isSubmitting = false
     @State private var error: String?
 
+    /// Role-based committees (Family Fest) expose areas from the roster — a
+    /// requester must pick at least one so leads know where they'd fit before
+    /// approving. Committees with no roles skip the picker entirely.
+    private var isRoleBased: Bool { !areaOptions.isEmpty }
+
+    /// Role-based committees require an area before the request can be sent.
+    private var needsAreaSelection: Bool { isRoleBased && selected.isEmpty }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -250,8 +258,8 @@ struct CommitteeJoinSheet: View {
 
                 if isLoading {
                     HStack { Spacer(); ProgressView(); Spacer() }
-                } else if !areaOptions.isEmpty {
-                    Section("Which areas do you want to help with? (optional)") {
+                } else if isRoleBased {
+                    Section {
                         ForEach(areaOptions, id: \.self) { area in
                             Button {
                                 if selected.contains(area) { selected.remove(area) }
@@ -269,6 +277,13 @@ struct CommitteeJoinSheet: View {
                                 .contentShape(Rectangle())
                             }
                             .buttonStyle(.plain)
+                        }
+                    } header: {
+                        Text("Which areas do you want to help with?")
+                    } footer: {
+                        if needsAreaSelection {
+                            Text("Pick at least one area to send your request.")
+                                .foregroundStyle(Color.mlrDanger)
                         }
                     }
                 }
@@ -290,7 +305,7 @@ struct CommitteeJoinSheet: View {
                 }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Request") { Task { await submit() } }
-                        .disabled(isSubmitting)
+                        .disabled(isSubmitting || needsAreaSelection)
                 }
             }
             .task { await loadAreas() }
@@ -313,6 +328,7 @@ struct CommitteeJoinSheet: View {
     }
 
     private func submit() async {
+        guard !needsAreaSelection else { return }
         isSubmitting = true
         defer { isSubmitting = false }
         do {

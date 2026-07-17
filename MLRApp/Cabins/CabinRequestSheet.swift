@@ -174,9 +174,9 @@ struct CabinRequestSheet: View {
                             .font(.mlrScaled(13, weight: .semibold))
                             .foregroundStyle(Color.mlrFest)
                     }
-                    if let available = selectedAvailable {
+                    if let available = selectedAvailable, let cabin = selectedCabin {
                         Text(available > 0
-                             ? "\(available) room\(available == 1 ? "" : "s") left for these dates"
+                             ? "\(available) of \(cabin.roomCount) room\(cabin.roomCount == 1 ? "" : "s") left for these dates"
                              : "No rooms left for these dates")
                             .font(.mlrCaption)
                             .foregroundStyle(available > 0 ? Color.mlrTextMuted : Color.mlrDanger)
@@ -237,8 +237,8 @@ struct CabinRequestSheet: View {
                             Text("\(guests) guest\(guests == 1 ? "" : "s")")
                                 .foregroundStyle(Color.mlrText)
                         }
-                        if let cabin = selectedCabin {
-                            Text("Sleeps up to \(cabin.maxGuests ?? 12).")
+                        if let cabin = selectedCabin, let beds = cabin.bedCount {
+                            Text("Sleeps up to \(beds).")
                                 .font(.mlrCaption)
                                 .foregroundStyle(Color.mlrTextMuted)
                         }
@@ -265,8 +265,10 @@ struct CabinRequestSheet: View {
         }
     }
 
+    // Stepper upper bound (internal cap only — never shown as a "sleeps" figure).
+    // Prefer real bed data; fall back to a sane cap when the cabin has none.
     private var maxGuests: Int {
-        selectedCabin?.maxGuests ?? 12
+        selectedCabin?.maxGuests ?? selectedCabin?.bedCount ?? 12
     }
 
     // MARK: - Confirmation
@@ -434,40 +436,33 @@ private struct CabinPickCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 0) {
-                ZStack {
-                    if let urlString = cabin.imageUrl, let url = URL(string: urlString) {
-                        AsyncImage(url: url) { phase in
-                            switch phase {
-                            case .success(let image):
-                                image.resizable().scaledToFill()
-                            default:
-                                placeholderImage
-                            }
-                        }
-                    } else {
-                        placeholderImage
-                    }
-                }
-                .frame(width: 180, height: 110)
-                .clipped()
-
-                VStack(alignment: .leading, spacing: 3) {
+            // Clean text card — no photo. `image_url` isn't in the DB (always
+            // nil), so the old AsyncImage only ever rendered a clunky house-icon
+            // placeholder; the web shows no image here either.
+            VStack(alignment: .leading, spacing: 6) {
+                HStack(spacing: 8) {
+                    Image(systemName: "house.fill")
+                        .font(.mlrScaled(15))
+                        .foregroundStyle(Color.mlrPrimary)
                     Text(cabin.name)
                         .font(.mlrScaled(15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
-                    Text("\(cabin.roomCount) rooms · sleeps \(cabin.maxGuests ?? 12)")
-                        .font(.mlrScaled(12))
-                        .foregroundStyle(Color.mlrTextMuted)
-                    if let available {
-                        Text(available > 0 ? "\(available) left" : "Full")
-                            .font(.mlrScaled(11, weight: .semibold))
-                            .foregroundStyle(available > 0 ? Color.mlrSuccess : Color.mlrDanger)
-                    }
+                        .lineLimit(1)
                 }
-                .frame(width: 180, alignment: .leading)
-                .padding(10)
+                // Real bed/room figures — never a fabricated "sleeps" number.
+                Text(occupancyText)
+                    .font(.mlrScaled(12))
+                    .foregroundStyle(Color.mlrTextMuted)
+                if let available {
+                    Text(available > 0
+                         ? "\(available) of \(cabin.roomCount) room\(cabin.roomCount == 1 ? "" : "s") left"
+                         : "Full")
+                        .font(.mlrScaled(11, weight: .semibold))
+                        .foregroundStyle(available > 0 ? Color.mlrSuccess : Color.mlrDanger)
+                }
             }
+            .frame(width: 180, alignment: .leading)
+            .padding(14)
             .background(Color.mlrCard)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
@@ -478,12 +473,12 @@ private struct CabinPickCard: View {
         .buttonStyle(.plain)
     }
 
-    private var placeholderImage: some View {
-        Color.mlrPrimaryLight
-            .overlay(
-                Image(systemName: "house.fill")
-                    .font(.mlrScaled(30))
-                    .foregroundStyle(Color.mlrPrimary)
-            )
+    /// "🛏️ 4 beds · 4 rooms" when bed count is known, else just the room count.
+    private var occupancyText: String {
+        let rooms = "\(cabin.roomCount) room\(cabin.roomCount == 1 ? "" : "s")"
+        if let beds = cabin.bedCount {
+            return "🛏️ \(beds) bed\(beds == 1 ? "" : "s") · \(rooms)"
+        }
+        return rooms
     }
 }

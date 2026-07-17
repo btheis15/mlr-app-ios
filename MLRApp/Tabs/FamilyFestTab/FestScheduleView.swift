@@ -100,7 +100,7 @@ private struct DayHeader: View {
     var body: some View {
         HStack {
             Text(day.uppercased())
-                .font(.mlrScaled(11, weight: .semibold))
+                .font(.mlrScaled(13, weight: .bold))
                 .foregroundStyle(Color.mlrFest.opacity(0.65))
                 .tracking(1.2)
             Spacer()
@@ -126,26 +126,26 @@ private struct ScheduleRow: View {
         HStack(alignment: .top, spacing: 14) {
             // Time column
             Text(MLRFormat.time(item.time))
-                .font(.mlrScaled(12, weight: .medium, design: .monospaced))
+                .font(.mlrScaled(13, weight: .semibold, design: .monospaced))
                 .foregroundStyle(Color.mlrFestInk.opacity(0.6))
-                .frame(width: 62, alignment: .leading)
-                .padding(.top, 1)
+                .frame(width: 68, alignment: .leading)
+                .padding(.top, 2)
 
             // Content column
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(item.title)
-                    .font(.festSerif(14, weight: .bold))
+                    .font(.festSerif(18, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                     .multilineTextAlignment(.leading)
 
                 if let location = item.location {
                     if isSignedIn {
                         Label(location, systemImage: "mappin.and.ellipse")
-                            .font(.mlrScaled(12))
+                            .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                     } else {
                         Label("Sign in to see location", systemImage: "lock.fill")
-                            .font(.mlrScaled(12))
+                            .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFest.opacity(0.4))
                     }
                 }
@@ -154,12 +154,12 @@ private struct ScheduleRow: View {
             Spacer()
 
             Image(systemName: "chevron.right")
-                .font(.mlrScaled(12, weight: .semibold))
+                .font(.mlrScaled(13, weight: .semibold))
                 .foregroundStyle(Color.mlrFest.opacity(0.3))
-                .padding(.top, 2)
+                .padding(.top, 3)
         }
         .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.vertical, 14)
         .background(Color.mlrFestParchment)
     }
 }
