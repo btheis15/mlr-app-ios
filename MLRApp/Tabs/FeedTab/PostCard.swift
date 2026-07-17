@@ -340,38 +340,43 @@ private struct PostMediaTile: View {
 
     var body: some View {
         let shape = RoundedRectangle(cornerRadius: 12)
-        ZStack {
-            shape.fill(isVideo ? Color.black : Color.mlrCard)
-            if isVideo {
-                Image(systemName: "play.circle.fill")
-                    .font(.mlrScaled(46))
-                    .foregroundStyle(.white.opacity(0.9))
-                    .shadow(radius: 4)
-            } else if failed {
-                failureView
-            } else if let imageURL = URL(string: url) {
-                KFImage(imageURL)
-                    .placeholder { ProgressView() }
-                    .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 1200, height: 1200)))
-                    .scaleFactor(UIScreen.main.scale)
-                    .retry(maxCount: 2, interval: .seconds(2))
-                    .onFailure { _ in failed = true }
-                    .fade(duration: 0.2)
-                    .resizable()
-                    .scaledToFill()
-            } else {
-                failureView
+        // `Color.clear` is the size anchor: full width, forced to 1:1 — so the
+        // tile is ALWAYS square regardless of the image's own aspect ratio.
+        // (A ZStack sized by the image let portrait photos render tall/native
+        // instead of the square center-crop the web uses.)
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .aspectRatio(1, contentMode: .fit)
+            .overlay {
+                if isVideo {
+                    Image(systemName: "play.circle.fill")
+                        .font(.mlrScaled(46))
+                        .foregroundStyle(.white.opacity(0.9))
+                        .shadow(radius: 4)
+                } else if failed {
+                    failureView
+                } else if let imageURL = URL(string: url) {
+                    KFImage(imageURL)
+                        .placeholder { ProgressView() }
+                        .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 1200, height: 1200)))
+                        .scaleFactor(UIScreen.main.scale)
+                        .retry(maxCount: 2, interval: .seconds(2))
+                        .onFailure { _ in failed = true }
+                        .fade(duration: 0.2)
+                        .resizable()
+                        .scaledToFill()
+                } else {
+                    failureView
+                }
             }
-        }
-        .frame(maxWidth: .infinity)
-        .aspectRatio(1, contentMode: .fit)
-        .clipShape(shape)
-        .contentShape(shape)
-        .onTapGesture {
-            // A failed image can't open in the (same-loader) lightbox, so send
-            // the user to the original in the browser instead of a dead tap.
-            if failed, let u = URL(string: url) { openURL(u) } else { onTap() }
-        }
+            .background(isVideo ? Color.black : Color.mlrCard)
+            .clipShape(shape)
+            .contentShape(shape)
+            .onTapGesture {
+                // A failed image can't open in the (same-loader) lightbox, so send
+                // the user to the original in the browser instead of a dead tap.
+                if failed, let u = URL(string: url) { openURL(u) } else { onTap() }
+            }
     }
 
     private var failureView: some View {
