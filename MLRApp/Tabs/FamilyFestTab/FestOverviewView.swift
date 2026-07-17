@@ -12,11 +12,16 @@ import SwiftUI
 
 struct FestOverviewView: View {
     @Environment(AppEnvironment.self) private var env
-    @State private var festSeason: FestSeason = .current()
     @State private var canEdit = false
     @State private var showPlanner = false
+    @State private var previewDate: Date? = nil      // admin "see as this day" preview
+    @State private var showDatePicker = false
 
     private var content: FestContentService { env.festContentService }
+
+    /// The fest season for the previewed day (or the real today) — drives the
+    /// FestStatus phase + "Day N of N".
+    private var festSeason: FestSeason { FestSeason.current(now: previewDate ?? .now) }
 
     /// Timed items grouped by day, ordered by real date (falls back to weekday
     /// order when a day has no ISO date, e.g. the offline seed). All days shown
@@ -45,13 +50,15 @@ struct FestOverviewView: View {
          "Thursday": 4, "Friday": 5, "Saturday": 6][day] ?? 99
     }
 
-    static var todayWeekday: String {
+    static func weekday(for date: Date) -> String {
         let fmt = DateFormatter()
         fmt.dateFormat = "EEEE"
         fmt.locale = Locale(identifier: "en_US_POSIX")
         fmt.timeZone = TimeZone(identifier: "America/Chicago")
-        return fmt.string(from: .now)
+        return fmt.string(from: date)
     }
+
+    static var todayWeekday: String { weekday(for: .now) }
 
     var body: some View {
         NavigationStack {
@@ -61,7 +68,9 @@ struct FestOverviewView: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
 
-                        FestStatus(season: festSeason)
+                        if previewDate != nil { previewBanner }
+
+                        FestStatus(season: festSeason, previewDate: previewDate)
 
                         // Identity: cover art + theme/dates/venue caption.
                         VStack(spacing: 10) {
@@ -114,6 +123,15 @@ struct FestOverviewView: View {
             .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
             .toolbarColorScheme(.light, for: .navigationBar)
             .toolbar {
+                if env.isAdmin {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button { showDatePicker = true } label: {
+                            Image(systemName: previewDate == nil ? "calendar.badge.clock" : "calendar.badge.exclamationmark")
+                                .foregroundStyle(previewDate == nil ? Color.mlrFest : .orange)
+                        }
+                        .accessibilityLabel("Preview Fest as a date")
+                    }
+                }
                 if canEdit {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { showPlanner = true } label: {
@@ -126,9 +144,7 @@ struct FestOverviewView: View {
             .sheet(isPresented: $showPlanner, onDismiss: { Task { await env.festContentService.reload() } }) {
                 NavigationStack { FamilyFestPlannerView() }
             }
-        }
-        .onAppear {
-            festSeason = .current()
+            .sheet(isPresented: $showDatePicker) { datePreviewSheet }
         }
         .task {
             await env.appImagesService.load()
@@ -137,6 +153,59 @@ struct FestOverviewView: View {
             env.festContentService.subscribeToRealtime()
         }
         .onDisappear { env.festContentService.unsubscribeFromRealtime() }
+    }
+
+    // MARK: - Admin date preview ("see as Day N")
+
+    static var festStart: Date {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd"
+        f.timeZone = TimeZone(identifier: "America/Chicago")
+        return f.date(from: FamilyFestConfig.startDate) ?? .now
+    }
+
+    private var previewBanner: some View {
+        let f = DateFormatter(); f.dateStyle = .medium; f.timeStyle = .none
+        return HStack(spacing: 8) {
+            Image(systemName: "clock.badge.exclamationmark").foregroundStyle(.orange)
+            Text("Previewing as \(f.string(from: previewDate ?? .now))")
+                .font(.mlrScaled(12, weight: .medium)).foregroundStyle(.orange)
+            Spacer()
+            Button { withAnimation { previewDate = nil } } label: {
+                Image(systemName: "xmark").font(.mlrScaled(11, weight: .semibold)).foregroundStyle(.orange)
+            }
+        }
+        .padding(.horizontal, 12).padding(.vertical, 8)
+        .frame(maxWidth: .infinity)
+        .background(Color.orange.opacity(0.12))
+        .clipShape(RoundedRectangle(cornerRadius: 10))
+    }
+
+    private var datePreviewSheet: some View {
+        NavigationStack {
+            VStack(spacing: 14) {
+                DatePicker("Preview date",
+                           selection: Binding(get: { previewDate ?? Self.festStart },
+                                              set: { previewDate = $0 }),
+                           displayedComponents: .date)
+                    .datePickerStyle(.graphical)
+                    .tint(Color.mlrFest)
+                Text("See the Fest tab — its phase, “Day N of N”, and today's events/dinner — as it'll look on this day.")
+                    .font(.mlrScaled(12)).foregroundStyle(Color.mlrTextMuted)
+                    .multilineTextAlignment(.center)
+                Spacer()
+            }
+            .padding()
+            .navigationTitle("Preview a day")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    if previewDate != nil { Button("Clear") { previewDate = nil; showDatePicker = false } }
+                }
+                ToolbarItem(placement: .confirmationAction) { Button("Done") { showDatePicker = false }.fontWeight(.semibold) }
+            }
+        }
+        .presentationDetents([.medium, .large])
     }
 
     // MARK: - Secondary sections

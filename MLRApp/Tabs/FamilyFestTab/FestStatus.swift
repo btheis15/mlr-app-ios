@@ -12,6 +12,9 @@ import SwiftUI
 struct FestStatus: View {
     @Environment(AppEnvironment.self) private var env
     let season: FestSeason
+    /// Admin "see as this day" preview — drives which day the live card treats as
+    /// "today" (nil = the real today).
+    var previewDate: Date? = nil
 
     var body: some View {
         switch season.phase {
@@ -20,7 +23,7 @@ struct FestStatus: View {
         case .planning:
             PlanningCard(season: season)
         case .live:
-            LiveCard(season: season)
+            LiveCard(season: season, previewDate: previewDate)
         case .wrap:
             WrapCard(season: season)
         }
@@ -109,22 +112,7 @@ private struct PlanningCard: View {
 private struct LiveCard: View {
     @Environment(AppEnvironment.self) private var env
     let season: FestSeason
-    @State private var editingItem: ScheduleItem?
-    @State private var editingDinner: FestDinner?
-
-    /// Admin / committee runner, or this event's own lead or crew (migration 0110).
-    private func canEditItem(_ item: ScheduleItem) -> Bool {
-        guard env.isSignedIn, let me = env.currentProfile?.id else { return false }
-        return env.isAdmin || env.festContentService.userCanEditFest
-            || item.leadUserId == me || item.crewUserIds.contains(me)
-    }
-
-    /// Admin / committee runner, or tonight's chef or crew (migration 0099).
-    private func canEditDinner(_ d: FestDinner) -> Bool {
-        guard env.isSignedIn, let me = env.currentProfile?.id else { return false }
-        return env.isAdmin || env.festContentService.userCanEditFest
-            || d.chefUserId == me || d.crewUserIds.contains(me)
-    }
+    var previewDate: Date? = nil
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
@@ -157,7 +145,7 @@ private struct LiveCard: View {
 
             // Today's schedule items and tonight's dinner — everything you
             // need for today, right in the status card so nobody has to scroll.
-            let todayName = FestOverviewView.todayWeekday
+            let todayName = FestOverviewView.weekday(for: previewDate ?? .now)
             let todayItems = env.festContentService.schedule.filter { $0.day == todayName && $0.day != "Anytime" }
             let dinner = env.festContentService.dinners.first { $0.day == todayName }
 
@@ -165,58 +153,21 @@ private struct LiveCard: View {
                 GoldOrnamentDivider()
                     .padding(.vertical, 2)
 
-                VStack(alignment: .leading, spacing: 6) {
-                    ForEach(todayItems) { item in
-                        HStack(spacing: 6) {
-                            Text(MLRFormat.time(item.time))
-                                .font(.mlrScaled(12, weight: .medium))
-                                .foregroundStyle(Color.mlrFestInk.opacity(0.6))
-                                .frame(width: 60, alignment: .leading)
-                            Text(item.title)
-                                .font(.mlrScaled(13, weight: .medium))
-                                .foregroundStyle(Color.mlrFestInk)
-                                .lineLimit(1)
-                            Spacer(minLength: 4)
-                            if canEditItem(item) {
-                                Button { editingItem = item } label: {
-                                    Image(systemName: "pencil")
-                                        .font(.mlrScaled(11, weight: .semibold))
-                                        .foregroundStyle(Color.mlrFest)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
+                // The whole schedule for the day — the same rich, tappable rows as
+                // the day-by-day sections (time, location, about, leads; dinner
+                // menu + crew, each self-editable), so "today"/the previewed day
+                // shows everything inline, matching the web.
+                VStack(spacing: 0) {
+                    ForEach(Array(todayItems.enumerated()), id: \.element.id) { index, item in
+                        if index > 0 { Divider().background(Color.mlrFest.opacity(0.1)) }
+                        ExpandableScheduleRow(item: item)
                     }
                     if let d = dinner {
-                        HStack(spacing: 6) {
-                            Text(d.time == "TBD" ? "Dinner" : MLRFormat.time(d.time))
-                                .font(.mlrScaled(12, weight: .medium))
-                                .foregroundStyle(Color.mlrFestInk.opacity(0.6))
-                                .frame(width: 60, alignment: .leading)
-                            VStack(alignment: .leading, spacing: 1) {
-                                Text("🍽️ Dinner · \(d.title)")
-                                    .font(.mlrScaled(13, weight: .medium))
-                                    .foregroundStyle(Color.mlrFestInk)
-                                    .lineLimit(1)
-                                if d.menu != "TBD" {
-                                    Text(d.menu)
-                                        .font(.mlrScaled(11))
-                                        .foregroundStyle(Color.mlrFestInk.opacity(0.6))
-                                        .lineLimit(1)
-                                }
-                            }
-                            Spacer(minLength: 4)
-                            if canEditDinner(d) {
-                                Button { editingDinner = d } label: {
-                                    Image(systemName: "pencil")
-                                        .font(.mlrScaled(11, weight: .semibold))
-                                        .foregroundStyle(Color.mlrFest)
-                                }
-                                .buttonStyle(.plain)
-                            }
-                        }
+                        Divider().background(Color.mlrFest.opacity(0.15))
+                        ExpandableDinnerRow(dinner: d)
                     }
                 }
+                .festCardStyle(cornerRadius: 12)
             } else {
                 Text("Check the schedule below for today's activities.")
                     .font(.mlrScaled(13))
@@ -224,16 +175,6 @@ private struct LiveCard: View {
             }
         }
         .festStatusCard(accent: true)
-        .sheet(item: $editingItem) { item in
-            NavigationStack {
-                FestScheduleEditSheet(item: item) { await env.festContentService.reload() }
-            }
-        }
-        .sheet(item: $editingDinner) { d in
-            NavigationStack {
-                FestDinnerEditSheet(dinner: d) { await env.festContentService.reload() }
-            }
-        }
     }
 }
 

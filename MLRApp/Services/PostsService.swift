@@ -391,27 +391,33 @@ private struct PostRow: Decodable {
         var resolvedUrl: String {
             storagePath.hasPrefix("http") ? storagePath : "\(postStorageBase)/\(storagePath)"
         }
+        /// Authoritative video flag from the stored media_type; falls back to the
+        /// URL extension only when media_type is absent (legacy rows).
+        var isVideo: Bool { mediaType == "video" || (mediaType == nil && resolvedUrl.isVideoURL) }
     }
 
-    /// All media URLs in position order (legacy image_path as a fallback).
-    var resolvedMediaUrls: [String] {
+    /// All media in position order (legacy image_path as a fallback), each with
+    /// its resolved URL + video flag.
+    var resolvedMedia: [(url: String, isVideo: Bool)] {
         if let media = postMedia, !media.isEmpty {
-            return media.sorted { ($0.position ?? 0) < ($1.position ?? 0) }.map(\.resolvedUrl)
+            return media.sorted { ($0.position ?? 0) < ($1.position ?? 0) }
+                .map { ($0.resolvedUrl, $0.isVideo) }
         }
-        if let imageUrl { return [imageUrl] }
+        if let imageUrl { return [(imageUrl, imageUrl.isVideoURL)] }
         return []
     }
 
     var toPost: Post {
-        let urls = resolvedMediaUrls
+        let media = resolvedMedia
         return Post(
             id: id,
             authorId: authorId,
             authorName: profiles?.name ?? "Member",
             authorAvatarUrl: profiles?.avatarUrl,
             text: text,
-            imageUrl: urls.first,
-            mediaUrls: urls,
+            imageUrl: media.first?.url,
+            mediaUrls: media.map(\.url),
+            mediaIsVideo: media.map(\.isVideo),
             tags: (postTags ?? []).map { PostTag(id: $0.taggedUserId, name: $0.profiles?.name ?? "Member") },
             status: status,
             occurredAt: occurredAt,

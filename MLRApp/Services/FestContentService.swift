@@ -256,12 +256,15 @@ final class FestContentService {
     /// Fetches the callout IDs the signed-in user has permanently marked "done".
     /// Merges UserDefaults local cache with the DB so completions survive even when
     /// the `home_callout_completions` table isn't deployed or the fetch races sign-in.
-    func fetchMyCalloutCompletions(userId: UUID) async {
+    /// `useLocal` folds in this device's own local completion snapshot — correct
+    /// for the signed-in user, but must be OFF when previewing another member
+    /// (their completions come only from the DB, not the admin's local cache).
+    func fetchMyCalloutCompletions(userId: UUID, useLocal: Bool = true) async {
         struct CompletionRow: Decodable {
             let calloutId: String
             enum CodingKeys: String, CodingKey { case calloutId = "callout_id" }
         }
-        let local = Self.localCompletions()
+        let local = useLocal ? Self.localCompletions() : []
         if !local.isEmpty { completedCalloutIds = local }
         do {
             let rows: [CompletionRow] = try await supabase

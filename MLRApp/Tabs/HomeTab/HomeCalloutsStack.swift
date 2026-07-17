@@ -107,8 +107,10 @@ struct HomeCalloutsStack: View {
     }
 
     private func fetchCompletions() async {
-        guard env.isSignedIn, let uid = await env.authService.userId else { return }
-        await env.festContentService.fetchMyCalloutCompletions(userId: uid)
+        // Scope to the previewed member when an admin is "seeing as" someone.
+        guard env.isSignedIn, let uid = env.effectiveUserId else { return }
+        await env.festContentService.fetchMyCalloutCompletions(
+            userId: uid, useLocal: env.previewMember == nil)
     }
 
     private func markDone(_ callout: HomeCallout) {
