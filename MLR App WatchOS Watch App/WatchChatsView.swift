@@ -58,6 +58,12 @@ struct WatchChatThreadView: View {
 
     @State private var messages: [WatchChatMessage] = []
     @State private var loaded = false
+    @State private var draft = ""
+    @State private var sending = false
+
+    private var canSend: Bool {
+        !draft.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !sending
+    }
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -79,15 +85,51 @@ struct WatchChatThreadView: View {
                         .listRowInsets(.init(top: 4, leading: 8, bottom: 4, trailing: 8))
                     }
                 }
+
+                // Reply — tapping the field brings up watch input (Dictation /
+                // Scribble / emoji). Sends to the General channel.
+                Section {
+                    HStack(spacing: 6) {
+                        TextField("Reply", text: $draft)
+                            .font(.system(size: 15, design: .rounded))
+                            .submitLabel(.send)
+                            .onSubmit { Task { await send(proxy: proxy) } }
+                        Button {
+                            Task { await send(proxy: proxy) }
+                        } label: {
+                            Image(systemName: sending ? "clock" : "arrow.up.circle.fill")
+                                .font(.system(size: 20))
+                        }
+                        .buttonStyle(.plain)
+                        .foregroundStyle(canSend ? Color.green : .secondary)
+                        .disabled(!canSend)
+                    }
+                }
             }
             .navigationTitle(conversation.title)
             .task {
                 messages = await WatchData.messages(for: conversation)
                 loaded = true
-                if let last = messages.last?.id {
-                    proxy.scrollTo(last, anchor: .bottom)
-                }
+                scrollToLast(proxy)
             }
+            .onChange(of: messages.count) { _, _ in scrollToLast(proxy) }
+        }
+    }
+
+    private func scrollToLast(_ proxy: ScrollViewProxy) {
+        guard let last = messages.last?.id else { return }
+        withAnimation { proxy.scrollTo(last, anchor: .bottom) }
+    }
+
+    private func send(proxy: ScrollViewProxy) async {
+        guard canSend else { return }
+        let text = draft
+        sending = true
+        defer { sending = false }
+        let ok = await WatchData.sendMessage(text, to: conversation)
+        if ok {
+            draft = ""
+            messages = await WatchData.messages(for: conversation)
         }
     }
 }
