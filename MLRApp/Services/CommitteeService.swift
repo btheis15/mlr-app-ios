@@ -28,6 +28,7 @@ final class CommitteeService {
             let rows: [Committee] = try await supabase
                 .from("committees")
                 .select("*")
+                .order("position", ascending: true)
                 .order("name", ascending: true)
                 .execute()
                 .value

@@ -11,6 +11,7 @@
 		D31B348F300AB8E800A0D653 /* MLRCore in Frameworks */ = {isa = PBXBuildFile; productRef = D31B348E300AB8E800A0D653 /* MLRCore */; };
 		D31B3491300AB93800A0D653 /* MLRCore in Frameworks */ = {isa = PBXBuildFile; productRef = D31B3490300AB93800A0D653 /* MLRCore */; };
 		D31B3496300ABBC400A0D653 /* PhoneWatchSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B3495300ABBC400A0D653 /* PhoneWatchSync.swift */; };
+		D31B34B5300AC9CA00A0D653 /* CommitteeTaxonomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -231,6 +232,7 @@
 		000000000000000000000120 /* MLR App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MLR App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D31B3478300A89D400A0D653 /* MLR App WatchOS Watch App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MLR App WatchOS Watch App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D31B3495300ABBC400A0D653 /* PhoneWatchSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PhoneWatchSync.swift; sourceTree = "<group>"; };
+		D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeTaxonomy.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -642,6 +644,7 @@
 				D33F9EE72FF419F700603CE7 /* AppImagesService.swift */,
 				D33F9F192FF8457100603CE7 /* HousesService.swift */,
 				D3F9D87230071069006874DA /* PollsService.swift */,
+				D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -1196,6 +1199,7 @@
 				D363474C2FFDD8DC001D52C8 /* FestQueryIntents.swift in Sources */,
 				D36347642FFDED8A001D52C8 /* InfoIntents.swift in Sources */,
 				D33F9EBE2FEC086700603CE7 /* HelpRequestsView.swift in Sources */,
+				D31B34B5300AC9CA00A0D653 /* CommitteeTaxonomy.swift in Sources */,
 				D363476A2FFDF098001D52C8 /* IntentDonations.swift in Sources */,
 				D36347562FFDDFA5001D52C8 /* ContentIndexer.swift in Sources */,
 			);
@@ -1389,7 +1393,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
@@ -1446,7 +1450,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.5;
+				MARKETING_VERSION = 1.6;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
@@ -1488,7 +1492,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
@@ -1523,7 +1527,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 1.6;
 				PRODUCT_BUNDLE_IDENTIFIER = com.muskellungelakeresort.mlr.watchkitapp;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				REGISTER_APP_GROUPS = YES;
