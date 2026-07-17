@@ -15,19 +15,27 @@ import Kingfisher
 
 struct LightboxView: View {
     let urls: [String]
+    let isVideo: [Bool]
 
     @Environment(\.dismiss) private var dismiss
     @State private var selection: Int
     @State private var shareItem: IdentifiableURL?
 
-    init(urls: [String], startIndex: Int = 0) {
+    init(urls: [String], isVideo: [Bool] = [], startIndex: Int = 0) {
         self.urls = urls
+        self.isVideo = isVideo
         _selection = State(initialValue: max(0, min(startIndex, max(0, urls.count - 1))))
     }
 
     /// Convenience for a single image (keeps existing call sites working).
     init(imageUrl: String) {
         self.init(urls: [imageUrl], startIndex: 0)
+    }
+
+    /// Authoritative video flag (from media_type), falling back to the URL
+    /// extension for legacy call sites that don't pass the flags.
+    private func isVideoItem(_ index: Int, _ url: String) -> Bool {
+        index >= 0 && index < isVideo.count ? isVideo[index] : url.isVideoURL
     }
 
     var body: some View {
@@ -37,7 +45,7 @@ struct LightboxView: View {
             TabView(selection: $selection) {
                 ForEach(Array(urls.enumerated()), id: \.offset) { idx, url in
                     Group {
-                        if url.isVideoURL, let u = URL(string: url) {
+                        if isVideoItem(idx, url), let u = URL(string: url) {
                             VideoPage(url: u)
                         } else if let u = URL(string: url) {
                             ZoomableImage(url: u) { dismiss() }

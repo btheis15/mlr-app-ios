@@ -57,7 +57,7 @@ struct PostCard: View {
             CommentsView(post: post)
         }
         .fullScreenCover(item: $lightbox) { pres in
-            LightboxView(urls: post.mediaUrls, startIndex: pres.startIndex)
+            LightboxView(urls: post.mediaUrls, isVideo: post.mediaIsVideo, startIndex: pres.startIndex)
         }
         .sheet(isPresented: $showEdit) {
             PostComposer(editing: post)
@@ -156,7 +156,7 @@ struct PostCard: View {
         let shape = RoundedRectangle(cornerRadius: 12)
         ZStack {
             shape.fill(Color.mlrCard)
-            if url.isVideoURL {
+            if post.isVideo(at: index) {
                 Image(systemName: "play.circle.fill")
                     .font(.mlrScaled(46))
                     .foregroundStyle(.white.opacity(0.9))
