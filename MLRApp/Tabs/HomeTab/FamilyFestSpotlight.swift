@@ -109,7 +109,7 @@ struct FamilyFestSpotlight: View {
             }
             if env.isSignedIn,
                env.committeeService.myMemberships.isEmpty,
-               let uid = await env.authService.userId {
+               let uid = env.effectiveUserId {
                 await env.committeeService.fetchMyMemberships(userId: uid)
             }
         }

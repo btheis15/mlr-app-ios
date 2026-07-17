@@ -9,16 +9,38 @@ import SwiftUI
 
 struct PreviewAsView: View {
     @Environment(AppEnvironment.self) private var env
+    @State private var showPersonPicker = false
 
     var body: some View {
         List {
             Section {
-                Text("See the app exactly as a member or a signed-out guest would. This only changes what you see on this device — it never touches your account or any data.")
+                Text("See the app exactly as a member, a signed-out guest, or a SPECIFIC person would. Only changes what you see on this device — it never touches accounts or data.")
                     .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrTextMuted)
             }
 
-            Section("View as") {
+            Section("View as a specific person") {
+                Button { showPersonPicker = true } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "person.text.rectangle.fill")
+                            .font(.mlrScaled(16)).foregroundStyle(Color.mlrPrimary).frame(width: 26)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(env.previewMember?.name ?? "Choose a person…")
+                                .font(.mlrScaled(15, weight: .medium)).foregroundStyle(Color.mlrText)
+                            Text("See their callout cards, whether they've joined the faire, and what they've checked off")
+                                .font(.caption).foregroundStyle(Color.mlrTextMuted)
+                        }
+                        Spacer()
+                        if env.previewMember != nil {
+                            Image(systemName: "checkmark").foregroundStyle(Color.mlrPrimary).fontWeight(.semibold)
+                        } else {
+                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(Color.mlrTextSubtle)
+                        }
+                    }
+                }
+            }
+
+            Section("View as a generic role") {
                 row(.member, title: "A member", subtitle: "Regular member view — admin controls hidden",
                     icon: "person.fill")
                 row(.guest, title: "A guest", subtitle: "Signed-out experience — members-only content locked",
@@ -38,6 +60,9 @@ struct PreviewAsView: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Preview As")
         .navigationBarTitleDisplayMode(.large)
+        .sheet(isPresented: $showPersonPicker) {
+            FestMemberPicker { env.setPreviewMember($0) }
+        }
     }
 
     private func row(_ mode: AppEnvironment.PreviewMode, title: String, subtitle: String, icon: String) -> some View {
@@ -54,7 +79,7 @@ struct PreviewAsView: View {
                     Text(subtitle).font(.caption).foregroundStyle(Color.mlrTextMuted)
                 }
                 Spacer()
-                if env.previewMode == mode {
+                if env.previewMode == mode && (mode != .member || env.previewMember == nil) {
                     Image(systemName: "checkmark").foregroundStyle(Color.mlrPrimary).fontWeight(.semibold)
                 }
             }
@@ -71,6 +96,7 @@ struct PreviewBanner: View {
     @Environment(AppEnvironment.self) private var env
 
     private var label: String {
+        if let m = env.previewMember { return "Previewing as \(m.name)" }
         switch env.previewMode {
         case .guest:  return "Previewing as a guest"
         case .member: return "Previewing as a member"

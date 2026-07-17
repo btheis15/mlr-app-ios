@@ -60,6 +60,15 @@ final class AppEnvironment {
         return m
     }()
 
+    /// When previewing as a SPECIFIC member (not the generic member/guest view),
+    /// who it is — so "my stuff" reads (callout completions, committee membership)
+    /// show exactly what that person sees. In-memory only (not persisted).
+    var previewMember: Profile? = nil
+
+    /// The id whose personal data should drive the UI: the previewed member while
+    /// previewing a specific person, otherwise the real signed-in user.
+    var effectiveUserId: UUID? { previewMember?.id ?? currentProfile?.id }
+
     /// Whether an admin is currently viewing the app as someone else.
     var isPreviewing: Bool { previewMode != .off }
 
@@ -73,13 +82,36 @@ final class AppEnvironment {
     /// Effective sign-in — false while previewing as a guest so guest gating shows.
     var isSignedIn: Bool { previewMode == .guest ? false : authService.isSignedIn }
 
-    /// Switch the preview. Entering (member/guest) is admin-only; exiting is free.
+    /// Switch the generic preview. Entering (member/guest) is admin-only; exiting
+    /// is free. Clears any specific-person preview.
     func setPreview(_ mode: PreviewMode) {
         if mode != .off && !realIsAdmin { return }
         previewMode = mode
+        previewMember = nil
         let defaults = UserDefaults.standard
         if mode == .off { defaults.removeObject(forKey: Self.previewKey) }
         else { defaults.set(mode.rawValue, forKey: Self.previewKey) }
+        Task { await reloadPreviewScopedData() }
+    }
+
+    /// Preview as a specific member (admin-only) — pass nil to clear. Puts the app
+    /// in a non-admin member view scoped to that person's data. Not persisted.
+    func setPreviewMember(_ member: Profile?) {
+        if member != nil && !realIsAdmin { return }
+        previewMember = member
+        if member != nil { previewMode = .member }
+        else if previewMode == .member { previewMode = .off }
+        UserDefaults.standard.removeObject(forKey: Self.previewKey)   // specific person isn't persisted
+        Task { await reloadPreviewScopedData() }
+    }
+
+    /// Reload the personal data that differs per member (callout completions,
+    /// committee memberships) for whoever the UI is currently scoped to.
+    @MainActor
+    func reloadPreviewScopedData() async {
+        guard let uid = effectiveUserId else { return }
+        await festContentService.fetchMyCalloutCompletions(userId: uid, useLocal: previewMember == nil)
+        await committeeService.fetchMyMemberships(userId: uid)
     }
 
     // Help contact — loaded from resort_config (migration 0082), falls back to
