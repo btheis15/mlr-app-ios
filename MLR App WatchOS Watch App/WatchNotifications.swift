@@ -30,7 +30,8 @@ final class WatchNotificationController: NSObject {
         case "committee", "committee_message", "committee_join_request",
              "house", "house_message", "chat_mention", "post":
             return .chats
-        // Fest route added when that screen lands.
+        case "event", "fest_dinner", "fest_schedule", "announcement":
+            return .fest
         default:
             return nil
         }

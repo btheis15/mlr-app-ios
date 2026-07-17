@@ -77,10 +77,12 @@ struct ContentView: View {
                     NavigationLink { WatchChatsListView() } label: {
                         Label("Chats", systemImage: "bubble.left.and.bubble.right.fill")
                     }
+                    NavigationLink { WatchFestScheduleView() } label: {
+                        Label("Fest Schedule", systemImage: "calendar")
+                    }
                     NavigationLink { WatchWorkItemsView() } label: {
                         Label("Work Items", systemImage: "checklist")
                     }
-                    // Family Fest schedule lands here next.
                 }
             }
             .navigationTitle("MLR")
@@ -89,6 +91,7 @@ struct ContentView: View {
                 switch route {
                 case .work:  WatchWorkItemsView()
                 case .chats: WatchChatsListView()
+                case .fest:  WatchFestScheduleView()
                 }
             }
         }

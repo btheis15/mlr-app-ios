@@ -11,7 +11,7 @@ import Foundation
 enum WatchRoute: Hashable {
     case work
     case chats
-    // case fest            // added when the Fest schedule screen lands
+    case fest
 }
 
 @MainActor
