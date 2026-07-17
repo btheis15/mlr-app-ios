@@ -176,7 +176,6 @@ enum ContentIndexer {
             }
             let it = item(id: "mlr://people?id=\(m.id.uuidString)", title: m.name,
                           description: desc, keywords: keywords, contentType: .contact)
-            it.associateAppEntity(m, priority: 0)
             return it
         }
     }
@@ -186,7 +185,6 @@ enum ContentIndexer {
         return committees.map { c in
             let it = item(id: "mlr://committees?slug=\(c.id)", title: "\(c.emoji) \(c.name)",
                           description: "Committee", keywords: [c.name, "committee", "volunteer", "group"])
-            it.associateAppEntity(c, priority: 0)
             return it
         }
     }
@@ -196,7 +194,6 @@ enum ContentIndexer {
         return events.map { e in
             let it = item(id: "mlr://events?id=\(e.id)", title: e.title,
                           description: e.subtitle, keywords: [e.title, "event", "calendar", "gathering", e.subtitle])
-            it.associateAppEntity(e, priority: 0)
             return it
         }
     }
@@ -207,7 +204,6 @@ enum ContentIndexer {
             let it = item(id: "mlr://work?id=\(w.id.uuidString)", title: w.title,
                           description: "Work checklist · \(w.subtitle)",
                           keywords: [w.title, "work", "task", "to do", "checklist", "project", "fix"])
-            it.associateAppEntity(w, priority: 0)
             return it
         }
     }
@@ -218,7 +214,6 @@ enum ContentIndexer {
             let it = item(id: "mlr://family-fest?dinner=\(d.id)", title: d.title,
                           description: d.subtitle,
                           keywords: [d.title, "dinner", "meal", "chef", "cooking", "food", "family fest"])
-            it.associateAppEntity(d, priority: 0)
             return it
         }
     }
@@ -229,7 +224,6 @@ enum ContentIndexer {
             let it = item(id: "mlr://family-fest?item=\(s.id)", title: s.title,
                           description: s.subtitle,
                           keywords: [s.title, "schedule", "plan", "activity", "family fest", "event"])
-            it.associateAppEntity(s, priority: 0)
             return it
         }
     }
