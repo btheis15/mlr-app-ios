@@ -540,19 +540,24 @@ final class CommitteeService {
         for committee in mine {
             let roster = (try? await fetchRoster(slug: committee.slug)) ?? []
             let myAreas = Self.areas(forUser: userId, in: roster)
+            let committeeArchived = committee.isArchived
+            // Areas archived out from under a member still show (read-only) so
+            // history stays reachable — flag them for the "Archived chats" group.
+            let archivedAreas: Set<String> = committeeArchived ? Set(myAreas)
+                : Set(await fetchCommitteeAreas(slug: committee.slug, includeArchived: true)
+                        .filter { $0.isArchived }.map(\.area))
             if myAreas.isEmpty {
-                // No assigned role → a single committee chat (the General/NULL channel).
                 channels.append(ChatChannel(committee: committee, area: nil,
-                                            title: committee.name, subtitle: nil))
+                                            title: committee.name, subtitle: nil,
+                                            isArchived: committeeArchived))
             } else {
-                // Committee-wide channel: title carries the committee name (e.g.
-                // "Family Fest General") so it's clear which committee's General
-                // this is once real messages replace the subtitle fallback.
                 channels.append(ChatChannel(committee: committee, area: nil,
-                                            title: "\(committee.name) General", subtitle: nil))
+                                            title: "\(committee.name) General", subtitle: nil,
+                                            isArchived: committeeArchived))
                 for area in myAreas {
                     channels.append(ChatChannel(committee: committee, area: area,
-                                                title: area, subtitle: committee.name))
+                                                title: area, subtitle: committee.name,
+                                                isArchived: committeeArchived || archivedAreas.contains(area)))
                 }
             }
         }
@@ -700,6 +705,9 @@ struct ChatChannel: Identifiable, Equatable {
     let area: String?
     let title: String
     let subtitle: String?
+    /// True when the committee or this role is archived (migration 0112): the
+    /// chat stays readable but read-only, and lists it under "Archived chats".
+    var isArchived: Bool = false
     var id: String { "\(committee.id.uuidString)|\(area ?? "")" }
 }
 
