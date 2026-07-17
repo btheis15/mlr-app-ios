@@ -2,13 +2,9 @@
 //  ContentView.swift
 //  MLR App WatchOS Watch App
 //
-//  The watch app's home screen: a glanceable Family Fest countdown.
-//
-//  Self-contained on purpose — the fest dates + countdown logic are duplicated
-//  here (mirroring FestSeason.swift / FamilyFestConfig in the iOS app) so the
-//  watch target builds without depending on iOS-only source files. When we wire
-//  the watch to Supabase + the shared session (App Group), the live schedule /
-//  next-event data can replace the static messaging below.
+//  Watch home: a Family Fest countdown hero + navigation into the stripped-down
+//  companion features (Work Items now; Chats + Fest schedule next). Live data
+//  needs the session the paired iPhone pushes (see WatchSessionReceiver).
 //
 
 import SwiftUI
@@ -18,7 +14,6 @@ import SwiftUI
 private enum WatchFest {
     static let startISO = "2026-07-27"
     static let endISO   = "2026-07-31"
-
     static var range: String { "July 27 – 31" }
 
     private static let iso: DateFormatter = {
@@ -29,7 +24,6 @@ private enum WatchFest {
         return f
     }()
 
-    /// Countdown state for `now`, mirroring the iOS FestSeason phases.
     static func state(now: Date = .now) -> WatchFestState {
         guard let start = iso.date(from: startISO), let end = iso.date(from: endISO) else {
             return WatchFestState(phase: .offSeason, daysUntilStart: 0, dayNumber: nil, totalDays: 0)
@@ -60,47 +54,67 @@ private struct WatchFestState {
     let totalDays: Int
 }
 
-// MARK: - Brand palette (Family Fest greens/gold)
-
 private extension Color {
-    static let festGreen = Color(red: 0.16, green: 0.42, blue: 0.26)
-    static let festGold  = Color(red: 0.82, green: 0.66, blue: 0.32)
+    static let festGold = Color(red: 0.82, green: 0.66, blue: 0.32)
 }
 
 // MARK: - Home
 
 struct ContentView: View {
-    // TimelineView keeps the countdown honest without a manual timer.
+    @Environment(WatchRouter.self) private var router
+
     var body: some View {
-        TimelineView(.everyMinute) { context in
-            FestCountdownView(state: WatchFest.state(now: context.date))
+        @Bindable var router = router
+        NavigationStack {
+            List {
+                Section {
+                    TimelineView(.everyMinute) { context in
+                        FestCountdownCard(state: WatchFest.state(now: context.date))
+                    }
+                    .listRowBackground(Color.clear)
+                }
+                Section("Family") {
+                    NavigationLink { WatchChatsListView() } label: {
+                        Label("Chats", systemImage: "bubble.left.and.bubble.right.fill")
+                    }
+                    NavigationLink { WatchFestScheduleView() } label: {
+                        Label("Fest Schedule", systemImage: "calendar")
+                    }
+                    NavigationLink { WatchWorkItemsView() } label: {
+                        Label("Work Items", systemImage: "checklist")
+                    }
+                }
+            }
+            .navigationTitle("MLR")
+            // A tapped (forwarded) notification routes here via WatchRouter.
+            .navigationDestination(item: $router.route) { route in
+                switch route {
+                case .work:  WatchWorkItemsView()
+                case .chats: WatchChatsListView()
+                case .fest:  WatchFestScheduleView()
+                }
+            }
         }
     }
 }
 
-private struct FestCountdownView: View {
+private struct FestCountdownCard: View {
     let state: WatchFestState
 
     var body: some View {
-        VStack(spacing: 6) {
+        VStack(spacing: 4) {
             Text("FAMILY FEST")
-                .font(.system(size: 13, weight: .bold, design: .rounded))
-                .tracking(1.5)
+                .font(.system(size: 12, weight: .bold, design: .rounded))
+                .tracking(1.2)
                 .foregroundStyle(Color.festGold)
-
             headline
-
             Text(WatchFest.range)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
+                .font(.system(size: 12, weight: .medium, design: .rounded))
                 .foregroundStyle(.secondary)
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .frame(maxWidth: .infinity)
         .multilineTextAlignment(.center)
-        .containerBackground(
-            LinearGradient(colors: [.festGreen.opacity(0.55), .black],
-                           startPoint: .top, endPoint: .bottom),
-            for: .navigation
-        )
+        .padding(.vertical, 6)
     }
 
     @ViewBuilder
@@ -109,29 +123,29 @@ private struct FestCountdownView: View {
         case .upcoming:
             VStack(spacing: 0) {
                 Text("\(state.daysUntilStart)")
-                    .font(.system(size: 52, weight: .heavy, design: .rounded))
+                    .font(.system(size: 46, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
                     .contentTransition(.numericText())
                 Text(state.daysUntilStart == 1 ? "day to go" : "days to go")
-                    .font(.system(size: 15, weight: .semibold, design: .rounded))
+                    .font(.system(size: 14, weight: .semibold, design: .rounded))
                     .foregroundStyle(.white.opacity(0.9))
             }
         case .live:
-            VStack(spacing: 2) {
+            VStack(spacing: 1) {
                 Text("HAPPENING NOW")
-                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .font(.system(size: 11, weight: .bold, design: .rounded))
                     .foregroundStyle(.green)
                 Text("Day \(state.dayNumber ?? 1) of \(state.totalDays)")
-                    .font(.system(size: 24, weight: .heavy, design: .rounded))
+                    .font(.system(size: 22, weight: .heavy, design: .rounded))
                     .foregroundStyle(.white)
             }
         case .wrap:
             Text("That's a wrap! 🎉")
-                .font(.system(size: 20, weight: .heavy, design: .rounded))
+                .font(.system(size: 18, weight: .heavy, design: .rounded))
                 .foregroundStyle(.white)
         case .offSeason:
             Text("See you Up North")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
+                .font(.system(size: 16, weight: .bold, design: .rounded))
                 .foregroundStyle(.white)
         }
     }
@@ -139,4 +153,6 @@ private struct FestCountdownView: View {
 
 #Preview {
     ContentView()
+        .environment(WatchSessionReceiver.shared)
+        .environment(WatchRouter.shared)
 }
