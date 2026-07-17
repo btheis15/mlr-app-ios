@@ -56,9 +56,6 @@ struct MemberSheetView: View {
             }
             .background(Color.mlrSurface)
             .navigationBarTitleDisplayMode(.inline)
-            // Onscreen context for Apple Intelligence / Siri ("when's their birthday?",
-            // "how do I pay them?") — associates the sheet with its member entity.
-            .appEntityIdentifier(EntityIdentifier(for: MemberEntity.self, identifier: member.id))
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
                     CloseButton { dismiss() }

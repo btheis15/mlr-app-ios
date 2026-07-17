@@ -72,9 +72,6 @@ struct WorkItemDetailSheet: View {
             .background(Color(.systemGroupedBackground))
             .navigationTitle("Work item")
             .navigationBarTitleDisplayMode(.inline)
-            // Onscreen context for Apple Intelligence / Siri ("summarize this",
-            // "add a comment to this") — associates the visible sheet with its entity.
-            .appEntityIdentifier(EntityIdentifier(for: WorkItemEntity.self, identifier: current.id))
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }

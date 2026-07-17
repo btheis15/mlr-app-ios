@@ -1,5 +1,4 @@
 import SwiftUI
-import FoundationModels
 
 // MARK: - EventComposer
 // Admin create / edit form for resort events.
@@ -25,12 +24,6 @@ struct EventComposer: View {
 
     @State private var isSaving = false
     @State private var saveError: String?
-    @State private var drafting = false
-
-    private var aiAvailable: Bool {
-        if case .available = SystemLanguageModel.default.availability { return true }
-        return false
-    }
 
     // Work items that can be linked to this event (open items), + current selection.
     @State private var openWorkItems: [WorkItem] = []
@@ -127,14 +120,6 @@ struct EventComposer: View {
                     TextField("Event title", text: $title)
                     TextField("Description", text: $description, axis: .vertical)
                         .lineLimit(3...6)
-                    if aiAvailable && !title.trimmingCharacters(in: .whitespaces).isEmpty {
-                        Button { Task { await draftDescription() } } label: {
-                            Label(drafting ? "Drafting…" : "Draft description with AI",
-                                  systemImage: "sparkles")
-                                .font(.mlrScaled(14))
-                        }
-                        .disabled(drafting)
-                    }
                     TextField("Location", text: $location)
                 }
 
@@ -240,30 +225,6 @@ struct EventComposer: View {
                 }
             }
             .task { await loadWorkItems() }
-        }
-    }
-
-    /// On-device draft of a friendly event description from the entered details.
-    private func draftDescription() async {
-        drafting = true
-        defer { drafting = false }
-        let dates = hasEndDate
-            ? "\(startDate.isoDateString) to \(endDate.isoDateString)"
-            : startDate.isoDateString
-        let session = LanguageModelSession(instructions: """
-            You write short, warm descriptions for a family lake-resort event listing.
-            One or two friendly, concrete sentences. No preamble, no quotes.
-            """)
-        let prompt = """
-            Event title: \(title)
-            Kind: \(kind)
-            Dates: \(dates)
-            Location: \(location.isEmpty ? "Muskellunge Lake Resort" : location)
-
-            Write the description.
-            """
-        if let response = try? await session.respond(to: prompt) {
-            description = response.content.trimmingCharacters(in: .whitespacesAndNewlines)
         }
     }
 

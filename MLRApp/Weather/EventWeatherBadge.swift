@@ -100,17 +100,14 @@ struct EventWeatherBadge: View {
 
 // MARK: - Event Weather Forecast Section
 //
-// For a multi-day event, shows a per-day forecast strip plus an on-device Apple
-// Intelligence summary of the week's weather. For a single-day event it falls
-// back to the existing full-size badge. Self-hides when WeatherKit has no data
-// (event too far out / in the past).
+// For a multi-day event, shows a per-day forecast strip. For a single-day event
+// it falls back to the existing full-size badge. Self-hides when WeatherKit has
+// no data (event too far out / in the past).
 
 struct EventWeatherForecastSection: View {
     let event: ResortEvent
 
     @State private var forecasts: [EventForecast] = []
-    @State private var summary: String?
-    @State private var summarizing = false
     @State private var didLoad = false
 
     private var isMultiDay: Bool {
@@ -124,10 +121,6 @@ struct EventWeatherForecastSection: View {
                 guard isMultiDay, !didLoad else { return }
                 didLoad = true
                 forecasts = await WeatherService.shared.forecasts(fromISO: event.startDate, toISO: event.endDate)
-                guard !forecasts.isEmpty, WeatherSummarizer.isAvailable else { return }
-                summarizing = true
-                summary = await WeatherSummarizer.summarize(eventTitle: event.title, forecasts: forecasts)
-                summarizing = false
             }
     }
 
@@ -141,11 +134,6 @@ struct EventWeatherForecastSection: View {
             } else {
                 VStack(alignment: .leading, spacing: 12) {
                     SectionLabel(text: "Weather")
-                    if summarizing {
-                        summaryPlaceholder
-                    } else if let summary {
-                        summaryCard(summary)
-                    }
                     dayStrip
                 }
             }
@@ -202,41 +190,6 @@ struct EventWeatherForecastSection: View {
         .accessibilityLabel("\(f.weekdayLabel) \(f.shortDateLabel): \(f.condition), high \(f.highLabel()), low \(f.lowLabel())")
     }
 
-    // MARK: AI summary
-
-    private func summaryCard(_ text: String) -> some View {
-        HStack(alignment: .top, spacing: 10) {
-            Image(systemName: "sparkles")
-                .font(.mlrScaled(15, weight: .semibold))
-                .foregroundStyle(Color.mlrPrimary)
-                .padding(.top, 1)
-            Text(text)
-                .font(.subheadline)
-                .foregroundStyle(Color.mlrText)
-                .fixedSize(horizontal: false, vertical: true)
-            Spacer(minLength: 0)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.mlrPrimaryLight)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
-
-    private var summaryPlaceholder: some View {
-        HStack(spacing: 8) {
-            Image(systemName: "sparkles")
-                .font(.mlrScaled(15, weight: .semibold))
-                .foregroundStyle(Color.mlrPrimary)
-            Text("Summarizing the forecast…")
-                .font(.subheadline)
-                .foregroundStyle(Color.mlrTextMuted)
-            ProgressView().controlSize(.small)
-        }
-        .padding(12)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.mlrPrimaryLight)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-    }
 }
 
 // MARK: - Attribution (required by Apple's WeatherKit terms)
