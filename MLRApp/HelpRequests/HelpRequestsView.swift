@@ -14,7 +14,16 @@ struct HelpRequestsView: View {
 
     private var requests: [HelpRequest] { env.helpService.openRequests }
 
-    private var myId: UUID? { env.currentProfile?.id }
+    // Resolve "my" identity against the EFFECTIVE viewer (the previewed member
+    // while an admin is previewing as a specific person), so "is this my
+    // request" / "have I responded" reflect what THAT member sees — never the
+    // real admin's account. Mirrors web `effectiveUserId`.
+    private var myId: UUID? { env.effectiveUserId }
+
+    /// True while an admin is previewing as a specific member. "View as" is
+    /// read-only: no Ask CTA, and every write below is a no-op — it only shows
+    /// what that member would see, it never acts as them. Mirrors web `previewAsId`.
+    private var isPreviewingMember: Bool { env.previewMember != nil }
 
     /// Changes whenever the user's own request's live-activity-relevant state
     /// changes (status, responder count, covered) — drives the Live Activity.
@@ -36,7 +45,7 @@ struct HelpRequestsView: View {
             .navigationTitle("Ask for Help")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                if env.isSignedIn {
+                if env.isSignedIn && !isPreviewingMember {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button {
                             showAskSheet = true
@@ -113,9 +122,11 @@ struct HelpRequestsView: View {
         } description: {
             Text("All quiet for now. When someone needs a hand, it'll show up here.")
         } actions: {
-            Button("Ask for Help") { showAskSheet = true }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.mlrFest)
+            if !isPreviewingMember {
+                Button("Ask for Help") { showAskSheet = true }
+                    .buttonStyle(.borderedProminent)
+                    .tint(Color.mlrFest)
+            }
         }
     }
 
@@ -136,6 +147,7 @@ struct HelpRequestsView: View {
     // MARK: - Actions
 
     private func respond(_ request: HelpRequest) async {
+        guard !isPreviewingMember else { return }
         actionInFlight.insert(request.id)
         defer { actionInFlight.remove(request.id) }
         do {
@@ -147,6 +159,7 @@ struct HelpRequestsView: View {
     }
 
     private func withdraw(_ request: HelpRequest) async {
+        guard !isPreviewingMember else { return }
         actionInFlight.insert(request.id)
         defer { actionInFlight.remove(request.id) }
         do {
@@ -157,6 +170,7 @@ struct HelpRequestsView: View {
     }
 
     private func cancel(_ request: HelpRequest) async {
+        guard !isPreviewingMember else { return }
         actionInFlight.insert(request.id)
         defer { actionInFlight.remove(request.id) }
         do {
@@ -167,6 +181,7 @@ struct HelpRequestsView: View {
     }
 
     private func toggleItem(_ item: BringItem) async {
+        guard !isPreviewingMember else { return }
         guard env.isSignedIn else { env.authService.promptSignIn(); return }
         do {
             // Claim if unclaimed or claimed by someone else; release only your own claim.
