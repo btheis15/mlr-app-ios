@@ -13,7 +13,8 @@ struct CommitteesView: View {
     @State private var actionError: String?
     @State private var joinSheetCommittee: Committee?
 
-    private var committees: [Committee] { env.committeeService.committees }
+    // Live committees only — archived ones drop out; admin-created ones appear.
+    private var committees: [Committee] { env.committeeService.liveCommittees }
     private var myMemberships: [CommitteeMember] { env.committeeService.myMemberships }
 
     private var myCommitteeIds: Set<UUID> {
@@ -314,16 +315,11 @@ struct CommitteeJoinSheet: View {
 
     private func loadAreas() async {
         isLoading = true
-        let roster = (try? await env.committeeService.fetchRoster(slug: committee.slug)) ?? []
-        // Areas = the committee's roles with the " · Lead" suffix stripped, deduped
-        // in first-seen order (mirrors the web join UI).
-        var seen = Set<String>()
-        var ordered: [String] = []
-        for role in roster.flatMap(\.roles) {
-            let area = role.hasSuffix(" · Lead") ? String(role.dropLast(" · Lead".count)) : role
-            if !area.isEmpty && !seen.contains(area) { seen.insert(area); ordered.append(area) }
-        }
-        areaOptions = ordered
+        // Areas come from committee_areas (the live source of truth, migration
+        // 0112) — so admin-created roles are joinable and archived ones drop out.
+        areaOptions = await env.committeeService
+            .fetchCommitteeAreas(slug: committee.slug)
+            .map(\.area)
         isLoading = false
     }
 
