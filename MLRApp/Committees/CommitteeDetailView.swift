@@ -24,8 +24,12 @@ struct CommitteeDetailView: View {
     @State private var confirmLeave = false
     @State private var leaving = false
 
-    /// Canonical area order for role-based committees (matches the web).
-    private let festAreas = [
+    /// Live roles from committee_areas — the source of truth (migration 0112).
+    @State private var dbAreas: [String] = []
+
+    /// In-code Family Fest fallback — first paint / offline only, before the DB
+    /// area set loads.
+    private let fallbackAreas = [
         "Meals",
         "Entertainment & Games",
         "Art & Decorating",
@@ -33,7 +37,28 @@ struct CommitteeDetailView: View {
         "Logistics, Scheduling & Finance",
     ]
 
-    private var roleBased: Bool { committee.slug == "family-fest" || roster.contains { !$0.roles.isEmpty } }
+    /// Areas people currently hold (roster roles, " · Lead" stripped), deduped.
+    private var heldAreas: [String] {
+        var seen = Set<String>(); var out: [String] = []
+        for role in roster.flatMap(\.roles) {
+            let a = role.hasSuffix(" · Lead") ? String(role.dropLast(" · Lead".count)) : role
+            if !a.isEmpty, !seen.contains(a) { seen.insert(a); out.append(a) }
+        }
+        return out
+    }
+
+    /// The role/area set to show: live committee_areas first (source of truth),
+    /// plus any area someone still holds that isn't in the live set (so nobody
+    /// drops off the roster silently). Falls back to the in-code Family Fest list
+    /// only before the DB set has loaded.
+    private var areas: [String] {
+        let base = !dbAreas.isEmpty ? dbAreas : (committee.slug == "family-fest" ? fallbackAreas : [])
+        var seen = Set(base); var out = base
+        for a in heldAreas where !seen.contains(a) { seen.insert(a); out.append(a) }
+        return out
+    }
+
+    private var roleBased: Bool { !areas.isEmpty }
     private var canManage: Bool { env.isAdmin }   // app admins have universal privileges
 
     /// A lead of this committee (per the roster) may also review join requests —
@@ -134,9 +159,10 @@ struct CommitteeDetailView: View {
         .background(Color(.systemGroupedBackground))
         .navigationTitle(committee.name)
         .navigationBarTitleDisplayMode(.inline)
-        .refreshable { await load() }
+        .refreshable { await load(); await loadAreas() }
         .task {
             await load()
+            await loadAreas()
             // Live-update the roster when members are added/removed anywhere
             // (e.g. from the web app or another device), matching web behavior.
             env.committeeService.subscribeToRoster(slug: committee.slug) {
@@ -152,12 +178,12 @@ struct CommitteeDetailView: View {
             env.committeeService.unsubscribeFromManagement(slug: committee.slug)
         }
         .sheet(item: $editing) { entry in
-            RosterEditSheet(committee: committee, entry: entry, areas: festAreas, roleBased: roleBased) {
+            RosterEditSheet(committee: committee, entry: entry, areas: areas, roleBased: roleBased) {
                 Task { await load() }
             }
         }
         .sheet(isPresented: $addingNew) {
-            RosterEditSheet(committee: committee, entry: nil, areas: festAreas, roleBased: roleBased) {
+            RosterEditSheet(committee: committee, entry: nil, areas: areas, roleBased: roleBased) {
                 Task { await load() }
             }
         }
@@ -170,7 +196,7 @@ struct CommitteeDetailView: View {
         .sheet(isPresented: $showMyAreas) {
             MyCommitteeAreasSheet(
                 committeeId: committee.id,
-                allAreas: festAreas,
+                allAreas: areas,
                 current: myAreas
             ) { Task { await load() } }
         }
@@ -222,6 +248,11 @@ struct CommitteeDetailView: View {
         }
     }
 
+    /// Load the committee's live roles from committee_areas (source of truth).
+    private func loadAreas() async {
+        dbAreas = await env.committeeService.fetchCommitteeAreas(slug: committee.slug).map(\.area)
+    }
+
     private func leave() async {
         leaving = true
         defer { leaving = false }
@@ -258,6 +289,11 @@ struct CommitteeDetailView: View {
                 Text(desc)
                     .font(.mlrBody)
                     .foregroundStyle(Color.mlrTextMuted)
+            }
+            if committee.isArchived {
+                Label("Archived — read-only", systemImage: "archivebox")
+                    .font(.mlrScaled(12, weight: .semibold))
+                    .foregroundStyle(Color.mlrWarning)
             }
         }
     }
@@ -360,7 +396,7 @@ struct CommitteeDetailView: View {
         } else if roleBased {
             VStack(alignment: .leading, spacing: 14) {
                 SectionLabel(text: "Roles & who's on them")
-                ForEach(festAreas, id: \.self) { area in
+                ForEach(areas, id: \.self) { area in
                     let inArea = roster
                         .filter { $0.roles.contains(area) || $0.roles.contains("\(area) · Lead") }
                         .sorted { a, b in
