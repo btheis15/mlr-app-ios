@@ -10,11 +10,36 @@ struct Committee: Codable, Identifiable, Equatable {
     var emoji: String?
     var isPrivate: Bool?
     var createdAt: Date?
+    var position: Int?       // admin ordering (migration 0112)
+    var archivedAt: Date?    // non-nil = archived/"deleted" (migration 0112)
+
+    /// Archived committees are hidden from the live app; their chats go read-only.
+    var isArchived: Bool { archivedAt != nil }
 
     enum CodingKeys: String, CodingKey {
-        case id, slug, name, description, emoji
+        case id, slug, name, description, emoji, position
         case isPrivate = "is_private"
         case createdAt = "created_at"
+        case archivedAt = "archived_at"
+    }
+}
+
+// MARK: - Committee Area (role/channel allow-list, migrations 0073 + 0112)
+// The single source of truth for "what roles/areas exist" in a committee. Each
+// area is also a chat channel. Archived areas are hidden + their chat read-only.
+
+struct CommitteeArea: Codable, Identifiable, Equatable {
+    var committeeSlug: String
+    var area: String
+    var archivedAt: Date?
+
+    var id: String { "\(committeeSlug)·\(area)" }
+    var isArchived: Bool { archivedAt != nil }
+
+    enum CodingKeys: String, CodingKey {
+        case committeeSlug = "committee_slug"
+        case area
+        case archivedAt = "archived_at"
     }
 }
 
