@@ -1,0 +1,21 @@
+import Foundation
+import Supabase
+
+// MARK: - Supabase client (shared by the iOS app + watch app)
+//
+// Both are client-safe public values — the key is designed to ship in apps; RLS
+// gates all data access. Same values as NEXT_PUBLIC_SUPABASE_URL +
+// NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY in the web app's Vercel env.
+//
+// The watch app doesn't sign in on-device; it receives the session tokens from
+// the paired iPhone (WatchConnectivity) and calls `supabase.auth.setSession(...)`.
+
+private enum SupabaseConfig {
+    static let url    = "https://vrksrpzlslrcjvbzchfg.supabase.co"
+    static let apiKey = "sb_publishable_XHnrbQ8FHY4xEtAGrk45JQ_Kw0rLlqJ"
+}
+
+public let supabase = SupabaseClient(
+    supabaseURL: URL(string: SupabaseConfig.url)!,
+    supabaseKey: SupabaseConfig.apiKey
+)

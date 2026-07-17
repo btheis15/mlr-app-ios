@@ -1,27 +1,10 @@
 import Foundation
 import Supabase
-
-// MARK: - Supabase credentials
-// ─────────────────────────────────────────────────────────────────────────────
-// Paste your project values below. Both are client-safe public values — the
-// key is designed to ship in apps; RLS gates all data access.
-//
-// Find them at: supabase.com → your project → Project Settings → API
-//   • Project URL       → url below
-//   • anon/public key (eyJ…) OR publishable key (sb_publishable_…) → apiKey
-//
-// Same values as NEXT_PUBLIC_SUPABASE_URL + NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY
-// in the web app's Vercel environment variables.
-// ─────────────────────────────────────────────────────────────────────────────
-private enum SupabaseConfig {
-    static let url    = "https://vrksrpzlslrcjvbzchfg.supabase.co"
-    static let apiKey = "sb_publishable_XHnrbQ8FHY4xEtAGrk45JQ_Kw0rLlqJ"
-}
-
-let supabase = SupabaseClient(
-    supabaseURL: URL(string: SupabaseConfig.url)!,
-    supabaseKey: SupabaseConfig.apiKey
-)
+// Re-export MLRCore app-wide so every file sees the shared `supabase` client
+// (and, as they migrate over, the shared models/services) without a per-file
+// `import MLRCore`. The Supabase client now lives in the MLRCore package so the
+// watch app can share it.
+@_exported import MLRCore
 
 // MARK: - App Environment
 
