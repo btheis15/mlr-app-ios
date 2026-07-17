@@ -30,6 +30,9 @@ struct CommitteeChatView: View {
     @State private var sending = false
     @State private var editingMessage: CommitteeChatMessage?
     @State private var subscribed = false
+    /// True when this committee or role is archived (migration 0112): history is
+    /// readable but posting is blocked by RLS, so we render read-only.
+    @State private var isArchivedChat = false
 
     private var rosterProfiles: [Profile] {
         members.compactMap(\.profile)
@@ -145,16 +148,32 @@ struct CommitteeChatView: View {
     private var chatScaffold: some View {
         VStack(spacing: 0) {
             messageScroll
-            ChatComposer(
-                text: $draft,
-                roster: rosterProfiles,
-                isEditing: editingMessage != nil,
-                sending: sending,
-                onSend: { attachments in Task { await send(attachments) } },
-                onCancelEdit: { cancelEdit() }
-            )
+            if isArchivedChat {
+                archivedNote
+            } else {
+                ChatComposer(
+                    text: $draft,
+                    roster: rosterProfiles,
+                    isEditing: editingMessage != nil,
+                    sending: sending,
+                    onSend: { attachments in Task { await send(attachments) } },
+                    onCancelEdit: { cancelEdit() }
+                )
+            }
         }
         .background(Color(.systemGroupedBackground))
+    }
+
+    private var archivedNote: some View {
+        HStack(spacing: 6) {
+            Image(systemName: "archivebox")
+            Text("This chat is archived — read-only.")
+        }
+        .font(.mlrScaled(13))
+        .foregroundStyle(Color.mlrTextMuted)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(Color(.secondarySystemBackground))
     }
 
     private var messageScroll: some View {
@@ -244,6 +263,13 @@ struct CommitteeChatView: View {
             print("[CommitteeChat] load error: \(error)")
         }
         isLoading = false
+        // Archived committee → whole chat read-only; else check if THIS role is archived.
+        if committee.isArchived {
+            isArchivedChat = true
+        } else if let area {
+            let all = await env.committeeService.fetchCommitteeAreas(slug: committee.slug, includeArchived: true)
+            isArchivedChat = all.contains { $0.area == area && $0.isArchived }
+        }
         isMuted = await env.committeeService.isAreaMuted(committeeId: committee.id, area: area)
         await env.committeeService.markAreaRead(committeeId: committee.id, area: area)
 

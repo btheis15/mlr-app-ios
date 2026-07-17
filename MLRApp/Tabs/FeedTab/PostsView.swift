@@ -78,19 +78,21 @@ private struct ConversationsList: View {
                 }
             }
 
-            if !channels.isEmpty {
+            let live = channels.filter { !$0.isArchived }
+            let archived = channels.filter { $0.isArchived }
+
+            if !live.isEmpty {
                 Section("Committee chats") {
-                    ForEach(channels) { channel in
-                        NavigationLink {
-                            ChannelChatLoader(channel: channel)
-                        } label: {
-                            ConversationRow(
-                                emoji: channel.committee.emoji ?? "💬",
-                                title: channel.title,
-                                subtitle: channel.subtitle,
-                                summary: summaries[channel.id]
-                            )
-                        }
+                    ForEach(live) { channelLink($0) }
+                }
+            }
+
+            // Archived committee/role chats stay reachable (read-only) under a
+            // quiet disclosure at the foot of the list (migration 0112).
+            if !archived.isEmpty {
+                Section {
+                    DisclosureGroup("Archived chats") {
+                        ForEach(archived) { channelLink($0) }
                     }
                 }
             }
@@ -100,6 +102,20 @@ private struct ConversationsList: View {
         .navigationBarTitleDisplayMode(.inline)
         .task { await loadSummaries() }
         .refreshable { await loadSummaries() }
+    }
+
+    @ViewBuilder
+    private func channelLink(_ channel: ChatChannel) -> some View {
+        NavigationLink {
+            ChannelChatLoader(channel: channel)
+        } label: {
+            ConversationRow(
+                emoji: channel.committee.emoji ?? "💬",
+                title: channel.title,
+                subtitle: channel.subtitle,
+                summary: summaries[channel.id]
+            )
+        }
     }
 
     private func loadSummaries() async {
