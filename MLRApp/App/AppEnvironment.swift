@@ -176,7 +176,18 @@ final class AppEnvironment {
             try? await Task.sleep(for: .milliseconds(600))
             resolved = await fetchProfile(id: user.id)
         }
-        currentProfile = resolved ?? Self.fallbackProfile(id: user.id, email: user.email ?? "")
+        if let resolved {
+            currentProfile = resolved
+        } else if currentProfile?.id != user.id {
+            // Both fetch attempts came back empty — a transient network/decode
+            // error or replication lag on a fresh verify. Only synthesize the
+            // email-derived placeholder when we don't already hold THIS user's
+            // profile. Otherwise a transient re-fetch failure (e.g. the reload
+            // right after saving a name) would clobber a good, already-persisted
+            // name — like one containing an emoji — back to the email prefix.
+            // Keep what we have; the next successful load refreshes it.
+            currentProfile = Self.fallbackProfile(id: user.id, email: user.email ?? "")
+        }
 
         // Resolve the member's house so the Home/Feed "Your house" surfaces can read
         // it directly (see HousesService.myHouse).
