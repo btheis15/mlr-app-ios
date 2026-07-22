@@ -22,6 +22,9 @@ struct CommitteeChatView: View {
 
     @State private var isMuted = false
     @State private var showMembers = false
+    @State private var canOrganizeMeeting = false
+    @State private var showMeetingComposer = false
+    @State private var meetingRefreshID = 0
     @State private var channelMembers: [CommitteeRosterEntry] = []
     @State private var messages: [CommitteeChatMessage] = []
     @State private var draft = ""
@@ -59,6 +62,13 @@ struct CommitteeChatView: View {
             if isMember {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        if canOrganizeMeeting {
+                            Button {
+                                showMeetingComposer = true
+                            } label: {
+                                Label("Schedule a meeting", systemImage: "calendar.badge.plus")
+                            }
+                        }
                         Button {
                             Task { await loadMembers() }
                             showMembers = true
@@ -77,6 +87,11 @@ struct CommitteeChatView: View {
             }
         }
         .sheet(isPresented: $showMembers) { membersSheet }
+        .sheet(isPresented: $showMeetingComposer) {
+            MeetingComposer(scope: meetingScope, roomLabel: channelTitle ?? committee.name) {
+                meetingRefreshID += 1
+            }
+        }
         .task { await initialLoad() }
         .onDisappear {
             env.committeeService.unsubscribeFromMessages(committeeId: committee.id, area: area)
@@ -145,8 +160,21 @@ struct CommitteeChatView: View {
 
     // MARK: - Scaffold
 
+    /// The meeting room this chat maps to (committee-wide General = nil area).
+    private var meetingScope: MeetingScope {
+        .committee(committeeId: committee.id, slug: committee.slug, area: area)
+    }
+
+    /// Roster members for meeting name-resolution + the "everyone can make it" count.
+    private var meetingMembers: [MeetingMember] {
+        members.compactMap { m in
+            m.profile.map { MeetingMember(id: m.userId, name: $0.displayName) }
+        }
+    }
+
     private var chatScaffold: some View {
         VStack(spacing: 0) {
+            MeetingSectionBar(scope: meetingScope, members: meetingMembers, surface: .chat, refreshID: meetingRefreshID)
             messageScroll
             if isArchivedChat {
                 archivedNote
@@ -272,6 +300,7 @@ struct CommitteeChatView: View {
         }
         isMuted = await env.committeeService.isAreaMuted(committeeId: committee.id, area: area)
         await env.committeeService.markAreaRead(committeeId: committee.id, area: area)
+        canOrganizeMeeting = await env.meetingsService.canOrganize(scope: meetingScope)
 
         guard !subscribed else { return }
         subscribed = true

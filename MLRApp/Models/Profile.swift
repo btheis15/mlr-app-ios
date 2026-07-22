@@ -17,6 +17,8 @@ enum PushType: String, Codable, CaseIterable {
     case helpResponse = "help_response"
     case workItemCreated = "work_item_created"
     case houseStayCreated = "house_stay_created"
+    case meetingProposed = "meeting_proposed"
+    case meetingScheduled = "meeting_scheduled"
 }
 
 enum NotifType: String, Codable, CaseIterable {
@@ -39,6 +41,8 @@ enum NotifType: String, Codable, CaseIterable {
     case workItemMention = "work_item_mention"
     case workItemCreated = "work_item_created"
     case houseStayCreated = "house_stay_created"
+    case meetingProposed = "meeting_proposed"
+    case meetingScheduled = "meeting_scheduled"
     case broadcast
 }
 

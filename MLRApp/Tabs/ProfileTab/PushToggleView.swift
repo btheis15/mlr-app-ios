@@ -99,6 +99,8 @@ struct PushToggleView: View {
                     pushToggle(for: .postMention, label: "Post @mentions",         desc: "When someone @mentions you in a comment", icon: "at")
                     pushToggle(for: .postReply, label: "Replies on posts",         desc: "Replies to your posts and comments", icon: "arrowshape.turn.up.left.fill")
                     pushToggle(for: .eventRsvp, label: "Event RSVPs",              desc: "When someone RSVPs to an event you created", icon: "calendar.badge.checkmark")
+                    pushToggle(for: .meetingProposed,  label: "Meetings to vote on",   desc: "When a meeting poll opens in your committee or house", icon: "calendar.badge.clock")
+                    pushToggle(for: .meetingScheduled, label: "Meetings scheduled",     desc: "When a meeting time is locked in", icon: "calendar.badge.checkmark")
                     pushToggle(for: .cabinDecision, label: "Cabin stay decisions", desc: "When your cabin request is approved or declined", icon: "house.lodge.fill")
                     pushToggle(for: .committeeJoin, label: "Committee joins",      desc: "When someone joins a committee you lead", icon: "person.badge.plus")
                     pushToggle(for: .helpRequest,  label: "Help requests",         desc: "Nearby “Ask for Help” requests", icon: "hand.raised.fill")

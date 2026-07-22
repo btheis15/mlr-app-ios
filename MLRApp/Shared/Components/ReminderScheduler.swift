@@ -50,6 +50,7 @@ struct ReminderScheduler: View {
     @State private var title = ""
     @State private var body_ = ""
     @State private var excludeDone = true
+    @State private var onlyUnconfirmed = false
     @State private var busyId: UUID?
     @State private var saving = false
     @State private var status: String?
@@ -136,6 +137,11 @@ struct ReminderScheduler: View {
                     .font(.mlrScaled(12)).tint(Color.mlrPrimary)
             }
 
+            if eventId != nil {
+                Toggle("Only remind people who haven't confirmed yet", isOn: $onlyUnconfirmed)
+                    .font(.mlrScaled(12)).tint(Color.mlrPrimary)
+            }
+
             if let when = computedAt {
                 Text(inPast(when) ? "That time has already passed." : "Sends \(formatWhen(when))")
                     .font(.mlrScaled(11))
@@ -203,6 +209,7 @@ struct ReminderScheduler: View {
             audience: "everyone",
             eventId: eventId,
             excludeNotAttending: eventId != nil ? true : nil,
+            onlyUnconfirmed: eventId != nil ? onlyUnconfirmed : nil,
             sourceType: sourceType,
             sourceId: sourceId,
             sourceLabel: sourceLabel,

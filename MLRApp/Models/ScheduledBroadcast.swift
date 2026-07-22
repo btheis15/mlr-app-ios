@@ -26,6 +26,10 @@ struct BroadcastPayload: Codable, Equatable {
     var alsoBanner: Bool?
     var eventId: String?
     var excludeNotAttending: Bool?
+    /// Event reminders only: skip anyone who has already confirmed their RSVP —
+    /// the "still coming?" reminder that rides a meeting-created event (migration
+    /// 0122). camelCase matches the web payload the cron reads.
+    var onlyUnconfirmed: Bool?
     // Reminder provenance (ReminderScheduler) — mostly a client label, except
     // excludeCalloutDone which the cron reads directly.
     var sourceType: String?          // "event" | "callout"
@@ -36,12 +40,14 @@ struct BroadcastPayload: Codable, Equatable {
     init(title: String, body: String? = nil, url: String? = nil,
          audience: String? = nil, expiryHours: Int? = nil, notifyEmail: Bool? = nil,
          emailAudience: String? = nil, alsoBanner: Bool? = nil, eventId: String? = nil,
-         excludeNotAttending: Bool? = nil, sourceType: String? = nil, sourceId: String? = nil,
+         excludeNotAttending: Bool? = nil, onlyUnconfirmed: Bool? = nil,
+         sourceType: String? = nil, sourceId: String? = nil,
          sourceLabel: String? = nil, excludeCalloutDone: Bool? = nil) {
         self.title = title; self.body = body; self.url = url; self.audience = audience
         self.expiryHours = expiryHours; self.notifyEmail = notifyEmail
         self.emailAudience = emailAudience; self.alsoBanner = alsoBanner; self.eventId = eventId
-        self.excludeNotAttending = excludeNotAttending; self.sourceType = sourceType
+        self.excludeNotAttending = excludeNotAttending; self.onlyUnconfirmed = onlyUnconfirmed
+        self.sourceType = sourceType
         self.sourceId = sourceId; self.sourceLabel = sourceLabel; self.excludeCalloutDone = excludeCalloutDone
     }
 }

@@ -10,6 +10,8 @@ struct EventsView: View {
     @State private var filter: TimeFilter = .upcoming
     @State private var selectedEvent: ResortEvent?
     @State private var showComposer = false
+    @State private var showMeetingComposer = false
+    @State private var meetingRefreshID = 0
     @State private var hasLoaded = false
 
     enum TimeFilter: String, CaseIterable {
@@ -53,18 +55,23 @@ struct EventsView: View {
 
     var body: some View {
         NavigationStack {
-            Group {
-                if env.eventsService.isLoading && !hasLoaded {
-                    ScrollView {
-                        VStack(spacing: 16) {
-                            ForEach(0..<4, id: \.self) { _ in SkeletonCard(height: 120) }
+            // spacing 0 so the family date-poll card collapses to nothing when idle.
+            VStack(spacing: 0) {
+                // Active family-wide date poll (#328) — every signed-in member sees it.
+                MeetingSectionBar(scope: .family, members: [], surface: .card, refreshID: meetingRefreshID)
+                Group {
+                    if env.eventsService.isLoading && !hasLoaded {
+                        ScrollView {
+                            VStack(spacing: 16) {
+                                ForEach(0..<4, id: \.self) { _ in SkeletonCard(height: 120) }
+                            }
+                            .padding(.vertical, 16)
                         }
-                        .padding(.vertical, 16)
+                    } else if filteredEvents.isEmpty {
+                        emptyState
+                    } else {
+                        eventList
                     }
-                } else if filteredEvents.isEmpty {
-                    emptyState
-                } else {
-                    eventList
                 }
             }
             .background(Color(.systemGroupedBackground))
@@ -81,8 +88,17 @@ struct EventsView: View {
                 }
                 if env.isAdmin {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            showComposer = true
+                        Menu {
+                            Button {
+                                showComposer = true
+                            } label: {
+                                Label("Create event", systemImage: "calendar.badge.plus")
+                            }
+                            Button {
+                                showMeetingComposer = true
+                            } label: {
+                                Label("Propose dates (poll the family)", systemImage: "calendar.badge.clock")
+                            }
                         } label: {
                             Image(systemName: "plus")
                         }
@@ -95,6 +111,11 @@ struct EventsView: View {
             }
             .sheet(isPresented: $showComposer) {
                 EventComposer()
+            }
+            .sheet(isPresented: $showMeetingComposer) {
+                MeetingComposer(scope: .family, roomLabel: "the whole family") {
+                    meetingRefreshID += 1
+                }
             }
             .task {
                 if !hasLoaded {

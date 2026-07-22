@@ -19,6 +19,9 @@ struct HouseChatView: View {
 
     @State private var members: [Profile] = []
     @State private var showMembers = false
+    @State private var canOrganizeMeeting = false
+    @State private var showMeetingComposer = false
+    @State private var meetingRefreshID = 0
     @State private var messages: [HouseChatMessage] = []
     @State private var draft = ""
     @State private var isLoading = true
@@ -47,6 +50,13 @@ struct HouseChatView: View {
             if isMember {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
+                        if canOrganizeMeeting {
+                            Button {
+                                showMeetingComposer = true
+                            } label: {
+                                Label("Schedule a meeting", systemImage: "calendar.badge.plus")
+                            }
+                        }
                         Button {
                             showMembers = true
                         } label: {
@@ -59,10 +69,25 @@ struct HouseChatView: View {
             }
         }
         .sheet(isPresented: $showMembers) { membersSheet }
+        .sheet(isPresented: $showMeetingComposer) {
+            MeetingComposer(scope: meetingScope, roomLabel: house.name) {
+                meetingRefreshID += 1
+            }
+        }
         .task { await initialLoad() }
         .onDisappear {
             env.housesService.unsubscribeFromMessages(houseId: house.id)
         }
+    }
+
+    /// The meeting room this house chat maps to.
+    private var meetingScope: MeetingScope {
+        .house(houseId: house.id, slug: house.slug)
+    }
+
+    /// House members for meeting name-resolution + the "everyone can make it" count.
+    private var meetingMembers: [MeetingMember] {
+        members.map { MeetingMember(id: $0.id, name: $0.displayName) }
     }
 
 
@@ -113,6 +138,7 @@ struct HouseChatView: View {
 
     private var chatScaffold: some View {
         VStack(spacing: 0) {
+            MeetingSectionBar(scope: meetingScope, members: meetingMembers, surface: .chat, refreshID: meetingRefreshID)
             messageScroll
             ChatComposer(
                 text: $draft,
@@ -213,6 +239,7 @@ struct HouseChatView: View {
         }
         isLoading = false
         await env.housesService.markRead(houseId: house.id)
+        canOrganizeMeeting = await env.meetingsService.canOrganize(scope: meetingScope)
 
         guard !subscribed else { return }
         subscribed = true
