@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		D31B348F300AB8E800A0D653 /* MLRCore in Frameworks */ = {isa = PBXBuildFile; productRef = D31B348E300AB8E800A0D653 /* MLRCore */; };
 		D31B34B5300AC9CA00A0D653 /* CommitteeTaxonomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */; };
+		D31B53553011646F00C8D189 /* HomeAdminDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53543011646F00C8D189 /* HomeAdminDashboardCard.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -217,6 +218,7 @@
 /* Begin PBXFileReference section */
 		000000000000000000000120 /* MLR App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "MLR App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeTaxonomy.swift; sourceTree = "<group>"; };
+		D31B53543011646F00C8D189 /* HomeAdminDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAdminDashboardCard.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -721,6 +723,7 @@
 				D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */,
 				D3F9D8683006C577006874DA /* HomeDelightCards.swift */,
 				D3F9D88430093D9E006874DA /* OnThisDayCard.swift */,
+				D31B53543011646F00C8D189 /* HomeAdminDashboardCard.swift */,
 			);
 			path = HomeTab;
 			sourceTree = "<group>";
@@ -994,6 +997,7 @@
 				D33F9E6B2FEC086700603CE7 /* AttendanceControl.swift in Sources */,
 				D33F9E6C2FEC086700603CE7 /* HelpRequest.swift in Sources */,
 				D33F9EE22FF3FC8600603CE7 /* GuideView.swift in Sources */,
+				D31B53553011646F00C8D189 /* HomeAdminDashboardCard.swift in Sources */,
 				D33F9E6D2FEC086700603CE7 /* CommitteeService.swift in Sources */,
 				D33F9E6E2FEC086700603CE7 /* AvatarView.swift in Sources */,
 				D33F9E6F2FEC086700603CE7 /* CabinBookingsView.swift in Sources */,

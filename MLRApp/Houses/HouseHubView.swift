@@ -41,31 +41,29 @@ struct HouseHubView: View {
                 // MJT House dues reminder — self-hides for other houses and outside the fest window.
                 MjtHouseDuesCard(house: house)
 
-                // Calendar
-                NavigationLink(destination: HouseCalendarView(house: house)) {
-                    HomeTile(
-                        icon: "calendar",
-                        title: "House calendar",
-                        subtitle: calSubtitle,
-                        tint: Color.mlrPrimary,
-                        fullWidth: true,
-                        minHeight: hubCardMinHeight
-                    )
+                // ── Calendar & chat — the two primary destinations, 2-up (#359) ──
+                SectionLabel(text: "Calendar & chat")
+                LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
+                                    GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                    NavigationLink(destination: HouseCalendarView(house: house)) {
+                        HomeTile(icon: "calendar", title: "Calendar",
+                                 subtitle: "Who's up & when", tint: Color.mlrPrimary,
+                                 fullWidth: false, minHeight: hubCardMinHeight)
+                    }
+                    .buttonStyle(.plain)
+                    NavigationLink(destination: HouseChatView(house: house, assumeMember: true)) {
+                        HomeTile(icon: "bubble.left.and.bubble.right.fill", title: "House chat",
+                                 subtitle: "Talk to your house", tint: Color.mlrInfo,
+                                 fullWidth: false, minHeight: hubCardMinHeight)
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+                if !loading {
+                    Text(calSubtitle).font(.mlrCaption).foregroundStyle(Color.mlrTextMuted).padding(.horizontal, 4)
+                }
 
-                // Chat
-                NavigationLink(destination: HouseChatView(house: house, assumeMember: true)) {
-                    HomeTile(
-                        icon: "bubble.left.and.bubble.right.fill",
-                        title: "House chat",
-                        subtitle: "Talk with everyone in your house.",
-                        tint: Color.mlrInfo,
-                        fullWidth: true,
-                        minHeight: hubCardMinHeight
-                    )
-                }
-                .buttonStyle(.plain)
+                // ── House — the shared rules doc ──
+                SectionLabel(text: "House")
 
                 // House Rules — a shared, editable open-text doc (any member).
                 Button {
@@ -107,11 +105,9 @@ struct HouseHubView: View {
                 // "Next up:" line on the calendar card above) — no separate
                 // preview here, matching web (#248).
 
-                // To-do list (the checklist also shows resort-wide MLR items).
-                VStack(alignment: .leading, spacing: 8) {
-                    Text("To-do list").font(.mlrScaled(15, weight: .bold))
-                    WorkChecklistCard()
-                }
+                // ── To-do (the checklist also shows resort-wide MLR items) ──
+                SectionLabel(text: "To-do")
+                WorkChecklistCard()
             }
             .padding(16)
         }
