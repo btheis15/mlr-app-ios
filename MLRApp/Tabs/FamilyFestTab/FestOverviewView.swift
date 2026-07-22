@@ -218,7 +218,7 @@ struct FestOverviewView: View {
                 .padding(.top, 4)
 
             FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
-            FestUtilityLink(label: "Dinner details", icon: "fork.knife") { FestDinnersView() }
+            FestUtilityLink(label: "Weekly dinner menu", icon: "fork.knife") { FestDinnersView() }
             FestUtilityLink(label: "Dues & payments", icon: "dollarsign.circle.fill") { FestPayView() }
             // Photos live on the Main Feed now — no separate Fest photo gallery.
         }
