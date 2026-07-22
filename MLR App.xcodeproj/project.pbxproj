@@ -18,6 +18,7 @@
 		D31B53653011690000C8D189 /* EmailPoolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53643011690000C8D189 /* EmailPoolsView.swift */; };
 		D31B53673011694F00C8D189 /* AdminBroadcastComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */; };
 		D31B5369301169A400C8D189 /* HomeAdminDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5368301169A400C8D189 /* HomeAdminDashboardCard.swift */; };
+		D31B536B301169D200C8D189 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536A301169D200C8D189 /* ConfettiView.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -240,6 +241,7 @@
 		D31B53643011690000C8D189 /* EmailPoolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPoolsView.swift; sourceTree = "<group>"; };
 		D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminBroadcastComposer.swift; sourceTree = "<group>"; };
 		D31B5368301169A400C8D189 /* HomeAdminDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAdminDashboardCard.swift; sourceTree = "<group>"; };
+		D31B536A301169D200C8D189 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -668,6 +670,7 @@
 				D3F9D88C30094A70006874DA /* ReminderScheduler.swift */,
 				D3F9D89030094CD9006874DA /* EventTargetPicker.swift */,
 				D31B5358301167A700C8D189 /* ChatTyping.swift */,
+				D31B536A301169D200C8D189 /* ConfettiView.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1123,6 +1126,7 @@
 				D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */,
 				D33F9E952FEC086700603CE7 /* FestScheduleView.swift in Sources */,
 				D33F9E962FEC086700603CE7 /* SignInView.swift in Sources */,
+				D31B536B301169D200C8D189 /* ConfettiView.swift in Sources */,
 				D33F9E972FEC086700603CE7 /* WelcomeCard.swift in Sources */,
 				D33F9F232FF84B0500603CE7 /* WorkItemIntents.swift in Sources */,
 				D33F9E982FEC086700603CE7 /* FamilyFestSpotlight.swift in Sources */,
