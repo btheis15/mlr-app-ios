@@ -24,7 +24,8 @@ struct MeetingSectionBar: View {
 
     @State private var meetings: [Meeting] = []
     @State private var openMeeting: Meeting?
-    @State private var loaded = false
+    @State private var subscriberID = UUID()
+    @State private var isSubscribed = false
 
     private var featured: Meeting? {
         meetings.first { $0.status == .open }
@@ -48,14 +49,7 @@ struct MeetingSectionBar: View {
             }
         }
         .task(id: refreshID) { await reload() }
-        .onAppear {
-            guard !loaded else { return }
-            loaded = true
-            env.meetingsService.subscribe(scope: scope) {
-                Task { await reload() }
-            }
-        }
-        .onDisappear { env.meetingsService.unsubscribe(scope: scope) }
+        .onDisappear { unsubscribeIfNeeded() }
         .sheet(item: $openMeeting) { m in
             MeetingSchedulerSheet(
                 meeting: m,
@@ -91,6 +85,23 @@ struct MeetingSectionBar: View {
         if let open = openMeeting {
             openMeeting = meetings.first { $0.id == open.id }
         }
+        // Only hold a live realtime channel while this room actually has a
+        // meeting — idle rooms (the common case) cost nothing. Subscribing so a
+        // still-open meeting's tallies stay live; released once none remain.
+        if meetings.isEmpty {
+            unsubscribeIfNeeded()
+        } else if !isSubscribed {
+            isSubscribed = true
+            env.meetingsService.subscribe(scope: scope, subscriber: subscriberID) {
+                Task { await reload() }
+            }
+        }
+    }
+
+    private func unsubscribeIfNeeded() {
+        guard isSubscribed else { return }
+        isSubscribed = false
+        env.meetingsService.unsubscribe(scope: scope, subscriber: subscriberID)
     }
 
     private func chosenInFuture(_ m: Meeting) -> Bool {
