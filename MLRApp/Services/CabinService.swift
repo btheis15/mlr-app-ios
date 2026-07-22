@@ -299,6 +299,82 @@ final class CabinService {
         }
     }
 
+    // MARK: - Add a place + per-place approver + guest messaging (migration 0114/0120)
+
+    /// Create a new place (admin-only, auto-slugs). `kind` is "cabin" | "house";
+    /// `approverUserId` need NOT be an app admin.
+    @discardableResult
+    func createCabin(name: String, kind: String, roomCount: Int, bedCount: Int?,
+                     notes: String?, approverUserId: UUID?) async throws -> Cabin? {
+        struct Params: Encodable {
+            let p_name: String
+            let p_kind: String
+            let p_room_count: Int
+            let p_bed_count: Int?
+            let p_notes: String?
+            let p_approver_user_id: String?
+        }
+        let response = try await supabase
+            .rpc("create_cabin", params: Params(
+                p_name: name, p_kind: kind, p_room_count: roomCount,
+                p_bed_count: bedCount, p_notes: notes,
+                p_approver_user_id: approverUserId?.uuidString))
+            .execute()
+        return try? JSONDecoder().decode(Cabin.self, from: response.data)
+    }
+
+    /// Am I an approver (or admin) for this place? Widened review/message gate.
+    func isCabinApprover(cabinId: UUID) async -> Bool {
+        struct Params: Encodable { let p_cabin_id: String }
+        let ok: Bool? = try? await supabase
+            .rpc("is_cabin_approver", params: Params(p_cabin_id: cabinId.uuidString))
+            .execute().value
+        return ok ?? false
+    }
+
+    /// Cabin ids where I'm the designated approver (drives the non-admin
+    /// "Requests to approve" surface).
+    func fetchMyApproverCabinIds(userId: UUID) async -> [UUID] {
+        struct Row: Decodable { let id: UUID }
+        let rows: [Row] = (try? await supabase
+            .from("cabins").select("id")
+            .eq("approver_user_id", value: userId.uuidString)
+            .execute().value) ?? []
+        return rows.map(\.id)
+    }
+
+    /// Places the caller can manage: all for admins, else only ones they approve.
+    func fetchManageableCabins(userId: UUID?, isAdmin: Bool) async -> [Cabin] {
+        do {
+            let filter = supabase.from("cabins").select("*")
+            let query = isAdmin
+                ? filter
+                : filter.eq("approver_user_id", value: (userId ?? UUID()).uuidString)
+            if !isAdmin && userId == nil { return [] }
+            return try await query.order("name", ascending: true).execute().value
+        } catch {
+            print("[CabinService] fetchManageableCabins error: \(error)")
+            return []
+        }
+    }
+
+    /// Message everyone with an approved, not-yet-ended stay at this place
+    /// (is_cabin_approver-gated). Returns the recipient count.
+    @discardableResult
+    func sendCabinMessage(cabinId: UUID, subject: String?, body: String, email: Bool) async throws -> Int {
+        struct Params: Encodable {
+            let p_cabin: String
+            let p_subject: String?
+            let p_body: String
+            let p_email: Bool
+        }
+        let response = try await supabase
+            .rpc("send_cabin_message", params: Params(
+                p_cabin: cabinId.uuidString, p_subject: subject, p_body: body, p_email: email))
+            .execute()
+        return (try? JSONDecoder().decode(Int.self, from: response.data)) ?? 0
+    }
+
     /// Edit a cabin's editable fields (admin-gated by RLS, migration 0089).
     func saveCabin(id: UUID, name: String, roomCount: Int, bedCount: Int?,
                    notes: String?, active: Bool) async throws {
@@ -313,6 +389,16 @@ final class CabinService {
             .from("cabins")
             .update(Row(name: name, room_count: roomCount, bed_count: bedCount, notes: notes, active: active))
             .eq("id", value: id.uuidString)
+            .execute()
+    }
+
+    /// Set (or clear) a place's designated approver (admin-gated by RLS).
+    func setCabinApprover(cabinId: UUID, approverUserId: UUID?) async throws {
+        struct Row: Encodable { let approver_user_id: String? }
+        try await supabase
+            .from("cabins")
+            .update(Row(approver_user_id: approverUserId?.uuidString))
+            .eq("id", value: cabinId.uuidString)
             .execute()
     }
 

@@ -11,6 +11,9 @@ struct CabinBookingsView: View {
     @State private var showRequestSheet = false
     @State private var cancellingId: UUID?
     @State private var actionError: String?
+    /// True when the signed-in (non-admin) member approves ≥1 place — shows the
+    /// "Requests to approve" entry (migration 0114/0120).
+    @State private var isApprover = false
 
     private var bookings: [CabinBooking] { env.cabinService.myBookings }
 
@@ -36,6 +39,16 @@ struct CabinBookingsView: View {
             .navigationTitle("My Cabin Stays")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
+                // Non-admin approvers reach the requests for the place(s) they
+                // approve here (admins use the admin panel).
+                if isApprover && !env.isAdmin {
+                    ToolbarItem(placement: .topBarLeading) {
+                        NavigationLink { AdminCabinBookings() } label: {
+                            Label("Requests to approve", systemImage: "tray.full")
+                        }
+                        .tint(Color.mlrPrimary)
+                    }
+                }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showRequestSheet = true
@@ -63,6 +76,9 @@ struct CabinBookingsView: View {
                 }
                 if let userId = env.currentProfile?.id {
                     env.cabinService.subscribeMyBookings(userId: userId)
+                    if !env.isAdmin {
+                        isApprover = !(await env.cabinService.fetchMyApproverCabinIds(userId: userId)).isEmpty
+                    }
                 }
             }
             .onDisappear { env.cabinService.unsubscribeMyBookings() }

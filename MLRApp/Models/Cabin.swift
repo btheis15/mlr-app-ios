@@ -14,6 +14,8 @@ struct Cabin: Codable, Identifiable, Equatable {
     var bedCount: Int? = nil     // migration 0089
     var notes: String? = nil     // member-facing notes (migration 0089)
     var active: Bool = true      // archived cabins hidden from members (migration 0089)
+    var kind: String = "cabin"           // "cabin" | "house" — display badge (migration 0114)
+    var approverUserId: UUID? = nil      // per-place approver; nil = all admins (migration 0114)
 
     enum CodingKeys: String, CodingKey {
         case id, slug, name, description
@@ -22,7 +24,8 @@ struct Cabin: Codable, Identifiable, Equatable {
         case imageUrl = "image_url"
         case sortOrder = "sort_order"
         case bedCount = "bed_count"
-        case notes, active
+        case notes, active, kind
+        case approverUserId = "approver_user_id"
     }
 
     // Custom decode so the extra columns degrade gracefully when a query only
@@ -41,15 +44,19 @@ struct Cabin: Codable, Identifiable, Equatable {
         bedCount = try c.decodeIfPresent(Int.self, forKey: .bedCount)
         notes = try c.decodeIfPresent(String.self, forKey: .notes)
         active = try c.decodeIfPresent(Bool.self, forKey: .active) ?? true
+        kind = try c.decodeIfPresent(String.self, forKey: .kind) ?? "cabin"
+        approverUserId = try c.decodeIfPresent(UUID.self, forKey: .approverUserId)
     }
 
     // Memberwise init retained (custom `init(from:)` suppresses synthesis).
     init(id: UUID, slug: String, name: String, description: String? = nil,
          roomCount: Int, maxGuests: Int? = nil, imageUrl: String? = nil,
-         sortOrder: Int, bedCount: Int? = nil, notes: String? = nil, active: Bool = true) {
+         sortOrder: Int, bedCount: Int? = nil, notes: String? = nil, active: Bool = true,
+         kind: String = "cabin", approverUserId: UUID? = nil) {
         self.id = id; self.slug = slug; self.name = name; self.description = description
         self.roomCount = roomCount; self.maxGuests = maxGuests; self.imageUrl = imageUrl
         self.sortOrder = sortOrder; self.bedCount = bedCount; self.notes = notes; self.active = active
+        self.kind = kind; self.approverUserId = approverUserId
     }
 }
 

@@ -12,6 +12,7 @@ struct AdminCabinDetails: View {
     @Environment(AppEnvironment.self) private var env
     @State private var cabins: [Cabin] = []
     @State private var isLoading = true
+    @State private var addingPlace = false
 
     var body: some View {
         List {
@@ -28,7 +29,15 @@ struct AdminCabinDetails: View {
                             Image(systemName: cabin.active ? "house.lodge.fill" : "house.lodge")
                                 .foregroundStyle(cabin.active ? Color.mlrPrimary : Color.mlrTextSubtle)
                             VStack(alignment: .leading, spacing: 2) {
-                                Text(cabin.name).font(.mlrScaled(15, weight: .semibold))
+                                HStack(spacing: 6) {
+                                    Text(cabin.name).font(.mlrScaled(15, weight: .semibold))
+                                    if cabin.kind == "house" {
+                                        Text("House").font(.mlrScaled(10, weight: .bold))
+                                            .foregroundStyle(Color.mlrLake)
+                                            .padding(.horizontal, 6).padding(.vertical, 2)
+                                            .background(Color.mlrLake.opacity(0.15)).clipShape(Capsule())
+                                    }
+                                }
                                 Text("\(cabin.roomCount) room\(cabin.roomCount == 1 ? "" : "s")"
                                      + (cabin.bedCount.map { " · \($0) beds" } ?? ""))
                                     .font(.caption).foregroundStyle(Color.mlrTextMuted)
@@ -44,8 +53,17 @@ struct AdminCabinDetails: View {
             }
         }
         .listStyle(.insetGrouped)
-        .navigationTitle("Cabins")
+        .navigationTitle("Places to stay")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { addingPlace = true } label: { Image(systemName: "plus") }
+                    .tint(Color.mlrPrimary)
+            }
+        }
+        .sheet(isPresented: $addingPlace) {
+            AddPlaceSheet { Task { await load() } }
+        }
         .refreshable { await load() }
         .task { await load() }
     }
@@ -76,6 +94,10 @@ private struct AdminCabinEditor: View {
     @State private var loadingRooms = true
     @State private var addingRoom = false
 
+    @State private var approverUserId: UUID?
+    @State private var approverName: String?
+    @State private var showApproverPicker = false
+
     init(cabin: Cabin, onChanged: @escaping () async -> Void) {
         self.cabin = cabin
         self.onChanged = onChanged
@@ -84,6 +106,7 @@ private struct AdminCabinEditor: View {
         _bedCount = State(initialValue: cabin.bedCount ?? 0)
         _notes = State(initialValue: cabin.notes ?? "")
         _active = State(initialValue: cabin.active)
+        _approverUserId = State(initialValue: cabin.approverUserId)
     }
 
     var body: some View {
@@ -91,9 +114,28 @@ private struct AdminCabinEditor: View {
             Section("Cabin") {
                 TextField("Name", text: $name)
                 Stepper("\(roomCount) room\(roomCount == 1 ? "" : "s")", value: $roomCount, in: 0...40)
-                Stepper(bedCount == 0 ? "Beds: not set" : "\(bedCount) bed\(bedCount == 1 ? "" : "s")",
-                        value: $bedCount, in: 0...80)
+                Stepper(bedStepperLabel, value: $bedCount, in: 0...80)
                 Toggle("Active (visible to members)", isOn: $active).tint(Color.mlrPrimary)
+            }
+
+            Section {
+                Button { showApproverPicker = true } label: {
+                    HStack {
+                        Text(approverUserId == nil ? "All admins" : (approverName ?? "Loading…"))
+                            .foregroundStyle(Color.mlrText)
+                        Spacer()
+                        Image(systemName: "chevron.right").font(.mlrScaled(13)).foregroundStyle(Color.mlrTextSubtle)
+                    }
+                }
+                if approverUserId != nil {
+                    Button(role: .destructive) { Task { await setApprover(nil) } } label: {
+                        Text("Clear — all admins approve")
+                    }
+                }
+            } header: {
+                Text("Who approves stays here")
+            } footer: {
+                Text("The approver reviews stay requests and can message guests for this place — they need not be an app admin.")
             }
 
             Section {
@@ -148,13 +190,41 @@ private struct AdminCabinEditor: View {
         }
         .navigationTitle(cabin.name)
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadRooms() }
+        .sheet(isPresented: $showApproverPicker) {
+            FestMemberPicker { profile in Task { await setApprover(profile) } }
+        }
+        .task { await loadRooms(); await resolveApproverName() }
+    }
+
+    /// Once a cabin has named rooms, the count is "extra beds" not in a room.
+    private var bedStepperLabel: String {
+        let noun = rooms.isEmpty ? "bed" : "extra bed"
+        return bedCount == 0 ? (rooms.isEmpty ? "Beds: not set" : "Extra beds: none")
+                             : "\(bedCount) \(noun)\(bedCount == 1 ? "" : "s")"
     }
 
     private func loadRooms() async {
         loadingRooms = true
         defer { loadingRooms = false }
         rooms = await env.cabinService.fetchCabinRooms(cabinId: cabin.id)
+    }
+
+    private func resolveApproverName() async {
+        guard let uid = approverUserId else { approverName = nil; return }
+        let profile: Profile? = try? await supabase
+            .from("profiles").select("*").eq("id", value: uid.uuidString).single().execute().value
+        approverName = profile?.displayName
+    }
+
+    private func setApprover(_ profile: Profile?) async {
+        do {
+            try await env.cabinService.setCabinApprover(cabinId: cabin.id, approverUserId: profile?.id)
+            approverUserId = profile?.id
+            approverName = profile?.displayName
+            await onChanged()
+        } catch {
+            saveError = "Couldn't update the approver."
+        }
     }
 
     private func saveCabin() async {
@@ -263,5 +333,93 @@ private struct RoomEditRow: View {
         CabinRoom(id: base.id, cabinId: base.cabinId, name: name, beds: beds,
                   active: active, sortOrder: base.sortOrder,
                   description: description.isEmpty ? nil : description)
+    }
+}
+
+// MARK: - Add a place (create_cabin, migration 0114)
+
+private struct AddPlaceSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    let onCreated: () -> Void
+
+    @State private var name = ""
+    @State private var kind = "cabin"
+    @State private var roomCount = 1
+    @State private var bedCount = 0
+    @State private var notes = ""
+    @State private var approver: Profile?
+    @State private var showApproverPicker = false
+    @State private var saving = false
+    @State private var errorText: String?
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Place") {
+                    TextField("Name", text: $name)
+                    Picker("Type", selection: $kind) {
+                        Text("Cabin").tag("cabin")
+                        Text("House").tag("house")
+                    }
+                    Stepper("\(roomCount) room\(roomCount == 1 ? "" : "s")", value: $roomCount, in: 0...40)
+                    Stepper(bedCount == 0 ? "Beds: not set" : "\(bedCount) bed\(bedCount == 1 ? "" : "s")",
+                            value: $bedCount, in: 0...80)
+                }
+                Section {
+                    Button { showApproverPicker = true } label: {
+                        HStack {
+                            Text(approver?.displayName ?? "All admins").foregroundStyle(Color.mlrText)
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.mlrScaled(13)).foregroundStyle(Color.mlrTextSubtle)
+                        }
+                    }
+                    if approver != nil {
+                        Button(role: .destructive) { approver = nil } label: { Text("Clear — all admins approve") }
+                    }
+                } header: {
+                    Text("Who approves stays here")
+                } footer: {
+                    Text("Optional. The approver need not be an app admin.")
+                }
+                Section("Notes") {
+                    TextField("Member-facing notes (optional)", text: $notes, axis: .vertical).lineLimit(2...6)
+                }
+                if let errorText {
+                    Section { Text(errorText).font(.mlrScaled(13)).foregroundStyle(Color.mlrDanger) }
+                }
+            }
+            .navigationTitle("Add a place")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(saving ? "Adding…" : "Add") { Task { await create() } }
+                        .disabled(saving || name.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+            .sheet(isPresented: $showApproverPicker) {
+                FestMemberPicker { approver = $0 }
+            }
+        }
+    }
+
+    private func create() async {
+        saving = true; errorText = nil
+        defer { saving = false }
+        let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            try await env.cabinService.createCabin(
+                name: name.trimmingCharacters(in: .whitespaces),
+                kind: kind, roomCount: roomCount,
+                bedCount: bedCount == 0 ? nil : bedCount,
+                notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+                approverUserId: approver?.id)
+            Haptics.success()
+            onCreated()
+            dismiss()
+        } catch {
+            errorText = "Couldn't add the place."
+        }
     }
 }

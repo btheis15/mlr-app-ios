@@ -448,6 +448,13 @@ private struct CabinPickCard: View {
                         .font(.mlrScaled(15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
                         .lineLimit(1)
+                    if cabin.kind == "house" {
+                        Text("House")
+                            .font(.mlrScaled(9, weight: .bold))
+                            .foregroundStyle(Color.mlrLake)
+                            .padding(.horizontal, 5).padding(.vertical, 2)
+                            .background(Color.mlrLake.opacity(0.15)).clipShape(Capsule())
+                    }
                 }
                 // Real bed/room figures — never a fabricated "sleeps" number.
                 Text(occupancyText)
