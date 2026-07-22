@@ -84,19 +84,11 @@ struct AdminView: View {
                 )
 
                 adminLink(
-                    destination: AdminAlertComposer(),
+                    destination: AdminBroadcastComposer(),
                     icon: "megaphone.fill",
                     iconColor: Color.mlrAccent,
-                    title: "Post Announcement",
-                    description: "Show a banner to all app visitors"
-                )
-
-                adminLink(
-                    destination: AdminNotificationComposer(),
-                    icon: "bell.badge.fill",
-                    iconColor: Color.mlrPrimary,
-                    title: "Send Notification",
-                    description: "Broadcast to everyone or just admins"
+                    title: "Broadcast",
+                    description: "Banner, Activity feed, and/or email — in one send"
                 )
 
                 adminLink(

@@ -117,6 +117,9 @@ struct CalloutComposerView: View {
     @State private var isUploadingImage = false
     @State private var selectedImage: PhotosPickerItem? = nil
     @State private var saveError: String?
+    // One-time side actions (default OFF each open — not saved on the callout).
+    @State private var alsoNotify = false
+    @State private var alsoEmail = false
     @State private var showDeleteAlert = false
 
     private var isNew: Bool { existing == nil }
@@ -259,6 +262,16 @@ struct CalloutComposerView: View {
                 }
             }
 
+            Section {
+                Toggle("Also send a notification", isOn: $alsoNotify).tint(Color.mlrPrimary)
+                Toggle("Also email everyone", isOn: $alsoEmail).tint(Color.mlrPrimary)
+            } header: {
+                Text("On save")
+            } footer: {
+                Text("One-time — fires this callout's title & body to everyone's Activity feed / inbox when you save. Resets each time you open this.")
+                    .font(.mlrScaled(12))
+            }
+
             if let saveError {
                 Section {
                     Text(saveError)
@@ -370,6 +383,20 @@ struct CalloutComposerView: View {
                 try await supabase.from("home_callouts").upsert(payload, onConflict: "id").execute()
             } else {
                 try await supabase.from("home_callouts").insert(payload).execute()
+            }
+            // One-time side actions using the callout's own title/body.
+            if (alsoNotify || alsoEmail) && !title.isEmpty {
+                let bodyOrNil = body_.isEmpty ? nil : body_
+                if alsoNotify {
+                    try? await env.notificationsService.sendBroadcast(
+                        title: title, body: bodyOrNil, audience: .everyone, mirrorBanner: false)
+                }
+                if alsoEmail {
+                    try? await env.notificationsService.postAnnouncement(
+                        title: title, body: bodyOrNil, severity: "alert",
+                        showBanner: false, notifyEmail: true, emailAudience: "all",
+                        expiresAt: Date.now.addingTimeInterval(6 * 3600))
+                }
             }
             dismiss()
         } catch {

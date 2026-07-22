@@ -17,6 +17,7 @@ struct AdminScheduledBroadcasts: View {
     @State private var rescheduling: ScheduledBroadcast?
     @State private var newDate = Date.now.addingTimeInterval(3600)
     @State private var channel: RealtimeChannelV2?
+    @State private var showHistory = false
 
     private var pending: [ScheduledBroadcast] { items.filter(\.isPending) }
     private var history: [ScheduledBroadcast] { items.filter { !$0.isPending } }
@@ -38,8 +39,14 @@ struct AdminScheduledBroadcasts: View {
                     }
                 }
                 if !history.isEmpty {
-                    Section("Recent") {
-                        ForEach(history) { item in row(item, showActions: false) }
+                    Section {
+                        DisclosureGroup(isExpanded: $showHistory) {
+                            ForEach(history) { item in row(item, showActions: false) }
+                        } label: {
+                            Text("Previously sent (\(history.count))")
+                                .font(.mlrScaled(13, weight: .semibold))
+                                .foregroundStyle(Color.mlrTextMuted)
+                        }
                     }
                 }
             }
