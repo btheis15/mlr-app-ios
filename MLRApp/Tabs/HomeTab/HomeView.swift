@@ -93,6 +93,10 @@ struct HomeView: View {
                             // Promoted above checklist to match web layout (Jul 2026).
                             HouseHubHomeCard()
 
+                            // ── 5b. Admin dashboard shortcut (admins only) ──
+                            // Self-hides for non-admins and during "View as" preview.
+                            HomeAdminDashboardCard()
+
                             // ── 6. Work Checklist (standalone collapsible card) ──
                             WorkChecklistCard()
 
