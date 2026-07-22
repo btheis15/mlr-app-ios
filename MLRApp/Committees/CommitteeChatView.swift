@@ -34,6 +34,19 @@ struct CommitteeChatView: View {
     /// readable but posting is blocked by RLS, so we render read-only.
     @State private var isArchivedChat = false
 
+    // Typing indicators (#361) — its own broadcast channel, separate from messages.
+    @State private var typing = ChatTypingChannel()
+    // Smart auto-scroll + jump-to-bottom pill (Wave 4).
+    @State private var atBottom = true
+    @State private var showJumpPill = false
+    @State private var didInitialScroll = false
+    @State private var scrollBump = 0
+
+    private static let bottomID = "__chat_bottom__"
+
+    /// Stable per-room key for the typing broadcast channel.
+    private var roomKey: String { "committee:\(committee.slug):\(area ?? "")" }
+
     private var rosterProfiles: [Profile] {
         members.compactMap(\.profile)
     }
@@ -80,6 +93,7 @@ struct CommitteeChatView: View {
         .task { await initialLoad() }
         .onDisappear {
             env.committeeService.unsubscribeFromMessages(committeeId: committee.id, area: area)
+            typing.stop()
         }
     }
 
@@ -148,6 +162,7 @@ struct CommitteeChatView: View {
     private var chatScaffold: some View {
         VStack(spacing: 0) {
             messageScroll
+            TypingIndicator(names: typing.typers)
             if isArchivedChat {
                 archivedNote
             } else {
@@ -162,6 +177,11 @@ struct CommitteeChatView: View {
             }
         }
         .background(Color(.systemGroupedBackground))
+        .onChange(of: draft) { _, new in
+            if editingMessage == nil && !new.trimmingCharacters(in: .whitespaces).isEmpty {
+                typing.notifyTyping()
+            }
+        }
     }
 
     private var archivedNote: some View {
@@ -205,18 +225,54 @@ struct CommitteeChatView: View {
                                 onEdit: { startEdit(message) },
                                 onDelete: { Task { await deleteMessage(message) } },
                                 onReact: { emoji in Task { await react(message, emoji) } },
+                                onReport: { Task { await report(message) } },
                                 reactorName: { reactorName($0) }
                             )
                             .id(message.id)
                         }
                     }
+                    // Bottom sentinel — the scroll target for jump-to-bottom.
+                    Color.clear.frame(height: 1).id(Self.bottomID)
                 }
                 .padding(.vertical, 12)
             }
             .scrollDismissesKeyboard(.interactively)
-            .onChange(of: messages.count) {
-                if let last = messages.last {
-                    withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+            .onScrollGeometryChange(for: CGFloat.self) { geo in
+                geo.contentSize.height - geo.contentOffset.y - geo.containerSize.height
+            } action: { _, distanceFromBottom in
+                atBottom = distanceFromBottom < 80
+                if atBottom { showJumpPill = false }
+            }
+            .onChange(of: messages.count) { old, new in
+                guard !messages.isEmpty else { return }
+                if !didInitialScroll {
+                    // Jump straight to the newest on first open (no animation).
+                    didInitialScroll = true
+                    proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                } else if atBottom || messages.last?.authorId == env.currentProfile?.id {
+                    // Smooth-follow only when already at bottom, and always for my own sends.
+                    withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
+                } else if new > old {
+                    showJumpPill = true
+                }
+            }
+            .onChange(of: scrollBump) {
+                withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
+                showJumpPill = false
+            }
+            .overlay(alignment: .bottom) {
+                if showJumpPill && !atBottom {
+                    Button { scrollBump += 1 } label: {
+                        Label("New messages", systemImage: "arrow.down")
+                            .font(.mlrScaled(12, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(Color.mlrPrimary).clipShape(Capsule())
+                            .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 10)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
         }
@@ -273,6 +329,10 @@ struct CommitteeChatView: View {
         isMuted = await env.committeeService.isAreaMuted(committeeId: committee.id, area: area)
         await env.committeeService.markAreaRead(committeeId: committee.id, area: area)
 
+        if let me = env.currentProfile {
+            typing.start(roomKey: roomKey, uid: me.id, name: me.displayName)
+        }
+
         guard !subscribed else { return }
         subscribed = true
         env.committeeService.subscribeToMessages(
@@ -324,42 +384,88 @@ struct CommitteeChatView: View {
         guard let userId = env.currentProfile?.id else { return }
         // Need either text or an attachment (editing only touches text).
         guard editingMessage != nil || !text.isEmpty || !attachments.isEmpty else { return }
-        sending = true
-        defer { sending = false }
 
-        do {
-            if let editing = editingMessage {
+        // Edit path — a direct update, unchanged.
+        if let editing = editingMessage {
+            sending = true
+            defer { sending = false }
+            do {
                 try await env.committeeService.editMessage(messageId: editing.id, text: text)
                 if let idx = messages.firstIndex(where: { $0.id == editing.id }) {
                     messages[idx].text = text
                     messages[idx].editedAt = .now
                 }
                 cancelEdit()
-            } else {
-                // Upload attachments to the mini first so a failure never leaves an
-                // empty message.
-                var uploaded: [ChatMedia] = []
-                for att in attachments {
-                    if let res = try? await env.mediaService.uploadChatMedia(
-                        data: att.data, filename: att.filename, mimeType: att.mimeType, room: committee.slug) {
-                        // Trust the local kind (we know it) rather than the server echo,
-                        // so photos/videos render right even before the mini redeploys.
-                        let type = att.kind == .image ? "image" : att.kind == .video ? "video" : "file"
-                        uploaded.append(ChatMedia(url: res.url, type: type, name: att.kind == .file ? att.filename : nil, position: uploaded.count))
-                    }
-                }
-                let mentioned = rosterProfiles
-                    .filter { !$0.name.isEmpty && text.lowercased().contains("@\($0.name.lowercased())") }
-                    .map(\.id)
-                let msg = try await env.committeeService.sendMessage(
-                    committeeId: committee.id, area: area, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded)
-                if !messages.contains(where: { $0.id == msg.id }) {
-                    messages.append(msg)
-                }
-                draft = ""
+            } catch {
+                print("[CommitteeChat] edit error: \(error)")
             }
+            return
+        }
+
+        let mentioned = rosterProfiles
+            .filter { !$0.name.isEmpty && text.lowercased().contains("@\($0.name.lowercased())") }
+            .map(\.id)
+
+        // Optimistic send (#348): a text-only message gets an instant temp bubble
+        // and the composer clears right away; restore the draft on failure.
+        // Attachments upload first (media needs a URL to render) then insert.
+        if attachments.isEmpty {
+            let tempId = UUID()
+            let temp = CommitteeChatMessage(
+                id: tempId, committeeId: committee.id, authorId: userId,
+                authorName: env.currentProfile?.displayName ?? "You",
+                authorAvatarUrl: env.currentProfile?.avatarUrl,
+                text: text, editedAt: nil, deletedAt: nil, createdAt: .now, area: area,
+                media: [], reactions: [])
+            messages.append(temp)
+            let savedDraft = draft
+            draft = ""
+            do {
+                let msg = try await env.committeeService.sendMessage(
+                    committeeId: committee.id, area: area, text: text, authorId: userId, mentionedIds: mentioned)
+                if let idx = messages.firstIndex(where: { $0.id == tempId }) {
+                    if messages.contains(where: { $0.id == msg.id }) { messages.remove(at: idx) }
+                    else { messages[idx] = msg }
+                }
+            } catch {
+                messages.removeAll { $0.id == tempId }
+                draft = savedDraft
+                Haptics.error()
+                print("[CommitteeChat] send error: \(error)")
+            }
+            return
+        }
+
+        sending = true
+        defer { sending = false }
+        do {
+            var uploaded: [ChatMedia] = []
+            for att in attachments {
+                if let res = try? await env.mediaService.uploadChatMedia(
+                    data: att.data, filename: att.filename, mimeType: att.mimeType, room: committee.slug) {
+                    let type = att.kind == .image ? "image" : att.kind == .video ? "video" : "file"
+                    uploaded.append(ChatMedia(url: res.url, type: type, name: att.kind == .file ? att.filename : nil, position: uploaded.count))
+                }
+            }
+            let msg = try await env.committeeService.sendMessage(
+                committeeId: committee.id, area: area, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded)
+            if !messages.contains(where: { $0.id == msg.id }) {
+                messages.append(msg)
+            }
+            draft = ""
         } catch {
             print("[CommitteeChat] send error: \(error)")
+        }
+    }
+
+    /// Report a chat message for moderator review (#344). RLS then hides a held
+    /// message from everyone but its author + admins on the next refetch.
+    private func report(_ message: CommitteeChatMessage) async {
+        do {
+            try await env.postsService.reportContent(targetType: "committee_message", targetId: message.id, reason: nil)
+            Haptics.success()
+        } catch {
+            print("[CommitteeChat] report error: \(error)")
         }
     }
 
@@ -396,6 +502,7 @@ private struct MessageBubble: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     var onReact: (String) -> Void = { _ in }
+    var onReport: () -> Void = {}
     /// Resolves a reactor's user id to a display name ("You" for yourself).
     var reactorName: (UUID) -> String = { _ in "Member" }
 
@@ -522,6 +629,9 @@ private struct MessageBubble: View {
                     Button(role: .destructive) { onDelete() } label: {
                         Label("Delete", systemImage: "trash")
                     }
+                }
+                if !isOwn && !message.isDeleted {
+                    Button { onReport() } label: { Label("Report", systemImage: "flag") }
                 }
             }
         }

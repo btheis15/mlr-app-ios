@@ -165,6 +165,7 @@
 		D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A4 /* HouseStayComposer.swift */; };
 		D3A0000000000000000000B5 /* HouseHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A5 /* HouseHubView.swift */; };
 		D3E4FD3D2FFFE7340008DA06 /* FestDuesCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */; };
+		D3EA3D9F301149810092AE8E /* ChatTyping.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D9E301149810092AE8E /* ChatTyping.swift */; };
 		D3F9D8633006C1B3006874DA /* HomeCalloutsStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */; };
 		D3F9D8653006C201006874DA /* AdminCommitteesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8643006C201006874DA /* AdminCommitteesView.swift */; };
 		D3F9D8673006C288006874DA /* AdminHelpContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8663006C288006874DA /* AdminHelpContactView.swift */; };
@@ -368,6 +369,7 @@
 		D3A0000000000000000000A4 /* HouseStayComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStayComposer.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A5 /* HouseHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseHubView.swift; sourceTree = "<group>"; };
 		D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDuesCalculator.swift; sourceTree = "<group>"; };
+		D3EA3D9E301149810092AE8E /* ChatTyping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTyping.swift; sourceTree = "<group>"; };
 		D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeCalloutsStack.swift; sourceTree = "<group>"; };
 		D3F9D8643006C201006874DA /* AdminCommitteesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCommitteesView.swift; sourceTree = "<group>"; };
 		D3F9D8663006C288006874DA /* AdminHelpContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminHelpContactView.swift; sourceTree = "<group>"; };
@@ -631,6 +633,7 @@
 				D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */,
 				D3F9D88C30094A70006874DA /* ReminderScheduler.swift */,
 				D3F9D89030094CD9006874DA /* EventTargetPicker.swift */,
+				D3EA3D9E301149810092AE8E /* ChatTyping.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -1073,6 +1076,7 @@
 				D3F9D8933009816D006874DA /* FestActivityEditSheet.swift in Sources */,
 				D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */,
 				D33F9E9B2FEC086700603CE7 /* FestPayView.swift in Sources */,
+				D3EA3D9F301149810092AE8E /* ChatTyping.swift in Sources */,
 				D33F9E9C2FEC086700603CE7 /* SeedData.swift in Sources */,
 				D33F9E9D2FEC086700603CE7 /* NextEventIntent.swift in Sources */,
 				D3F9D87F30093C6C006874DA /* ScheduleSendPicker.swift in Sources */,

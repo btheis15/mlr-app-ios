@@ -27,6 +27,17 @@ struct HouseChatView: View {
     @State private var editingMessage: HouseChatMessage?
     @State private var subscribed = false
 
+    // Typing indicators (#361) — its own broadcast channel, separate from messages.
+    @State private var typing = ChatTypingChannel()
+    // Smart auto-scroll + jump-to-bottom pill (Wave 4).
+    @State private var atBottom = true
+    @State private var showJumpPill = false
+    @State private var didInitialScroll = false
+    @State private var scrollBump = 0
+
+    private static let bottomID = "__chat_bottom__"
+    private var roomKey: String { "house:\(house.slug)" }
+
     private var isMember: Bool {
         assumeMember || env.isAdmin || env.currentProfile?.houseId == house.id
     }
@@ -62,6 +73,7 @@ struct HouseChatView: View {
         .task { await initialLoad() }
         .onDisappear {
             env.housesService.unsubscribeFromMessages(houseId: house.id)
+            typing.stop()
         }
     }
 
@@ -114,6 +126,7 @@ struct HouseChatView: View {
     private var chatScaffold: some View {
         VStack(spacing: 0) {
             messageScroll
+            TypingIndicator(names: typing.typers)
             ChatComposer(
                 text: $draft,
                 roster: members,
@@ -124,6 +137,11 @@ struct HouseChatView: View {
             )
         }
         .background(Color(.systemGroupedBackground))
+        .onChange(of: draft) { _, new in
+            if editingMessage == nil && !new.trimmingCharacters(in: .whitespaces).isEmpty {
+                typing.notifyTyping()
+            }
+        }
     }
 
     private var messageScroll: some View {
@@ -155,18 +173,51 @@ struct HouseChatView: View {
                                 onEdit: { startEdit(message) },
                                 onDelete: { Task { await deleteMessage(message) } },
                                 onReact: { emoji in Task { await react(message, emoji) } },
+                                onReport: { Task { await report(message) } },
                                 reactorName: { reactorName($0) }
                             )
                             .id(message.id)
                         }
                     }
+                    Color.clear.frame(height: 1).id(Self.bottomID)
                 }
                 .padding(.vertical, 12)
             }
             .scrollDismissesKeyboard(.interactively)
-            .onChange(of: messages.count) {
-                if let last = messages.last {
-                    withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
+            .onScrollGeometryChange(for: CGFloat.self) { geo in
+                geo.contentSize.height - geo.contentOffset.y - geo.containerSize.height
+            } action: { _, distanceFromBottom in
+                atBottom = distanceFromBottom < 80
+                if atBottom { showJumpPill = false }
+            }
+            .onChange(of: messages.count) { old, new in
+                guard !messages.isEmpty else { return }
+                if !didInitialScroll {
+                    didInitialScroll = true
+                    proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                } else if atBottom || messages.last?.authorId == env.currentProfile?.id {
+                    withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
+                } else if new > old {
+                    showJumpPill = true
+                }
+            }
+            .onChange(of: scrollBump) {
+                withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
+                showJumpPill = false
+            }
+            .overlay(alignment: .bottom) {
+                if showJumpPill && !atBottom {
+                    Button { scrollBump += 1 } label: {
+                        Label("New messages", systemImage: "arrow.down")
+                            .font(.mlrScaled(12, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 14).padding(.vertical, 8)
+                            .background(Color.mlrPrimary).clipShape(Capsule())
+                            .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
+                    }
+                    .buttonStyle(.plain)
+                    .padding(.bottom, 10)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
             }
         }
@@ -214,6 +265,10 @@ struct HouseChatView: View {
         isLoading = false
         await env.housesService.markRead(houseId: house.id)
 
+        if let me = env.currentProfile {
+            typing.start(roomKey: roomKey, uid: me.id, name: me.displayName)
+        }
+
         guard !subscribed else { return }
         subscribed = true
         env.housesService.subscribeToMessages(
@@ -260,40 +315,85 @@ struct HouseChatView: View {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let userId = env.currentProfile?.id else { return }
         guard editingMessage != nil || !text.isEmpty || !attachments.isEmpty else { return }
-        sending = true
-        defer { sending = false }
 
-        do {
-            if let editing = editingMessage {
+        if let editing = editingMessage {
+            sending = true
+            defer { sending = false }
+            do {
                 try await env.housesService.editMessage(messageId: editing.id, text: text)
                 if let idx = messages.firstIndex(where: { $0.id == editing.id }) {
                     messages[idx].text = text
                     messages[idx].editedAt = .now
                 }
                 cancelEdit()
-            } else {
-                var uploaded: [ChatMedia] = []
-                for att in attachments {
-                    if let res = try? await env.mediaService.uploadChatMedia(
-                        data: att.data, filename: att.filename, mimeType: att.mimeType, room: house.slug) {
-                        // Trust the local kind (we know it) rather than the server echo,
-                        // so photos/videos render right even before the mini redeploys.
-                        let type = att.kind == .image ? "image" : att.kind == .video ? "video" : "file"
-                        uploaded.append(ChatMedia(url: res.url, type: type, name: att.kind == .file ? att.filename : nil, position: uploaded.count))
-                    }
-                }
-                let mentioned = members
-                    .filter { !$0.name.isEmpty && text.lowercased().contains("@\($0.name.lowercased())") }
-                    .map(\.id)
-                let msg = try await env.housesService.sendMessage(
-                    houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded)
-                if !messages.contains(where: { $0.id == msg.id }) {
-                    messages.append(msg)
-                }
-                draft = ""
+            } catch {
+                print("[HouseChat] edit error: \(error)")
             }
+            return
+        }
+
+        let mentioned = members
+            .filter { !$0.name.isEmpty && text.lowercased().contains("@\($0.name.lowercased())") }
+            .map(\.id)
+
+        // Optimistic send (#348) — text-only gets an instant temp bubble; restore
+        // the draft on failure. Attachments upload first, then insert.
+        if attachments.isEmpty {
+            let tempId = UUID()
+            let temp = HouseChatMessage(
+                id: tempId, houseId: house.id, authorId: userId,
+                authorName: env.currentProfile?.displayName ?? "You",
+                authorAvatarUrl: env.currentProfile?.avatarUrl,
+                text: text, editedAt: nil, deletedAt: nil, createdAt: .now,
+                media: [], reactions: [])
+            messages.append(temp)
+            let savedDraft = draft
+            draft = ""
+            do {
+                let msg = try await env.housesService.sendMessage(
+                    houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned)
+                if let idx = messages.firstIndex(where: { $0.id == tempId }) {
+                    if messages.contains(where: { $0.id == msg.id }) { messages.remove(at: idx) }
+                    else { messages[idx] = msg }
+                }
+            } catch {
+                messages.removeAll { $0.id == tempId }
+                draft = savedDraft
+                Haptics.error()
+                print("[HouseChat] send error: \(error)")
+            }
+            return
+        }
+
+        sending = true
+        defer { sending = false }
+        do {
+            var uploaded: [ChatMedia] = []
+            for att in attachments {
+                if let res = try? await env.mediaService.uploadChatMedia(
+                    data: att.data, filename: att.filename, mimeType: att.mimeType, room: house.slug) {
+                    let type = att.kind == .image ? "image" : att.kind == .video ? "video" : "file"
+                    uploaded.append(ChatMedia(url: res.url, type: type, name: att.kind == .file ? att.filename : nil, position: uploaded.count))
+                }
+            }
+            let msg = try await env.housesService.sendMessage(
+                houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded)
+            if !messages.contains(where: { $0.id == msg.id }) {
+                messages.append(msg)
+            }
+            draft = ""
         } catch {
             print("[HouseChat] send error: \(error)")
+        }
+    }
+
+    /// Report a chat message for moderator review (#344).
+    private func report(_ message: HouseChatMessage) async {
+        do {
+            try await env.postsService.reportContent(targetType: "house_message", targetId: message.id, reason: nil)
+            Haptics.success()
+        } catch {
+            print("[HouseChat] report error: \(error)")
         }
     }
 
@@ -330,6 +430,7 @@ private struct HouseMessageBubble: View {
     let onEdit: () -> Void
     let onDelete: () -> Void
     var onReact: (String) -> Void = { _ in }
+    var onReport: () -> Void = {}
     /// Resolves a reactor's user id to a display name ("You" for yourself).
     var reactorName: (UUID) -> String = { _ in "Member" }
 
@@ -456,6 +557,9 @@ private struct HouseMessageBubble: View {
                     Button(role: .destructive) { onDelete() } label: {
                         Label("Delete", systemImage: "trash")
                     }
+                }
+                if !isOwn && !message.isDeleted {
+                    Button { onReport() } label: { Label("Report", systemImage: "flag") }
                 }
             }
         }
