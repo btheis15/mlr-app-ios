@@ -16,6 +16,7 @@
 		D31B5361301168CC00C8D189 /* EmailMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5360301168CC00C8D189 /* EmailMembersView.swift */; };
 		D31B5363301168ED00C8D189 /* AdminFamilyRosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5362301168ED00C8D189 /* AdminFamilyRosterView.swift */; };
 		D31B53653011690000C8D189 /* EmailPoolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53643011690000C8D189 /* EmailPoolsView.swift */; };
+		D31B53673011694F00C8D189 /* AdminBroadcastComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -236,6 +237,7 @@
 		D31B5360301168CC00C8D189 /* EmailMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailMembersView.swift; sourceTree = "<group>"; };
 		D31B5362301168ED00C8D189 /* AdminFamilyRosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminFamilyRosterView.swift; sourceTree = "<group>"; };
 		D31B53643011690000C8D189 /* EmailPoolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPoolsView.swift; sourceTree = "<group>"; };
+		D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminBroadcastComposer.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -776,6 +778,7 @@
 				D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */,
 				D3F9D88A300948A5006874DA /* PreviewAsView.swift */,
 				D3F9D89A3009870A006874DA /* AdminMembersView.swift */,
+				D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */,
 			);
 			path = Admin;
 			sourceTree = "<group>";
@@ -1106,6 +1109,7 @@
 				D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */,
 				D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */,
 				D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */,
+				D31B53673011694F00C8D189 /* AdminBroadcastComposer.swift in Sources */,
 				D3F9D876300710BC006874DA /* PollsView.swift in Sources */,
 				D33F9F182FF844AA00603CE7 /* House.swift in Sources */,
 				D3F9D89B3009870A006874DA /* AdminMembersView.swift in Sources */,
