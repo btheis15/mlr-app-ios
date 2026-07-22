@@ -49,6 +49,14 @@ struct AdminMembersView: View {
         .searchable(text: $query, prompt: "Name, email, or household")
         .navigationTitle("Members")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                NavigationLink { AdminFamilyRosterView() } label: {
+                    Label("Family roster", systemImage: "person.crop.rectangle.stack.fill")
+                }
+                .tint(Color.mlrPrimary)
+            }
+        }
         .refreshable { await load() }
         .task { await load() }
         .sheet(item: $selected, onDismiss: { Task { await load() } }) { profile in

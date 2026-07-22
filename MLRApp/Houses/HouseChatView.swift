@@ -22,6 +22,7 @@ struct HouseChatView: View {
     @State private var canOrganizeMeeting = false
     @State private var showMeetingComposer = false
     @State private var meetingRefreshID = 0
+    @State private var emailData: ChatEmailData?
     @State private var messages: [HouseChatMessage] = []
     @State private var draft = ""
     @State private var isLoading = true
@@ -73,6 +74,14 @@ struct HouseChatView: View {
                         } label: {
                             Label("See members", systemImage: "person.2.fill")
                         }
+                        Button {
+                            Task {
+                                let recips = await env.familyRosterService.houseRecipients(houseId: house.id)
+                                emailData = ChatEmailData(title: "Email \(house.name)", recipients: recips, area: nil)
+                            }
+                        } label: {
+                            Label("Email members", systemImage: "envelope")
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -84,6 +93,9 @@ struct HouseChatView: View {
             MeetingComposer(scope: meetingScope, roomLabel: house.name) {
                 meetingRefreshID += 1
             }
+        }
+        .sheet(item: $emailData) { d in
+            EmailMembersView(title: d.title, recipients: d.recipients, presetArea: d.area)
         }
         .task { await initialLoad() }
         .onDisappear {

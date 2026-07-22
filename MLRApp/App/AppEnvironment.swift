@@ -24,6 +24,7 @@ final class AppEnvironment {
     var appImagesService: AppImagesService
     var pollsService: PollsService
     var meetingsService: MeetingsService
+    var familyRosterService: FamilyRosterService
 
     // Resolved once per session
     var currentProfile: Profile?
@@ -149,6 +150,7 @@ final class AppEnvironment {
         appImagesService     = AppImagesService()
         pollsService         = PollsService()
         meetingsService      = MeetingsService()
+        familyRosterService  = FamilyRosterService()
 
         AppEnvironment.activeEventsService    = eventsService
         AppEnvironment.activeHelpService      = helpService
