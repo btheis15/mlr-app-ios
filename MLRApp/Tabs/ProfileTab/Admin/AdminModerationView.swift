@@ -226,8 +226,15 @@ private struct ModerationItemRow: View {
     }
 
     private var typeBadge: some View {
-        let label = item.contentType == "post" ? "Post" : "Comment"
-        let color = item.contentType == "post" ? Color.mlrInfo : Color.mlrAccent
+        let label: String
+        let color: Color
+        switch item.contentType {
+        case "post":               label = "Post";    color = Color.mlrInfo
+        case "post_comment":       label = "Comment"; color = Color.mlrAccent
+        case "committee_message",
+             "house_message":      label = "Chat";    color = Color.mlrPrimary
+        default:                   label = "Content"; color = Color.mlrTextMuted
+        }
         return Text(label)
             .font(.mlrScaled(11, weight: .semibold))
             .foregroundStyle(color)

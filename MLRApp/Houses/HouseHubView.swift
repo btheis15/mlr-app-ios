@@ -153,26 +153,44 @@ struct HouseHubHomeCard: View {
         // unlike a per-view .task(id: currentProfile?.houseId), which didn't re-render.
         Group {
             if let house = env.housesService.myHouse {
-                NavigationLink(destination: HouseHubView(house: house)) {
-                    HStack(spacing: 12) {
-                        Text(house.emoji)
-                            .font(.mlrScaled(24))
-                            .frame(width: 44, height: 44)
-                            .background(Color.white.opacity(0.15))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(house.name).font(.mlrScaled(15, weight: .semibold)).foregroundStyle(.white)
-                            Text("Your house — calendar, chat & to-do list")
-                                .font(.mlrCaption).foregroundStyle(.white.opacity(0.85))
+                HStack(spacing: 10) {
+                    // Card body → the House Hub (calendar, chat & to-do).
+                    NavigationLink(destination: HouseHubView(house: house)) {
+                        HStack(spacing: 12) {
+                            Text(house.emoji)
+                                .font(.mlrScaled(24))
+                                .frame(width: 44, height: 44)
+                                .background(Color.white.opacity(0.15))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                            VStack(alignment: .leading, spacing: 2) {
+                                Text(house.name).font(.mlrScaled(15, weight: .semibold)).foregroundStyle(.white)
+                                Text("Your house — calendar & to-do list")
+                                    .font(.mlrCaption).foregroundStyle(.white.opacity(0.85))
+                            }
+                            Spacer(minLength: 4)
                         }
-                        Spacer()
-                        Image(systemName: "chevron.right").font(.mlrScaled(14, weight: .semibold)).foregroundStyle(.white.opacity(0.75))
+                        .contentShape(Rectangle())
                     }
-                    .padding(14)
-                    .background(Color.mlrPrimary)
-                    .clipShape(RoundedRectangle(cornerRadius: 16))
+                    .buttonStyle(.plain)
+
+                    // Dedicated Chat button → straight into the house chat room (#349).
+                    NavigationLink(destination: HouseChatView(house: house, assumeMember: true)) {
+                        VStack(spacing: 3) {
+                            Image(systemName: "bubble.left.and.bubble.right.fill")
+                                .font(.mlrScaled(16, weight: .semibold))
+                            Text("Chat").font(.mlrScaled(11, weight: .semibold))
+                        }
+                        .foregroundStyle(.white)
+                        .frame(width: 60)
+                        .padding(.vertical, 10)
+                        .background(Color.white.opacity(0.18))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
                 }
-                .buttonStyle(.plain)
+                .padding(14)
+                .background(Color.mlrPrimary)
+                .clipShape(RoundedRectangle(cornerRadius: 16))
             }
         }
     }
