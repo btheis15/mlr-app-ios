@@ -11,6 +11,11 @@
 		D31B34B5300AC9CA00A0D653 /* CommitteeTaxonomy.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */; };
 		D31B5359301167A700C8D189 /* ChatTyping.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5358301167A700C8D189 /* ChatTyping.swift */; };
 		D31B535B3011680100C8D189 /* CabinMessageSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B535A3011680100C8D189 /* CabinMessageSheet.swift */; };
+		D31B535D3011689A00C8D189 /* FamilyRosterEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B535C3011689A00C8D189 /* FamilyRosterEntry.swift */; };
+		D31B535F301168AA00C8D189 /* FamilyRosterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B535E301168AA00C8D189 /* FamilyRosterService.swift */; };
+		D31B5361301168CC00C8D189 /* EmailMembersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5360301168CC00C8D189 /* EmailMembersView.swift */; };
+		D31B5363301168ED00C8D189 /* AdminFamilyRosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5362301168ED00C8D189 /* AdminFamilyRosterView.swift */; };
+		D31B53653011690000C8D189 /* EmailPoolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53643011690000C8D189 /* EmailPoolsView.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -226,6 +231,11 @@
 		D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitteeTaxonomy.swift; sourceTree = "<group>"; };
 		D31B5358301167A700C8D189 /* ChatTyping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatTyping.swift; sourceTree = "<group>"; };
 		D31B535A3011680100C8D189 /* CabinMessageSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CabinMessageSheet.swift; sourceTree = "<group>"; };
+		D31B535C3011689A00C8D189 /* FamilyRosterEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyRosterEntry.swift; sourceTree = "<group>"; };
+		D31B535E301168AA00C8D189 /* FamilyRosterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FamilyRosterService.swift; sourceTree = "<group>"; };
+		D31B5360301168CC00C8D189 /* EmailMembersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailMembersView.swift; sourceTree = "<group>"; };
+		D31B5362301168ED00C8D189 /* AdminFamilyRosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminFamilyRosterView.swift; sourceTree = "<group>"; };
+		D31B53643011690000C8D189 /* EmailPoolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPoolsView.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -582,6 +592,7 @@
 				D3F9D86E30071027006874DA /* Poll.swift */,
 				D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */,
 				D3EA3D93301144AF0092AE8E /* Meeting.swift */,
+				D31B535C3011689A00C8D189 /* FamilyRosterEntry.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -607,6 +618,9 @@
 				D33F9E112FEC086700603CE7 /* MemberSheetView.swift */,
 				D33F9E122FEC086700603CE7 /* PeopleDirectoryView.swift */,
 				D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */,
+				D31B5360301168CC00C8D189 /* EmailMembersView.swift */,
+				D31B5362301168ED00C8D189 /* AdminFamilyRosterView.swift */,
+				D31B53643011690000C8D189 /* EmailPoolsView.swift */,
 			);
 			path = People;
 			sourceTree = "<group>";
@@ -629,6 +643,7 @@
 				D3F9D87230071069006874DA /* PollsService.swift */,
 				D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */,
 				D3EA3D95301145120092AE8E /* MeetingsService.swift */,
+				D31B535E301168AA00C8D189 /* FamilyRosterService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -1059,6 +1074,7 @@
 				D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */,
 				D3A0000000000000000000B1 /* HouseStay.swift in Sources */,
 				D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */,
+				D31B5363301168ED00C8D189 /* AdminFamilyRosterView.swift in Sources */,
 				D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */,
 				D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */,
 				D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */,
@@ -1094,6 +1110,7 @@
 				D33F9F182FF844AA00603CE7 /* House.swift in Sources */,
 				D3F9D89B3009870A006874DA /* AdminMembersView.swift in Sources */,
 				D33F9E932FEC086700603CE7 /* AppEnvironment.swift in Sources */,
+				D31B53653011690000C8D189 /* EmailPoolsView.swift in Sources */,
 				D3EA3D96301145120092AE8E /* MeetingsService.swift in Sources */,
 				D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */,
 				D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */,
@@ -1110,6 +1127,7 @@
 				D33F9E9C2FEC086700603CE7 /* SeedData.swift in Sources */,
 				D33F9E9D2FEC086700603CE7 /* NextEventIntent.swift in Sources */,
 				D3F9D87F30093C6C006874DA /* ScheduleSendPicker.swift in Sources */,
+				D31B535F301168AA00C8D189 /* FamilyRosterService.swift in Sources */,
 				D33F9E9E2FEC086700603CE7 /* CabinService.swift in Sources */,
 				D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */,
 				D36347582FFDE088001D52C8 /* CommitteeActionIntents.swift in Sources */,
@@ -1124,6 +1142,7 @@
 				D33F9EA42FEC086700603CE7 /* HelpService.swift in Sources */,
 				D33F9EA52FEC086700603CE7 /* MLRApp.swift in Sources */,
 				D36347682FFDEF09001D52C8 /* SnippetViews.swift in Sources */,
+				D31B5361301168CC00C8D189 /* EmailMembersView.swift in Sources */,
 				D33F9EA62FEC086700603CE7 /* EventComposer.swift in Sources */,
 				D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */,
 				D33F9EA72FEC086700603CE7 /* HomeNavigationStubs.swift in Sources */,
@@ -1161,6 +1180,7 @@
 				D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */,
 				D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */,
 				D33F9F1A2FF8457100603CE7 /* HousesService.swift in Sources */,
+				D31B535D3011689A00C8D189 /* FamilyRosterEntry.swift in Sources */,
 				D33F9EBB2FEC086700603CE7 /* FestPhotosView.swift in Sources */,
 				D33F9EBC2FEC086700603CE7 /* AdminView.swift in Sources */,
 				D33F9ED72FF3178900603CE7 /* WorkItemComposer.swift in Sources */,
