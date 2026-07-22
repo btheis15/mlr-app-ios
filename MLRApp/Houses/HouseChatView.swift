@@ -19,6 +19,7 @@ struct HouseChatView: View {
 
     @State private var members: [Profile] = []
     @State private var showMembers = false
+    @State private var emailData: ChatEmailData?
     @State private var messages: [HouseChatMessage] = []
     @State private var draft = ""
     @State private var isLoading = true
@@ -52,6 +53,14 @@ struct HouseChatView: View {
                         } label: {
                             Label("See members", systemImage: "person.2.fill")
                         }
+                        Button {
+                            Task {
+                                let recips = await env.familyRosterService.houseRecipients(houseId: house.id)
+                                emailData = ChatEmailData(title: "Email \(house.name)", recipients: recips, area: nil)
+                            }
+                        } label: {
+                            Label("Email members", systemImage: "envelope")
+                        }
                     } label: {
                         Image(systemName: "ellipsis.circle")
                     }
@@ -59,6 +68,9 @@ struct HouseChatView: View {
             }
         }
         .sheet(isPresented: $showMembers) { membersSheet }
+        .sheet(item: $emailData) { d in
+            EmailMembersView(title: d.title, recipients: d.recipients, presetArea: d.area)
+        }
         .task { await initialLoad() }
         .onDisappear {
             env.housesService.unsubscribeFromMessages(houseId: house.id)

@@ -22,6 +22,7 @@ struct CommitteeChatView: View {
 
     @State private var isMuted = false
     @State private var showMembers = false
+    @State private var emailData: ChatEmailData?
     @State private var channelMembers: [CommitteeRosterEntry] = []
     @State private var messages: [CommitteeChatMessage] = []
     @State private var draft = ""
@@ -66,6 +67,14 @@ struct CommitteeChatView: View {
                             Label("See members", systemImage: "person.2.fill")
                         }
                         Button {
+                            Task {
+                                let recips = await env.familyRosterService.committeeRecipients(committeeId: committee.id)
+                                emailData = ChatEmailData(title: "Email \(channelTitle ?? committee.name)", recipients: recips, area: area)
+                            }
+                        } label: {
+                            Label("Email members", systemImage: "envelope")
+                        }
+                        Button {
                             Task { await toggleMute() }
                         } label: {
                             Label(isMuted ? "Unmute" : "Mute", systemImage: isMuted ? "bell" : "bell.slash")
@@ -77,6 +86,9 @@ struct CommitteeChatView: View {
             }
         }
         .sheet(isPresented: $showMembers) { membersSheet }
+        .sheet(item: $emailData) { d in
+            EmailMembersView(title: d.title, recipients: d.recipients, presetArea: d.area)
+        }
         .task { await initialLoad() }
         .onDisappear {
             env.committeeService.unsubscribeFromMessages(committeeId: committee.id, area: area)

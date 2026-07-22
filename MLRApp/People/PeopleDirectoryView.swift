@@ -44,7 +44,7 @@ struct PeopleDirectoryView: View {
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $searchText, prompt: "Search by name or email")
         .toolbar {
-            if env.isAdmin && !members.isEmpty {
+            if env.isSignedIn && !members.isEmpty {
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showEmailGroup = true
@@ -59,7 +59,9 @@ struct PeopleDirectoryView: View {
             MemberSheetView(member: member)
         }
         .sheet(isPresented: $showEmailGroup) {
-            EmailGroupSheet(members: members)
+            // Widened pools: whole family (incl. not-yet-signed-up roster people),
+            // public directory, App Admins, your house, and per-committee By-Role.
+            EmailPoolsView()
         }
         .messageComposer($composeState)
         .task { await load() }
