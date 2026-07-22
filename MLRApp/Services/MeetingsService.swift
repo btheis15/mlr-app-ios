@@ -13,8 +13,14 @@ import Supabase
 @MainActor
 final class MeetingsService {
 
-    /// Live realtime channels keyed by scope.roomKey.
-    private var channels: [String: RealtimeChannelV2] = [:]
+    /// Live realtime subscriptions keyed by scope.roomKey. Reference-counted so
+    /// several bars sharing a room (e.g. the chat bar + the committee-detail card)
+    /// share ONE channel and it's torn down only when the last one leaves.
+    private struct RoomSubscription {
+        let channel: RealtimeChannelV2
+        var callbacks: [UUID: () -> Void]
+    }
+    private var subscriptions: [String: RoomSubscription] = [:]
 
     /// ISO-8601 (UTC, "Z") — the format Postgres timestamptz accepts, matching
     /// the web's `new Date(...).toISOString()`.
@@ -280,27 +286,42 @@ final class MeetingsService {
     // MARK: - Realtime
 
     /// Live-refetch (via `onChange`) when any meeting / slot / availability row
-    /// changes for this room. Idempotent per roomKey.
-    func subscribe(scope: MeetingScope, onChange: @escaping () -> Void) {
+    /// changes for this room, for one `subscriber`. Subscribers sharing a room
+    /// share a single channel; the channel opens on the first subscriber and is
+    /// torn down when the last one unsubscribes. Callers should only subscribe
+    /// when a meeting actually exists in the room (see MeetingSectionBar) so idle
+    /// rooms hold no open socket.
+    func subscribe(scope: MeetingScope, subscriber: UUID, onChange: @escaping () -> Void) {
         let key = scope.roomKey
-        guard channels[key] == nil else { return }
+        if subscriptions[key] != nil {
+            subscriptions[key]?.callbacks[subscriber] = onChange   // join the existing channel
+            return
+        }
         let channel = supabase.channel("meetings-\(key)")
-        channels[key] = channel
+        subscriptions[key] = RoomSubscription(channel: channel, callbacks: [subscriber: onChange])
         Task {
             for table in ["meetings", "meeting_slots", "meeting_availability"] {
-                channel.onPostgresChange(AnyAction.self, schema: "public", table: table) { _ in
-                    Task { @MainActor in onChange() }
+                channel.onPostgresChange(AnyAction.self, schema: "public", table: table) { [weak self] _ in
+                    Task { @MainActor in
+                        self?.subscriptions[key]?.callbacks.values.forEach { $0() }
+                    }
                 }
             }
             await channel.subscribe()
         }
     }
 
-    func unsubscribe(scope: MeetingScope) {
+    func unsubscribe(scope: MeetingScope, subscriber: UUID) {
         let key = scope.roomKey
-        guard let channel = channels[key] else { return }
-        channels[key] = nil
-        Task { await supabase.removeChannel(channel) }
+        guard var sub = subscriptions[key] else { return }
+        sub.callbacks[subscriber] = nil
+        if sub.callbacks.isEmpty {
+            subscriptions[key] = nil
+            let channel = sub.channel
+            Task { await supabase.removeChannel(channel) }
+        } else {
+            subscriptions[key] = sub
+        }
     }
 
     // MARK: - Google Meet / link helpers (pure, mirror lib/meetings.ts)
