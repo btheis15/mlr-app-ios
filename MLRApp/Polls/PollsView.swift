@@ -110,6 +110,8 @@ struct PollCard: View {
             // Footer: vote count + manage actions
             HStack {
                 Text("\(poll.totalVotes) vote\(poll.totalVotes == 1 ? "" : "s")")
+                    .contentTransition(.numericText())
+                    .animation(.default, value: poll.totalVotes)
                     .font(.caption)
                     .foregroundStyle(Color.mlrTextSubtle)
                 Spacer()
@@ -183,6 +185,8 @@ private struct PollOptionRow: View {
                         Text("\(Int(percent * 100))%")
                             .font(.mlrScaled(12, weight: .medium))
                             .foregroundStyle(Color.mlrTextMuted)
+                            .contentTransition(.numericText())   // rolls as votes land (#347)
+                            .animation(.default, value: percent)
                     }
                     GeometryReader { geo in
                         ZStack(alignment: .leading) {

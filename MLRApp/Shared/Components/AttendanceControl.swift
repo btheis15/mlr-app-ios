@@ -28,6 +28,7 @@ struct AttendanceControl: View {
     private let statuses: [AttendanceStatus] = [.going, .maybe, .notGoing]
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var confettiTrigger = 0
 
     var body: some View {
         HStack(spacing: 6) {
@@ -37,8 +38,14 @@ struct AttendanceControl: View {
                     isSelected: selection == status,
                     isEnabled: isEnabled && !isLoading,
                     action: {
+                        let freshGoing = status == .going && selection != .going
                         selection = status
                         onSelect(status)
+                        // A confirmed "Going" is a little celebration (#347).
+                        if freshGoing {
+                            Haptics.success()
+                            if !reduceMotion { confettiTrigger += 1 }
+                        }
                     }
                 )
             }
@@ -51,6 +58,7 @@ struct AttendanceControl: View {
                     .tint(Color.mlrPrimary)
             }
         }
+        .overlay { ConfettiView(trigger: confettiTrigger) }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: selection)
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.15), value: isLoading)
         .sensoryFeedback(.selection, trigger: selection)

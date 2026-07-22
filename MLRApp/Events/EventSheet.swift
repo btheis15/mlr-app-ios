@@ -331,6 +331,8 @@ struct EventSheet: View {
                 Text("\(s.going)")
                     .font(.mlrScaled(22, weight: .bold))
                     .foregroundStyle(Color.mlrText)
+                    .contentTransition(.numericText())   // rolls when the tally changes (#347)
+                    .animation(.default, value: s.going)
                 Text("going").font(.caption).foregroundStyle(Color.mlrTextMuted)
             }
         }
