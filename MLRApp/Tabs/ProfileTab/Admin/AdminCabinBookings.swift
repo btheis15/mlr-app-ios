@@ -13,6 +13,10 @@ struct AdminCabinBookings: View {
     @State private var isLoading = false
     @State private var actionError: String? = nil
     @State private var editingBooking: CabinBooking? = nil
+    // Places the viewer can manage (all for admins, else ones they approve) —
+    // drives the "Message guests" menu (migration 0120).
+    @State private var manageableCabins: [Cabin] = []
+    @State private var messagingCabin: Cabin? = nil
 
     private let statusOrder: [BookingStatus] = [.pending, .approved, .denied, .cancelled]
 
@@ -56,9 +60,25 @@ struct AdminCabinBookings: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Cabin Bookings")
         .navigationBarTitleDisplayMode(.large)
+        .toolbar {
+            if !manageableCabins.isEmpty {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        ForEach(manageableCabins) { cabin in
+                            Button { messagingCabin = cabin } label: { Text(cabin.name) }
+                        }
+                    } label: {
+                        Label("Message guests", systemImage: "megaphone.fill")
+                    }
+                    .tint(Color.mlrPrimary)
+                }
+            }
+        }
         .refreshable { await load() }
         .task {
             await load()
+            manageableCabins = await env.cabinService.fetchManageableCabins(
+                userId: env.currentProfile?.id, isAdmin: env.isAdmin)
             subscribeRealtime()
         }
         .sheet(item: $editingBooking) { booking in
@@ -67,6 +87,9 @@ struct AdminCabinBookings: View {
                     Task { await load() }
                 }
             }
+        }
+        .sheet(item: $messagingCabin) { cabin in
+            CabinMessageSheet(cabinId: cabin.id, cabinName: cabin.name)
         }
     }
 

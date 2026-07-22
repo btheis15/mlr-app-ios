@@ -102,6 +102,7 @@ struct PushToggleView: View {
                     pushToggle(for: .meetingProposed,  label: "Meetings to vote on",   desc: "When a meeting poll opens in your committee or house", icon: "calendar.badge.clock")
                     pushToggle(for: .meetingScheduled, label: "Meetings scheduled",     desc: "When a meeting time is locked in", icon: "calendar.badge.checkmark")
                     pushToggle(for: .cabinDecision, label: "Cabin stay decisions", desc: "When your cabin request is approved or declined", icon: "house.lodge.fill")
+                    pushToggle(for: .cabinMessage, label: "Messages from your host", desc: "When the host of a place you're staying messages guests", icon: "envelope.fill")
                     pushToggle(for: .committeeJoin, label: "Committee joins",      desc: "When someone joins a committee you lead", icon: "person.badge.plus")
                     pushToggle(for: .helpRequest,  label: "Help requests",         desc: "Nearby “Ask for Help” requests", icon: "hand.raised.fill")
                     pushToggle(for: .helpResponse, label: "Help responses",        desc: "When someone's on their way to help you", icon: "figure.walk")
@@ -272,7 +273,7 @@ struct PushToggleView: View {
     // member who enables push for the first time on iOS doesn't end up with
     // every category silently off until they visit each row individually.
     private static let defaultPushTypes: Set<PushType> = [
-        .alerts, .birthdays, .committeeJoin, .cabinDecision,
+        .alerts, .birthdays, .committeeJoin, .cabinDecision, .cabinMessage,
         .postTag, .postMention, .postReply, .chat, .helpRequest, .helpResponse,
     ]
 

@@ -60,6 +60,7 @@ struct NotifPrefsView: View {
                     toggle(for: .cabinRequest, label: "New cabin booking requests", icon: "house.lodge.fill")
                 }
                 toggle(for: .cabinDecision, label: "Decisions on your cabin requests", icon: "house.lodge.fill")
+                toggle(for: .cabinMessage, label: "Messages from your place's host", icon: "envelope.fill")
             }
 
             // Events
