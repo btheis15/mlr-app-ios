@@ -17,6 +17,7 @@
 		D31B5363301168ED00C8D189 /* AdminFamilyRosterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5362301168ED00C8D189 /* AdminFamilyRosterView.swift */; };
 		D31B53653011690000C8D189 /* EmailPoolsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53643011690000C8D189 /* EmailPoolsView.swift */; };
 		D31B53673011694F00C8D189 /* AdminBroadcastComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */; };
+		D31B5369301169A400C8D189 /* HomeAdminDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5368301169A400C8D189 /* HomeAdminDashboardCard.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -238,6 +239,7 @@
 		D31B5362301168ED00C8D189 /* AdminFamilyRosterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminFamilyRosterView.swift; sourceTree = "<group>"; };
 		D31B53643011690000C8D189 /* EmailPoolsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EmailPoolsView.swift; sourceTree = "<group>"; };
 		D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminBroadcastComposer.swift; sourceTree = "<group>"; };
+		D31B5368301169A400C8D189 /* HomeAdminDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAdminDashboardCard.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -756,6 +758,7 @@
 				D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */,
 				D3F9D8683006C577006874DA /* HomeDelightCards.swift */,
 				D3F9D88430093D9E006874DA /* OnThisDayCard.swift */,
+				D31B5368301169A400C8D189 /* HomeAdminDashboardCard.swift */,
 			);
 			path = HomeTab;
 			sourceTree = "<group>";
@@ -1135,6 +1138,7 @@
 				D33F9E9E2FEC086700603CE7 /* CabinService.swift in Sources */,
 				D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */,
 				D36347582FFDE088001D52C8 /* CommitteeActionIntents.swift in Sources */,
+				D31B5369301169A400C8D189 /* HomeAdminDashboardCard.swift in Sources */,
 				D3F9D86F30071027006874DA /* Poll.swift in Sources */,
 				D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */,
 				D3F9D87D300934F0006874DA /* AdminCabinDetails.swift in Sources */,

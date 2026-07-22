@@ -33,8 +33,8 @@ struct HomeAdminDashboardCard: View {
                 }
                 .buttonStyle(.plain)
 
-                // Secondary Alerts quick-link → the broadcast composer (#351).
-                NavigationLink { AdminAlertComposer() } label: {
+                // Secondary Alerts quick-link → the unified broadcast composer (#351).
+                NavigationLink { AdminBroadcastComposer() } label: {
                     VStack(spacing: 3) {
                         Image(systemName: "megaphone.fill").font(.mlrScaled(16, weight: .semibold))
                         Text("Alerts").font(.mlrScaled(11, weight: .semibold))
