@@ -166,6 +166,41 @@ final class NotificationsService {
         }
     }
 
+    /// Insert a banner/email announcements row (migration 0126). `showBanner`
+    /// paints the top-of-app banner (+ lets the mini fire phone push); `notifyEmail`
+    /// emails opted-in members (or just admins, via `emailAudience`). An email-only
+    /// send passes showBanner:false so the row still reaches the mailer without
+    /// ever painting a banner. Mirrors lib/broadcast.ts `postAnnouncement`.
+    func postAnnouncement(
+        title: String,
+        body: String?,
+        severity: String,
+        showBanner: Bool,
+        notifyEmail: Bool,
+        emailAudience: String,
+        expiresAt: Date,
+        eventId: String? = nil,
+        excludeNotAttending: Bool = true
+    ) async throws {
+        let uid = try? await supabase.auth.session.user.id
+        let iso = ISO8601DateFormatter()
+        var params: [String: AnyJSON] = [
+            "title": .string(title),
+            "body": body.map(AnyJSON.string) ?? .null,
+            "severity": .string(severity),
+            "show_banner": .bool(showBanner),
+            "notify_email": .bool(notifyEmail),
+            "email_audience": .string(emailAudience),
+            "expires_at": .string(iso.string(from: expiresAt)),
+        ]
+        if let uid { params["author_id"] = .string(uid.uuidString) }
+        if let eventId {
+            params["event_id"] = .string(eventId)
+            params["exclude_not_attending"] = .bool(excludeNotAttending)
+        }
+        try await supabase.from("announcements").insert(params).execute()
+    }
+
     // MARK: - Scheduled broadcasts (migration 0097)
 
     private var isoStamp: ISO8601DateFormatter { ISO8601DateFormatter() }
