@@ -163,6 +163,8 @@ struct NotificationRow: View {
         case .workItemMention:      return "at"
         case .workItemCreated:      return "wrench.and.screwdriver.fill"
         case .houseStayCreated:     return "house.fill"
+        case .meetingProposed:      return "calendar.badge.clock"
+        case .meetingScheduled:     return "calendar.badge.checkmark"
         }
     }
 
@@ -204,6 +206,8 @@ struct NotificationRow: View {
         case .workItemMention:      return "Mention"
         case .workItemCreated:      return "New Task"
         case .houseStayCreated:     return "House Stay"
+        case .meetingProposed:      return "Meeting"
+        case .meetingScheduled:     return "Meeting"
         }
     }
 }

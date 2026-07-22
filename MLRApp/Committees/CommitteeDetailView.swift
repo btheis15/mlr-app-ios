@@ -96,6 +96,11 @@ struct CommitteeDetailView: View {
         roster.compactMap { $0.effectiveEmail?.trimmedNonEmpty }
     }
 
+    /// Linked roster members for meeting name-resolution + the "everyone" count.
+    private var meetingMembers: [MeetingMember] {
+        roster.compactMap { e in e.linkedUserId.map { MeetingMember(id: $0, name: e.displayName) } }
+    }
+
     /// Roster people who have an email, mapped for the email composer. Areas come
     /// from their roles (lead suffix stripped) so the composer's "By Role" works.
     private var emailRecipients: [CommitteeEmailComposer.Recipient] {
@@ -112,7 +117,17 @@ struct CommitteeDetailView: View {
                 header
 
                 if isMember {
-                    chatLink
+                    // spacing 0 so the meeting card collapses to nothing when idle.
+                    VStack(spacing: 0) {
+                        chatLink
+                        // Response surface for an active committee-wide meeting (#326);
+                        // creating one lives in the chat ⋯ menu. Renders nothing when idle.
+                        MeetingSectionBar(
+                            scope: .committee(committeeId: committee.id, slug: committee.slug, area: nil),
+                            members: meetingMembers,
+                            surface: .card
+                        )
+                    }
                 }
 
                 // Email sits right under the chat entry.

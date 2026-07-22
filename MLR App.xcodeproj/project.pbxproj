@@ -165,6 +165,11 @@
 		D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A4 /* HouseStayComposer.swift */; };
 		D3A0000000000000000000B5 /* HouseHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A5 /* HouseHubView.swift */; };
 		D3E4FD3D2FFFE7340008DA06 /* FestDuesCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */; };
+		D3EA3D94301144AF0092AE8E /* Meeting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D93301144AF0092AE8E /* Meeting.swift */; };
+		D3EA3D96301145120092AE8E /* MeetingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D95301145120092AE8E /* MeetingsService.swift */; };
+		D3EA3D99301145680092AE8E /* MeetingComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D98301145680092AE8E /* MeetingComposer.swift */; };
+		D3EA3D9B301145C90092AE8E /* MeetingSchedulerSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D9A301145C90092AE8E /* MeetingSchedulerSheet.swift */; };
+		D3EA3D9D301146110092AE8E /* MeetingSectionBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D9C301146110092AE8E /* MeetingSectionBar.swift */; };
 		D3F9D8633006C1B3006874DA /* HomeCalloutsStack.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */; };
 		D3F9D8653006C201006874DA /* AdminCommitteesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8643006C201006874DA /* AdminCommitteesView.swift */; };
 		D3F9D8673006C288006874DA /* AdminHelpContactView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8663006C288006874DA /* AdminHelpContactView.swift */; };
@@ -368,6 +373,11 @@
 		D3A0000000000000000000A4 /* HouseStayComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStayComposer.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A5 /* HouseHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseHubView.swift; sourceTree = "<group>"; };
 		D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDuesCalculator.swift; sourceTree = "<group>"; };
+		D3EA3D93301144AF0092AE8E /* Meeting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Meeting.swift; sourceTree = "<group>"; };
+		D3EA3D95301145120092AE8E /* MeetingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingsService.swift; sourceTree = "<group>"; };
+		D3EA3D98301145680092AE8E /* MeetingComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingComposer.swift; sourceTree = "<group>"; };
+		D3EA3D9A301145C90092AE8E /* MeetingSchedulerSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingSchedulerSheet.swift; sourceTree = "<group>"; };
+		D3EA3D9C301146110092AE8E /* MeetingSectionBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingSectionBar.swift; sourceTree = "<group>"; };
 		D3F9D8623006C1B3006874DA /* HomeCalloutsStack.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeCalloutsStack.swift; sourceTree = "<group>"; };
 		D3F9D8643006C201006874DA /* AdminCommitteesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCommitteesView.swift; sourceTree = "<group>"; };
 		D3F9D8663006C288006874DA /* AdminHelpContactView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminHelpContactView.swift; sourceTree = "<group>"; };
@@ -566,6 +576,7 @@
 				D39BD8902FFC47C000B1E74D /* ChatMedia.swift */,
 				D3F9D86E30071027006874DA /* Poll.swift */,
 				D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */,
+				D3EA3D93301144AF0092AE8E /* Meeting.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -612,6 +623,7 @@
 				D33F9F192FF8457100603CE7 /* HousesService.swift */,
 				D3F9D87230071069006874DA /* PollsService.swift */,
 				D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */,
+				D3EA3D95301145120092AE8E /* MeetingsService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -805,6 +817,7 @@
 				D36347492FFD37F9001D52C8 /* PrivacyInfo.xcprivacy */,
 				D363476B2FFEA947001D52C8 /* Search */,
 				D3F9D874300710BC006874DA /* Polls */,
+				D3EA3D97301145680092AE8E /* Meetings */,
 			);
 			path = MLRApp;
 			sourceTree = "<group>";
@@ -867,6 +880,16 @@
 				D363476C2FFEA947001D52C8 /* GlobalSearchView.swift */,
 			);
 			path = Search;
+			sourceTree = "<group>";
+		};
+		D3EA3D97301145680092AE8E /* Meetings */ = {
+			isa = PBXGroup;
+			children = (
+				D3EA3D98301145680092AE8E /* MeetingComposer.swift */,
+				D3EA3D9A301145C90092AE8E /* MeetingSchedulerSheet.swift */,
+				D3EA3D9C301146110092AE8E /* MeetingSectionBar.swift */,
+			);
+			path = Meetings;
 			sourceTree = "<group>";
 		};
 		D3F9D874300710BC006874DA /* Polls */ = {
@@ -1015,6 +1038,7 @@
 				D363475E2FFDE689001D52C8 /* PersonalIntents.swift in Sources */,
 				D33F9E782FEC086700603CE7 /* InstallPrompt.swift in Sources */,
 				D33F9E7A2FEC086700603CE7 /* FestDinnersDetailView.swift in Sources */,
+				D3EA3D94301144AF0092AE8E /* Meeting.swift in Sources */,
 				D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */,
 				D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */,
 				D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */,
@@ -1025,6 +1049,7 @@
 				D3F9D8673006C288006874DA /* AdminHelpContactView.swift in Sources */,
 				D363475C2FFDE656001D52C8 /* ResortLifeIntents.swift in Sources */,
 				D33F9E7E2FEC086700603CE7 /* FestCountdownIntent.swift in Sources */,
+				D3EA3D99301145680092AE8E /* MeetingComposer.swift in Sources */,
 				D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */,
 				D3A0000000000000000000B1 /* HouseStay.swift in Sources */,
 				D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */,
@@ -1048,6 +1073,7 @@
 				D3F9D87B30091A65006874DA /* FestDecor.swift in Sources */,
 				D33F9E8A2FEC086700603CE7 /* MediaService.swift in Sources */,
 				D33F9E8B2FEC086700603CE7 /* CommitteeChatView.swift in Sources */,
+				D3EA3D9B301145C90092AE8E /* MeetingSchedulerSheet.swift in Sources */,
 				D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */,
 				D33F9E8C2FEC086700603CE7 /* FestCrewView.swift in Sources */,
 				D33F9E8D2FEC086700603CE7 /* PostCard.swift in Sources */,
@@ -1061,6 +1087,7 @@
 				D33F9F182FF844AA00603CE7 /* House.swift in Sources */,
 				D3F9D89B3009870A006874DA /* AdminMembersView.swift in Sources */,
 				D33F9E932FEC086700603CE7 /* AppEnvironment.swift in Sources */,
+				D3EA3D96301145120092AE8E /* MeetingsService.swift in Sources */,
 				D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */,
 				D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */,
 				D33F9E952FEC086700603CE7 /* FestScheduleView.swift in Sources */,
@@ -1114,6 +1141,7 @@
 				D33F9EB42FEC086700603CE7 /* Profile.swift in Sources */,
 				D33F9EB52FEC086700603CE7 /* NotificationsView.swift in Sources */,
 				D33F9EB62FEC086700603CE7 /* NotificationsService.swift in Sources */,
+				D3EA3D9D301146110092AE8E /* MeetingSectionBar.swift in Sources */,
 				D36347542FFDDF3D001D52C8 /* ChatSearchIntents.swift in Sources */,
 				D33F9EB72FEC086700603CE7 /* PostComposer.swift in Sources */,
 				D33F9EE82FF419F700603CE7 /* AppImagesService.swift in Sources */,
@@ -1313,7 +1341,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
@@ -1370,7 +1398,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.6;
+				MARKETING_VERSION = 1.7;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
