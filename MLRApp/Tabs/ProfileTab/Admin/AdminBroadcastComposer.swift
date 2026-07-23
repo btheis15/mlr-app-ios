@@ -34,6 +34,8 @@ struct AdminBroadcastComposer: View {
 
     @State private var selectedEventId: String? = nil
     @State private var excludeNotAttending = true
+    // "Remind about an activity" autofill (#393) — sets the tap-through link.
+    @State private var linkUrl: String? = nil
     @State private var scheduleAt: Date? = nil
     @State private var isPosting = false
     @State private var error: String? = nil
@@ -47,6 +49,21 @@ struct AdminBroadcastComposer: View {
     var body: some View {
         NavigationStack {
             Form {
+                // Remind about a Family Fest activity — autofills the message +
+                // targets Fest attendees (#393).
+                if !festActivities.isEmpty {
+                    Section {
+                        Menu {
+                            ForEach(festActivities) { item in
+                                Button(item.title) { autofill(from: item) }
+                            }
+                        } label: {
+                            Label("Remind about an activity (autofills)", systemImage: "sparkles")
+                                .font(.mlrScaled(14, weight: .medium))
+                        }
+                    }
+                }
+
                 Section("Message") {
                     TextField("Title (required)", text: $title).font(.mlrScaled(16, weight: .medium))
                     ZStack(alignment: .topLeading) {
@@ -130,7 +147,10 @@ struct AdminBroadcastComposer: View {
             }
             .navigationTitle("Broadcast")
             .navigationBarTitleDisplayMode(.inline)
-            .task { if env.eventsService.events.isEmpty { await env.eventsService.fetchEvents() } }
+            .task {
+                if env.eventsService.events.isEmpty { await env.eventsService.fetchEvents() }
+                if env.festContentService.schedule.isEmpty { await env.festContentService.reload() }
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() }.foregroundStyle(Color.mlrPrimary) }
             }
@@ -150,6 +170,26 @@ struct AdminBroadcastComposer: View {
             }
         }
         .tint(Color.mlrPrimary)
+    }
+
+    // MARK: - Activity autofill (#393)
+
+    private var festActivities: [ScheduleItem] {
+        env.festContentService.schedule.filter { !$0.isPrivate }
+    }
+
+    /// Pull title + when/where from a Fest activity, link the notification to it,
+    /// and target Family Fest attendees — mirrors activityReminderDefaults.
+    private func autofill(from item: ScheduleItem) {
+        title = item.title
+        let when = item.day == "Anytime" ? "Anytime all week" : "\(item.day) · \(MLRFormat.time(item.time))"
+        var parts = [when]
+        if let loc = item.location, loc != "TBD" { parts.append("📍 \(loc)") }
+        messageBody = parts.joined(separator: "  ·  ")
+        selectedEventId = NotificationsService.familyFestEventId
+        excludeNotAttending = true
+        linkUrl = "/family-fest/schedule/\(item.id)"
+        if !hasChannel { toActivity = true }
     }
 
     // MARK: - Send
@@ -193,7 +233,7 @@ struct AdminBroadcastComposer: View {
             if toActivity {
                 try await env.notificationsService.sendBroadcast(
                     title: trimmedTitle, body: bodyOrNil, audience: audience.broadcast,
-                    mirrorBanner: false, expiresAt: expiry.expiresAt,
+                    mirrorBanner: false, url: linkUrl, expiresAt: expiry.expiresAt,
                     eventId: eventId, excludeNotAttending: exclude)
             }
             posted = true
