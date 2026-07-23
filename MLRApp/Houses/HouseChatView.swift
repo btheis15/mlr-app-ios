@@ -24,6 +24,9 @@ struct HouseChatView: View {
     @State private var meetingRefreshID = 0
     @State private var emailData: ChatEmailData?
     @State private var messages: [HouseChatMessage] = []
+    // Quick polls in this house room, merged into the timeline by createdAt (#390).
+    @State private var polls: [ChatPoll] = []
+    @State private var showCreatePoll = false
     @State private var draft = ""
     @State private var isLoading = true
     @State private var loadError: String?
@@ -94,6 +97,9 @@ struct HouseChatView: View {
                 meetingRefreshID += 1
             }
         }
+        .sheet(isPresented: $showCreatePoll) {
+            CreateChatPollSheet(scope: pollScope) { Task { await loadPolls() } }
+        }
         .sheet(item: $emailData) { d in
             EmailMembersView(title: d.title, recipients: d.recipients, presetArea: d.area)
         }
@@ -107,6 +113,49 @@ struct HouseChatView: View {
     /// The meeting room this house chat maps to.
     private var meetingScope: MeetingScope {
         .house(houseId: house.id, slug: house.slug)
+    }
+
+    /// Poll room scope (same room as the chat).
+    private var pollScope: ChatPollScope {
+        .house(houseId: house.id, slug: house.slug)
+    }
+
+    /// Messages + polls merged and ordered by creation time for inline rendering.
+    private var timeline: [ChatTimelineEntry] {
+        let msgs = messages.map { ChatTimelineEntry.message($0) }
+        let pollEntries = polls.map { ChatTimelineEntry.poll($0) }
+        return (msgs + pollEntries).sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private enum ChatTimelineEntry: Identifiable {
+        case message(HouseChatMessage)
+        case poll(ChatPoll)
+        var id: String {
+            switch self {
+            case .message(let m): return "m-\(m.id.uuidString)"
+            case .poll(let p):    return "p-\(p.id.uuidString)"
+            }
+        }
+        var createdAt: Date {
+            switch self {
+            case .message(let m): return m.createdAt
+            case .poll(let p):    return p.createdAt
+            }
+        }
+    }
+
+    private func loadPolls() async {
+        polls = await env.chatPollsService.fetchPolls(scope: pollScope)
+    }
+    private func setPollVotes(_ poll: ChatPoll, _ ids: [UUID], _ other: String?) async {
+        try? await env.chatPollsService.setVotes(pollId: poll.id, optionIds: ids, otherText: other)
+        await loadPolls()
+    }
+    private func closePoll(_ poll: ChatPoll) async {
+        try? await env.chatPollsService.closePoll(pollId: poll.id); await loadPolls()
+    }
+    private func deletePoll(_ poll: ChatPoll) async {
+        try? await env.chatPollsService.deletePoll(pollId: poll.id); await loadPolls()
     }
 
     /// House members for meeting name-resolution + the "everyone can make it" count.
@@ -171,7 +220,8 @@ struct HouseChatView: View {
                 isEditing: editingMessage != nil,
                 sending: sending,
                 onSend: { attachments in Task { await send(attachments) } },
-                onCancelEdit: { cancelEdit() }
+                onCancelEdit: { cancelEdit() },
+                onCreatePoll: { showCreatePoll = true }
             )
         }
         .background(Color(.systemGroupedBackground))
@@ -195,26 +245,39 @@ struct HouseChatView: View {
                             .font(.mlrCaption)
                             .foregroundStyle(Color.mlrDanger)
                             .padding()
-                    } else if messages.isEmpty {
+                    } else if timeline.isEmpty {
                         Text("No messages yet — say hello 👋")
                             .font(.mlrCaption)
                             .foregroundStyle(Color.mlrTextMuted)
                             .padding(.top, 40)
                     } else {
-                        ForEach(messages) { message in
-                            HouseMessageBubble(
-                                message: message,
-                                isOwn: message.authorId == env.currentProfile?.id,
-                                myUserId: env.currentProfile?.id,
-                                canEdit: canEdit(message),
-                                canDelete: canDelete(message),
-                                onEdit: { startEdit(message) },
-                                onDelete: { Task { await deleteMessage(message) } },
-                                onReact: { emoji in Task { await react(message, emoji) } },
-                                onReport: { Task { await report(message) } },
-                                reactorName: { reactorName($0) }
-                            )
-                            .id(message.id)
+                        ForEach(timeline) { entry in
+                            switch entry {
+                            case .message(let message):
+                                HouseMessageBubble(
+                                    message: message,
+                                    isOwn: message.authorId == env.currentProfile?.id,
+                                    myUserId: env.currentProfile?.id,
+                                    canEdit: canEdit(message),
+                                    canDelete: canDelete(message),
+                                    onEdit: { startEdit(message) },
+                                    onDelete: { Task { await deleteMessage(message) } },
+                                    onReact: { emoji in Task { await react(message, emoji) } },
+                                    onReport: { Task { await report(message) } },
+                                    reactorName: { reactorName($0) }
+                                )
+                                .id(entry.id)
+                            case .poll(let poll):
+                                ChatPollCard(
+                                    poll: poll,
+                                    onSetVotes: { ids, other in await setPollVotes(poll, ids, other) },
+                                    onClose: { await closePoll(poll) },
+                                    onDelete: { await deletePoll(poll) },
+                                    fetchVoters: { await env.chatPollsService.fetchVoters(pollId: poll.id) }
+                                )
+                                .padding(.horizontal, 12)
+                                .id(entry.id)
+                            }
                         }
                     }
                     Color.clear.frame(height: 1).id(Self.bottomID)
@@ -237,6 +300,11 @@ struct HouseChatView: View {
                     withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
                 } else if new > old {
                     showJumpPill = true
+                }
+            }
+            .onChange(of: polls.count) { old, new in
+                if new > old && (atBottom || didInitialScroll == false) {
+                    withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
                 }
             }
             .onChange(of: scrollBump) {
@@ -303,6 +371,7 @@ struct HouseChatView: View {
         isLoading = false
         await env.housesService.markRead(houseId: house.id)
         canOrganizeMeeting = await env.meetingsService.canOrganize(scope: meetingScope)
+        await loadPolls()
 
         if let me = env.currentProfile {
             typing.start(roomKey: roomKey, uid: me.id, name: me.displayName)
