@@ -82,31 +82,87 @@ final class TournamentsService {
         try await supabase.rpc("set_tournament_format", params: P(p_tournament: id.uuidString, p_format: format.rawValue)).execute()
     }
 
-    func generateBracket(id: UUID) async throws { try await gen("generate_bracket", id) }
-    func generateRoundRobin(id: UUID) async throws { try await gen("generate_round_robin", id) }
-    func generateBracketFromPools(id: UUID) async throws { try await gen("generate_bracket_from_pools", id) }
-    func resetBracket(id: UUID) async throws { try await gen("reset_bracket", id) }
+    /// `seedOrder` (entrant ids, top seed first) hand-sets the bracket seeding;
+    /// nil lets the server seed by its own order.
+    func generateBracket(id: UUID, seedOrder: [UUID]? = nil) async throws { try await gen("generate_bracket", id, seedOrder) }
+    func generateRoundRobin(id: UUID, seedOrder: [UUID]? = nil) async throws { try await gen("generate_round_robin", id, seedOrder) }
+    func generateBracketFromPools(id: UUID) async throws {
+        struct P: Encodable { let p_tournament: String }
+        try await supabase.rpc("generate_bracket_from_pools", params: P(p_tournament: id.uuidString)).execute()
+    }
+    func resetBracket(id: UUID) async throws {
+        struct P: Encodable { let p_tournament: String }
+        try await supabase.rpc("reset_bracket", params: P(p_tournament: id.uuidString)).execute()
+    }
 
-    func generatePools(id: UUID, poolCount: Int, advance: Int) async throws {
+    func generatePools(id: UUID, poolCount: Int, advance: Int, seedOrder: [UUID]? = nil) async throws {
         let params: [String: AnyJSON] = [
             "p_tournament": .string(id.uuidString),
             "p_pool_count": .double(Double(poolCount)),
             "p_advance":    .double(Double(advance)),
-            "p_seed_order": .null,
+            "p_seed_order": seedJSON(seedOrder),
         ]
         try await supabase.rpc("generate_pools", params: params).execute()
     }
 
-    private func gen(_ rpc: String, _ id: UUID) async throws {
-        let params: [String: AnyJSON] = ["p_tournament": .string(id.uuidString), "p_seed_order": .null]
-        // reset/from-pools take only p_tournament; the extra key is ignored by PG functions
-        // that don't declare it — so send the minimal shape instead.
-        if rpc == "reset_bracket" || rpc == "generate_bracket_from_pools" {
-            struct P: Encodable { let p_tournament: String }
-            try await supabase.rpc(rpc, params: P(p_tournament: id.uuidString)).execute()
-        } else {
-            try await supabase.rpc(rpc, params: params).execute()
-        }
+    private func gen(_ rpc: String, _ id: UUID, _ seedOrder: [UUID]?) async throws {
+        let params: [String: AnyJSON] = ["p_tournament": .string(id.uuidString), "p_seed_order": seedJSON(seedOrder)]
+        try await supabase.rpc(rpc, params: params).execute()
+    }
+
+    private func seedJSON(_ ids: [UUID]?) -> AnyJSON {
+        guard let ids, !ids.isEmpty else { return .null }
+        return .array(ids.map { AnyJSON.string($0.uuidString) })
+    }
+
+    // MARK: Entrant / participant / seeding management
+
+    @discardableResult
+    func addParticipant(id: UUID, forUser: UUID?, name: String?) async throws -> UUID {
+        let params: [String: AnyJSON] = [
+            "p_tournament": .string(id.uuidString),
+            "p_for_user":   forUser.map { AnyJSON.string($0.uuidString) } ?? .null,
+            "p_name":       name.map { AnyJSON.string($0) } ?? .null,
+        ]
+        return try await supabase.rpc("add_participant", params: params).execute().value
+    }
+    func removeParticipant(participantId: UUID) async throws {
+        struct P: Encodable { let p_participant: String }
+        try await supabase.rpc("remove_participant", params: P(p_participant: participantId.uuidString)).execute()
+    }
+    func removeEntrant(entrantId: UUID) async throws {
+        struct P: Encodable { let p_entrant: String }
+        try await supabase.rpc("remove_entrant", params: P(p_entrant: entrantId.uuidString)).execute()
+    }
+    func setByeStrategy(id: UUID, strategy: ByeStrategy) async throws {
+        // update_tournament takes the full param set; send nulls for the rest.
+        let params: [String: AnyJSON] = [
+            "p_tournament":   .string(id.uuidString),
+            "p_title":        .null,
+            "p_bye_strategy": .string(strategy.rawValue),
+            "p_allow_ties":   .null,
+            "p_target_score": .null,
+            "p_win_by":       .null,
+        ]
+        try await supabase.rpc("update_tournament", params: params).execute()
+    }
+
+    // MARK: Live bracket rearrange (tap-to-swap)
+
+    func setMatchEntrant(matchId: UUID, slot: Int, entrantId: UUID?) async throws {
+        let params: [String: AnyJSON] = [
+            "p_match":      .string(matchId.uuidString),
+            "p_slot":       .double(Double(slot)),
+            "p_entrant_id": entrantId.map { AnyJSON.string($0.uuidString) } ?? .null,
+        ]
+        try await supabase.rpc("set_match_entrant", params: params).execute()
+    }
+    func swapMatchEntrants(matchA: UUID, slotA: Int, matchB: UUID, slotB: Int) async throws {
+        let params: [String: AnyJSON] = [
+            "p_match_a": .string(matchA.uuidString), "p_slot_a": .double(Double(slotA)),
+            "p_match_b": .string(matchB.uuidString), "p_slot_b": .double(Double(slotB)),
+        ]
+        try await supabase.rpc("swap_match_entrants", params: params).execute()
     }
 
     func delete(id: UUID) async throws {

@@ -124,6 +124,62 @@ struct Tournament: Identifiable {
     var maxRound: Int { bracketMatches.map(\.round).max() ?? 0 }
 }
 
+// MARK: - Bracket math (mirrors lib/tournaments.ts)
+
+enum BracketMath {
+    /// Next power of two ≥ n (the bracket draw size).
+    static func bracketSize(_ n: Int) -> Int {
+        if n < 2 { return n }
+        var b = 1
+        while b < n { b *= 2 }
+        return b
+    }
+    /// Byes needed = bracketSize − n.
+    static func byeCount(_ n: Int) -> Int { max(0, bracketSize(n) - n) }
+    /// Largest power of two ≤ n (clean main-draw size for play-in framing).
+    static func lowerPow2(_ n: Int) -> Int {
+        if n < 1 { return 0 }
+        var b = 1
+        while b * 2 <= n { b *= 2 }
+        return b
+    }
+    /// Standard fold-seed slot order for a size bracket (entry p = seed in slot p).
+    static func seedOrder(_ size: Int) -> [Int] {
+        if size <= 1 { return [1] }
+        var arr = [1, 2]; var sz = 2
+        while sz < size {
+            var next: [Int] = []
+            for s in arr { next.append(s); next.append(2 * sz + 1 - s) }
+            arr = next; sz *= 2
+        }
+        return arr
+    }
+    /// One-line human summary of the bracket shape.
+    static func bracketSummary(_ n: Int, _ strategy: ByeStrategy) -> String {
+        if n < 2 { return "Need at least 2 entrants" }
+        let b = bracketSize(n), byes = byeCount(n), games = n - lowerPow2(n)
+        if byes == 0 { return "\(n) entrants · \(b)-team bracket · no byes" }
+        if strategy == .play_in {
+            return "\(n) entrants · \(games) play-in game\(games == 1 ? "" : "s") → clean \(lowerPow2(n))-team draw"
+        }
+        return "\(n) entrants · \(b)-team bracket · \(byes) bye\(byes == 1 ? "" : "s") (top seeds rest)"
+    }
+    /// First-round matchups (name pairs) for the setup preview, in seed order.
+    static func firstRoundPreview(_ names: [String], _ strategy: ByeStrategy) -> [(a: String?, b: String?, isBye: Bool)] {
+        let n = names.count
+        if n < 2 { return [] }
+        let b = bracketSize(n), order = seedOrder(b)
+        var out: [(String?, String?, Bool)] = []
+        for i in 0..<(b / 2) {
+            let s1 = order[2 * i], s2 = order[2 * i + 1]
+            let a = s1 <= n ? names[s1 - 1] : nil
+            let bb = s2 <= n ? names[s2 - 1] : nil
+            out.append((a, bb, a == nil || bb == nil))
+        }
+        return out
+    }
+}
+
 // MARK: - Standings
 
 struct Standing: Identifiable {
