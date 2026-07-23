@@ -499,7 +499,9 @@ final class FestContentService {
                 id: r.id.uuidString,
                 day: Self.weekday(from: r.day) ?? r.day,
                 isoDate: r.day,
-                time: r.startTime?.nilIfBlank ?? "TBD",
+                // An "Anytime all week" event with no set time isn't pending a
+                // decision — show "No specific time", not "TBD" (web #378).
+                time: r.startTime?.nilIfBlank ?? (r.anytime == true ? "No specific time" : "TBD"),
                 title: Self.titled(emoji: r.emoji, title: r.title),
                 location: r.location?.nilIfBlank ?? "TBD",
                 description: r.description,
@@ -652,8 +654,9 @@ private struct ScheduleRow: Decodable {
     let leadName: String?
     let leadUserId: UUID?
     let crewUserIds: [UUID]?   // migration 0110 — crew can self-edit the event
+    let anytime: Bool?         // migration 0139 — "Anytime all week", no set time
     enum CodingKeys: String, CodingKey {
-        case id, day, title, emoji, location, description
+        case id, day, title, emoji, location, description, anytime
         case startTime   = "start_time"
         case isPrivate   = "is_private"
         case leadName    = "lead_name"
