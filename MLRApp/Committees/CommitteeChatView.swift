@@ -28,6 +28,9 @@ struct CommitteeChatView: View {
     @State private var emailData: ChatEmailData?
     @State private var channelMembers: [CommitteeRosterEntry] = []
     @State private var messages: [CommitteeChatMessage] = []
+    // Quick polls in this room, merged into the timeline by createdAt (#390).
+    @State private var polls: [ChatPoll] = []
+    @State private var showCreatePoll = false
     @State private var draft = ""
     @State private var isLoading = true
     @State private var loadError: String?
@@ -117,6 +120,9 @@ struct CommitteeChatView: View {
         .sheet(item: $emailData) { d in
             EmailMembersView(title: d.title, recipients: d.recipients, presetArea: d.area)
         }
+        .sheet(isPresented: $showCreatePoll) {
+            CreateChatPollSheet(scope: pollScope) { Task { await loadPolls() } }
+        }
         .task { await initialLoad() }
         .onDisappear {
             env.committeeService.unsubscribeFromMessages(committeeId: committee.id, area: area)
@@ -191,6 +197,35 @@ struct CommitteeChatView: View {
         .committee(committeeId: committee.id, slug: committee.slug, area: area)
     }
 
+    /// Poll room scope (same room key as the chat).
+    private var pollScope: ChatPollScope {
+        .committee(committeeId: committee.id, slug: committee.slug, area: area)
+    }
+
+    /// Messages + polls merged and ordered by creation time for inline rendering.
+    private var timeline: [ChatTimelineEntry] {
+        let msgs = messages.map { ChatTimelineEntry.message($0) }
+        let pollEntries = polls.map { ChatTimelineEntry.poll($0) }
+        return (msgs + pollEntries).sorted { $0.createdAt < $1.createdAt }
+    }
+
+    private enum ChatTimelineEntry: Identifiable {
+        case message(CommitteeChatMessage)
+        case poll(ChatPoll)
+        var id: String {
+            switch self {
+            case .message(let m): return "m-\(m.id.uuidString)"
+            case .poll(let p):    return "p-\(p.id.uuidString)"
+            }
+        }
+        var createdAt: Date {
+            switch self {
+            case .message(let m): return m.createdAt
+            case .poll(let p):    return p.createdAt
+            }
+        }
+    }
+
     /// Roster members for meeting name-resolution + the "everyone can make it" count.
     private var meetingMembers: [MeetingMember] {
         members.compactMap { m in
@@ -212,7 +247,8 @@ struct CommitteeChatView: View {
                     isEditing: editingMessage != nil,
                     sending: sending,
                     onSend: { attachments in Task { await send(attachments) } },
-                    onCancelEdit: { cancelEdit() }
+                    onCancelEdit: { cancelEdit() },
+                    onCreatePoll: { showCreatePoll = true }
                 )
             }
         }
@@ -255,20 +291,33 @@ struct CommitteeChatView: View {
                             .foregroundStyle(Color.mlrTextMuted)
                             .padding(.top, 40)
                     } else {
-                        ForEach(messages) { message in
-                            MessageBubble(
-                                message: message,
-                                isOwn: message.authorId == env.currentProfile?.id,
-                                myUserId: env.currentProfile?.id,
-                                canEdit: canEdit(message),
-                                canDelete: canDelete(message),
-                                onEdit: { startEdit(message) },
-                                onDelete: { Task { await deleteMessage(message) } },
-                                onReact: { emoji in Task { await react(message, emoji) } },
-                                onReport: { Task { await report(message) } },
-                                reactorName: { reactorName($0) }
-                            )
-                            .id(message.id)
+                        ForEach(timeline) { entry in
+                            switch entry {
+                            case .message(let message):
+                                MessageBubble(
+                                    message: message,
+                                    isOwn: message.authorId == env.currentProfile?.id,
+                                    myUserId: env.currentProfile?.id,
+                                    canEdit: canEdit(message),
+                                    canDelete: canDelete(message),
+                                    onEdit: { startEdit(message) },
+                                    onDelete: { Task { await deleteMessage(message) } },
+                                    onReact: { emoji in Task { await react(message, emoji) } },
+                                    onReport: { Task { await report(message) } },
+                                    reactorName: { reactorName($0) }
+                                )
+                                .id(entry.id)
+                            case .poll(let poll):
+                                ChatPollCard(
+                                    poll: poll,
+                                    onSetVotes: { ids, other in await setPollVotes(poll, ids, other) },
+                                    onClose: { await closePoll(poll) },
+                                    onDelete: { await deletePoll(poll) },
+                                    fetchVoters: { await env.chatPollsService.fetchVoters(pollId: poll.id) }
+                                )
+                                .padding(.horizontal, 12)
+                                .id(entry.id)
+                            }
                         }
                     }
                     // Bottom sentinel — the scroll target for jump-to-bottom.
@@ -294,6 +343,11 @@ struct CommitteeChatView: View {
                     withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
                 } else if new > old {
                     showJumpPill = true
+                }
+            }
+            .onChange(of: polls.count) { old, new in
+                if new > old && (atBottom || didInitialScroll == false) {
+                    withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
                 }
             }
             .onChange(of: scrollBump) {
@@ -349,6 +403,27 @@ struct CommitteeChatView: View {
 
     // MARK: - Actions
 
+    // MARK: - Polls
+
+    private func loadPolls() async {
+        polls = await env.chatPollsService.fetchPolls(scope: pollScope)
+    }
+
+    private func setPollVotes(_ poll: ChatPoll, _ ids: [UUID], _ other: String?) async {
+        try? await env.chatPollsService.setVotes(pollId: poll.id, optionIds: ids, otherText: other)
+        await loadPolls()
+    }
+
+    private func closePoll(_ poll: ChatPoll) async {
+        try? await env.chatPollsService.closePoll(pollId: poll.id)
+        await loadPolls()
+    }
+
+    private func deletePoll(_ poll: ChatPoll) async {
+        try? await env.chatPollsService.deletePoll(pollId: poll.id)
+        await loadPolls()
+    }
+
     private func initialLoad() async {
         isLoading = true
         loadError = nil
@@ -369,6 +444,7 @@ struct CommitteeChatView: View {
         isMuted = await env.committeeService.isAreaMuted(committeeId: committee.id, area: area)
         await env.committeeService.markAreaRead(committeeId: committee.id, area: area)
         canOrganizeMeeting = await env.meetingsService.canOrganize(scope: meetingScope)
+        await loadPolls()
 
         if let me = env.currentProfile {
             typing.start(roomKey: roomKey, uid: me.id, name: me.displayName)
