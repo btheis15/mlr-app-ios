@@ -22,6 +22,7 @@
 		D31B536D3012A45500C8D189 /* ChatPoll.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536C3012A45500C8D189 /* ChatPoll.swift */; };
 		D31B536F3012A46900C8D189 /* ChatPollsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536E3012A46900C8D189 /* ChatPollsService.swift */; };
 		D31B53723012A51F00C8D189 /* ChatPollCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53713012A51F00C8D189 /* ChatPollCard.swift */; };
+		D31B53743012A82E00C8D189 /* EventSignups.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53733012A82E00C8D189 /* EventSignups.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -248,6 +249,7 @@
 		D31B536C3012A45500C8D189 /* ChatPoll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPoll.swift; sourceTree = "<group>"; };
 		D31B536E3012A46900C8D189 /* ChatPollsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPollsService.swift; sourceTree = "<group>"; };
 		D31B53713012A51F00C8D189 /* ChatPollCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPollCard.swift; sourceTree = "<group>"; };
+		D31B53733012A82E00C8D189 /* EventSignups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSignups.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -614,6 +616,7 @@
 				D3EA3D93301144AF0092AE8E /* Meeting.swift */,
 				D31B535C3011689A00C8D189 /* FamilyRosterEntry.swift */,
 				D31B536C3012A45500C8D189 /* ChatPoll.swift */,
+				D31B53733012A82E00C8D189 /* EventSignups.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -1177,6 +1180,7 @@
 				D31B5361301168CC00C8D189 /* EmailMembersView.swift in Sources */,
 				D33F9EA62FEC086700603CE7 /* EventComposer.swift in Sources */,
 				D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */,
+				D31B53743012A82E00C8D189 /* EventSignups.swift in Sources */,
 				D33F9EA72FEC086700603CE7 /* HomeNavigationStubs.swift in Sources */,
 				D33F9EA82FEC086700603CE7 /* MentionText.swift in Sources */,
 				D3512BE630057B63008BBC44 /* HomeWeatherCard.swift in Sources */,

@@ -513,7 +513,16 @@ final class FestContentService {
                 leads: [r.leadName].compactMap { $0?.nilIfBlank },
                 leadUserId: r.leadUserId,
                 crewUserIds: r.crewUserIds ?? [],
-                links: r.links ?? []
+                links: r.links ?? [],
+                signupEnabled: r.signupEnabled ?? false,
+                signupMode: r.signupMode,
+                signupCapacity: r.signupCapacity,
+                signupSlotMinutes: r.signupSlotMinutes,
+                signupStartTime: r.signupStartTime,
+                signupEndTime: r.signupEndTime,
+                signupInstructions: r.signupInstructions,
+                signupTeamSize: r.signupTeamSize,
+                signupFields: r.signupFields ?? []
             )
         }
     }
@@ -661,6 +670,16 @@ private struct ScheduleRow: Decodable {
     let crewUserIds: [UUID]?   // migration 0110 — crew can self-edit the event
     let anytime: Bool?         // migration 0139 — "Anytime all week", no set time
     let links: [ScheduleLink]? // migration 0142 — ordered link buttons
+    // Sign-ups (migrations 0135/0136/0143)
+    let signupEnabled: Bool?
+    let signupMode: String?
+    let signupCapacity: Int?
+    let signupSlotMinutes: Int?
+    let signupStartTime: String?
+    let signupEndTime: String?
+    let signupInstructions: String?
+    let signupTeamSize: Int?
+    let signupFields: [SignupField]?
     enum CodingKeys: String, CodingKey {
         case id, day, title, emoji, location, description, anytime, links
         case startTime   = "start_time"
@@ -668,6 +687,15 @@ private struct ScheduleRow: Decodable {
         case leadName    = "lead_name"
         case leadUserId  = "lead_user_id"
         case crewUserIds = "crew_user_ids"
+        case signupEnabled      = "signup_enabled"
+        case signupMode         = "signup_mode"
+        case signupCapacity     = "signup_capacity"
+        case signupSlotMinutes  = "signup_slot_minutes"
+        case signupStartTime    = "signup_start_time"
+        case signupEndTime      = "signup_end_time"
+        case signupInstructions = "signup_instructions"
+        case signupTeamSize     = "signup_team_size"
+        case signupFields       = "signup_fields"
     }
 }
 
