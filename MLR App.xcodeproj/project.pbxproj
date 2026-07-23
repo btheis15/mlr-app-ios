@@ -21,6 +21,7 @@
 		D31B536B301169D200C8D189 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536A301169D200C8D189 /* ConfettiView.swift */; };
 		D31B536D3012A45500C8D189 /* ChatPoll.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536C3012A45500C8D189 /* ChatPoll.swift */; };
 		D31B536F3012A46900C8D189 /* ChatPollsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536E3012A46900C8D189 /* ChatPollsService.swift */; };
+		D31B53723012A51F00C8D189 /* ChatPollCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53713012A51F00C8D189 /* ChatPollCard.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -246,6 +247,7 @@
 		D31B536A301169D200C8D189 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
 		D31B536C3012A45500C8D189 /* ChatPoll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPoll.swift; sourceTree = "<group>"; };
 		D31B536E3012A46900C8D189 /* ChatPollsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPollsService.swift; sourceTree = "<group>"; };
+		D31B53713012A51F00C8D189 /* ChatPollCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPollCard.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -471,6 +473,14 @@
 				000000000000000000000120 /* MLR App.app */,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		D31B53703012A51F00C8D189 /* Chat */ = {
+			isa = PBXGroup;
+			children = (
+				D31B53713012A51F00C8D189 /* ChatPollCard.swift */,
+			);
+			path = Chat;
 			sourceTree = "<group>";
 		};
 		D33F9DE02FEC086700603CE7 /* Activities */ = {
@@ -854,6 +864,7 @@
 				D363476B2FFEA947001D52C8 /* Search */,
 				D3F9D874300710BC006874DA /* Polls */,
 				D3EA3D97301145680092AE8E /* Meetings */,
+				D31B53703012A51F00C8D189 /* Chat */,
 			);
 			path = MLRApp;
 			sourceTree = "<group>";
@@ -1066,6 +1077,7 @@
 				D33F9EEC2FF4502100603CE7 /* RosterEditSheet.swift in Sources */,
 				D33F9E732FEC086700603CE7 /* NotificationActions.swift in Sources */,
 				D33F9E742FEC086700603CE7 /* EventSheet.swift in Sources */,
+				D31B53723012A51F00C8D189 /* ChatPollCard.swift in Sources */,
 				D33F9E752FEC086700603CE7 /* PushToggleView.swift in Sources */,
 				D33F9E762FEC086700603CE7 /* MLRSheet.swift in Sources */,
 				D33F9ED22FF3172100603CE7 /* WorkItemsService.swift in Sources */,
