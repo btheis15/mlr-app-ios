@@ -126,6 +126,7 @@ struct CommitteeChatView: View {
         .task { await initialLoad() }
         .onDisappear {
             env.committeeService.unsubscribeFromMessages(committeeId: committee.id, area: area)
+            env.chatPollsService.unsubscribeFromPolls(scope: pollScope)
             typing.stop()
         }
     }
@@ -285,7 +286,7 @@ struct CommitteeChatView: View {
                             .font(.mlrCaption)
                             .foregroundStyle(Color.mlrDanger)
                             .padding()
-                    } else if messages.isEmpty {
+                    } else if timeline.isEmpty {
                         Text("No messages yet — say hello 👋")
                             .font(.mlrCaption)
                             .foregroundStyle(Color.mlrTextMuted)
@@ -445,6 +446,7 @@ struct CommitteeChatView: View {
         await env.committeeService.markAreaRead(committeeId: committee.id, area: area)
         canOrganizeMeeting = await env.meetingsService.canOrganize(scope: meetingScope)
         await loadPolls()
+        env.chatPollsService.subscribeToPolls(scope: pollScope) { Task { await loadPolls() } }
 
         if let me = env.currentProfile {
             typing.start(roomKey: roomKey, uid: me.id, name: me.displayName)

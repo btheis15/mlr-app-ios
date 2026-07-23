@@ -106,6 +106,7 @@ struct HouseChatView: View {
         .task { await initialLoad() }
         .onDisappear {
             env.housesService.unsubscribeFromMessages(houseId: house.id)
+            env.chatPollsService.unsubscribeFromPolls(scope: pollScope)
             typing.stop()
         }
     }
@@ -372,6 +373,7 @@ struct HouseChatView: View {
         await env.housesService.markRead(houseId: house.id)
         canOrganizeMeeting = await env.meetingsService.canOrganize(scope: meetingScope)
         await loadPolls()
+        env.chatPollsService.subscribeToPolls(scope: pollScope) { Task { await loadPolls() } }
 
         if let me = env.currentProfile {
             typing.start(roomKey: roomKey, uid: me.id, name: me.displayName)

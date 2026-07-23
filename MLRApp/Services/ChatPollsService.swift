@@ -14,6 +14,42 @@ import Supabase
 @MainActor
 final class ChatPollsService {
 
+    private var pollChannels: [String: RealtimeChannelV2] = [:]
+
+    /// Live tallies: fire `onChange` whenever a poll or its options change in this
+    /// room (denormalized counts are realtime-safe; raw votes are not readable).
+    func subscribeToPolls(scope: ChatPollScope, onChange: @escaping () -> Void) {
+        let key = roomKey(scope)
+        guard pollChannels[key] == nil else { return }
+        let channel = supabase.channel("chat-polls-\(key)")
+        pollChannels[key] = channel
+        Task {
+            channel.onPostgresChange(AnyAction.self, schema: "public", table: "chat_polls") { _ in
+                Task { @MainActor in onChange() }
+            }
+            channel.onPostgresChange(AnyAction.self, schema: "public", table: "chat_poll_options") { _ in
+                Task { @MainActor in onChange() }
+            }
+            await channel.subscribe()
+        }
+    }
+
+    func unsubscribeFromPolls(scope: ChatPollScope) {
+        let key = roomKey(scope)
+        guard let channel = pollChannels[key] else { return }
+        Task {
+            await supabase.removeChannel(channel)
+            pollChannels.removeValue(forKey: key)
+        }
+    }
+
+    private func roomKey(_ scope: ChatPollScope) -> String {
+        switch scope {
+        case let .committee(_, slug, area): return "c-\(slug)-\(area ?? "")"
+        case let .house(_, slug):           return "h-\(slug)"
+        }
+    }
+
     /// Every poll in a room (newest first) with options/counts + my own votes.
     /// Empty on any failure (pre-migration, offline) — never throws.
     func fetchPolls(scope: ChatPollScope) async -> [ChatPoll] {
