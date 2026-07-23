@@ -85,6 +85,12 @@ struct FestScheduleDetailView: View {
                     }
                 }
 
+                // Sign-ups (migrations 0135/0136/0143) — self-hides when disabled.
+                if item.signupEnabled {
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                    EventSignupSection(item: item)
+                }
+
                 Spacer(minLength: 32)
             }
         }
@@ -368,6 +374,11 @@ struct ExpandableScheduleRow: View {
                 DetailSection(icon: "link", title: "Links") {
                     ScheduleLinkButtons(links: item.links)
                 }
+            }
+
+            if item.signupEnabled {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                EventSignupSection(item: item)
             }
 
             if canEditItem {

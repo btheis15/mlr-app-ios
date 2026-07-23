@@ -23,6 +23,7 @@
 		D31B536F3012A46900C8D189 /* ChatPollsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536E3012A46900C8D189 /* ChatPollsService.swift */; };
 		D31B53723012A51F00C8D189 /* ChatPollCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53713012A51F00C8D189 /* ChatPollCard.swift */; };
 		D31B53743012A82E00C8D189 /* EventSignups.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53733012A82E00C8D189 /* EventSignups.swift */; };
+		D31B53763012A89400C8D189 /* EventSignupSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53753012A89400C8D189 /* EventSignupSection.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -250,6 +251,7 @@
 		D31B536E3012A46900C8D189 /* ChatPollsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPollsService.swift; sourceTree = "<group>"; };
 		D31B53713012A51F00C8D189 /* ChatPollCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPollCard.swift; sourceTree = "<group>"; };
 		D31B53733012A82E00C8D189 /* EventSignups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSignups.swift; sourceTree = "<group>"; };
+		D31B53753012A89400C8D189 /* EventSignupSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSignupSection.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -751,6 +753,7 @@
 				D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */,
 				D3F9D87A30091A65006874DA /* FestDecor.swift */,
 				D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */,
+				D31B53753012A89400C8D189 /* EventSignupSection.swift */,
 			);
 			path = FamilyFestTab;
 			sourceTree = "<group>";
@@ -1164,6 +1167,7 @@
 				D31B535F301168AA00C8D189 /* FamilyRosterService.swift in Sources */,
 				D33F9E9E2FEC086700603CE7 /* CabinService.swift in Sources */,
 				D33F9E9F2FEC086700603CE7 /* Post.swift in Sources */,
+				D31B53763012A89400C8D189 /* EventSignupSection.swift in Sources */,
 				D36347582FFDE088001D52C8 /* CommitteeActionIntents.swift in Sources */,
 				D31B5369301169A400C8D189 /* HomeAdminDashboardCard.swift in Sources */,
 				D3F9D86F30071027006874DA /* Poll.swift in Sources */,
