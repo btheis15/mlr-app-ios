@@ -146,9 +146,9 @@ extension Tournament {
         let ids = Set(field.map(\.id))
         var rows: [UUID: Standing] = [:]
         for e in field { rows[e.id] = Standing(entrantId: e.id, name: e.displayName) }
-        let done = matches.filter {
-            $0.status == .complete, let a = $0.slot1EntrantId, let b = $0.slot2EntrantId,
-            ids.contains(a), ids.contains(b)
+        let done = matches.filter { m in
+            guard m.status == .complete, let a = m.slot1EntrantId, let b = m.slot2EntrantId else { return false }
+            return ids.contains(a) && ids.contains(b)
         }
         for m in done {
             guard let aId = m.slot1EntrantId, let bId = m.slot2EntrantId else { continue }
