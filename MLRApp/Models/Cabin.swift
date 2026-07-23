@@ -68,6 +68,11 @@ struct CabinAvailability: Codable, Identifiable, Equatable {
     let name: String
     let roomCount: Int
     let available: Int
+    // Real bed counts, only for a cabin broken into named rooms (0092) — nil for
+    // a plain room-count cabin, and nil until migration 0111 is deployed (the RPC
+    // simply omits the columns, so the card falls back to the static bed total).
+    let bedsTotal: Int?
+    let bedsAvailable: Int?
 
     var id: UUID { cabinId }
 
@@ -76,6 +81,8 @@ struct CabinAvailability: Codable, Identifiable, Equatable {
         case slug, name
         case roomCount = "room_count"
         case available
+        case bedsTotal = "beds_total"
+        case bedsAvailable = "beds_available"
     }
 }
 

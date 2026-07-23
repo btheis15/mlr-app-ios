@@ -79,6 +79,34 @@ struct FamilyFestSpotlight: View {
         env.festContentService.dinners.first { $0.day == todayWeekday }
     }
 
+    // Today's schedule events and the dinner merged into one list, ordered by
+    // time so a 5:00 PM dinner isn't stuck below a 6:30 PM event (web parity —
+    // FamilyFestSpotlight sorts across schedule + dinner). Raw `time` values are
+    // zero-padded 24h "HH:mm", so a lexical sort matches; "TBD" sorts last.
+    private enum LiveDayItem: Identifiable {
+        case event(ScheduleItem)
+        case dinner(FestDinner)
+
+        var id: String {
+            switch self {
+            case .event(let e):  return "e-\(e.id)"
+            case .dinner(let d): return "d-\(d.id)"
+            }
+        }
+        var sortKey: String {
+            switch self {
+            case .event(let e):  return e.time
+            case .dinner(let d): return d.time
+            }
+        }
+    }
+
+    private var liveDayItems: [LiveDayItem] {
+        var items = todayEvents.map { LiveDayItem.event($0) }
+        if let dinner = todayDinner { items.append(.dinner(dinner)) }
+        return items.sorted { $0.sortKey < $1.sortKey }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             if season.phase == .live {
@@ -142,14 +170,14 @@ struct FamilyFestSpotlight: View {
                         .contentTransition(.numericText())
                 }
 
-                // Today's events
-                if !todayEvents.isEmpty || todayDinner != nil {
+                // Today's events + dinner, merged and time-ordered
+                if !liveDayItems.isEmpty {
                     VStack(spacing: 6) {
-                        ForEach(todayEvents) { event in
-                            liveEventRow(event)
-                        }
-                        if let dinner = todayDinner {
-                            liveDinnerRow(dinner)
+                        ForEach(liveDayItems) { item in
+                            switch item {
+                            case .event(let event):  liveEventRow(event)
+                            case .dinner(let dinner): liveDinnerRow(dinner)
+                            }
                         }
                     }
                 } else {

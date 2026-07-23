@@ -37,6 +37,14 @@ struct WorkItemDetailSheet: View {
         return env.housesService.houses.first { $0.id == hid }?.name
     }
 
+    /// Who added the item, resolved from the loaded roster (web parity — the
+    /// WorkItemSheet credits the creator; the "Done by" banner covers who checked
+    /// it off). Falls back to "someone" until the roster resolves.
+    private var createdByName: String? {
+        guard let cid = current.createdBy else { return nil }
+        return roster.first { $0.id == cid }?.name
+    }
+
     /// Who may edit: an admin (any item) or the person who created it (their own).
     /// The update_work_item RPC enforces the same rule server-side (migration 0079).
     private var canEdit: Bool {
@@ -138,6 +146,12 @@ struct WorkItemDetailSheet: View {
                             .foregroundStyle(Color.mlrTextMuted)
                     }
                 }
+            }
+
+            if current.createdBy != nil {
+                Text("Added by \(createdByName ?? "someone") · \(MLRFormat.relativeTime(current.createdAt))")
+                    .font(.mlrScaled(12))
+                    .foregroundStyle(Color.mlrTextMuted)
             }
         }
     }

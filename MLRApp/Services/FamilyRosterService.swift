@@ -52,6 +52,46 @@ final class FamilyRosterService {
         try await supabase.from("family_roster").delete().eq("id", value: id.uuidString).execute()
     }
 
+    /// Committee memberships held by account-less roster people, keyed by
+    /// lowercased email — the "manual add-in" committee slots. Migration 0125
+    /// keeps them in sync with the family roster until the person signs up, at
+    /// which point the slot links to their account. Empty pre-migration / on
+    /// error, so the roster UI simply shows no committee chips.
+    func fetchRosterCommittees() async -> [String: [RosterCommittee]] {
+        struct SlotRow: Decodable {
+            let email: String?
+            let committeeSlug: String
+            enum CodingKeys: String, CodingKey { case email; case committeeSlug = "committee_slug" }
+        }
+        struct CommitteeMeta: Decodable { let slug: String; let name: String; let emoji: String? }
+        do {
+            let slots: [SlotRow] = try await supabase
+                .from("committee_roster")
+                .select("email, committee_slug")
+                .is("linked_user_id", value: nil)
+                .execute()
+                .value
+            let committees: [CommitteeMeta] = try await supabase
+                .from("committees")
+                .select("slug, name, emoji")
+                .is("archived_at", value: nil)
+                .execute()
+                .value
+            let names = Dictionary(
+                committees.map { ($0.slug, "\($0.emoji ?? "") \($0.name)".trimmingCharacters(in: .whitespaces)) },
+                uniquingKeysWith: { a, _ in a })
+            var out: [String: [RosterCommittee]] = [:]
+            for s in slots {
+                guard let key = s.email?.trimmingCharacters(in: .whitespaces).lowercased(), !key.isEmpty else { continue }
+                out[key, default: []].append(RosterCommittee(slug: s.committeeSlug, label: names[s.committeeSlug] ?? s.committeeSlug))
+            }
+            return out
+        } catch {
+            print("[FamilyRosterService] fetchRosterCommittees error: \(error)")
+            return [:]
+        }
+    }
+
     // MARK: - Email recipient pools
 
     private func recipients(rpc: String, params: (some Encodable)? = Optional<String>.none) async -> [EmailRecipient] {
@@ -83,6 +123,15 @@ final class FamilyRosterService {
         struct P: Encodable { let cid: String }
         return await recipients(rpc: "committee_member_recipients", params: P(cid: committeeId.uuidString))
     }
+}
+
+// MARK: - Roster committee chip
+
+/// One account-less committee slot a family-roster person holds (migration 0125).
+struct RosterCommittee: Identifiable, Hashable {
+    let slug: String
+    let label: String
+    var id: String { slug }
 }
 
 // MARK: - Row decoding

@@ -28,8 +28,9 @@ struct CabinRequestSheet: View {
     @State private var didSubmit = false
     @State private var loadingCabins = true
 
-    // Live availability for the selected date range (cabinId → rooms free).
-    @State private var availability: [UUID: Int] = [:]
+    // Live availability for the selected date range (cabinId → availability row,
+    // which carries rooms-free plus real beds-left for named-room cabins).
+    @State private var availability: [UUID: CabinAvailability] = [:]
     @State private var loadingAvailability = false
 
     private var cabins: [Cabin] { env.cabinService.cabins }
@@ -46,7 +47,15 @@ struct CabinRequestSheet: View {
     /// Rooms free in the selected cabin for the chosen dates (nil until loaded).
     private var selectedAvailable: Int? {
         guard let id = selectedCabin?.id else { return nil }
-        return availability[id]
+        return availability[id]?.available
+    }
+
+    /// Beds still free / total for a named-room cabin — nil for a plain
+    /// room-count cabin (or until migration 0111 is deployed), so the card falls
+    /// back to the static bed total. Mirrors the web CabinCard's bedsLeft.
+    private func bedsLeft(_ a: CabinAvailability?) -> (available: Int, total: Int)? {
+        guard let a, let total = a.bedsTotal, let available = a.bedsAvailable else { return nil }
+        return (available, total)
     }
 
     private var canSubmit: Bool {
@@ -143,7 +152,8 @@ struct CabinRequestSheet: View {
                                     CabinPickCard(
                                         cabin: cabin,
                                         isSelected: selectedCabin?.id == cabin.id,
-                                        available: availability[cabin.id]
+                                        available: availability[cabin.id]?.available,
+                                        bedsLeft: bedsLeft(availability[cabin.id])
                                     ) { selectedCabin = cabin }
                                 }
                             }
@@ -315,7 +325,7 @@ struct CabinRequestSheet: View {
         let rows = await env.cabinService.fetchAvailability(
             checkIn: checkIn.isoDateString, checkOut: checkOut.isoDateString
         )
-        availability = Dictionary(rows.map { ($0.cabinId, $0.available) }, uniquingKeysWith: { a, _ in a })
+        availability = Dictionary(rows.map { ($0.cabinId, $0) }, uniquingKeysWith: { a, _ in a })
         // Load per-room availability when a cabin is selected.
         if let cabinId = selectedCabin?.id {
             await env.cabinService.fetchRoomAvailability(
@@ -432,6 +442,7 @@ private struct CabinPickCard: View {
     let cabin: Cabin
     let isSelected: Bool
     var available: Int? = nil
+    var bedsLeft: (available: Int, total: Int)? = nil
     let onTap: () -> Void
 
     var body: some View {
@@ -467,6 +478,15 @@ private struct CabinPickCard: View {
                         .font(.mlrScaled(11, weight: .semibold))
                         .foregroundStyle(available > 0 ? Color.mlrSuccess : Color.mlrDanger)
                 }
+                // Real beds-left when the cabin is broken into named rooms
+                // (migration 0111) — web parity with the CabinCard bed line.
+                if let bedsLeft {
+                    Text(bedsLeft.available > 0
+                         ? "🛏️ \(bedsLeft.available) of \(bedsLeft.total) bed\(bedsLeft.total == 1 ? "" : "s") left"
+                         : "🛏️ No beds left")
+                        .font(.mlrScaled(11, weight: .semibold))
+                        .foregroundStyle(bedsLeft.available > 0 ? Color.mlrTextMuted : Color.mlrDanger)
+                }
             }
             .frame(width: 180, alignment: .leading)
             .padding(14)
@@ -481,9 +501,11 @@ private struct CabinPickCard: View {
     }
 
     /// "🛏️ 4 beds · 4 rooms" when bed count is known, else just the room count.
+    /// When a live beds-left figure is shown below, drop the static bed count
+    /// here so beds aren't listed twice.
     private var occupancyText: String {
         let rooms = "\(cabin.roomCount) room\(cabin.roomCount == 1 ? "" : "s")"
-        if let beds = cabin.bedCount {
+        if bedsLeft == nil, let beds = cabin.bedCount {
             return "🛏️ \(beds) bed\(beds == 1 ? "" : "s") · \(rooms)"
         }
         return rooms
