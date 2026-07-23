@@ -456,7 +456,8 @@ final class FestContentService {
         description: String?,
         leadName: String?,
         leadUserId: UUID?,
-        leadPhone: String?
+        leadPhone: String?,
+        links: [ScheduleLink]? = nil
     ) async throws {
         var payload: [String: AnyJSON] = [
             "location":     j(location),
@@ -465,6 +466,12 @@ final class FestContentService {
             "lead_phone":   j(leadPhone),
             "lead_user_id": leadUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
         ]
+        // Ordered link buttons (migration 0142) — only written when provided.
+        if let links {
+            payload["links"] = .array(links.map { link in
+                .object(["href": .string(link.href), "label": link.label.map { AnyJSON.string($0) } ?? .null])
+            })
+        }
         if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
         try await supabase.from("fest_schedule_items").update(payload).eq("id", value: itemId.uuidString).execute()
     }

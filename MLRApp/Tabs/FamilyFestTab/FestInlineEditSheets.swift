@@ -17,9 +17,13 @@ struct FestScheduleEditSheet: View {
     @State private var description: String = ""
     @State private var leadName: String = ""
     @State private var linkedUser: Profile? = nil
+    @State private var links: [LinkDraft] = []
     @State private var showPicker = false
     @State private var isSaving = false
     @State private var saveError: String? = nil
+
+    /// Editable link row (ScheduleLink is immutable; this backs the text fields).
+    struct LinkDraft: Identifiable { let id = UUID(); var label: String; var href: String }
 
     private var canAssignLead: Bool { env.isAdmin || env.festContentService.userCanEditFest }
 
@@ -71,6 +75,32 @@ struct FestScheduleEditSheet: View {
                 }
             }
 
+            // Link buttons (migration 0142) — e.g. a sign-up form + an info doc.
+            Section {
+                ForEach($links) { $link in
+                    VStack(spacing: 4) {
+                        TextField("Label (e.g. Sign-up form)", text: $link.label)
+                        HStack {
+                            TextField("https://…", text: $link.href)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .keyboardType(.URL)
+                            Button { links.removeAll { $0.id == link.id } } label: {
+                                Image(systemName: "minus.circle.fill").foregroundStyle(Color.mlrDanger)
+                            }.buttonStyle(.plain)
+                        }
+                    }
+                }
+                Button { links.append(LinkDraft(label: "", href: "")) } label: {
+                    Label("Add a link", systemImage: "plus.circle")
+                }
+            } header: {
+                Text("Links")
+            } footer: {
+                Text("Buttons shown on the event — a sign-up form, an info doc, etc.")
+                    .font(.caption)
+            }
+
             if let err = saveError {
                 Section { Text(err).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) }
             }
@@ -98,6 +128,7 @@ struct FestScheduleEditSheet: View {
         location    = (item.location == "TBD" ? nil : item.location) ?? ""
         description = item.description ?? ""
         leadName    = item.leads.first ?? ""
+        links       = item.links.map { LinkDraft(label: $0.label ?? "", href: $0.href) }
     }
 
     private func save() async {
@@ -105,6 +136,12 @@ struct FestScheduleEditSheet: View {
         guard let uid = UUID(uuidString: item.id) else { saveError = "Invalid item ID."; return }
         let name = (linkedUser?.name ?? leadName).trimBlank
         let leadId = linkedUser?.id ?? item.leadUserId
+        // Keep only links with a real URL; label falls back to the URL when blank.
+        let cleanedLinks: [ScheduleLink] = links.compactMap { d in
+            let href = d.href.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !href.isEmpty else { return nil }
+            return ScheduleLink(href: href, label: d.label.trimBlank)
+        }
         do {
             try await env.festContentService.updateScheduleItem(
                 itemId:      uid,
@@ -112,7 +149,8 @@ struct FestScheduleEditSheet: View {
                 description: description.trimBlank,
                 leadName:    name,
                 leadUserId:  leadId,
-                leadPhone:   nil
+                leadPhone:   nil,
+                links:       cleanedLinks
             )
             await onSaved()
             dismiss()
