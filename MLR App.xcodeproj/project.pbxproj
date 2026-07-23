@@ -19,6 +19,8 @@
 		D31B53673011694F00C8D189 /* AdminBroadcastComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */; };
 		D31B5369301169A400C8D189 /* HomeAdminDashboardCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5368301169A400C8D189 /* HomeAdminDashboardCard.swift */; };
 		D31B536B301169D200C8D189 /* ConfettiView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536A301169D200C8D189 /* ConfettiView.swift */; };
+		D31B536D3012A45500C8D189 /* ChatPoll.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536C3012A45500C8D189 /* ChatPoll.swift */; };
+		D31B536F3012A46900C8D189 /* ChatPollsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536E3012A46900C8D189 /* ChatPollsService.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -242,6 +244,8 @@
 		D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminBroadcastComposer.swift; sourceTree = "<group>"; };
 		D31B5368301169A400C8D189 /* HomeAdminDashboardCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeAdminDashboardCard.swift; sourceTree = "<group>"; };
 		D31B536A301169D200C8D189 /* ConfettiView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConfettiView.swift; sourceTree = "<group>"; };
+		D31B536C3012A45500C8D189 /* ChatPoll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPoll.swift; sourceTree = "<group>"; };
+		D31B536E3012A46900C8D189 /* ChatPollsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPollsService.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -599,6 +603,7 @@
 				D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */,
 				D3EA3D93301144AF0092AE8E /* Meeting.swift */,
 				D31B535C3011689A00C8D189 /* FamilyRosterEntry.swift */,
+				D31B536C3012A45500C8D189 /* ChatPoll.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -650,6 +655,7 @@
 				D31B34B4300AC9CA00A0D653 /* CommitteeTaxonomy.swift */,
 				D3EA3D95301145120092AE8E /* MeetingsService.swift */,
 				D31B535E301168AA00C8D189 /* FamilyRosterService.swift */,
+				D31B536E3012A46900C8D189 /* ChatPollsService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -1064,6 +1070,7 @@
 				D33F9E762FEC086700603CE7 /* MLRSheet.swift in Sources */,
 				D33F9ED22FF3172100603CE7 /* WorkItemsService.swift in Sources */,
 				D36347602FFDE761001D52C8 /* WriteActionIntents.swift in Sources */,
+				D31B536D3012A45500C8D189 /* ChatPoll.swift in Sources */,
 				D33F9E772FEC086700603CE7 /* SkeletonView.swift in Sources */,
 				D363475E2FFDE689001D52C8 /* PersonalIntents.swift in Sources */,
 				D33F9E782FEC086700603CE7 /* InstallPrompt.swift in Sources */,
@@ -1107,6 +1114,7 @@
 				D3EA3D9B301145C90092AE8E /* MeetingSchedulerSheet.swift in Sources */,
 				D31B5359301167A700C8D189 /* ChatTyping.swift in Sources */,
 				D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */,
+				D31B536F3012A46900C8D189 /* ChatPollsService.swift in Sources */,
 				D33F9E8C2FEC086700603CE7 /* FestCrewView.swift in Sources */,
 				D33F9E8D2FEC086700603CE7 /* PostCard.swift in Sources */,
 				D33F9E8E2FEC086700603CE7 /* AskForHelpHomeCard.swift in Sources */,
@@ -1354,7 +1362,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MLRApp/MLRApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = UBM722BP54;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
@@ -1411,7 +1419,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MLRApp/MLRApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_TEAM = UBM722BP54;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
