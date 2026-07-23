@@ -457,7 +457,8 @@ final class FestContentService {
         leadName: String?,
         leadUserId: UUID?,
         leadPhone: String?,
-        links: [ScheduleLink]? = nil
+        links: [ScheduleLink]? = nil,
+        signup: SignupConfig? = nil
     ) async throws {
         var payload: [String: AnyJSON] = [
             "location":     j(location),
@@ -472,8 +473,30 @@ final class FestContentService {
                 .object(["href": .string(link.href), "label": link.label.map { AnyJSON.string($0) } ?? .null])
             })
         }
+        if let signup {
+            payload["signup_enabled"]      = .bool(signup.enabled)
+            payload["signup_mode"]         = .string(signup.mode)
+            payload["signup_capacity"]     = signup.capacity.map { AnyJSON.double(Double($0)) } ?? .null
+            payload["signup_slot_minutes"] = signup.slotMinutes.map { AnyJSON.double(Double($0)) } ?? .null
+            payload["signup_start_time"]   = signup.startTime.map { AnyJSON.string($0) } ?? .null
+            payload["signup_end_time"]     = signup.endTime.map { AnyJSON.string($0) } ?? .null
+            payload["signup_instructions"] = signup.instructions.map { AnyJSON.string($0) } ?? .null
+            payload["signup_team_size"]    = signup.teamSize.map { AnyJSON.double(Double($0)) } ?? .null
+        }
         if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
         try await supabase.from("fest_schedule_items").update(payload).eq("id", value: itemId.uuidString).execute()
+    }
+
+    /// The admin-editable sign-up config for a schedule event (migrations 0135/0143).
+    struct SignupConfig {
+        var enabled: Bool
+        var mode: String            // interval | slots | headcount
+        var capacity: Int?
+        var slotMinutes: Int?
+        var startTime: String?
+        var endTime: String?
+        var instructions: String?
+        var teamSize: Int?
     }
 
     /// Updates only the crew_user_ids on a dinner (admin / canEditFest / chef only).

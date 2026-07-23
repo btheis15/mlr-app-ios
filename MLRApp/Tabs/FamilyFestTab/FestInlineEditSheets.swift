@@ -22,6 +22,20 @@ struct FestScheduleEditSheet: View {
     @State private var isSaving = false
     @State private var saveError: String? = nil
 
+    // Sign-up config (admin / fest-editor only).
+    @State private var signupEnabled = false
+    @State private var signupMode = "interval"       // interval | slots | headcount
+    @State private var signupCapacity = ""
+    @State private var signupTeamSize = 1
+    @State private var signupInstructions = ""
+    @State private var signupStart = FestScheduleEditSheet.defaultTime(18, 0)
+    @State private var signupEnd = FestScheduleEditSheet.defaultTime(20, 0)
+    @State private var signupSlotMinutes = 15
+
+    static func defaultTime(_ h: Int, _ m: Int) -> Date {
+        Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: Date()) ?? Date()
+    }
+
     /// Editable link row (ScheduleLink is immutable; this backs the text fields).
     struct LinkDraft: Identifiable { let id = UUID(); var label: String; var href: String }
 
@@ -101,6 +115,40 @@ struct FestScheduleEditSheet: View {
                     .font(.caption)
             }
 
+            // Sign-ups (migrations 0135/0143) — authoring is admin / fest-editor only.
+            if canAssignLead {
+                Section {
+                    Toggle("Take sign-ups", isOn: $signupEnabled)
+                    if signupEnabled {
+                        Picker("Type", selection: $signupMode) {
+                            Text("Head count").tag("headcount")
+                            Text("Time slots").tag("interval")
+                            Text("Named slots").tag("slots")
+                        }
+                        LabeledContent("Capacity") {
+                            TextField("No limit", text: $signupCapacity)
+                                .keyboardType(.numberPad).multilineTextAlignment(.trailing)
+                        }
+                        Stepper("Team size: \(signupTeamSize)", value: $signupTeamSize, in: 1...8)
+                        TextField("Instructions (optional)", text: $signupInstructions, axis: .vertical).lineLimit(1...3)
+                        if signupMode == "interval" {
+                            DatePicker("First slot", selection: $signupStart, displayedComponents: .hourAndMinute)
+                            DatePicker("Ends by", selection: $signupEnd, displayedComponents: .hourAndMinute)
+                            Picker("Slot length", selection: $signupSlotMinutes) {
+                                ForEach([10, 15, 20, 30, 45, 60], id: \.self) { Text("\($0) min").tag($0) }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Sign-ups")
+                } footer: {
+                    Text(signupMode == "slots"
+                         ? "Named-slot lists are edited on the web for now."
+                         : "Members can sign up right on the event.")
+                        .font(.caption)
+                }
+            }
+
             if let err = saveError {
                 Section { Text(err).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) }
             }
@@ -129,6 +177,24 @@ struct FestScheduleEditSheet: View {
         description = item.description ?? ""
         leadName    = item.leads.first ?? ""
         links       = item.links.map { LinkDraft(label: $0.label ?? "", href: $0.href) }
+        signupEnabled      = item.signupEnabled
+        signupMode         = item.signupMode ?? "interval"
+        signupCapacity     = item.signupCapacity.map(String.init) ?? ""
+        signupTeamSize     = item.signupTeamSize ?? 1
+        signupInstructions = item.signupInstructions ?? ""
+        signupSlotMinutes  = item.signupSlotMinutes ?? 15
+        if let s = Self.timeFromHHMM(item.signupStartTime) { signupStart = s }
+        if let e = Self.timeFromHHMM(item.signupEndTime) { signupEnd = e }
+    }
+
+    private static func timeFromHHMM(_ s: String?) -> Date? {
+        guard let parts = s?.split(separator: ":"), parts.count == 2,
+              let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
+        return defaultTime(h, m)
+    }
+    private static func hhmm(_ d: Date) -> String {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 
     private func save() async {
@@ -142,6 +208,18 @@ struct FestScheduleEditSheet: View {
             guard !href.isEmpty else { return nil }
             return ScheduleLink(href: href, label: d.label.trimBlank)
         }
+        // Only admins/fest editors author sign-up config; leads leave it untouched.
+        let signupConfig: FestContentService.SignupConfig? = canAssignLead
+            ? .init(
+                enabled: signupEnabled,
+                mode: signupMode,
+                capacity: Int(signupCapacity.trimmingCharacters(in: .whitespaces)),
+                slotMinutes: signupMode == "interval" ? signupSlotMinutes : nil,
+                startTime: signupMode == "interval" ? Self.hhmm(signupStart) : nil,
+                endTime: signupMode == "interval" ? Self.hhmm(signupEnd) : nil,
+                instructions: signupInstructions.trimBlank,
+                teamSize: signupTeamSize > 1 ? signupTeamSize : nil)
+            : nil
         do {
             try await env.festContentService.updateScheduleItem(
                 itemId:      uid,
@@ -150,7 +228,8 @@ struct FestScheduleEditSheet: View {
                 leadName:    name,
                 leadUserId:  leadId,
                 leadPhone:   nil,
-                links:       cleanedLinks
+                links:       cleanedLinks,
+                signup:      signupConfig
             )
             await onSaved()
             dismiss()
