@@ -18,6 +18,7 @@ struct EventSignupSection: View {
     @State private var loading = true
     @State private var busy = false
     @State private var fieldPrompt: FieldPrompt?
+    @State private var teamPrompt: FieldPrompt?
     @State private var errorText: String?
 
     private var itemUUID: UUID? { UUID(uuidString: item.id) }
@@ -33,8 +34,8 @@ struct EventSignupSection: View {
                             .font(.mlrScaled(13))
                             .foregroundStyle(Color.mlrFestInk.opacity(0.8))
                     }
-                    if item.signupTeamSize ?? 1 > 1 {
-                        Text("This event signs up in teams of \(item.signupTeamSize!) — use the web app to enter a team.")
+                    if let ts = item.signupTeamSize, ts > 1 {
+                        Text("Signs up in teams of \(ts).")
                             .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrFest.opacity(0.7))
                     }
@@ -56,6 +57,12 @@ struct EventSignupSection: View {
             .sheet(item: $fieldPrompt) { prompt in
                 SignupFieldsSheet(fields: item.signupFields) { values in
                     Task { await performSignUp(slotStart: prompt.slotStart, slotId: prompt.slotId, fields: values) }
+                }
+            }
+            .sheet(item: $teamPrompt) { prompt in
+                TeamSignupSheet(teamSize: item.signupTeamSize ?? 2) { members, teamName in
+                    Task { await performTeamSignUp(slotStart: prompt.slotStart, slotId: prompt.slotId,
+                                                   members: members, teamName: teamName) }
                 }
             }
         }
@@ -152,10 +159,28 @@ struct EventSignupSection: View {
     // MARK: Actions
 
     private func startSignUp(_ key: SlotKey) {
-        if item.signupFields.isEmpty {
+        if (item.signupTeamSize ?? 1) > 1 {
+            teamPrompt = FieldPrompt(slotStart: key.slotStart, slotId: key.slotId)
+        } else if item.signupFields.isEmpty {
             Task { await performSignUp(slotStart: key.slotStart, slotId: key.slotId, fields: [:]) }
         } else {
             fieldPrompt = FieldPrompt(slotStart: key.slotStart, slotId: key.slotId)
+        }
+    }
+
+    private func performTeamSignUp(slotStart: String?, slotId: UUID?, members: [Profile], teamName: String?) async {
+        guard let itemUUID, !busy else { return }
+        busy = true; errorText = nil
+        defer { busy = false }
+        // The signer (userId nil = caller) plus the picked teammates.
+        var team: [SignupsService.TeamMemberInput] = [.init(userId: env.currentProfile?.id, name: nil)]
+        team += members.map { .init(userId: $0.id, name: $0.displayName) }
+        do {
+            try await env.signupsService.signUpTeam(itemId: itemUUID, slotStart: slotStart, slotId: slotId,
+                                                    members: team, teamName: teamName)
+            await reload()
+        } catch {
+            errorText = "Couldn't sign up the team. Try again."
         }
     }
 
@@ -217,6 +242,48 @@ private extension String {
     var blankToNil: String? {
         let t = trimmingCharacters(in: .whitespacesAndNewlines)
         return t.isEmpty ? nil : t
+    }
+}
+
+// MARK: - Team sign-up sheet
+
+/// Pick your teammates (the signer is added automatically) + an optional team name.
+private struct TeamSignupSheet: View {
+    let teamSize: Int
+    let onSubmit: ([Profile], String?) -> Void
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var teamName = ""
+    @State private var mates: [Profile] = []
+
+    private var needed: Int { max(1, teamSize - 1) }   // minus the signer
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+                Form {
+                    Section("Team name (optional)") { TextField("e.g. The Ringers", text: $teamName) }
+                    Section {
+                        Text("Pick \(needed) teammate\(needed == 1 ? "" : "s") — you're already on the team.")
+                            .font(.mlrScaled(13)).foregroundStyle(.secondary)
+                    }
+                }
+                .frame(maxHeight: 160)
+                MemberMultiPicker(selected: $mates)
+            }
+            .navigationTitle("Sign up a team")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Sign up") {
+                        onSubmit(mates, teamName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : teamName)
+                        dismiss()
+                    }
+                    .disabled(mates.isEmpty)
+                }
+            }
+        }
     }
 }
 

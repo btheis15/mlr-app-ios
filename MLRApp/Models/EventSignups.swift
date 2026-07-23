@@ -114,6 +114,32 @@ final class SignupsService {
         try await supabase.rpc("sign_up_for_schedule_slot", params: params).execute()
     }
 
+    /// Sign up a whole team at once (migration 0143). `members` is the full team —
+    /// include the signer (userId nil = the caller). Shares one team_id server-side.
+    func signUpTeam(itemId: UUID, slotStart: String? = nil, slotId: UUID? = nil,
+                    members: [TeamMemberInput], teamName: String?) async throws {
+        let membersJson = AnyJSON.array(members.map { m in
+            .object([
+                "for_user": m.userId.map { AnyJSON.string($0.uuidString) } ?? .null,
+                "name":     m.name.map { AnyJSON.string($0) } ?? .null,
+                "fields":   .object([:]),
+            ])
+        })
+        let params: [String: AnyJSON] = [
+            "p_item":         .string(itemId.uuidString),
+            "p_slot":         slotStart.map { AnyJSON.string($0) } ?? .null,
+            "p_for_user":     .null,
+            "p_name":         .null,
+            "p_slot_id":      slotId.map { AnyJSON.string($0.uuidString) } ?? .null,
+            "p_fields":       .object([:]),
+            "p_team_members": membersJson,
+            "p_team_name":    teamName.map { AnyJSON.string($0) } ?? .null,
+        ]
+        try await supabase.rpc("sign_up_for_schedule_slot", params: params).execute()
+    }
+
+    struct TeamMemberInput { var userId: UUID?; var name: String? }
+
     func remove(signupId: UUID) async throws {
         struct P: Encodable { let p_signup: String }
         try await supabase.rpc("remove_schedule_signup", params: P(p_signup: signupId.uuidString)).execute()
