@@ -424,8 +424,10 @@ private struct FestAnytimeCard: View {
                 }
             }
             .sheet(item: $editing) { item in
-                if let uuid = UUID(uuidString: item.id) {
-                    FestActivityEditSheet(activityId: uuid, title: item.title) {
+                // Anytime items are now regular (anytime) schedule events after the
+                // 0141 merge, so they edit through the shared schedule editor.
+                NavigationStack {
+                    FestScheduleEditSheet(item: item) {
                         await env.festContentService.reload()
                     }
                 }

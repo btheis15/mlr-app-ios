@@ -177,15 +177,17 @@ final class FestContentService {
             async let sched = fetchSchedule()
             async let dins = fetchDinners()
             async let pays = fetchPayees()
-            async let acts = fetchActivities()
             async let duesTiers = fetchDues()
             async let co = fetchCallouts()
 
-            let (c, s, d, p, a, du, calloutRows) = try await (cfg, sched, dins, pays, acts, duesTiers, co)
+            let (c, s, d, p, du, calloutRows) = try await (cfg, sched, dins, pays, duesTiers, co)
 
             if let c { config = c }
             if !du.isEmpty { dues = du }
-            let combined = s + a
+            // Migration 0141 merged the old fest_activities into fest_schedule_items
+            // as anytime events, so the schedule is now the single source — no
+            // separate fetchActivities() (that would double-count the copies).
+            let combined = s
             if !combined.isEmpty { schedule = combined }
             if !d.isEmpty { dinners = d }
             if !p.isEmpty { payees = p }
@@ -497,8 +499,10 @@ final class FestContentService {
         return rows.map { r in
             ScheduleItem(
                 id: r.id.uuidString,
-                day: Self.weekday(from: r.day) ?? r.day,
-                isoDate: r.day,
+                // Anytime events (migration 0139/0141) group under the "Anytime"
+                // bucket, not a weekday — their stored `day` is a placeholder.
+                day: r.anytime == true ? "Anytime" : (Self.weekday(from: r.day) ?? r.day),
+                isoDate: r.anytime == true ? nil : r.day,
                 // An "Anytime all week" event with no set time isn't pending a
                 // decision — show "No specific time", not "TBD" (web #378).
                 time: r.startTime?.nilIfBlank ?? (r.anytime == true ? "No specific time" : "TBD"),
