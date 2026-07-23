@@ -57,11 +57,13 @@ struct TournamentContainerView: View {
             }
         }
         .sheet(item: $resultMatch) { m in
-            MatchResultSheet(tournament: tournament, match: m) { winner, s1, s2 in
+            MatchResultSheet(tournament: tournament, match: m, onRecord: { winner, s1, s2 in
                 run { try await env.tournamentsService.recordResult(matchId: m.id, winnerId: winner, score1: s1, score2: s2) }
-            } onClear: {
+            }, onClear: {
                 run { try await env.tournamentsService.clearResult(matchId: m.id) }
-            }
+            }, onChanged: {
+                Task { await reload() }
+            })
         }
         .task { await reload() }
     }
@@ -291,11 +293,16 @@ private struct MatchResultSheet: View {
     let match: TournamentMatch
     let onRecord: (UUID, Int?, Int?) -> Void
     let onClear: () -> Void
+    var onChanged: () -> Void = {}
 
+    @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State private var s1 = ""
     @State private var s2 = ""
     @State private var winner: UUID?
+    @State private var hasTime = false
+    @State private var matchTime = Date()
+    @State private var busy = false
 
     private var name1: String { tournament?.entrantName(match.slot1EntrantId) ?? "—" }
     private var name2: String { tournament?.entrantName(match.slot2EntrantId) ?? "—" }
@@ -314,6 +321,24 @@ private struct MatchResultSheet: View {
                     }
                     .pickerStyle(.inline)
                 }
+                // Schedule the match + ping the two players (migration 0148).
+                Section("Schedule") {
+                    Toggle("Set a time", isOn: $hasTime)
+                    if hasTime { DatePicker("When", selection: $matchTime) }
+                    Button(busy ? "Saving…" : "Save time") {
+                        Task { await save { try await env.tournamentsService.scheduleMatch(matchId: match.id, at: hasTime ? matchTime : nil) } }
+                    }.disabled(busy)
+                }
+                Section("Notify players") {
+                    Button("“Up next!”") {
+                        Task { await save { try await env.tournamentsService.notifyMatch(matchId: match.id, when: "is up next!") } }
+                    }
+                    Button("“In about 15 minutes”") {
+                        Task { await save { try await env.tournamentsService.notifyMatch(matchId: match.id, when: "is in about 15 minutes") } }
+                    }
+                }
+                .disabled(busy)
+
                 if match.status == .complete {
                     Section {
                         Button(role: .destructive) { onClear(); dismiss() } label: { Text("Clear result") }
@@ -334,7 +359,15 @@ private struct MatchResultSheet: View {
                 winner = match.winnerEntrantId ?? match.slot1EntrantId
                 if let v = match.slot1Score { s1 = "\(v)" }
                 if let v = match.slot2Score { s2 = "\(v)" }
+                if let at = match.scheduledAt { hasTime = true; matchTime = at }
             }
         }
+    }
+
+    private func save(_ work: @escaping () async throws -> Void) async {
+        guard !busy else { return }
+        busy = true; defer { busy = false }
+        try? await work()
+        onChanged()
     }
 }

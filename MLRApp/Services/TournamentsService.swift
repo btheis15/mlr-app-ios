@@ -115,6 +115,25 @@ final class TournamentsService {
         struct P: Encodable { let p_match: String }
         try await supabase.rpc("clear_match_result", params: P(p_match: matchId.uuidString)).execute()
     }
+
+    // MARK: Scheduling + notify
+
+    /// Set (or clear, with nil) a match's scheduled time + reminder lead-times.
+    func scheduleMatch(matchId: UUID, at: Date?, reminderMinutes: [Int] = []) async throws {
+        let params: [String: AnyJSON] = [
+            "p_match":     .string(matchId.uuidString),
+            "p_at":        at.map { AnyJSON.string(ISO8601DateFormatter().string(from: $0)) } ?? .null,
+            "p_reminders": .array(reminderMinutes.map { AnyJSON.double(Double($0)) }),
+        ]
+        try await supabase.rpc("schedule_match", params: params).execute()
+    }
+
+    /// Send an immediate matchup push to the two players. `when` is the trailing
+    /// phrase, e.g. "is up next!" or "is in about 15 minutes".
+    func notifyMatch(matchId: UUID, when: String) async throws {
+        struct P: Encodable { let p_match: String; let p_when: String }
+        try await supabase.rpc("notify_match", params: P(p_match: matchId.uuidString, p_when: when)).execute()
+    }
 }
 
 // MARK: - Raw row decode + assembly
