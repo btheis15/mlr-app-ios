@@ -13,6 +13,10 @@ struct EventsView: View {
     @State private var showMeetingComposer = false
     @State private var meetingRefreshID = 0
     @State private var hasLoaded = false
+    // Private activities + games (#397) — visible only to the viewer.
+    @State private var activities: [PrivateActivity] = []
+    @State private var showActivityComposer = false
+    @State private var selectedActivity: PrivateActivity?
 
     enum TimeFilter: String, CaseIterable {
         case upcoming = "Upcoming"
@@ -67,8 +71,6 @@ struct EventsView: View {
                             }
                             .padding(.vertical, 16)
                         }
-                    } else if filteredEvents.isEmpty {
-                        emptyState
                     } else {
                         eventList
                     }
@@ -86,18 +88,26 @@ struct EventsView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 200)
                 }
-                if env.isAdmin {
+                if env.isSignedIn {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
+                            // Anyone can start an invite-only activity / game (#397).
                             Button {
-                                showComposer = true
+                                showActivityComposer = true
                             } label: {
-                                Label("Create event", systemImage: "calendar.badge.plus")
+                                Label("Create an activity or game", systemImage: "gamecontroller")
                             }
-                            Button {
-                                showMeetingComposer = true
-                            } label: {
-                                Label("Propose dates (poll the family)", systemImage: "calendar.badge.clock")
+                            if env.isAdmin {
+                                Button {
+                                    showComposer = true
+                                } label: {
+                                    Label("Create event", systemImage: "calendar.badge.plus")
+                                }
+                                Button {
+                                    showMeetingComposer = true
+                                } label: {
+                                    Label("Propose dates (poll the family)", systemImage: "calendar.badge.clock")
+                                }
                             }
                         } label: {
                             Image(systemName: "plus")
@@ -117,12 +127,19 @@ struct EventsView: View {
                     meetingRefreshID += 1
                 }
             }
+            .sheet(isPresented: $showActivityComposer) {
+                PrivateActivityComposer { Task { await loadActivities() } }
+            }
+            .sheet(item: $selectedActivity) { activity in
+                PrivateActivitySheet(activityId: activity.id) { Task { await loadActivities() } }
+            }
             .task {
                 if !hasLoaded {
                     await env.eventsService.fetchEvents()
                     if let userId = await env.authService.userId {
                         await env.eventsService.fetchAttendance(userId: userId)
                     }
+                    await loadActivities()
                     hasLoaded = true
                 }
                 env.eventsService.subscribeToRealtime(userId: env.currentProfile?.id)
@@ -136,6 +153,15 @@ struct EventsView: View {
     private var eventList: some View {
         ScrollView {
             LazyVStack(alignment: .leading, spacing: 24, pinnedViews: [.sectionHeaders]) {
+                activitiesSection
+                if filteredEvents.isEmpty {
+                    Text(filter == .upcoming ? "Nothing on the calendar yet." : "No past events.")
+                        .font(.mlrCaption)
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.top, 8)
+                }
                 ForEach(grouped, id: \.month) { group in
                     Section {
                         VStack(spacing: 12) {
@@ -168,7 +194,30 @@ struct EventsView: View {
             if let userId = await env.authService.userId {
                 await env.eventsService.fetchAttendance(userId: userId)
             }
+            await loadActivities()
         }
+    }
+
+    // MARK: - Private activities & games
+
+    @ViewBuilder
+    private var activitiesSection: some View {
+        if !activities.isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Games & activities")
+                    .font(.mlrScaled(13, weight: .bold))
+                    .foregroundStyle(Color.mlrTextMuted)
+                ForEach(activities) { activity in
+                    Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
+                        .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+        }
+    }
+
+    private func loadActivities() async {
+        activities = await env.privateActivitiesService.fetchActivities().filter { !$0.isArchived }
     }
 
     // MARK: - Empty

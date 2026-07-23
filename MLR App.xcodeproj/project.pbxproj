@@ -26,6 +26,10 @@
 		D31B53763012A89400C8D189 /* EventSignupSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53753012A89400C8D189 /* EventSignupSection.swift */; };
 		D31B53783012B54500C8D189 /* PrivateActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53773012B54500C8D189 /* PrivateActivity.swift */; };
 		D31B537A3012B56400C8D189 /* PrivateActivitiesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53793012B56400C8D189 /* PrivateActivitiesService.swift */; };
+		D31B537C3012B5E600C8D189 /* PrivateActivityViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B537B3012B5E600C8D189 /* PrivateActivityViews.swift */; };
+		D31B537E3012B69400C8D189 /* Tournament.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B537D3012B69400C8D189 /* Tournament.swift */; };
+		D31B53803012B6C600C8D189 /* TournamentsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B537F3012B6C600C8D189 /* TournamentsService.swift */; };
+		D31B53823012B72000C8D189 /* TournamentContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53813012B72000C8D189 /* TournamentContainerView.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -256,6 +260,10 @@
 		D31B53753012A89400C8D189 /* EventSignupSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSignupSection.swift; sourceTree = "<group>"; };
 		D31B53773012B54500C8D189 /* PrivateActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateActivity.swift; sourceTree = "<group>"; };
 		D31B53793012B56400C8D189 /* PrivateActivitiesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateActivitiesService.swift; sourceTree = "<group>"; };
+		D31B537B3012B5E600C8D189 /* PrivateActivityViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateActivityViews.swift; sourceTree = "<group>"; };
+		D31B537D3012B69400C8D189 /* Tournament.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tournament.swift; sourceTree = "<group>"; };
+		D31B537F3012B6C600C8D189 /* TournamentsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentsService.swift; sourceTree = "<group>"; };
+		D31B53813012B72000C8D189 /* TournamentContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentContainerView.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -553,6 +561,8 @@
 				D33F9DF12FEC086700603CE7 /* EventComposer.swift */,
 				D33F9DF22FEC086700603CE7 /* EventSheet.swift */,
 				D33F9DF32FEC086700603CE7 /* EventsView.swift */,
+				D31B537B3012B5E600C8D189 /* PrivateActivityViews.swift */,
+				D31B53813012B72000C8D189 /* TournamentContainerView.swift */,
 			);
 			path = Events;
 			sourceTree = "<group>";
@@ -624,6 +634,7 @@
 				D31B536C3012A45500C8D189 /* ChatPoll.swift */,
 				D31B53733012A82E00C8D189 /* EventSignups.swift */,
 				D31B53773012B54500C8D189 /* PrivateActivity.swift */,
+				D31B537D3012B69400C8D189 /* Tournament.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -677,6 +688,7 @@
 				D31B535E301168AA00C8D189 /* FamilyRosterService.swift */,
 				D31B536E3012A46900C8D189 /* ChatPollsService.swift */,
 				D31B53793012B56400C8D189 /* PrivateActivitiesService.swift */,
+				D31B537F3012B6C600C8D189 /* TournamentsService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -1045,8 +1057,10 @@
 		000000000000000120000000 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			files = (
+				D31B537E3012B69400C8D189 /* Tournament.swift in Sources */,
 				D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */,
 				D3512BE430057B41008BBC44 /* MjtHouseDuesView.swift in Sources */,
+				D31B53803012B6C600C8D189 /* TournamentsService.swift in Sources */,
 				D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */,
 				D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */,
 				D33F9E602FEC086700603CE7 /* FestLiveActivityController.swift in Sources */,
@@ -1054,6 +1068,7 @@
 				D33F9EEA2FF41A0A00603CE7 /* AppImagesAdminView.swift in Sources */,
 				D33F9ECA2FEC184500603CE7 /* FestActivityAttributes.swift in Sources */,
 				D3F9D86D3006E599006874DA /* FestDinnerEditSheet.swift in Sources */,
+				D31B53823012B72000C8D189 /* TournamentContainerView.swift in Sources */,
 				D33F9ECB2FEC184500603CE7 /* PulsingLiveDot.swift in Sources */,
 				D36347522FFDD9CE001D52C8 /* MemberQueryIntents.swift in Sources */,
 				D33F9ECC2FEC184500603CE7 /* SharedStore.swift in Sources */,
@@ -1229,6 +1244,7 @@
 				D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */,
 				D33F9F1A2FF8457100603CE7 /* HousesService.swift in Sources */,
 				D31B535D3011689A00C8D189 /* FamilyRosterEntry.swift in Sources */,
+				D31B537C3012B5E600C8D189 /* PrivateActivityViews.swift in Sources */,
 				D33F9EBB2FEC086700603CE7 /* FestPhotosView.swift in Sources */,
 				D33F9EBC2FEC086700603CE7 /* AdminView.swift in Sources */,
 				D33F9ED72FF3178900603CE7 /* WorkItemComposer.swift in Sources */,
@@ -1390,7 +1406,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MLRApp/MLRApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UBM722BP54;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
@@ -1417,7 +1433,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
@@ -1447,7 +1463,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = MLRApp/MLRApp.entitlements;
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 2;
+				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = UBM722BP54;
 				ENABLE_APP_SANDBOX = YES;
 				ENABLE_PREVIEWS = YES;
@@ -1474,7 +1490,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.7;
+				MARKETING_VERSION = 1.8;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
