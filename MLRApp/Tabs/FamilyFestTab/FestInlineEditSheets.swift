@@ -32,6 +32,13 @@ struct FestScheduleEditSheet: View {
     @State private var signupEnd = FestScheduleEditSheet.defaultTime(20, 0)
     @State private var signupSlotMinutes = 15
 
+    // Edit-and-notify (#393) — admin-only, default OFF; sends on save when on.
+    @State private var notifyOnSave = false
+    @State private var notifyMessage = ""
+    @State private var notifyBanner = true
+    @State private var notifyActivity = true
+    @State private var notifyEmail = false
+
     static func defaultTime(_ h: Int, _ m: Int) -> Date {
         Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: Date()) ?? Date()
     }
@@ -149,6 +156,28 @@ struct FestScheduleEditSheet: View {
                 }
             }
 
+            // Edit-and-notify (#393) — admin-only. Off by default; when on, a send
+            // fires on Save to everyone at Family Fest except those who RSVP'd "not
+            // coming" (people who haven't RSVP'd still get it).
+            if canAssignLead {
+                Section {
+                    Toggle("📣 Notify about this change", isOn: $notifyOnSave)
+                    if notifyOnSave {
+                        TextField("Message", text: $notifyMessage, axis: .vertical).lineLimit(1...3)
+                        Toggle("Banner + push", isOn: $notifyBanner)
+                        Toggle("Activity tab", isOn: $notifyActivity)
+                        Toggle("Email", isOn: $notifyEmail)
+                    }
+                } header: {
+                    Text("Tell everyone")
+                } footer: {
+                    if notifyOnSave {
+                        Text("Sends on Save to everyone at Family Fest except those who said they're not coming.")
+                            .font(.caption)
+                    }
+                }
+            }
+
             if let err = saveError {
                 Section { Text(err).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) }
             }
@@ -185,6 +214,7 @@ struct FestScheduleEditSheet: View {
         signupSlotMinutes  = item.signupSlotMinutes ?? 15
         if let s = Self.timeFromHHMM(item.signupStartTime) { signupStart = s }
         if let e = Self.timeFromHHMM(item.signupEndTime) { signupEnd = e }
+        notifyMessage = "Update: \(item.title)"
     }
 
     private static func timeFromHHMM(_ s: String?) -> Date? {
@@ -231,6 +261,23 @@ struct FestScheduleEditSheet: View {
                 links:       cleanedLinks,
                 signup:      signupConfig
             )
+            // Optional: tell everyone about the change (#393). Admin-only, opt-in.
+            if canAssignLead, notifyOnSave {
+                let msg = notifyMessage.trimBlank
+                if let msg, (notifyBanner || notifyActivity || notifyEmail) {
+                    do {
+                        try await env.notificationsService.sendActivityNotify(
+                            title: msg, body: nil,
+                            banner: notifyBanner, activity: notifyActivity, email: notifyEmail,
+                            scheduleItemId: item.id)
+                    } catch {
+                        // The edit saved; only the notification failed — surface it,
+                        // don't dismiss, so they can retry the send.
+                        saveError = "Saved, but the notification didn't send. Try again."
+                        return
+                    }
+                }
+            }
             await onSaved()
             dismiss()
         } catch {
