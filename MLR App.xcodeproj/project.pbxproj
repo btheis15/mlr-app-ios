@@ -30,6 +30,7 @@
 		D31B537E3012B69400C8D189 /* Tournament.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B537D3012B69400C8D189 /* Tournament.swift */; };
 		D31B53803012B6C600C8D189 /* TournamentsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B537F3012B6C600C8D189 /* TournamentsService.swift */; };
 		D31B53823012B72000C8D189 /* TournamentContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53813012B72000C8D189 /* TournamentContainerView.swift */; };
+		D31B53843012CA5000C8D189 /* TournamentManageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53833012CA5000C8D189 /* TournamentManageViews.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -264,6 +265,7 @@
 		D31B537D3012B69400C8D189 /* Tournament.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tournament.swift; sourceTree = "<group>"; };
 		D31B537F3012B6C600C8D189 /* TournamentsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentsService.swift; sourceTree = "<group>"; };
 		D31B53813012B72000C8D189 /* TournamentContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentContainerView.swift; sourceTree = "<group>"; };
+		D31B53833012CA5000C8D189 /* TournamentManageViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentManageViews.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -563,6 +565,7 @@
 				D33F9DF32FEC086700603CE7 /* EventsView.swift */,
 				D31B537B3012B5E600C8D189 /* PrivateActivityViews.swift */,
 				D31B53813012B72000C8D189 /* TournamentContainerView.swift */,
+				D31B53833012CA5000C8D189 /* TournamentManageViews.swift */,
 			);
 			path = Events;
 			sourceTree = "<group>";
@@ -1199,6 +1202,7 @@
 				D3F9D89130094CD9006874DA /* EventTargetPicker.swift in Sources */,
 				D3F9D8633006C1B3006874DA /* HomeCalloutsStack.swift in Sources */,
 				D33F9EA22FEC086700603CE7 /* NotifPrefsView.swift in Sources */,
+				D31B53843012CA5000C8D189 /* TournamentManageViews.swift in Sources */,
 				D33F9EA32FEC086700603CE7 /* GuardView.swift in Sources */,
 				D33F9EA42FEC086700603CE7 /* HelpService.swift in Sources */,
 				D33F9EA52FEC086700603CE7 /* MLRApp.swift in Sources */,
