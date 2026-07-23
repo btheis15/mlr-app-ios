@@ -77,6 +77,14 @@ struct FestScheduleDetailView: View {
                     }
                 }
 
+                // Links (migration 0142) — e.g. a sign-up form + a separate info doc.
+                if !item.links.isEmpty {
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                    DetailSection(icon: "link", title: "Links") {
+                        ScheduleLinkButtons(links: item.links)
+                    }
+                }
+
                 Spacer(minLength: 32)
             }
         }
@@ -111,6 +119,39 @@ struct DetailSection<Content: View>: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
+    }
+}
+
+// MARK: - Schedule link buttons (migration 0142)
+
+/// Renders a schedule event's ordered links as tappable buttons — e.g. a
+/// sign-up form and a separate info doc as two distinct pills.
+struct ScheduleLinkButtons: View {
+    let links: [ScheduleLink]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(links) { link in
+                if let url = URL(string: link.href) {
+                    Link(destination: url) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.mlrScaled(13, weight: .semibold))
+                            Text(link.display)
+                                .font(.mlrScaled(14, weight: .semibold))
+                                .lineLimit(1)
+                            Spacer(minLength: 4)
+                        }
+                        .foregroundStyle(Color.mlrFest)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.mlrFest.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -319,6 +360,13 @@ struct ExpandableScheduleRow: View {
                     } else {
                         ProtectedField(message: "Sign in to see leads & contacts")
                     }
+                }
+            }
+
+            if !item.links.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "link", title: "Links") {
+                    ScheduleLinkButtons(links: item.links)
                 }
             }
 

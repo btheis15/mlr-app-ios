@@ -508,7 +508,8 @@ final class FestContentService {
                 isPrivate: r.isPrivate,
                 leads: [r.leadName].compactMap { $0?.nilIfBlank },
                 leadUserId: r.leadUserId,
-                crewUserIds: r.crewUserIds ?? []
+                crewUserIds: r.crewUserIds ?? [],
+                links: r.links ?? []
             )
         }
     }
@@ -655,8 +656,9 @@ private struct ScheduleRow: Decodable {
     let leadUserId: UUID?
     let crewUserIds: [UUID]?   // migration 0110 — crew can self-edit the event
     let anytime: Bool?         // migration 0139 — "Anytime all week", no set time
+    let links: [ScheduleLink]? // migration 0142 — ordered link buttons
     enum CodingKeys: String, CodingKey {
-        case id, day, title, emoji, location, description, anytime
+        case id, day, title, emoji, location, description, anytime, links
         case startTime   = "start_time"
         case isPrivate   = "is_private"
         case leadName    = "lead_name"
