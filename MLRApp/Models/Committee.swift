@@ -213,6 +213,11 @@ struct CommitteeChatMessage: Codable, Identifiable, Equatable {
     var editedAt: Date?
     var deletedAt: Date?
     var createdAt: Date
+    /// Moderation status (migration 0128): visible | pending | hidden. RLS returns
+    /// non-'visible' rows only to the author + admins, so a held message vanishes
+    /// for everyone else on refetch; those who still see it get a "held" badge.
+    /// Set from the row, not decoded here.
+    var status: String? = nil
     /// The role channel this message belongs to; nil = the committee-wide
     /// "General" channel (migration 0063). Set from the row, not decoded here.
     var area: String? = nil
@@ -236,6 +241,9 @@ struct CommitteeChatMessage: Codable, Identifiable, Equatable {
 
     var isDeleted: Bool { deletedAt != nil }
     var isEdited: Bool { editedAt != nil }
+    /// Held by moderation (pending review or hidden) — only the author + admins
+    /// ever see such a row (RLS), so this drives a subtle "held" badge for them.
+    var isHeld: Bool { let s = status ?? "visible"; return s != "visible" }
 
     func canEdit(userId: UUID, isAdmin: Bool, now: Date = .now) -> Bool {
         guard !isDeleted else { return false }

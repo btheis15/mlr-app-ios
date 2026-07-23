@@ -95,6 +95,10 @@ struct HouseChatMessage: Codable, Identifiable, Equatable {
     var editedAt: Date?
     var deletedAt: Date?
     var createdAt: Date
+    /// Moderation status (migration 0128): visible | pending | hidden. RLS returns
+    /// non-'visible' rows only to the author + admins; held rows get a badge for
+    /// them and vanish for everyone else on refetch. Set from the row, not decoded.
+    var status: String? = nil
     /// Attachments (photos/videos/files). Set from the embedded media rows in the
     /// service, not decoded here — so it's excluded from CodingKeys below.
     var media: [ChatMedia] = []
@@ -115,6 +119,9 @@ struct HouseChatMessage: Codable, Identifiable, Equatable {
 
     var isDeleted: Bool { deletedAt != nil }
     var isEdited: Bool { editedAt != nil }
+    /// Held by moderation (pending review or hidden) — only the author + admins
+    /// ever see such a row (RLS), so this drives a subtle "held" badge for them.
+    var isHeld: Bool { let s = status ?? "visible"; return s != "visible" }
 
     func canEdit(userId: UUID, isAdmin: Bool, now: Date = .now) -> Bool {
         guard !isDeleted else { return false }

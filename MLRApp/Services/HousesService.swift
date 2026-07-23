@@ -89,7 +89,7 @@ final class HousesService {
         let rows: [HouseChatRow] = try await supabase
             .from("house_messages")
             .select("""
-                id, house_id, author_id, text, edited_at, deleted_at, created_at,
+                id, house_id, author_id, text, edited_at, deleted_at, created_at, status,
                 profiles!author_id(display_name, avatar_url),
                 house_message_media(storage_path, media_type, width, height, file_name, position),
                 house_message_reactions(user_id, emoji)
@@ -112,7 +112,7 @@ final class HousesService {
             .from("house_messages")
             .insert(params)
             .select("""
-                id, house_id, author_id, text, edited_at, deleted_at, created_at,
+                id, house_id, author_id, text, edited_at, deleted_at, created_at, status,
                 profiles!author_id(display_name, avatar_url)
             """)
             .single()
@@ -273,7 +273,7 @@ final class HousesService {
                     if let row: HouseChatRow = try? await supabase
                         .from("house_messages")
                         .select("""
-                            id, house_id, author_id, text, edited_at, deleted_at, created_at,
+                            id, house_id, author_id, text, edited_at, deleted_at, created_at, status,
                             profiles!author_id(display_name, avatar_url),
                             house_message_media(storage_path, media_type, width, height, file_name, position)
                         """)
@@ -524,6 +524,7 @@ private struct HouseChatRow: Decodable {
     let editedAt: Date?
     let deletedAt: Date?
     let createdAt: Date
+    let status: String?
     let profiles: AuthorInfo?
     let media: [ChatMedia]?
     let reactions: [ChatReaction]?
@@ -536,6 +537,7 @@ private struct HouseChatRow: Decodable {
         case editedAt = "edited_at"
         case deletedAt = "deleted_at"
         case createdAt = "created_at"
+        case status
         case profiles
         case media = "house_message_media"
         case reactions = "house_message_reactions"
@@ -561,6 +563,7 @@ private struct HouseChatRow: Decodable {
             editedAt: editedAt,
             deletedAt: deletedAt,
             createdAt: createdAt,
+            status: status,
             media: (media ?? []).sorted { $0.position < $1.position },
             reactions: reactions ?? []
         )

@@ -578,6 +578,13 @@ private struct HouseMessageBubble: View {
                         .font(.mlrScaled(10))
                         .foregroundStyle(Color.mlrTextSubtle)
                 }
+                // Only the author + admins ever see a held row (RLS); flag it so
+                // they know it's pending review / hidden from the room (#344).
+                if message.isHeld {
+                    Label("Held for review", systemImage: "eye.slash")
+                        .font(.mlrScaled(10, weight: .medium))
+                        .foregroundStyle(Color.mlrWarning)
+                }
             }
             .contextMenu {
                 // Palette style renders the emoji as a single horizontal tapback
