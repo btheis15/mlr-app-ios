@@ -232,6 +232,38 @@ final class MediaService {
         try supabase.storage.from(bucket).getPublicURL(path: path).absoluteString
     }
 
+    // MARK: - Semantic conversation search (migration 0129 / #365)
+
+    /// Search everything the signed-in member can see, by MEANING, via the mini's
+    /// POST /search — the mini embeds the query on-device and runs the RLS-scoped
+    /// search_conversations() RPC AS this member (we forward their access token),
+    /// so results never leak past what the Feed/chats already show. Returns [] on
+    /// any failure (not signed in, query too short, mini unreachable off Tailscale)
+    /// so the UI degrades to a clean empty state — matching the web + iOS media.
+    func searchConversations(query: String, limit: Int = 20) async -> [ConversationSearchHit] {
+        let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard q.count >= 2,
+              let session = try? await supabase.auth.session,
+              let url = URL(string: "\(Self.miniServerURL)/search")
+        else { return [] }
+
+        var req = URLRequest(url: url)
+        req.httpMethod = "POST"
+        req.setValue("application/json", forHTTPHeaderField: "content-type")
+        req.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "authorization")
+        req.httpBody = try? JSONSerialization.data(withJSONObject: ["q": q, "limit": limit])
+        req.timeoutInterval = 8
+
+        do {
+            let (data, resp) = try await URLSession.shared.data(for: req)
+            guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else { return [] }
+            struct Envelope: Decodable { let results: [ConversationSearchHit]? }
+            return (try JSONDecoder().decode(Envelope.self, from: data)).results ?? []
+        } catch {
+            return []
+        }
+    }
+
     /// Extract bucket and object path from a Supabase Storage public URL.
     /// URL pattern: …/storage/v1/object/public/<bucket>/<path>
     private func parseBucketAndPath(from urlString: String) -> (bucket: String, path: String)? {
@@ -259,6 +291,51 @@ enum MediaError: LocalizedError {
         case .encodingFailed:  return "Couldn't process the image. Please try a different photo."
         case .invalidURL:      return "The media URL is not valid."
         case .miniServerError: return "Couldn't reach the media server. Check your Tailscale connection."
+        }
+    }
+}
+
+// MARK: - Conversation search result (mini POST /search)
+
+/// One semantic-search hit — a post, comment, or chat message the member can see.
+struct ConversationSearchHit: Decodable, Identifiable {
+    let sourceType: String       // post | post_comment | committee_message | house_message
+    let sourceId: UUID
+    let content: String
+    let committeeId: UUID?
+    let area: String?
+    let houseId: UUID?
+    let postId: UUID?
+
+    var id: UUID { sourceId }
+
+    enum CodingKeys: String, CodingKey {
+        case sourceType  = "source_type"
+        case sourceId    = "source_id"
+        case content
+        case committeeId = "committee_id"
+        case area
+        case houseId     = "house_id"
+        case postId      = "post_id"
+    }
+
+    /// SF Symbol for the source kind, shown on the search row.
+    var symbol: String {
+        switch sourceType {
+        case "committee_message": return "person.3.fill"
+        case "house_message":     return "house.fill"
+        case "post_comment":      return "text.bubble.fill"
+        default:                  return "bubble.left.fill"   // post
+        }
+    }
+
+    /// Human label for where the hit lives.
+    var sourceLabel: String {
+        switch sourceType {
+        case "committee_message": return area.map { "Committee · \($0)" } ?? "Committee chat"
+        case "house_message":     return "House chat"
+        case "post_comment":      return "Comment on the Feed"
+        default:                  return "Family Feed"
         }
     }
 }
