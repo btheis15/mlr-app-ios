@@ -62,6 +62,21 @@ final class TournamentsService {
         return n
     }
 
+    /// Auto-group the imported players into fixed-size teams (team tournaments).
+    @discardableResult
+    func generateTeams(id: UUID) async throws -> Int {
+        struct P: Encodable { let p_tournament: String }
+        struct R: Decodable { let teams_created: Int? }
+        // The RPC returns a row {teams_created, leftover}; we only surface the count.
+        let r: R = try await supabase.rpc("generate_teams", params: P(p_tournament: id.uuidString)).execute().value
+        return r.teams_created ?? 0
+    }
+
+    func ungroupTeams(id: UUID) async throws {
+        struct P: Encodable { let p_tournament: String }
+        try await supabase.rpc("ungroup_teams", params: P(p_tournament: id.uuidString)).execute()
+    }
+
     func setFormat(id: UUID, format: TournamentFormat) async throws {
         struct P: Encodable { let p_tournament: String; let p_format: String }
         try await supabase.rpc("set_tournament_format", params: P(p_tournament: id.uuidString, p_format: format.rawValue)).execute()

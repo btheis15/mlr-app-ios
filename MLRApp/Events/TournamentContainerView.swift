@@ -18,6 +18,8 @@ struct TournamentContainerView: View {
     @State private var busy = false
     @State private var newTitle = "Tournament"
     @State private var newFormat: TournamentFormat = .single_elim
+    @State private var newEntrantType: EntrantType = .individual
+    @State private var newTeamSize = 2
     @State private var poolCount = 2
     @State private var advance = 2
     @State private var resultMatch: TournamentMatch?
@@ -76,9 +78,19 @@ struct TournamentContainerView: View {
             Picker("Format", selection: $newFormat) {
                 ForEach([TournamentFormat.single_elim, .round_robin, .pools_bracket], id: \.self) { Text($0.label).tag($0) }
             }
+            Picker("Entrants", selection: $newEntrantType) {
+                Text("Individuals").tag(EntrantType.individual)
+                Text("Teams").tag(EntrantType.team)
+            }
+            if newEntrantType == .team {
+                Stepper("Team size: \(newTeamSize)", value: $newTeamSize, in: 2...8)
+            }
             Button {
                 run {
-                    let id = try await env.tournamentsService.createForHost(host, title: newTitle, format: newFormat)
+                    let id = try await env.tournamentsService.createForHost(
+                        host, title: newTitle, format: newFormat,
+                        entrantType: newEntrantType,
+                        teamSize: newEntrantType == .team ? newTeamSize : nil)
                     _ = try? await env.tournamentsService.importEntrants(host: host, tournamentId: id)
                 }
             } label: { Label("Create tournament", systemImage: "trophy") }
@@ -122,6 +134,14 @@ struct TournamentContainerView: View {
                     Button { run { _ = try await env.tournamentsService.importEntrants(host: host, tournamentId: t.id) } } label: {
                         Label("Import players", systemImage: "square.and.arrow.down")
                     }.disabled(busy)
+                    if t.entrantType == .team {
+                        Button { run { _ = try await env.tournamentsService.generateTeams(id: t.id) } } label: {
+                            Label("Form teams", systemImage: "person.2.badge.gearshape")
+                        }.disabled(busy)
+                        Button(role: .destructive) { run { try await env.tournamentsService.ungroupTeams(id: t.id) } } label: {
+                            Label("Ungroup teams", systemImage: "person.2.slash")
+                        }.disabled(busy)
+                    }
                 }
             }
             if canManage {
