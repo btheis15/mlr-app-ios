@@ -45,6 +45,12 @@ enum NotifType: String, Codable, CaseIterable {
     case houseStayCreated = "house_stay_created"
     case meetingProposed = "meeting_proposed"
     case meetingScheduled = "meeting_scheduled"
+    case chatPollCreated = "chat_poll_created"
+    case privateActivityInvite = "private_activity_invite"
+    case signupReminder = "signup_reminder"
+    case tournamentPublished = "tournament_published"
+    case tournamentMatchReady = "tournament_match_ready"
+    case tournamentChampion = "tournament_champion"
     case broadcast
 }
 

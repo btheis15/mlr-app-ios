@@ -166,6 +166,12 @@ struct NotificationRow: View {
         case .houseStayCreated:     return "house.fill"
         case .meetingProposed:      return "calendar.badge.clock"
         case .meetingScheduled:     return "calendar.badge.checkmark"
+        case .chatPollCreated:      return "chart.bar.fill"
+        case .privateActivityInvite: return "party.popper.fill"
+        case .signupReminder:       return "clock.badge.fill"
+        case .tournamentPublished:  return "trophy.fill"
+        case .tournamentMatchReady: return "target"
+        case .tournamentChampion:   return "medal.fill"
         }
     }
 
@@ -210,6 +216,12 @@ struct NotificationRow: View {
         case .houseStayCreated:     return "House Stay"
         case .meetingProposed:      return "Meeting"
         case .meetingScheduled:     return "Meeting"
+        case .chatPollCreated:      return "Poll"
+        case .privateActivityInvite: return "Activity"
+        case .signupReminder:       return "Sign-up"
+        case .tournamentPublished:  return "Tournament"
+        case .tournamentMatchReady: return "Match"
+        case .tournamentChampion:   return "Champion"
         }
     }
 }
