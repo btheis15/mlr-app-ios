@@ -85,11 +85,16 @@ extension View {
     /// Opaque adaptive card with a soft hairline border — matches the web app's
     /// `bg-card rounded-2xl ring-1 ring-border` tile pattern.
     ///
-    /// Pass `elevated: true` for the raised `WelcomeCard` recipe: a soft ambient
-    /// shadow that lifts the card off the birch page. The shadow is a warm-neutral
-    /// black at low opacity so it stays subtle in light and effectively invisible
-    /// on the OLED-black dark canvas (where borders carry the separation instead).
+    /// Overhaul Phase 1.5: default elevation is bumped so cards read raised
+    /// app-wide with zero call-site edits — `elevated:false` → `.low`,
+    /// `elevated:true` → `.medium`. Use the `elevation:` overload (incl. `.none`
+    /// for grouped-list rows) for explicit control.
     func cardStyle(cornerRadius: CGFloat = 16, elevated: Bool = false) -> some View {
+        cardStyle(cornerRadius: cornerRadius, elevation: elevated ? .medium : .low)
+    }
+
+    /// `cardStyle` with an explicit elevation from the `MLRElevation` ramp.
+    func cardStyle(cornerRadius: CGFloat = 16, elevation: MLRElevation) -> some View {
         self
             .background(Color.mlrCard)
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
@@ -97,8 +102,60 @@ extension View {
                 RoundedRectangle(cornerRadius: cornerRadius)
                     .stroke(Color.mlrBorder, lineWidth: 1)
             )
-            .shadow(color: .black.opacity(elevated ? 0.06 : 0),
-                    radius: elevated ? 10 : 0, x: 0, y: elevated ? 4 : 0)
+            .shadow(elevation)
+    }
+
+    /// Accent-washed card: tinted hairline + a faint top-edge gradient wash of
+    /// the accent, over the normal card surface. Use for per-feature identity
+    /// (e.g. lake-blue weather, campfire who's-up-north).
+    func cardStyle(tint: Color, cornerRadius: CGFloat = 16, elevation: MLRElevation = .low) -> some View {
+        self
+            .background(
+                ZStack {
+                    Color.mlrCard
+                    LinearGradient(colors: [tint.opacity(0.10), tint.opacity(0)],
+                                   startPoint: .top, endPoint: .center)
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .overlay(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .stroke(tint.opacity(0.35), lineWidth: 1)
+            )
+            .shadow(elevation)
+    }
+
+    /// Full-gradient card fill (brand gradients) — for hero CTAs like the
+    /// tournament card. Content should be white/near-white for contrast.
+    func gradientCard(_ gradient: LinearGradient, cornerRadius: CGFloat = 16, elevation: MLRElevation = .medium) -> some View {
+        self
+            .background(gradient)
+            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .shadow(elevation)
+    }
+
+    /// Composes `Button` + `.pressable` + `cardStyle` (+ optional staggered
+    /// entrance) — the drop-in for `Button { … }.buttonStyle(.plain).cardStyle()`.
+    func interactiveCard(cornerRadius: CGFloat = 16,
+                         elevation: MLRElevation = .medium,
+                         entranceIndex: Int? = nil,
+                         action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            self.cardStyle(cornerRadius: cornerRadius, elevation: elevation)
+        }
+        .buttonStyle(.pressable)
+        .modifier(OptionalEntrance(index: entranceIndex))
+    }
+
+    /// `interactiveCard`, but on the Fest parchment recipe.
+    func interactiveFestCard(cornerRadius: CGFloat = 16,
+                             entranceIndex: Int? = nil,
+                             action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            self.festCardStyle(cornerRadius: cornerRadius)
+        }
+        .buttonStyle(.pressable)
+        .modifier(OptionalEntrance(index: entranceIndex))
     }
 
     /// Family Fest card surface — raised parchment card with an aged-gold hairline
@@ -114,6 +171,14 @@ extension View {
                     .stroke(Color.mlrFestGold.opacity(0.35), lineWidth: 1)
             )
             .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+    }
+}
+
+/// Applies `.cardEntrance(index:)` only when an index is provided.
+private struct OptionalEntrance: ViewModifier {
+    let index: Int?
+    func body(content: Content) -> some View {
+        if let index { content.cardEntrance(index: index) } else { content }
     }
 }
 

@@ -33,6 +33,10 @@
 		D31B53843012CA5000C8D189 /* TournamentManageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53833012CA5000C8D189 /* TournamentManageViews.swift */; };
 		D31B53863013928900C8D189 /* TeeTimesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53853013928900C8D189 /* TeeTimesView.swift */; };
 		D31B5388301392E500C8D189 /* AdminSystemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5387301392E500C8D189 /* AdminSystemView.swift */; };
+		D31B538A3013A0CC00C8D189 /* Metrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53893013A0CC00C8D189 /* Metrics.swift */; };
+		D31B538C3013A0E800C8D189 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538B3013A0E800C8D189 /* Motion.swift */; };
+		D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538D3013A0F900C8D189 /* Feedback.swift */; };
+		D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -270,6 +274,10 @@
 		D31B53833012CA5000C8D189 /* TournamentManageViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentManageViews.swift; sourceTree = "<group>"; };
 		D31B53853013928900C8D189 /* TeeTimesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeeTimesView.swift; sourceTree = "<group>"; };
 		D31B5387301392E500C8D189 /* AdminSystemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminSystemView.swift; sourceTree = "<group>"; };
+		D31B53893013A0CC00C8D189 /* Metrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Metrics.swift; sourceTree = "<group>"; };
+		D31B538B3013A0E800C8D189 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
+		D31B538D3013A0F900C8D189 /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
+		D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshHeroBackground.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -717,6 +725,7 @@
 				D3F9D89030094CD9006874DA /* EventTargetPicker.swift */,
 				D31B5358301167A700C8D189 /* ChatTyping.swift */,
 				D31B536A301169D200C8D189 /* ConfettiView.swift */,
+				D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -728,6 +737,9 @@
 				D33F9E282FEC086700603CE7 /* Colors.swift */,
 				D33F9E292FEC086700603CE7 /* LiquidGlass.swift */,
 				D33F9E2A2FEC086700603CE7 /* Typography.swift */,
+				D31B53893013A0CC00C8D189 /* Metrics.swift */,
+				D31B538B3013A0E800C8D189 /* Motion.swift */,
+				D31B538D3013A0F900C8D189 /* Feedback.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
@@ -1141,6 +1153,7 @@
 				D3A0000000000000000000B2 /* HouseCalendarView.swift in Sources */,
 				D31B5363301168ED00C8D189 /* AdminFamilyRosterView.swift in Sources */,
 				D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */,
+				D31B538C3013A0E800C8D189 /* Motion.swift in Sources */,
 				D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */,
 				D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */,
 				D3A0000000000000000000B5 /* HouseHubView.swift in Sources */,
@@ -1166,6 +1179,7 @@
 				D31B536F3012A46900C8D189 /* ChatPollsService.swift in Sources */,
 				D33F9E8C2FEC086700603CE7 /* FestCrewView.swift in Sources */,
 				D33F9E8D2FEC086700603CE7 /* PostCard.swift in Sources */,
+				D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */,
 				D33F9E8E2FEC086700603CE7 /* AskForHelpHomeCard.swift in Sources */,
 				D33F9E8F2FEC086700603CE7 /* PostsService.swift in Sources */,
 				D33F9E902FEC086700603CE7 /* Committee.swift in Sources */,
@@ -1181,6 +1195,7 @@
 				D31B537A3012B56400C8D189 /* PrivateActivitiesService.swift in Sources */,
 				D3EA3D96301145120092AE8E /* MeetingsService.swift in Sources */,
 				D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */,
+				D31B538A3013A0CC00C8D189 /* Metrics.swift in Sources */,
 				D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */,
 				D33F9E952FEC086700603CE7 /* FestScheduleView.swift in Sources */,
 				D33F9E962FEC086700603CE7 /* SignInView.swift in Sources */,
@@ -1222,6 +1237,7 @@
 				D33F9EA82FEC086700603CE7 /* MentionText.swift in Sources */,
 				D3512BE630057B63008BBC44 /* HomeWeatherCard.swift in Sources */,
 				D33F9EA92FEC086700603CE7 /* Payments.swift in Sources */,
+				D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */,
 				D33F9EAA2FEC086700603CE7 /* ActivitiesView.swift in Sources */,
 				D33F9EAB2FEC086700603CE7 /* WeatherService.swift in Sources */,
 				D33F9EAC2FEC086700603CE7 /* AskForHelpIntent.swift in Sources */,
@@ -1445,7 +1461,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.9;
+				MARKETING_VERSION = 2;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
@@ -1502,7 +1518,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.9;
+				MARKETING_VERSION = 2;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
