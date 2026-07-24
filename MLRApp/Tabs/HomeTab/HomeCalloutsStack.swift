@@ -146,12 +146,21 @@ private struct SwipeableCalloutCard: View {
             .offset(x: dragX)
             .rotationEffect(.degrees(dragX / 20))
             .opacity(flying ? 0 : 1)
-            .gesture(
-                DragGesture()
+            // simultaneousGesture + a horizontal-dominance guard so vertical
+            // drags stay with the page ScrollView (an exclusive, unconstrained
+            // DragGesture here was swallowing Home's scroll when the finger
+            // started on the callout deck).
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 12)
                     .onChanged { v in
+                        guard abs(v.translation.width) > abs(v.translation.height) else { return }
                         dragX = v.translation.width
                     }
                     .onEnded { v in
+                        guard abs(v.translation.width) > abs(v.translation.height) else {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { dragX = 0 }
+                            return
+                        }
                         if abs(v.translation.width) > SWIPE_THRESHOLD
                             || abs(v.predictedEndTranslation.width) > SWIPE_THRESHOLD * 1.5 {
                             fling(direction: v.translation.width > 0 ? 1 : -1)
