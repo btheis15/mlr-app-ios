@@ -119,6 +119,14 @@ struct AdminView: View {
 
             Section("Tools") {
                 adminLink(
+                    destination: FamilyFestPlannerView(),
+                    icon: "star.fill",
+                    iconColor: Color.mlrFest,
+                    title: "Family Fest Planner",
+                    description: "Schedule, dinners, dues & payees — the master editor"
+                )
+
+                adminLink(
                     destination: AdminHelpContactView(),
                     icon: "phone.fill",
                     iconColor: Color.mlrAccent,

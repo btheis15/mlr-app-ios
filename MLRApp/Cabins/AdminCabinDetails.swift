@@ -83,6 +83,7 @@ private struct AdminCabinEditor: View {
     let onChanged: () async -> Void
 
     @State private var name: String
+    @State private var kind: String
     @State private var roomCount: Int
     @State private var bedCount: Int
     @State private var notes: String
@@ -102,6 +103,7 @@ private struct AdminCabinEditor: View {
         self.cabin = cabin
         self.onChanged = onChanged
         _name = State(initialValue: cabin.name)
+        _kind = State(initialValue: cabin.kind)
         _roomCount = State(initialValue: cabin.roomCount)
         _bedCount = State(initialValue: cabin.bedCount ?? 0)
         _notes = State(initialValue: cabin.notes ?? "")
@@ -113,6 +115,10 @@ private struct AdminCabinEditor: View {
         Form {
             Section("Cabin") {
                 TextField("Name", text: $name)
+                Picker("Type", selection: $kind) {
+                    Text("Cabin").tag("cabin")
+                    Text("House").tag("house")
+                }
                 Stepper("\(roomCount) room\(roomCount == 1 ? "" : "s")", value: $roomCount, in: 0...40)
                 Stepper(bedStepperLabel, value: $bedCount, in: 0...80)
                 Toggle("Active (visible to members)", isOn: $active).tint(Color.mlrPrimary)
@@ -235,6 +241,7 @@ private struct AdminCabinEditor: View {
             try await env.cabinService.saveCabin(
                 id: cabin.id,
                 name: name.trimmingCharacters(in: .whitespaces),
+                kind: kind,
                 roomCount: roomCount,
                 bedCount: bedCount == 0 ? nil : bedCount,
                 notes: trimmed.isEmpty ? nil : trimmed,
