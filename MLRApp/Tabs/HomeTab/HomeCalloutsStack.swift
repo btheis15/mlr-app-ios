@@ -193,7 +193,16 @@ struct HomeCalloutCard: View {
     /// (migration 0098), unlike the swipe/✕ which only lasts the session.
     var onMarkDone: (() -> Void)? = nil
 
+    @Environment(AppEnvironment.self) private var env
     @State private var imageLoadFailed = false
+    @State private var signupItem: ScheduleItem?
+
+    /// The linked Fest activity (migration 0137). The Sign up button shows only
+    /// when the activity actually takes sign-ups (#407).
+    private var linkedActivity: ScheduleItem? {
+        guard let id = callout.signupItemId else { return nil }
+        return env.festContentService.schedule.first { $0.id == id }
+    }
 
     private var hasText: Bool {
         callout.title?.nilIfEmpty != nil
@@ -279,6 +288,22 @@ struct HomeCalloutCard: View {
                         }
                     }
 
+                    // Linked Fest activity's Sign up button — only when the
+                    // activity takes sign-ups (#407). Opens the activity detail
+                    // (which hosts the sign-up section).
+                    if let activity = linkedActivity, activity.signupEnabled {
+                        Button { signupItem = activity } label: {
+                            Text("📝 Sign up")
+                                .font(.mlrScaled(13, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 9)
+                                .background(Color.mlrPrimary)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.plain)
+                    }
+
                     if let ends = callout.endsOn {
                         Text("Due \(formattedDate(ends))")
                             .font(.mlrScaled(11))
@@ -310,6 +335,9 @@ struct HomeCalloutCard: View {
             }
         }
         .cardStyle()
+        .sheet(item: $signupItem) { item in
+            NavigationStack { FestScheduleDetailView(item: item) }
+        }
     }
 
     @ViewBuilder
