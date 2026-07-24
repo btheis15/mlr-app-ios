@@ -201,6 +201,43 @@ final class NotificationsService {
         try await supabase.from("announcements").insert(params).execute()
     }
 
+    // MARK: - Activity notifications (#393)
+
+    /// The stable event id all Family Fest tab content targets (a seed slug).
+    static let familyFestEventId = "family-fest-2026"
+
+    /// Notify people about a Family Fest activity or a change to one — reusing the
+    /// broadcast primitives, targeting `family-fest-2026` with exclude-not-attending
+    /// on (so it reaches everyone except those who RSVP'd "not going"; people who
+    /// haven't RSVP'd still get it). Mirrors lib/activityNotify.ts exactly. Sends
+    /// are admin-gated server-side; callers gate the UI to admins too.
+    func sendActivityNotify(
+        title: String,
+        body: String?,
+        banner: Bool,
+        activity: Bool,
+        email: Bool,
+        scheduleItemId: String?,
+        expiryHours: Int = 24
+    ) async throws {
+        let url = scheduleItemId.map { "/family-fest/schedule/\($0)" } ?? "/family-fest"
+        // Durable Activity-tab entry (also the in-app feed row).
+        if activity {
+            try await sendBroadcast(
+                title: title, body: body, audience: .everyone, mirrorBanner: false,
+                url: url, eventId: Self.familyFestEventId, excludeNotAttending: true)
+        }
+        // Banner and/or email share one announcements row (show_banner=false +
+        // email = email-only, no banner/push).
+        if banner || email {
+            try await postAnnouncement(
+                title: title, body: body, severity: "alert",
+                showBanner: banner, notifyEmail: email, emailAudience: "all",
+                expiresAt: Date().addingTimeInterval(Double(expiryHours) * 3600),
+                eventId: Self.familyFestEventId, excludeNotAttending: true)
+        }
+    }
+
     // MARK: - Scheduled broadcasts (migration 0097)
 
     private var isoStamp: ISO8601DateFormatter { ISO8601DateFormatter() }

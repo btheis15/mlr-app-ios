@@ -24,6 +24,13 @@ struct CommitteeDetailView: View {
     @State private var confirmLeave = false
     @State private var leaving = false
 
+    // Committee-page meeting scheduling (#326/#327): organizers (admins or leads)
+    // can schedule right from the page and aim it at the whole committee or a
+    // single role via the composer's "Who's this for?" picker.
+    @State private var canOrganizeMeeting = false
+    @State private var showMeetingComposer = false
+    @State private var meetingRefreshID = 0
+
     /// Live roles from committee_areas — the source of truth (migration 0112).
     @State private var dbAreas: [String] = []
 
@@ -101,6 +108,18 @@ struct CommitteeDetailView: View {
         roster.compactMap { e in e.linkedUserId.map { MeetingMember(id: $0, name: e.displayName) } }
     }
 
+    /// "Who's this for?" options for the meeting composer: the whole committee,
+    /// plus the roles the viewer may target — an admin sees every role, a lead
+    /// sees only the ones they lead. The server (can_organize_meeting) re-checks.
+    private var meetingAreaOptions: [MeetingComposer.AreaOption] {
+        let myLeadAreas = (myEntry?.roles ?? [])
+            .filter { $0.hasSuffix(" · Lead") }
+            .map { String($0.dropLast(" · Lead".count)) }
+        let allowed = env.isAdmin ? areas : areas.filter { myLeadAreas.contains($0) }
+        return [MeetingComposer.AreaOption(value: nil, label: "Everyone on \(committee.name)")]
+            + allowed.map { MeetingComposer.AreaOption(value: $0, label: $0) }
+    }
+
     /// Roster people who have an email, mapped for the email composer. Areas come
     /// from their roles (lead suffix stripped) so the composer's "By Role" works.
     private var emailRecipients: [CommitteeEmailComposer.Recipient] {
@@ -120,14 +139,30 @@ struct CommitteeDetailView: View {
                     // spacing 0 so the meeting card collapses to nothing when idle.
                     VStack(spacing: 0) {
                         chatLink
-                        // Response surface for an active committee-wide meeting (#326);
-                        // creating one lives in the chat ⋯ menu. Renders nothing when idle.
+                        // Response surface for an active committee-wide meeting (#326).
+                        // Renders nothing when idle.
                         MeetingSectionBar(
                             scope: .committee(committeeId: committee.id, slug: committee.slug, area: nil),
                             members: meetingMembers,
-                            surface: .card
+                            surface: .card,
+                            refreshID: meetingRefreshID
                         )
                     }
+                }
+
+                // Organizers (admins or committee leads) can schedule a meeting
+                // right from the page — committee-wide or aimed at one role (#327).
+                if canOrganizeMeeting && !committee.isArchived {
+                    Button { showMeetingComposer = true } label: {
+                        Label("Schedule a meeting", systemImage: "calendar.badge.plus")
+                            .font(.mlrScaled(15, weight: .semibold))
+                            .foregroundStyle(Color.mlrPrimary)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                            .background(Color.mlrPrimary.opacity(0.1))
+                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.plain)
                 }
 
                 // Email sits right under the chat entry.
@@ -214,6 +249,13 @@ struct CommitteeDetailView: View {
                 allAreas: areas,
                 current: myAreas
             ) { Task { await load() } }
+        }
+        .sheet(isPresented: $showMeetingComposer) {
+            MeetingComposer(
+                scope: .committee(committeeId: committee.id, slug: committee.slug, area: nil),
+                roomLabel: committee.name,
+                areaOptions: meetingAreaOptions
+            ) { meetingRefreshID += 1 }
         }
         .confirmationDialog("Leave \(committee.name)?", isPresented: $confirmLeave, titleVisibility: .visible) {
             Button("Leave committee", role: .destructive) { Task { await leave() } }
@@ -551,6 +593,10 @@ struct CommitteeDetailView: View {
         if env.isAdmin || iAmLead {
             try? await env.committeeService.fetchPendingRequests()
         }
+        // Can this viewer schedule a committee meeting? (admin or a lead — the
+        // server's can_organize_meeting is the source of truth.)
+        canOrganizeMeeting = await env.meetingsService.canOrganize(
+            scope: .committee(committeeId: committee.id, slug: committee.slug, area: nil))
         isLoading = false
     }
 

@@ -66,12 +66,22 @@ struct NotifPrefsView: View {
             // Events
             Section("Events") {
                 toggle(for: .eventRsvp, label: "RSVPs to your events", icon: "calendar.badge.checkmark")
+                toggle(for: .privateActivityInvite, label: "Invited to an activity", icon: "party.popper.fill")
             }
 
-            // Meetings
-            Section("Meetings") {
+            // Meetings & Polls
+            Section("Meetings & Polls") {
                 toggle(for: .meetingProposed,  label: "A meeting to vote on", icon: "calendar.badge.clock")
                 toggle(for: .meetingScheduled, label: "A meeting was scheduled", icon: "calendar.badge.checkmark")
+                toggle(for: .chatPollCreated,  label: "New quick poll in a chat", icon: "chart.bar.fill")
+            }
+
+            // Family Fest
+            Section("Family Fest") {
+                toggle(for: .signupReminder,      label: "Sign-up slot reminders",  icon: "clock.badge.fill")
+                toggle(for: .tournamentPublished, label: "Tournament bracket set",   icon: "trophy.fill")
+                toggle(for: .tournamentMatchReady, label: "Your next match is ready", icon: "target")
+                toggle(for: .tournamentChampion,  label: "Tournament champion",      icon: "medal.fill")
             }
 
             // House calendar

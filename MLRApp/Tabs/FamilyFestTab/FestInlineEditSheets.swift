@@ -15,11 +15,37 @@ struct FestScheduleEditSheet: View {
 
     @State private var location: String = ""
     @State private var description: String = ""
+    @State private var bring: String = ""
     @State private var leadName: String = ""
     @State private var linkedUser: Profile? = nil
+    @State private var links: [LinkDraft] = []
     @State private var showPicker = false
     @State private var isSaving = false
     @State private var saveError: String? = nil
+
+    // Sign-up config (admin / fest-editor only).
+    @State private var signupEnabled = false
+    @State private var signupMode = "interval"       // interval | slots | headcount
+    @State private var signupCapacity = ""
+    @State private var signupTeamSize = 1
+    @State private var signupInstructions = ""
+    @State private var signupStart = FestScheduleEditSheet.defaultTime(18, 0)
+    @State private var signupEnd = FestScheduleEditSheet.defaultTime(20, 0)
+    @State private var signupSlotMinutes = 15
+
+    // Edit-and-notify (#393) — admin-only, default OFF; sends on save when on.
+    @State private var notifyOnSave = false
+    @State private var notifyMessage = ""
+    @State private var notifyBanner = true
+    @State private var notifyActivity = true
+    @State private var notifyEmail = false
+
+    static func defaultTime(_ h: Int, _ m: Int) -> Date {
+        Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: Date()) ?? Date()
+    }
+
+    /// Editable link row (ScheduleLink is immutable; this backs the text fields).
+    struct LinkDraft: Identifiable { let id = UUID(); var label: String; var href: String }
 
     private var canAssignLead: Bool { env.isAdmin || env.festContentService.userCanEditFest }
 
@@ -33,6 +59,8 @@ struct FestScheduleEditSheet: View {
                 }
                 TextField("Description (optional)", text: $description, axis: .vertical)
                     .lineLimit(3...5)
+                TextField("What to bring (optional)", text: $bring, axis: .vertical)
+                    .lineLimit(1...4)
             }
 
             if canAssignLead {
@@ -71,6 +99,88 @@ struct FestScheduleEditSheet: View {
                 }
             }
 
+            // Link buttons (migration 0142) — e.g. a sign-up form + an info doc.
+            Section {
+                ForEach($links) { $link in
+                    VStack(spacing: 4) {
+                        TextField("Label (e.g. Sign-up form)", text: $link.label)
+                        HStack {
+                            TextField("https://…", text: $link.href)
+                                .textInputAutocapitalization(.never)
+                                .autocorrectionDisabled()
+                                .keyboardType(.URL)
+                            Button { links.removeAll { $0.id == link.id } } label: {
+                                Image(systemName: "minus.circle.fill").foregroundStyle(Color.mlrDanger)
+                            }.buttonStyle(.plain)
+                        }
+                    }
+                }
+                Button { links.append(LinkDraft(label: "", href: "")) } label: {
+                    Label("Add a link", systemImage: "plus.circle")
+                }
+            } header: {
+                Text("Links")
+            } footer: {
+                Text("Buttons shown on the event — a sign-up form, an info doc, etc.")
+                    .font(.caption)
+            }
+
+            // Sign-ups (migrations 0135/0143) — authoring is admin / fest-editor only.
+            if canAssignLead {
+                Section {
+                    Toggle("Take sign-ups", isOn: $signupEnabled)
+                    if signupEnabled {
+                        Picker("Type", selection: $signupMode) {
+                            Text("Head count").tag("headcount")
+                            Text("Time slots").tag("interval")
+                            Text("Named slots").tag("slots")
+                        }
+                        LabeledContent("Capacity") {
+                            TextField("No limit", text: $signupCapacity)
+                                .keyboardType(.numberPad).multilineTextAlignment(.trailing)
+                        }
+                        Stepper("Team size: \(signupTeamSize)", value: $signupTeamSize, in: 1...8)
+                        TextField("Instructions (optional)", text: $signupInstructions, axis: .vertical).lineLimit(1...3)
+                        if signupMode == "interval" {
+                            DatePicker("First slot", selection: $signupStart, displayedComponents: .hourAndMinute)
+                            DatePicker("Ends by", selection: $signupEnd, displayedComponents: .hourAndMinute)
+                            Picker("Slot length", selection: $signupSlotMinutes) {
+                                ForEach([10, 15, 20, 30, 45, 60], id: \.self) { Text("\($0) min").tag($0) }
+                            }
+                        }
+                    }
+                } header: {
+                    Text("Sign-ups")
+                } footer: {
+                    Text(signupMode == "slots"
+                         ? "Named-slot lists are edited on the web for now."
+                         : "Members can sign up right on the event.")
+                        .font(.caption)
+                }
+            }
+
+            // Edit-and-notify (#393) — admin-only. Off by default; when on, a send
+            // fires on Save to everyone at Family Fest except those who RSVP'd "not
+            // coming" (people who haven't RSVP'd still get it).
+            if canAssignLead {
+                Section {
+                    Toggle("📣 Notify about this change", isOn: $notifyOnSave)
+                    if notifyOnSave {
+                        TextField("Message", text: $notifyMessage, axis: .vertical).lineLimit(1...3)
+                        Toggle("Banner + push", isOn: $notifyBanner)
+                        Toggle("Activity tab", isOn: $notifyActivity)
+                        Toggle("Email", isOn: $notifyEmail)
+                    }
+                } header: {
+                    Text("Tell everyone")
+                } footer: {
+                    if notifyOnSave {
+                        Text("Sends on Save to everyone at Family Fest except those who said they're not coming.")
+                            .font(.caption)
+                    }
+                }
+            }
+
             if let err = saveError {
                 Section { Text(err).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) }
             }
@@ -97,7 +207,28 @@ struct FestScheduleEditSheet: View {
     private func seed() {
         location    = (item.location == "TBD" ? nil : item.location) ?? ""
         description = item.description ?? ""
+        bring       = item.bring ?? ""
         leadName    = item.leads.first ?? ""
+        links       = item.links.map { LinkDraft(label: $0.label ?? "", href: $0.href) }
+        signupEnabled      = item.signupEnabled
+        signupMode         = item.signupMode ?? "interval"
+        signupCapacity     = item.signupCapacity.map(String.init) ?? ""
+        signupTeamSize     = item.signupTeamSize ?? 1
+        signupInstructions = item.signupInstructions ?? ""
+        signupSlotMinutes  = item.signupSlotMinutes ?? 15
+        if let s = Self.timeFromHHMM(item.signupStartTime) { signupStart = s }
+        if let e = Self.timeFromHHMM(item.signupEndTime) { signupEnd = e }
+        notifyMessage = "Update: \(item.title)"
+    }
+
+    private static func timeFromHHMM(_ s: String?) -> Date? {
+        guard let parts = s?.split(separator: ":"), parts.count == 2,
+              let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
+        return defaultTime(h, m)
+    }
+    private static func hhmm(_ d: Date) -> String {
+        let c = Calendar.current.dateComponents([.hour, .minute], from: d)
+        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
     }
 
     private func save() async {
@@ -105,6 +236,24 @@ struct FestScheduleEditSheet: View {
         guard let uid = UUID(uuidString: item.id) else { saveError = "Invalid item ID."; return }
         let name = (linkedUser?.name ?? leadName).trimBlank
         let leadId = linkedUser?.id ?? item.leadUserId
+        // Keep only links with a real URL; label falls back to the URL when blank.
+        let cleanedLinks: [ScheduleLink] = links.compactMap { d in
+            let href = d.href.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !href.isEmpty else { return nil }
+            return ScheduleLink(href: href, label: d.label.trimBlank)
+        }
+        // Only admins/fest editors author sign-up config; leads leave it untouched.
+        let signupConfig: FestContentService.SignupConfig? = canAssignLead
+            ? .init(
+                enabled: signupEnabled,
+                mode: signupMode,
+                capacity: Int(signupCapacity.trimmingCharacters(in: .whitespaces)),
+                slotMinutes: signupMode == "interval" ? signupSlotMinutes : nil,
+                startTime: signupMode == "interval" ? Self.hhmm(signupStart) : nil,
+                endTime: signupMode == "interval" ? Self.hhmm(signupEnd) : nil,
+                instructions: signupInstructions.trimBlank,
+                teamSize: signupTeamSize > 1 ? signupTeamSize : nil)
+            : nil
         do {
             try await env.festContentService.updateScheduleItem(
                 itemId:      uid,
@@ -112,8 +261,28 @@ struct FestScheduleEditSheet: View {
                 description: description.trimBlank,
                 leadName:    name,
                 leadUserId:  leadId,
-                leadPhone:   nil
+                leadPhone:   nil,
+                bring:       bring.trimBlank,
+                links:       cleanedLinks,
+                signup:      signupConfig
             )
+            // Optional: tell everyone about the change (#393). Admin-only, opt-in.
+            if canAssignLead, notifyOnSave {
+                let msg = notifyMessage.trimBlank
+                if let msg, (notifyBanner || notifyActivity || notifyEmail) {
+                    do {
+                        try await env.notificationsService.sendActivityNotify(
+                            title: msg, body: nil,
+                            banner: notifyBanner, activity: notifyActivity, email: notifyEmail,
+                            scheduleItemId: item.id)
+                    } catch {
+                        // The edit saved; only the notification failed — surface it,
+                        // don't dismiss, so they can retry the send.
+                        saveError = "Saved, but the notification didn't send. Try again."
+                        return
+                    }
+                }
+            }
             await onSaved()
             dismiss()
         } catch {

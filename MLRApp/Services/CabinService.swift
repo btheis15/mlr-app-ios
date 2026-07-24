@@ -376,10 +376,11 @@ final class CabinService {
     }
 
     /// Edit a cabin's editable fields (admin-gated by RLS, migration 0089).
-    func saveCabin(id: UUID, name: String, roomCount: Int, bedCount: Int?,
+    func saveCabin(id: UUID, name: String, kind: String, roomCount: Int, bedCount: Int?,
                    notes: String?, active: Bool) async throws {
         struct Row: Encodable {
             let name: String
+            let kind: String
             let room_count: Int
             let bed_count: Int?
             let notes: String?
@@ -387,7 +388,7 @@ final class CabinService {
         }
         try await supabase
             .from("cabins")
-            .update(Row(name: name, room_count: roomCount, bed_count: bedCount, notes: notes, active: active))
+            .update(Row(name: name, kind: kind, room_count: roomCount, bed_count: bedCount, notes: notes, active: active))
             .eq("id", value: id.uuidString)
             .execute()
     }

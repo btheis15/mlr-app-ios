@@ -13,10 +13,38 @@ struct ScheduleItem: Identifiable {
     let title: String
     let location: String?
     let description: String?
+    var bring: String? = nil   // "what to bring" note
     let isPrivate: Bool
     let leads: [String]
     var leadUserId: UUID? = nil
     var crewUserIds: [UUID] = []   // migration 0110 — event/activity crew self-edit
+    var links: [ScheduleLink] = [] // migration 0142 — ordered link buttons (e.g. sign-up + info)
+    var imageUrl: String? = nil    // optional photo shown on the event/activity card
+
+    // Sign-ups (migrations 0135/0136/0143). When enabled, members can sign up —
+    // by time slot ("interval"/"slots") or a plain running count ("headcount").
+    var signupEnabled: Bool = false
+    var signupMode: String? = nil          // interval | slots | headcount
+    var signupCapacity: Int? = nil         // per-slot (interval/slots) or total (headcount); nil = uncapped
+    var signupSlotMinutes: Int? = nil      // interval mode: minutes per generated slot
+    var signupStartTime: String? = nil     // interval mode: first slot "HH:MM"
+    var signupEndTime: String? = nil       // interval mode: boundary the last slot ends by
+    var signupInstructions: String? = nil
+    var signupTeamSize: Int? = nil         // nil/1 = individual; >1 = sign up in fixed teams
+    var signupFields: [SignupField] = []   // admin-defined custom columns
+}
+
+/// One labeled link button on a schedule event (migration 0142 `links` jsonb —
+/// replaced the old single link_url/link_label pair).
+struct ScheduleLink: Identifiable, Hashable, Decodable {
+    let href: String
+    let label: String?
+    var id: String { href }
+    /// Button text — the label if set, else the raw URL.
+    var display: String {
+        let l = label?.trimmingCharacters(in: .whitespaces) ?? ""
+        return l.isEmpty ? href : l
+    }
 }
 
 // MARK: - Dinner

@@ -317,7 +317,7 @@ final class CommitteeService {
         var query = supabase
             .from("committee_messages")
             .select("""
-                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area,
+                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area, status,
                 profiles!author_id(display_name, avatar_url),
                 committee_message_media(storage_path, media_type, width, height, file_name, position),
                 committee_message_reactions(user_id, emoji)
@@ -343,7 +343,7 @@ final class CommitteeService {
             .from("committee_messages")
             .insert(params)
             .select("""
-                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area,
+                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area, status,
                 profiles!author_id(display_name, avatar_url)
             """)
             .single()
@@ -459,7 +459,7 @@ final class CommitteeService {
                     if let row: CommitteeChatRow = try? await supabase
                         .from("committee_messages")
                         .select("""
-                            id, committee_id, author_id, text, edited_at, deleted_at, created_at, area,
+                            id, committee_id, author_id, text, edited_at, deleted_at, created_at, area, status,
                             profiles!author_id(display_name, avatar_url),
                             committee_message_media(storage_path, media_type, width, height, file_name, position)
                         """)
@@ -732,6 +732,7 @@ private struct CommitteeChatRow: Decodable {
     let deletedAt: Date?
     let createdAt: Date
     let area: String?
+    let status: String?
     let profiles: AuthorInfo?
     let media: [ChatMedia]?
     let reactions: [ChatReaction]?
@@ -745,6 +746,7 @@ private struct CommitteeChatRow: Decodable {
         case deletedAt = "deleted_at"
         case createdAt = "created_at"
         case area
+        case status
         case profiles
         case media = "committee_message_media"
         case reactions = "committee_message_reactions"
@@ -770,6 +772,7 @@ private struct CommitteeChatRow: Decodable {
             editedAt: editedAt,
             deletedAt: deletedAt,
             createdAt: createdAt,
+            status: status,
             area: area,
             media: (media ?? []).sorted { $0.position < $1.position },
             reactions: reactions ?? []

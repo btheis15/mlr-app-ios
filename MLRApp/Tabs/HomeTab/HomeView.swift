@@ -176,6 +176,9 @@ struct HomeView: View {
             festSeason = FestSeason.current()
             await env.appImagesService.load()
             await env.festContentService.load()
+            // Live-update Home callouts (+ fest content) when an admin pushes one —
+            // the subscription reloads on any home_callouts change (idempotent).
+            env.festContentService.subscribeToRealtime()
             await env.loadHelpContact()
             await env.eventsService.fetchEvents()
             if let userId = env.currentProfile?.id {
@@ -185,6 +188,7 @@ struct HomeView: View {
         }
         .refreshable {
             festSeason = FestSeason.current()
+            await env.festContentService.reload()   // pick up newly-pushed callouts
             await env.eventsService.fetchEvents()
             if let userId = env.currentProfile?.id {
                 await env.eventsService.fetchAttendance(userId: userId)

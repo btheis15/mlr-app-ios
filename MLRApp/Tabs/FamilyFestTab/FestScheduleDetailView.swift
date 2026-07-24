@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 // MARK: - FestScheduleDetailView
 
@@ -9,6 +10,16 @@ struct FestScheduleDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+
+                // Photo banner
+                if let url = item.imageUrl.flatMap(URL.init(string:)) {
+                    KFImage(url)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 200)
+                        .clipped()
+                }
 
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
@@ -62,6 +73,17 @@ struct FestScheduleDetailView: View {
                         .background(Color.mlrFest.opacity(0.15))
                 }
 
+                // What to bring
+                if let bring = item.bring {
+                    DetailSection(icon: "bag.fill", title: "What to bring") {
+                        Text(bring)
+                            .font(.mlrScaled(15))
+                            .foregroundStyle(Color.mlrText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                }
+
                 // Leads
                 if !item.leads.isEmpty {
                     DetailSection(icon: "person.fill", title: "Leads") {
@@ -75,6 +97,20 @@ struct FestScheduleDetailView: View {
                             ProtectedField(message: "Sign in to see leads & contacts")
                         }
                     }
+                }
+
+                // Links (migration 0142) — e.g. a sign-up form + a separate info doc.
+                if !item.links.isEmpty {
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                    DetailSection(icon: "link", title: "Links") {
+                        ScheduleLinkButtons(links: item.links)
+                    }
+                }
+
+                // Sign-ups (migrations 0135/0136/0143) — self-hides when disabled.
+                if item.signupEnabled {
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                    EventSignupSection(item: item)
                 }
 
                 Spacer(minLength: 32)
@@ -111,6 +147,39 @@ struct DetailSection<Content: View>: View {
         }
         .padding(.horizontal, 20)
         .padding(.vertical, 16)
+    }
+}
+
+// MARK: - Schedule link buttons (migration 0142)
+
+/// Renders a schedule event's ordered links as tappable buttons — e.g. a
+/// sign-up form and a separate info doc as two distinct pills.
+struct ScheduleLinkButtons: View {
+    let links: [ScheduleLink]
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            ForEach(links) { link in
+                if let url = URL(string: link.href) {
+                    Link(destination: url) {
+                        HStack(spacing: 8) {
+                            Image(systemName: "arrow.up.right.square")
+                                .font(.mlrScaled(13, weight: .semibold))
+                            Text(link.display)
+                                .font(.mlrScaled(14, weight: .semibold))
+                                .lineLimit(1)
+                            Spacer(minLength: 4)
+                        }
+                        .foregroundStyle(Color.mlrFest)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(Color.mlrFest.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -284,6 +353,11 @@ struct ExpandableScheduleRow: View {
     @ViewBuilder
     private var expanded: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if let url = item.imageUrl.flatMap(URL.init(string:)) {
+                KFImage(url)
+                    .resizable().scaledToFill()
+                    .frame(maxWidth: .infinity).frame(height: 150).clipped()
+            }
             if let location = item.location {
                 Divider().background(Color.mlrFest.opacity(0.12))
                 DetailSection(icon: "mappin.and.ellipse", title: "Location") {
@@ -294,6 +368,16 @@ struct ExpandableScheduleRow: View {
                     } else {
                         ProtectedField(message: "Sign in to see location")
                     }
+                }
+            }
+
+            if let bring = item.bring, !bring.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "bag.fill", title: "What to bring") {
+                    Text(bring)
+                        .font(.mlrScaled(15))
+                        .foregroundStyle(Color.mlrText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 
@@ -320,6 +404,18 @@ struct ExpandableScheduleRow: View {
                         ProtectedField(message: "Sign in to see leads & contacts")
                     }
                 }
+            }
+
+            if !item.links.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "link", title: "Links") {
+                    ScheduleLinkButtons(links: item.links)
+                }
+            }
+
+            if item.signupEnabled {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                EventSignupSection(item: item)
             }
 
             if canEditItem {

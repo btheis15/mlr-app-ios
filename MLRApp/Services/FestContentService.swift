@@ -177,15 +177,17 @@ final class FestContentService {
             async let sched = fetchSchedule()
             async let dins = fetchDinners()
             async let pays = fetchPayees()
-            async let acts = fetchActivities()
             async let duesTiers = fetchDues()
             async let co = fetchCallouts()
 
-            let (c, s, d, p, a, du, calloutRows) = try await (cfg, sched, dins, pays, acts, duesTiers, co)
+            let (c, s, d, p, du, calloutRows) = try await (cfg, sched, dins, pays, duesTiers, co)
 
             if let c { config = c }
             if !du.isEmpty { dues = du }
-            let combined = s + a
+            // Migration 0141 merged the old fest_activities into fest_schedule_items
+            // as anytime events, so the schedule is now the single source — no
+            // separate fetchActivities() (that would double-count the copies).
+            let combined = s
             if !combined.isEmpty { schedule = combined }
             if !d.isEmpty { dinners = d }
             if !p.isEmpty { payees = p }
@@ -454,17 +456,49 @@ final class FestContentService {
         description: String?,
         leadName: String?,
         leadUserId: UUID?,
-        leadPhone: String?
+        leadPhone: String?,
+        bring: String? = nil,
+        links: [ScheduleLink]? = nil,
+        signup: SignupConfig? = nil
     ) async throws {
         var payload: [String: AnyJSON] = [
             "location":     j(location),
             "description":  j(description),
+            "bring":        j(bring),
             "lead_name":    j(leadName),
             "lead_phone":   j(leadPhone),
             "lead_user_id": leadUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
         ]
+        // Ordered link buttons (migration 0142) — only written when provided.
+        if let links {
+            payload["links"] = .array(links.map { link in
+                .object(["href": .string(link.href), "label": link.label.map { AnyJSON.string($0) } ?? .null])
+            })
+        }
+        if let signup {
+            payload["signup_enabled"]      = .bool(signup.enabled)
+            payload["signup_mode"]         = .string(signup.mode)
+            payload["signup_capacity"]     = signup.capacity.map { AnyJSON.double(Double($0)) } ?? .null
+            payload["signup_slot_minutes"] = signup.slotMinutes.map { AnyJSON.double(Double($0)) } ?? .null
+            payload["signup_start_time"]   = signup.startTime.map { AnyJSON.string($0) } ?? .null
+            payload["signup_end_time"]     = signup.endTime.map { AnyJSON.string($0) } ?? .null
+            payload["signup_instructions"] = signup.instructions.map { AnyJSON.string($0) } ?? .null
+            payload["signup_team_size"]    = signup.teamSize.map { AnyJSON.double(Double($0)) } ?? .null
+        }
         if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
         try await supabase.from("fest_schedule_items").update(payload).eq("id", value: itemId.uuidString).execute()
+    }
+
+    /// The admin-editable sign-up config for a schedule event (migrations 0135/0143).
+    struct SignupConfig {
+        var enabled: Bool
+        var mode: String            // interval | slots | headcount
+        var capacity: Int?
+        var slotMinutes: Int?
+        var startTime: String?
+        var endTime: String?
+        var instructions: String?
+        var teamSize: Int?
     }
 
     /// Updates only the crew_user_ids on a dinner (admin / canEditFest / chef only).
@@ -497,16 +531,32 @@ final class FestContentService {
         return rows.map { r in
             ScheduleItem(
                 id: r.id.uuidString,
-                day: Self.weekday(from: r.day) ?? r.day,
-                isoDate: r.day,
-                time: r.startTime?.nilIfBlank ?? "TBD",
+                // Anytime events (migration 0139/0141) group under the "Anytime"
+                // bucket, not a weekday — their stored `day` is a placeholder.
+                day: r.anytime == true ? "Anytime" : (Self.weekday(from: r.day) ?? r.day),
+                isoDate: r.anytime == true ? nil : r.day,
+                // An "Anytime all week" event with no set time isn't pending a
+                // decision — show "No specific time", not "TBD" (web #378).
+                time: r.startTime?.nilIfBlank ?? (r.anytime == true ? "No specific time" : "TBD"),
                 title: Self.titled(emoji: r.emoji, title: r.title),
                 location: r.location?.nilIfBlank ?? "TBD",
                 description: r.description,
+                bring: r.bring?.nilIfBlank,
                 isPrivate: r.isPrivate,
                 leads: [r.leadName].compactMap { $0?.nilIfBlank },
                 leadUserId: r.leadUserId,
-                crewUserIds: r.crewUserIds ?? []
+                crewUserIds: r.crewUserIds ?? [],
+                links: r.links ?? [],
+                imageUrl: r.imageUrl?.nilIfBlank,
+                signupEnabled: r.signupEnabled ?? false,
+                signupMode: r.signupMode,
+                signupCapacity: r.signupCapacity,
+                signupSlotMinutes: r.signupSlotMinutes,
+                signupStartTime: r.signupStartTime,
+                signupEndTime: r.signupEndTime,
+                signupInstructions: r.signupInstructions,
+                signupTeamSize: r.signupTeamSize,
+                signupFields: r.signupFields ?? []
             )
         }
     }
@@ -652,13 +702,37 @@ private struct ScheduleRow: Decodable {
     let leadName: String?
     let leadUserId: UUID?
     let crewUserIds: [UUID]?   // migration 0110 — crew can self-edit the event
+    let anytime: Bool?         // migration 0139 — "Anytime all week", no set time
+    let links: [ScheduleLink]? // migration 0142 — ordered link buttons
+    let imageUrl: String?      // optional photo on the event/activity
+    let bring: String?         // "what to bring" note
+    // Sign-ups (migrations 0135/0136/0143)
+    let signupEnabled: Bool?
+    let signupMode: String?
+    let signupCapacity: Int?
+    let signupSlotMinutes: Int?
+    let signupStartTime: String?
+    let signupEndTime: String?
+    let signupInstructions: String?
+    let signupTeamSize: Int?
+    let signupFields: [SignupField]?
     enum CodingKeys: String, CodingKey {
-        case id, day, title, emoji, location, description
+        case id, day, title, emoji, location, description, anytime, links, bring
+        case imageUrl    = "image_url"
         case startTime   = "start_time"
         case isPrivate   = "is_private"
         case leadName    = "lead_name"
         case leadUserId  = "lead_user_id"
         case crewUserIds = "crew_user_ids"
+        case signupEnabled      = "signup_enabled"
+        case signupMode         = "signup_mode"
+        case signupCapacity     = "signup_capacity"
+        case signupSlotMinutes  = "signup_slot_minutes"
+        case signupStartTime    = "signup_start_time"
+        case signupEndTime      = "signup_end_time"
+        case signupInstructions = "signup_instructions"
+        case signupTeamSize     = "signup_team_size"
+        case signupFields       = "signup_fields"
     }
 }
 

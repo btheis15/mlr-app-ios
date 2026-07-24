@@ -12,6 +12,9 @@ struct AdminFamilyRosterView: View {
 
     @State private var entries: [FamilyRosterEntry] = []
     @State private var houses: [House] = []
+    // Account-less committee memberships ("manual add-ins"), keyed by lowercased
+    // email — shown as chips on each person (migration 0125).
+    @State private var committeesByEmail: [String: [RosterCommittee]] = [:]
     @State private var loading = true
     @State private var editing: FamilyRosterEntry?
     @State private var addingNew = false
@@ -36,7 +39,7 @@ struct AdminFamilyRosterView: View {
                         Button { editing = entry } label: { row(entry) }.buttonStyle(.plain)
                     }
                 } footer: {
-                    Text("\(entries.count) on the roster")
+                    Text("\(entries.count) on the roster. Anyone added to a committee before they're on the app lands here automatically — edits you make here (name, email, phone) carry over to their committee spot, and everything links to their account when they sign up.")
                 }
             }
         }
@@ -59,25 +62,57 @@ struct AdminFamilyRosterView: View {
     }
 
     private func row(_ entry: FamilyRosterEntry) -> some View {
-        HStack(spacing: 12) {
-            AvatarView(url: entry.isLinked ? entry.linkedAvatarUrl : nil, size: .small)
-            VStack(alignment: .leading, spacing: 2) {
-                Text(entry.displayName).font(.mlrScaled(15, weight: .medium)).foregroundStyle(Color.mlrText)
-                if let email = entry.email, !email.isEmpty {
-                    Text(email).font(.caption).foregroundStyle(Color.mlrTextMuted)
+        VStack(alignment: .leading, spacing: 8) {
+            HStack(spacing: 12) {
+                AvatarView(url: entry.isLinked ? entry.linkedAvatarUrl : nil, size: .small)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(entry.displayName).font(.mlrScaled(15, weight: .medium)).foregroundStyle(Color.mlrText)
+                    if let email = entry.email, !email.isEmpty {
+                        Text(email).font(.caption).foregroundStyle(Color.mlrTextMuted)
+                    }
+                    if let h = houseName(entry.houseId) {
+                        Text(h).font(.caption2).foregroundStyle(Color.mlrTextSubtle)
+                    }
                 }
-                if let h = houseName(entry.houseId) {
-                    Text(h).font(.caption2).foregroundStyle(Color.mlrTextSubtle)
+                Spacer()
+                if entry.isLinked {
+                    Text("On the app").font(.mlrScaled(10, weight: .bold))
+                        .foregroundStyle(Color.mlrSuccess)
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(Color.mlrSuccess.opacity(0.15)).clipShape(Capsule())
                 }
             }
-            Spacer()
-            if entry.isLinked {
-                Text("On the app").font(.mlrScaled(10, weight: .bold))
-                    .foregroundStyle(Color.mlrSuccess)
-                    .padding(.horizontal, 6).padding(.vertical, 2)
-                    .background(Color.mlrSuccess.opacity(0.15)).clipShape(Capsule())
+            // Committee spots this account-less person holds by email, until they
+            // sign up and the slots link to their account (migration 0125).
+            let chips = committeeChips(for: entry)
+            if !entry.isLinked && !chips.isEmpty {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("On committees (until they join)")
+                        .font(.mlrScaled(10, weight: .medium))
+                        .foregroundStyle(Color.mlrTextSubtle)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 6) {
+                            ForEach(chips) { c in
+                                Text(c.label)
+                                    .font(.mlrScaled(11, weight: .medium))
+                                    .foregroundStyle(Color.mlrPrimary)
+                                    .padding(.horizontal, 8).padding(.vertical, 2)
+                                    .background(Color.mlrPrimary.opacity(0.1))
+                                    .clipShape(Capsule())
+                            }
+                        }
+                    }
+                }
+                .padding(.leading, 52)
             }
         }
+    }
+
+    /// The account-less committee spots this roster person holds, matched by email.
+    private func committeeChips(for entry: FamilyRosterEntry) -> [RosterCommittee] {
+        guard let email = entry.email?.trimmingCharacters(in: .whitespaces).lowercased(), !email.isEmpty
+        else { return [] }
+        return committeesByEmail[email] ?? []
     }
 
     private func load() async {
@@ -86,6 +121,7 @@ struct AdminFamilyRosterView: View {
         if env.housesService.houses.isEmpty { await env.housesService.fetchHouses() }
         houses = env.housesService.houses
         entries = await env.familyRosterService.fetchRoster()
+        committeesByEmail = await env.familyRosterService.fetchRosterCommittees()
     }
 }
 

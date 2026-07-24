@@ -439,6 +439,8 @@ struct ChatComposer: View {
     /// Called on send with the staged attachments (cleared here afterwards).
     var onSend: ([ChatAttachment]) -> Void
     var onCancelEdit: () -> Void = {}
+    /// When set, the attachment "+" menu offers "Poll" (chat rooms only).
+    var onCreatePoll: (() -> Void)? = nil
 
     @State private var height: CGFloat = 36
     @State private var mentionQuery: String?
@@ -491,12 +493,17 @@ struct ChatComposer: View {
             }
 
             HStack(alignment: .bottom, spacing: 8) {
-                if !isEditing && allowsAttachments {
+                if !isEditing && (allowsAttachments || onCreatePoll != nil) {
                     Menu {
-                        Button { showPhotoPicker = true } label: { Label("Photo or Video", systemImage: "photo") }
-                        Button { showFileImporter = true } label: { Label("File", systemImage: "doc") }
+                        if allowsAttachments {
+                            Button { showPhotoPicker = true } label: { Label("Photo or Video", systemImage: "photo") }
+                            Button { showFileImporter = true } label: { Label("File", systemImage: "doc") }
+                        }
+                        if let onCreatePoll {
+                            Button { onCreatePoll() } label: { Label("Poll", systemImage: "chart.bar") }
+                        }
                     } label: {
-                        Image(systemName: "paperclip")
+                        Image(systemName: onCreatePoll != nil ? "plus" : "paperclip")
                             .font(.mlrScaled(18, weight: .medium))
                             .foregroundStyle(Color.mlrTextMuted)
                             .frame(width: 34, height: 38)
