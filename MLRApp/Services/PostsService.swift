@@ -111,6 +111,33 @@ final class PostsService {
         await fetchPosts(userId: nil)
     }
 
+    /// Remove one media item from a post while editing. Accepts the display URL;
+    /// strips the storage base back off since post_media stores the raw path.
+    func removePostMedia(postId: UUID, displayUrl: String) async throws {
+        let raw = displayUrl.hasPrefix("\(postStorageBase)/")
+            ? String(displayUrl.dropFirst(postStorageBase.count + 1))
+            : displayUrl
+        try await supabase.from("post_media")
+            .delete()
+            .eq("post_id", value: postId.uuidString)
+            .eq("storage_path", value: raw)
+            .execute()
+    }
+
+    /// Append newly-uploaded media to an existing post (edit flow).
+    func addPostMedia(postId: UUID, media: [(path: String, type: String)], startPosition: Int) async throws {
+        guard !media.isEmpty else { return }
+        let rows: [[String: AnyJSON]] = media.enumerated().map { idx, m in
+            [
+                "post_id": .string(postId.uuidString),
+                "storage_path": .string(m.path),
+                "media_type": .string(m.type),
+                "position": .integer(startPosition + idx)
+            ]
+        }
+        try await supabase.from("post_media").insert(rows).execute()
+    }
+
     // MARK: - Comments
 
     func fetchComments(postId: UUID) async throws -> [PostComment] {

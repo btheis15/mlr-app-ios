@@ -317,7 +317,7 @@ final class CommitteeService {
         var query = supabase
             .from("committee_messages")
             .select("""
-                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area, status,
+                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area, status, reply_to_id,
                 profiles!author_id(display_name, avatar_url),
                 committee_message_media(storage_path, media_type, width, height, file_name, position),
                 committee_message_reactions(user_id, emoji)
@@ -332,18 +332,19 @@ final class CommitteeService {
         return rows.map(\.toChatMessage)
     }
 
-    func sendMessage(committeeId: UUID, area: String? = nil, text: String, authorId: UUID, mentionedIds: [UUID] = [], media: [ChatMedia] = []) async throws -> CommitteeChatMessage {
+    func sendMessage(committeeId: UUID, area: String? = nil, text: String, authorId: UUID, mentionedIds: [UUID] = [], media: [ChatMedia] = [], replyToId: UUID? = nil) async throws -> CommitteeChatMessage {
         let params: [String: AnyJSON] = [
             "committee_id": .string(committeeId.uuidString),
             "author_id":    .string(authorId.uuidString),
             "text":         .string(text),
-            "area":         area.map { AnyJSON.string($0) } ?? .null
+            "area":         area.map { AnyJSON.string($0) } ?? .null,
+            "reply_to_id":  replyToId.map { AnyJSON.string($0.uuidString) } ?? .null
         ]
         let row: CommitteeChatRow = try await supabase
             .from("committee_messages")
             .insert(params)
             .select("""
-                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area, status,
+                id, committee_id, author_id, text, edited_at, deleted_at, created_at, area, status, reply_to_id,
                 profiles!author_id(display_name, avatar_url)
             """)
             .single()
@@ -459,7 +460,7 @@ final class CommitteeService {
                     if let row: CommitteeChatRow = try? await supabase
                         .from("committee_messages")
                         .select("""
-                            id, committee_id, author_id, text, edited_at, deleted_at, created_at, area, status,
+                            id, committee_id, author_id, text, edited_at, deleted_at, created_at, area, status, reply_to_id,
                             profiles!author_id(display_name, avatar_url),
                             committee_message_media(storage_path, media_type, width, height, file_name, position)
                         """)
@@ -733,6 +734,7 @@ private struct CommitteeChatRow: Decodable {
     let createdAt: Date
     let area: String?
     let status: String?
+    let replyToId: UUID?
     let profiles: AuthorInfo?
     let media: [ChatMedia]?
     let reactions: [ChatReaction]?
@@ -747,6 +749,7 @@ private struct CommitteeChatRow: Decodable {
         case createdAt = "created_at"
         case area
         case status
+        case replyToId = "reply_to_id"
         case profiles
         case media = "committee_message_media"
         case reactions = "committee_message_reactions"
@@ -773,6 +776,7 @@ private struct CommitteeChatRow: Decodable {
             deletedAt: deletedAt,
             createdAt: createdAt,
             status: status,
+            replyToId: replyToId,
             area: area,
             media: (media ?? []).sorted { $0.position < $1.position },
             reactions: reactions ?? []

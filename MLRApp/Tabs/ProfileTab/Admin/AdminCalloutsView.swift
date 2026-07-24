@@ -121,6 +121,9 @@ struct CalloutComposerView: View {
     @State private var alsoNotify = false
     @State private var alsoEmail = false
     @State private var showDeleteAlert = false
+    // Linked Fest activity (migration 0137) — card borrows its context and shows
+    // a "📝 Sign up" button when the activity takes sign-ups (#407).
+    @State private var signupItemId: String? = nil
 
     private var isNew: Bool { existing == nil }
 
@@ -136,6 +139,17 @@ struct CalloutComposerView: View {
                         .multilineTextAlignment(.trailing)
                         .lineLimit(2...3)
                 }
+            }
+
+            Section {
+                Picker("Link a Fest activity", selection: $signupItemId) {
+                    Text("None").tag(String?.none)
+                    ForEach(env.festContentService.schedule) { item in
+                        Text(item.title).tag(String?.some(item.id))
+                    }
+                }
+            } footer: {
+                Text("The card links to that activity. If it's taking sign-ups, a \"📝 Sign up\" button is added too.")
             }
 
             Section {
@@ -318,6 +332,7 @@ struct CalloutComposerView: View {
         startsOn = c.startsOn ?? ""
         endsOn   = c.endsOn ?? ""
         isActive = c.isActive
+        signupItemId = c.signupItemId
         if let dl = c.deadlineAt, let date = ISO8601DateFormatter().date(from: dl) {
             hasDeadline = true
             deadlineDate = date
@@ -360,6 +375,7 @@ struct CalloutComposerView: View {
             var is_active: Bool
             var dismiss_id: String?
             var position: Int?
+            var signup_item_id: String?   // linked Fest activity (migration 0137)
         }
 
         let validLinks = links.filter { !$0.href.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -376,7 +392,8 @@ struct CalloutComposerView: View {
             deadline_at: hasDeadline ? ISO8601DateFormatter().string(from: deadlineDate) : nil,
             is_active:   isActive,
             dismiss_id:  existing?.dismissId,
-            position:    existing?.position
+            position:    existing?.position,
+            signup_item_id: signupItemId
         )
         do {
             if existing != nil {

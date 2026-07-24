@@ -99,6 +99,9 @@ struct HomeCallout: Identifiable, Equatable {
     var dismissId: String
     var position: Int
     var isActive: Bool
+    /// Linked Family Fest schedule item (migration 0137) — the card borrows its
+    /// photo/details, and shows a "📝 Sign up" button when it takes sign-ups.
+    var signupItemId: String? = nil
 
     /// Whether this callout should be shown today (yyyy-MM-dd string).
     func isLive(today: String) -> Bool {
@@ -244,7 +247,8 @@ final class FestContentService {
                     deadlineAt: row.deadlineAt,
                     dismissId: row.dismissId ?? row.id.uuidString,
                     position: row.position ?? 0,
-                    isActive: row.isActive ?? true
+                    isActive: row.isActive ?? true,
+                    signupItemId: row.signupItemId?.uuidString
                 )
             }
         } catch {
@@ -797,6 +801,7 @@ private struct CalloutRow: Decodable {
     let dismissId: String?
     let position: Int?
     let isActive: Bool?
+    let signupItemId: UUID?   // migration 0137 — linked fest schedule item
 
     struct CalloutLinkRow: Decodable {
         let href: String
@@ -812,6 +817,7 @@ private struct CalloutRow: Decodable {
         case dismissId = "dismiss_id"
         case position
         case isActive  = "is_active"
+        case signupItemId = "signup_item_id"
     }
 }
 

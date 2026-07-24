@@ -134,6 +134,14 @@ struct AdminView: View {
                     description: "Who the Help page says to text or call"
                 )
 
+                adminLink(
+                    destination: AdminSystemView(),
+                    icon: "server.rack",
+                    iconColor: Color.mlrTextMuted,
+                    title: "System",
+                    description: "Media server status · pull latest & restart (owner)"
+                )
+
                 if let url = URL(string: "https://docs.google.com/forms/create") {
                     Link(destination: url) {
                         adminRow(

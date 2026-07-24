@@ -35,6 +35,17 @@ struct AdminModerationView: View {
     @State private var error: String? = nil
     @State private var actionError: String? = nil
 
+    // Blocked words (moderation_blocklist, migration 0040) — a match auto-holds
+    // the post/comment for review. Admin-only reads/writes (RLS).
+    @State private var blocklist: [BlockTerm] = []
+    @State private var newTerm = ""
+
+    struct BlockTerm: Decodable, Identifiable, Equatable {
+        let id: UUID
+        let pattern: String
+        let note: String?
+    }
+
     // MARK: - Body
 
     var body: some View {
@@ -70,16 +81,74 @@ struct AdminModerationView: View {
                     )
                 }
             }
+
+            // Blocked words — the admin-managed "language" floor (migration 0040).
+            Section {
+                HStack {
+                    TextField("Add a word or phrase…", text: $newTerm)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                        .onSubmit { Task { await addTerm() } }
+                    Button("Add") { Task { await addTerm() } }
+                        .disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+                ForEach(blocklist) { term in
+                    HStack {
+                        Text(term.pattern).font(.mlrScaled(14))
+                        Spacer()
+                        Button {
+                            Task { await removeTerm(term) }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill").foregroundStyle(Color.mlrTextSubtle)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            } header: {
+                Text("Blocked words")
+            } footer: {
+                Text("A post, comment, or chat message containing one of these is automatically held for review. Matching is case-insensitive. Nothing ships by default — add what fits your family.")
+            }
         }
         .listStyle(.plain)
         .navigationTitle("Content Review")
         .navigationBarTitleDisplayMode(.large)
         .refreshable {
             await loadQueue()
+            await loadBlocklist()
         }
         .task {
             await loadQueue()
+            await loadBlocklist()
         }
+    }
+
+    // MARK: - Blocklist
+
+    private func loadBlocklist() async {
+        blocklist = (try? await supabase
+            .from("moderation_blocklist")
+            .select("id, pattern, note")
+            .order("pattern", ascending: true)
+            .execute().value) ?? []
+    }
+
+    private func addTerm() async {
+        let pattern = newTerm.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !pattern.isEmpty else { return }
+        newTerm = ""
+        do {
+            try await supabase.from("moderation_blocklist")
+                .insert(["pattern": AnyJSON.string(pattern)]).execute()
+            await loadBlocklist()
+        } catch {
+            actionError = "Couldn't add that term (it may already exist)."
+        }
+    }
+
+    private func removeTerm(_ term: BlockTerm) async {
+        try? await supabase.from("moderation_blocklist").delete().eq("id", value: term.id.uuidString).execute()
+        blocklist.removeAll { $0.id == term.id }
     }
 
     // MARK: - Empty state
