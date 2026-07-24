@@ -32,6 +32,7 @@ struct HouseChatView: View {
     @State private var loadError: String?
     @State private var sending = false
     @State private var editingMessage: HouseChatMessage?
+    @State private var replyingTo: HouseChatMessage?
     @State private var subscribed = false
 
     // Typing indicators (#361) — its own broadcast channel, separate from messages.
@@ -215,6 +216,30 @@ struct HouseChatView: View {
             MeetingSectionBar(scope: meetingScope, members: meetingMembers, surface: .chat, refreshID: meetingRefreshID)
             messageScroll
             TypingIndicator(names: typing.typers)
+            // "Replying to …" bar above the composer.
+            if let replyingTo, editingMessage == nil {
+                HStack(spacing: 8) {
+                    RoundedRectangle(cornerRadius: 1).fill(Color.mlrPrimary).frame(width: 2.5, height: 30)
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text("Replying to \(replyContext(replyingTo.id)?.author ?? replyingTo.authorName)")
+                            .font(.mlrScaled(12, weight: .semibold))
+                            .foregroundStyle(Color.mlrPrimary)
+                        Text(replyingTo.text.isEmpty ? "📎 Attachment" : replyingTo.text)
+                            .font(.mlrScaled(12))
+                            .foregroundStyle(Color.mlrTextMuted)
+                            .lineLimit(1)
+                    }
+                    Spacer()
+                    Button { self.replyingTo = nil } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(Color.mlrTextSubtle)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding(.horizontal, 14).padding(.vertical, 6)
+                .background(Color.mlrCard)
+                .overlay(alignment: .top) { Divider() }
+            }
             ChatComposer(
                 text: $draft,
                 roster: members,
@@ -265,6 +290,13 @@ struct HouseChatView: View {
                                     onDelete: { Task { await deleteMessage(message) } },
                                     onReact: { emoji in Task { await react(message, emoji) } },
                                     onReport: { Task { await report(message) } },
+                                    replyPreview: replyContext(message.replyToId),
+                                    onReply: { replyingTo = message },
+                                    onTapReply: {
+                                        if let rid = message.replyToId {
+                                            withAnimation { proxy.scrollTo("m-\(rid.uuidString)", anchor: .center) }
+                                        }
+                                    },
                                     reactorName: { reactorName($0) }
                                 )
                                 .id(entry.id)
@@ -421,6 +453,13 @@ struct HouseChatView: View {
         await env.housesService.toggleReaction(messageId: message.id, emoji: emoji, userId: userId)
     }
 
+    /// Quoted context for a reply bubble — author + a short text preview.
+    private func replyContext(_ id: UUID?) -> (author: String, text: String)? {
+        guard let id, let m = messages.first(where: { $0.id == id }) else { return nil }
+        let text = m.isDeleted ? "Message deleted" : (m.text.isEmpty ? "📎 Attachment" : m.text)
+        return (m.authorId == env.currentProfile?.id ? "You" : m.authorName, text)
+    }
+
     private func send(_ attachments: [ChatAttachment] = []) async {
         let text = draft.trimmingCharacters(in: .whitespacesAndNewlines)
         guard let userId = env.currentProfile?.id else { return }
@@ -448,20 +487,23 @@ struct HouseChatView: View {
 
         // Optimistic send (#348) — text-only gets an instant temp bubble; restore
         // the draft on failure. Attachments upload first, then insert.
+        let replyTo = replyingTo
         if attachments.isEmpty {
             let tempId = UUID()
-            let temp = HouseChatMessage(
+            var temp = HouseChatMessage(
                 id: tempId, houseId: house.id, authorId: userId,
                 authorName: env.currentProfile?.displayName ?? "You",
                 authorAvatarUrl: env.currentProfile?.avatarUrl,
                 text: text, editedAt: nil, deletedAt: nil, createdAt: .now,
                 media: [], reactions: [])
+            temp.replyToId = replyTo?.id
             messages.append(temp)
             let savedDraft = draft
             draft = ""
+            replyingTo = nil
             do {
                 let msg = try await env.housesService.sendMessage(
-                    houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned)
+                    houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned, replyToId: replyTo?.id)
                 if let idx = messages.firstIndex(where: { $0.id == tempId }) {
                     if messages.contains(where: { $0.id == msg.id }) { messages.remove(at: idx) }
                     else { messages[idx] = msg }
@@ -469,6 +511,7 @@ struct HouseChatView: View {
             } catch {
                 messages.removeAll { $0.id == tempId }
                 draft = savedDraft
+                replyingTo = replyTo
                 Haptics.error()
                 print("[HouseChat] send error: \(error)")
             }
@@ -487,11 +530,12 @@ struct HouseChatView: View {
                 }
             }
             let msg = try await env.housesService.sendMessage(
-                houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded)
+                houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded, replyToId: replyTo?.id)
             if !messages.contains(where: { $0.id == msg.id }) {
                 messages.append(msg)
             }
             draft = ""
+            replyingTo = nil
         } catch {
             print("[HouseChat] send error: \(error)")
         }
@@ -541,6 +585,10 @@ private struct HouseMessageBubble: View {
     let onDelete: () -> Void
     var onReact: (String) -> Void = { _ in }
     var onReport: () -> Void = {}
+    /// Quoted reply context (author + text of the message this replies to).
+    var replyPreview: (author: String, text: String)? = nil
+    var onReply: () -> Void = {}
+    var onTapReply: () -> Void = {}
     /// Resolves a reactor's user id to a display name ("You" for yourself).
     var reactorName: (UUID) -> String = { _ in "Member" }
 
@@ -624,6 +672,28 @@ private struct HouseMessageBubble: View {
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         } else {
             VStack(alignment: isOwn ? .trailing : .leading, spacing: 4) {
+                // Quoted reply — tap to jump to the original message.
+                if let replyPreview {
+                    Button(action: onTapReply) {
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(replyPreview.author)
+                                .font(.mlrScaled(11, weight: .semibold))
+                                .foregroundStyle(Color.mlrPrimary)
+                            Text(replyPreview.text)
+                                .font(.mlrScaled(12))
+                                .foregroundStyle(Color.mlrTextMuted)
+                                .lineLimit(2)
+                        }
+                        .padding(.horizontal, 10).padding(.vertical, 6)
+                        .frame(maxWidth: 240, alignment: .leading)
+                        .background(Color.mlrPrimary.opacity(0.08))
+                        .clipShape(RoundedRectangle(cornerRadius: 10))
+                        .overlay(alignment: .leading) {
+                            RoundedRectangle(cornerRadius: 1).fill(Color.mlrPrimary).frame(width: 2.5).padding(.vertical, 4)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                }
                 if !message.media.isEmpty {
                     ChatMediaView(media: message.media, isOwn: isOwn)
                 }
@@ -667,6 +737,9 @@ private struct HouseMessageBubble: View {
                     ForEach(chatReactionEmojis, id: \.self) { Text($0).tag($0) }
                 }
                 .pickerStyle(.palette)
+                if !message.isDeleted {
+                    Button { onReply() } label: { Label("Reply", systemImage: "arrowshape.turn.up.left") }
+                }
                 if canEdit {
                     Button { onEdit() } label: { Label("Edit", systemImage: "pencil") }
                 }

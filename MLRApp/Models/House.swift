@@ -99,6 +99,8 @@ struct HouseChatMessage: Codable, Identifiable, Equatable {
     /// non-'visible' rows only to the author + admins; held rows get a badge for
     /// them and vanish for everyone else on refetch. Set from the row, not decoded.
     var status: String? = nil
+    /// The message this replies to (quoted bubble). Set from the row.
+    var replyToId: UUID? = nil
     /// Attachments (photos/videos/files). Set from the embedded media rows in the
     /// service, not decoded here — so it's excluded from CodingKeys below.
     var media: [ChatMedia] = []

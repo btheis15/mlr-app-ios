@@ -218,6 +218,8 @@ struct CommitteeChatMessage: Codable, Identifiable, Equatable {
     /// for everyone else on refetch; those who still see it get a "held" badge.
     /// Set from the row, not decoded here.
     var status: String? = nil
+    /// The message this replies to (quoted bubble). Set from the row.
+    var replyToId: UUID? = nil
     /// The role channel this message belongs to; nil = the committee-wide
     /// "General" channel (migration 0063). Set from the row, not decoded here.
     var area: String? = nil
