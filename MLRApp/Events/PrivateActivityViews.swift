@@ -69,6 +69,8 @@ struct PrivateActivityComposer: View {
     @State private var tournamentEnabled = false
     @State private var notify = true
     @State private var invited: [Profile] = []
+    @State private var typedNames: [String] = []   // people not on the app yet
+    @State private var typedName = ""
     @State private var showPicker = false
     @State private var creating = false
     @State private var errorText: String?
@@ -97,10 +99,29 @@ struct PrivateActivityComposer: View {
                 }
                 Section("Invite") {
                     Button { showPicker = true } label: {
-                        Label(invited.isEmpty ? "Add people" : "\(invited.count) invited", systemImage: "person.badge.plus")
+                        Label(invited.isEmpty ? "Add app members" : "\(invited.count) added", systemImage: "person.badge.plus")
                     }
                     ForEach(invited) { p in
                         Text(p.displayName).font(.mlrScaled(14))
+                    }
+                    // Add someone who isn't on the app yet (by name).
+                    HStack {
+                        TextField("Or add a name (not on the app)", text: $typedName)
+                        Button("Add") {
+                            let n = typedName.trimmingCharacters(in: .whitespaces)
+                            guard !n.isEmpty else { return }
+                            typedNames.append(n); typedName = ""
+                        }
+                        .disabled(typedName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    ForEach(typedNames, id: \.self) { name in
+                        HStack {
+                            Text(name).font(.mlrScaled(14))
+                            Spacer()
+                            Button { typedNames.removeAll { $0 == name } } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
+                            }.buttonStyle(.plain)
+                        }
                     }
                     Toggle("Notify people I add", isOn: $notify)
                 }
@@ -133,7 +154,8 @@ struct PrivateActivityComposer: View {
                 location: location.nilBlank,
                 startsAt: hasDate ? startsAt : nil,
                 tournamentEnabled: tournamentEnabled,
-                members: invited.map { .init(userId: $0.id, name: $0.displayName) },
+                members: invited.map { .init(userId: $0.id, name: $0.displayName) }
+                    + typedNames.map { .init(userId: nil, name: $0) },
                 notify: notify
             )
             onCreated()
