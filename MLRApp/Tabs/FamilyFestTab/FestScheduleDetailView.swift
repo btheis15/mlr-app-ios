@@ -73,6 +73,17 @@ struct FestScheduleDetailView: View {
                         .background(Color.mlrFest.opacity(0.15))
                 }
 
+                // What to bring
+                if let bring = item.bring {
+                    DetailSection(icon: "bag.fill", title: "What to bring") {
+                        Text(bring)
+                            .font(.mlrScaled(15))
+                            .foregroundStyle(Color.mlrText)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                }
+
                 // Leads
                 if !item.leads.isEmpty {
                     DetailSection(icon: "person.fill", title: "Leads") {
@@ -357,6 +368,16 @@ struct ExpandableScheduleRow: View {
                     } else {
                         ProtectedField(message: "Sign in to see location")
                     }
+                }
+            }
+
+            if let bring = item.bring, !bring.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "bag.fill", title: "What to bring") {
+                    Text(bring)
+                        .font(.mlrScaled(15))
+                        .foregroundStyle(Color.mlrText)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
             }
 

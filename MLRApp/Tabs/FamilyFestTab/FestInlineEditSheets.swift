@@ -15,6 +15,7 @@ struct FestScheduleEditSheet: View {
 
     @State private var location: String = ""
     @State private var description: String = ""
+    @State private var bring: String = ""
     @State private var leadName: String = ""
     @State private var linkedUser: Profile? = nil
     @State private var links: [LinkDraft] = []
@@ -58,6 +59,8 @@ struct FestScheduleEditSheet: View {
                 }
                 TextField("Description (optional)", text: $description, axis: .vertical)
                     .lineLimit(3...5)
+                TextField("What to bring (optional)", text: $bring, axis: .vertical)
+                    .lineLimit(1...4)
             }
 
             if canAssignLead {
@@ -204,6 +207,7 @@ struct FestScheduleEditSheet: View {
     private func seed() {
         location    = (item.location == "TBD" ? nil : item.location) ?? ""
         description = item.description ?? ""
+        bring       = item.bring ?? ""
         leadName    = item.leads.first ?? ""
         links       = item.links.map { LinkDraft(label: $0.label ?? "", href: $0.href) }
         signupEnabled      = item.signupEnabled
@@ -258,6 +262,7 @@ struct FestScheduleEditSheet: View {
                 leadName:    name,
                 leadUserId:  leadId,
                 leadPhone:   nil,
+                bring:       bring.trimBlank,
                 links:       cleanedLinks,
                 signup:      signupConfig
             )

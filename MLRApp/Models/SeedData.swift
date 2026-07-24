@@ -13,6 +13,7 @@ struct ScheduleItem: Identifiable {
     let title: String
     let location: String?
     let description: String?
+    var bring: String? = nil   // "what to bring" note
     let isPrivate: Bool
     let leads: [String]
     var leadUserId: UUID? = nil

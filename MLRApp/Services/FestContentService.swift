@@ -457,12 +457,14 @@ final class FestContentService {
         leadName: String?,
         leadUserId: UUID?,
         leadPhone: String?,
+        bring: String? = nil,
         links: [ScheduleLink]? = nil,
         signup: SignupConfig? = nil
     ) async throws {
         var payload: [String: AnyJSON] = [
             "location":     j(location),
             "description":  j(description),
+            "bring":        j(bring),
             "lead_name":    j(leadName),
             "lead_phone":   j(leadPhone),
             "lead_user_id": leadUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
@@ -539,6 +541,7 @@ final class FestContentService {
                 title: Self.titled(emoji: r.emoji, title: r.title),
                 location: r.location?.nilIfBlank ?? "TBD",
                 description: r.description,
+                bring: r.bring?.nilIfBlank,
                 isPrivate: r.isPrivate,
                 leads: [r.leadName].compactMap { $0?.nilIfBlank },
                 leadUserId: r.leadUserId,
@@ -702,6 +705,7 @@ private struct ScheduleRow: Decodable {
     let anytime: Bool?         // migration 0139 — "Anytime all week", no set time
     let links: [ScheduleLink]? // migration 0142 — ordered link buttons
     let imageUrl: String?      // optional photo on the event/activity
+    let bring: String?         // "what to bring" note
     // Sign-ups (migrations 0135/0136/0143)
     let signupEnabled: Bool?
     let signupMode: String?
@@ -713,7 +717,7 @@ private struct ScheduleRow: Decodable {
     let signupTeamSize: Int?
     let signupFields: [SignupField]?
     enum CodingKeys: String, CodingKey {
-        case id, day, title, emoji, location, description, anytime, links
+        case id, day, title, emoji, location, description, anytime, links, bring
         case imageUrl    = "image_url"
         case startTime   = "start_time"
         case isPrivate   = "is_private"
