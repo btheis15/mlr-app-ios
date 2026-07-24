@@ -464,6 +464,12 @@ struct ExpandableDinnerRow: View {
         return env.isAdmin || env.festContentService.userCanEditFest || dinner.chefUserId == uid
     }
 
+    /// "Head chef — what's on the menu" (menu omitted while still TBD).
+    private var chefMenuLine: String {
+        let menu = dinner.menuLines.joined(separator: ", ")
+        return menu.isEmpty || dinner.menu == "TBD" ? dinner.chef : "\(dinner.chef) — \(menu)"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Button(action: toggle) { header }
@@ -490,9 +496,10 @@ struct ExpandableDinnerRow: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
-            Image(systemName: "fork.knife")
-                .font(.mlrScaled(13, weight: .semibold))
-                .foregroundStyle(Color.mlrFest.opacity(0.7))
+            // Serving time in the left column, exactly like every other event row.
+            Text(MLRFormat.time(dinner.time))
+                .font(.mlrScaled(12, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                 .frame(width: 62, alignment: .leading)
                 .padding(.top, 1)
 
@@ -500,7 +507,8 @@ struct ExpandableDinnerRow: View {
                 Text("Dinner")
                     .font(.festSerif(14, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
-                Text("\(dinner.chef) · \(MLRFormat.time(dinner.time))")
+                // Head chef — what's on the menu.
+                Text(chefMenuLine)
                     .font(.mlrScaled(12))
                     .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                     .lineLimit(1)
