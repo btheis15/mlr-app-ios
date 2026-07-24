@@ -28,6 +28,8 @@ struct PostComposer: View {
     @State private var showMentionSuggestions = false
     @State private var showTagPicker = false
     @State private var allProfiles: [Profile] = []
+    /// Display URLs of existing media marked for removal (edit mode).
+    @State private var removedUrls: Set<String> = []
 
     private let softLimit = 140
     private let maxPhotos = 5
@@ -38,10 +40,8 @@ struct PostComposer: View {
             ZStack(alignment: .top) {
                 VStack(spacing: 0) {
                     composeArea
-                    if !isEditing {
-                        Divider()
-                        toolbar
-                    }
+                    Divider()
+                    toolbar   // photo/video/tag pickers — editing can add media too
                 }
                 if showMentionSuggestions && !mentionQuery.isEmpty {
                     VStack {
@@ -121,6 +121,8 @@ struct PostComposer: View {
                         .onChange(of: text) { _, v in detectMentionTrigger(in: v) }
                 }
 
+                if isEditing && !keptExistingMedia.isEmpty { existingMediaStrip }
+
                 if !images.isEmpty { imageStrip }
 
                 if videoData != nil { videoChip }
@@ -141,6 +143,42 @@ struct PostComposer: View {
                 }
             }
             .padding(16)
+        }
+    }
+
+    /// Existing media on the post being edited, minus anything marked removed.
+    private var keptExistingMedia: [(url: String, isVideo: Bool)] {
+        guard let editing else { return [] }
+        return zip(editing.mediaUrls, editing.mediaIsVideo + Array(repeating: false, count: max(0, editing.mediaUrls.count - editing.mediaIsVideo.count)))
+            .filter { !removedUrls.contains($0.0) }
+            .map { (url: $0.0, isVideo: $0.1) }
+    }
+
+    /// Thumbnails of the post's current media with a remove ✕ (edit mode).
+    private var existingMediaStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(keptExistingMedia, id: \.url) { item in
+                    ZStack(alignment: .topTrailing) {
+                        if item.isVideo {
+                            RoundedRectangle(cornerRadius: 12)
+                                .fill(Color.mlrCard)
+                                .frame(width: 120, height: 120)
+                                .overlay(Image(systemName: "play.circle.fill").font(.mlrScaled(28)).foregroundStyle(Color.mlrTextMuted))
+                        } else {
+                            MediaThumb(url: item.url)
+                                .frame(width: 120, height: 120)
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        Button {
+                            removedUrls.insert(item.url)
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.mlrScaled(20)).foregroundStyle(.white).shadow(radius: 2).padding(4)
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -232,7 +270,9 @@ struct PostComposer: View {
     private var submitDisabled: Bool {
         let emptyText = text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
         // A new post needs text or at least one photo; an edit needs text.
-        let nothingToPost = isEditing ? emptyText : (emptyText && images.isEmpty && videoData == nil)
+        let nothingToPost = isEditing
+            ? (emptyText && keptExistingMedia.isEmpty && images.isEmpty && videoData == nil)
+            : (emptyText && images.isEmpty && videoData == nil)
         return nothingToPost || text.count > softLimit || isPosting || isUploading
     }
 
@@ -261,6 +301,28 @@ struct PostComposer: View {
         do {
             if let editing {
                 try await env.postsService.updatePost(id: editing.id, text: caption, occurredAt: date)
+                // Media changes: drop anything ✕'d, then append new uploads.
+                for url in removedUrls {
+                    try await env.postsService.removePostMedia(postId: editing.id, displayUrl: url)
+                }
+                if !images.isEmpty || videoData != nil {
+                    isUploading = true
+                    var newMedia: [(path: String, type: String)] = []
+                    for image in images {
+                        let url = try await env.mediaService.uploadPostImage(image: image, userId: profile.id)
+                        newMedia.append((path: url, type: "image"))
+                    }
+                    if let videoData {
+                        let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: profile.id)
+                        newMedia.append((path: url, type: "video"))
+                    }
+                    isUploading = false
+                    try await env.postsService.addPostMedia(
+                        postId: editing.id, media: newMedia, startPosition: editing.mediaUrls.count)
+                }
+                if !removedUrls.isEmpty || !images.isEmpty || videoData != nil {
+                    await env.postsService.fetchPosts(userId: nil)
+                }
                 dismiss()
                 return
             }

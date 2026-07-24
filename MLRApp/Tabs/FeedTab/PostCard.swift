@@ -39,6 +39,18 @@ struct PostCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             authorRow
+            // Moderation banners — only the author + admins ever receive
+            // non-visible rows (RLS), so this explains why it's held/hidden.
+            if post.status == .pending {
+                Label("Pending review — only you and admins can see this until it's approved.",
+                      systemImage: "hourglass")
+                    .font(.mlrScaled(12))
+                    .foregroundStyle(Color.mlrWarning)
+            } else if post.status == .hidden {
+                Label("Removed by an admin — hidden from the feed.", systemImage: "nosign")
+                    .font(.mlrScaled(12))
+                    .foregroundStyle(Color.mlrDanger)
+            }
             mediaContent
             if let text = post.text, !text.isEmpty {
                 MentionText(text)
