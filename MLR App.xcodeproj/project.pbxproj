@@ -31,6 +31,7 @@
 		D31B53803012B6C600C8D189 /* TournamentsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B537F3012B6C600C8D189 /* TournamentsService.swift */; };
 		D31B53823012B72000C8D189 /* TournamentContainerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53813012B72000C8D189 /* TournamentContainerView.swift */; };
 		D31B53843012CA5000C8D189 /* TournamentManageViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53833012CA5000C8D189 /* TournamentManageViews.swift */; };
+		D31B53863013928900C8D189 /* TeeTimesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53853013928900C8D189 /* TeeTimesView.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -266,6 +267,7 @@
 		D31B537F3012B6C600C8D189 /* TournamentsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentsService.swift; sourceTree = "<group>"; };
 		D31B53813012B72000C8D189 /* TournamentContainerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentContainerView.swift; sourceTree = "<group>"; };
 		D31B53833012CA5000C8D189 /* TournamentManageViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentManageViews.swift; sourceTree = "<group>"; };
+		D31B53853013928900C8D189 /* TeeTimesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TeeTimesView.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -805,6 +807,7 @@
 				D3F9D8683006C577006874DA /* HomeDelightCards.swift */,
 				D3F9D88430093D9E006874DA /* OnThisDayCard.swift */,
 				D31B5368301169A400C8D189 /* HomeAdminDashboardCard.swift */,
+				D31B53853013928900C8D189 /* TeeTimesView.swift */,
 			);
 			path = HomeTab;
 			sourceTree = "<group>";
@@ -1076,6 +1079,7 @@
 				D36347522FFDD9CE001D52C8 /* MemberQueryIntents.swift in Sources */,
 				D33F9ECC2FEC184500603CE7 /* SharedStore.swift in Sources */,
 				D36347622FFDED75001D52C8 /* PlaceIntents.swift in Sources */,
+				D31B53863013928900C8D189 /* TeeTimesView.swift in Sources */,
 				D3F9D8693006C577006874DA /* HomeDelightCards.swift in Sources */,
 				D33F9ED02FF3170900603CE7 /* WorkItem.swift in Sources */,
 				D33F9E612FEC086700603CE7 /* WelcomeIntroView.swift in Sources */,
@@ -1437,7 +1441,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
@@ -1494,7 +1498,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 1.8;
+				MARKETING_VERSION = 1.9;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";

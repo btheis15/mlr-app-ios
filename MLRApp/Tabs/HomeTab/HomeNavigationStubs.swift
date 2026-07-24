@@ -108,7 +108,13 @@ private struct LocalPlaceCard: View {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     let isGolf = place.category == .golf
-                    if let raw = place.orderUrl, let url = URL(string: raw) {
+                    if place.id == "inshalla" {
+                        // Inshalla gets the in-app Tee Times page (quick-book day
+                        // chips + call + Daily Deals) — web parity.
+                        NavigationLink(destination: TeeTimesView()) {
+                            PlaceChip(label: "Tee Times", icon: "calendar")
+                        }
+                    } else if let raw = place.orderUrl, let url = URL(string: raw) {
                         Link(destination: url) {
                             PlaceChip(label: isGolf ? "Tee Times" : "Order",
                                       icon:  isGolf ? "calendar"  : "cart")
