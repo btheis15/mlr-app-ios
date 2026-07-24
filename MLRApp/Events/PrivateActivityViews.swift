@@ -166,6 +166,76 @@ struct PrivateActivityComposer: View {
     }
 }
 
+// MARK: - Edit sheet
+
+private struct EditPrivateActivitySheet: View {
+    let activity: PrivateActivity
+    let onSaved: () -> Void
+
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var title: String
+    @State private var emoji: String
+    @State private var location: String
+    @State private var description: String
+    @State private var hasDate: Bool
+    @State private var startsAt: Date
+    @State private var saving = false
+
+    init(activity: PrivateActivity, onSaved: @escaping () -> Void) {
+        self.activity = activity
+        self.onSaved = onSaved
+        _title = State(initialValue: activity.title)
+        _emoji = State(initialValue: activity.emoji ?? "")
+        _location = State(initialValue: activity.location ?? "")
+        _description = State(initialValue: activity.description ?? "")
+        _hasDate = State(initialValue: activity.startsAt != nil)
+        _startsAt = State(initialValue: activity.startsAt ?? Date())
+    }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Activity") {
+                    TextField("Title", text: $title)
+                    TextField("Emoji (optional)", text: $emoji)
+                    TextField("Where (optional)", text: $location)
+                    TextField("Details (optional)", text: $description, axis: .vertical).lineLimit(1...4)
+                }
+                Section {
+                    Toggle("Set a date & time", isOn: $hasDate)
+                    if hasDate { DatePicker("Starts", selection: $startsAt) }
+                }
+            }
+            .navigationTitle("Edit activity")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(saving ? "Saving…" : "Save") { Task { await save() } }
+                        .disabled(saving || title.trimmingCharacters(in: .whitespaces).isEmpty)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        saving = true; defer { saving = false }
+        try? await env.privateActivitiesService.update(
+            id: activity.id,
+            title: title.trimmingCharacters(in: .whitespaces),
+            emoji: emoji.nilBlank,
+            description: description.nilBlank,
+            location: location.nilBlank,
+            startsAt: hasDate ? startsAt : nil,
+            clearStart: !hasDate,
+            tournamentEnabled: nil)
+        onSaved()
+        dismiss()
+    }
+}
+
 // MARK: - Detail sheet
 
 struct PrivateActivitySheet: View {
@@ -179,6 +249,7 @@ struct PrivateActivitySheet: View {
     @State private var loading = true
     @State private var busy = false
     @State private var showInvite = false
+    @State private var showEdit = false
 
     private var me: UUID? { env.currentProfile?.id }
     private var canManage: Bool { activity?.canManage(viewerId: me, isAdmin: env.isAdmin) ?? false }
@@ -201,6 +272,7 @@ struct PrivateActivitySheet: View {
                 if canManage, let activity {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
+                            Button { showEdit = true } label: { Label("Edit details", systemImage: "pencil") }
                             Button { showInvite = true } label: { Label("Invite people", systemImage: "person.badge.plus") }
                             Button(role: .destructive) { Task { await archiveOrDelete(activity) } } label: {
                                 Label(activity.isArchived ? "Delete" : "Archive", systemImage: "archivebox")
@@ -210,6 +282,9 @@ struct PrivateActivitySheet: View {
                 }
             }
             .sheet(isPresented: $showInvite) { InviteToActivitySheet(activityId: activityId) { Task { await reload() } } }
+            .sheet(isPresented: $showEdit) {
+                if let activity { EditPrivateActivitySheet(activity: activity) { Task { await reload(); onChanged() } } }
+            }
             .task { await reload() }
         }
     }
