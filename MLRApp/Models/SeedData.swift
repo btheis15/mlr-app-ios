@@ -18,6 +18,7 @@ struct ScheduleItem: Identifiable {
     var leadUserId: UUID? = nil
     var crewUserIds: [UUID] = []   // migration 0110 — event/activity crew self-edit
     var links: [ScheduleLink] = [] // migration 0142 — ordered link buttons (e.g. sign-up + info)
+    var imageUrl: String? = nil    // optional photo shown on the event/activity card
 
     // Sign-ups (migrations 0135/0136/0143). When enabled, members can sign up —
     // by time slot ("interval"/"slots") or a plain running count ("headcount").

@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 // MARK: - FestScheduleDetailView
 
@@ -9,6 +10,16 @@ struct FestScheduleDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
+
+                // Photo banner
+                if let url = item.imageUrl.flatMap(URL.init(string:)) {
+                    KFImage(url)
+                        .resizable()
+                        .scaledToFill()
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 200)
+                        .clipped()
+                }
 
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
@@ -331,6 +342,11 @@ struct ExpandableScheduleRow: View {
     @ViewBuilder
     private var expanded: some View {
         VStack(alignment: .leading, spacing: 0) {
+            if let url = item.imageUrl.flatMap(URL.init(string:)) {
+                KFImage(url)
+                    .resizable().scaledToFill()
+                    .frame(maxWidth: .infinity).frame(height: 150).clipped()
+            }
             if let location = item.location {
                 Divider().background(Color.mlrFest.opacity(0.12))
                 DetailSection(icon: "mappin.and.ellipse", title: "Location") {

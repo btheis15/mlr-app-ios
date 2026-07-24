@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 // MARK: - FestOverviewView
 //
@@ -397,27 +398,36 @@ private struct FestAnytimeCard: View {
             FestInfoCard(title: "All week — anytime") {
                 VStack(alignment: .leading, spacing: 8) {
                     ForEach(items) { item in
-                        HStack(alignment: .top, spacing: 8) {
-                            VStack(alignment: .leading, spacing: 3) {
-                                Text(item.title)
-                                    .font(.festSerif(14, weight: .bold))
-                                    .foregroundStyle(Color.mlrFest)
-                                if let desc = item.description {
-                                    Text(desc)
-                                        .font(.mlrScaled(12))
-                                        .foregroundStyle(Color.mlrFestInk.opacity(0.75))
-                                        .fixedSize(horizontal: false, vertical: true)
-                                }
+                        VStack(alignment: .leading, spacing: 6) {
+                            if let url = item.imageUrl.flatMap(URL.init(string:)) {
+                                KFImage(url)
+                                    .resizable().scaledToFill()
+                                    .frame(maxWidth: .infinity).frame(height: 130)
+                                    .clipped()
+                                    .clipShape(RoundedRectangle(cornerRadius: 10))
                             }
-                            Spacer(minLength: 0)
-                            if canEdit(item) {
-                                Button { editing = item } label: {
-                                    Image(systemName: "pencil")
-                                        .font(.mlrScaled(13, weight: .semibold))
+                            HStack(alignment: .top, spacing: 8) {
+                                VStack(alignment: .leading, spacing: 3) {
+                                    Text(item.title)
+                                        .font(.festSerif(14, weight: .bold))
                                         .foregroundStyle(Color.mlrFest)
-                                        .padding(4)
+                                    if let desc = item.description {
+                                        Text(desc)
+                                            .font(.mlrScaled(12))
+                                            .foregroundStyle(Color.mlrFestInk.opacity(0.75))
+                                            .fixedSize(horizontal: false, vertical: true)
+                                    }
                                 }
-                                .buttonStyle(.plain)
+                                Spacer(minLength: 0)
+                                if canEdit(item) {
+                                    Button { editing = item } label: {
+                                        Image(systemName: "pencil")
+                                            .font(.mlrScaled(13, weight: .semibold))
+                                            .foregroundStyle(Color.mlrFest)
+                                            .padding(4)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
                             }
                         }
                     }

@@ -544,6 +544,7 @@ final class FestContentService {
                 leadUserId: r.leadUserId,
                 crewUserIds: r.crewUserIds ?? [],
                 links: r.links ?? [],
+                imageUrl: r.imageUrl?.nilIfBlank,
                 signupEnabled: r.signupEnabled ?? false,
                 signupMode: r.signupMode,
                 signupCapacity: r.signupCapacity,
@@ -700,6 +701,7 @@ private struct ScheduleRow: Decodable {
     let crewUserIds: [UUID]?   // migration 0110 — crew can self-edit the event
     let anytime: Bool?         // migration 0139 — "Anytime all week", no set time
     let links: [ScheduleLink]? // migration 0142 — ordered link buttons
+    let imageUrl: String?      // optional photo on the event/activity
     // Sign-ups (migrations 0135/0136/0143)
     let signupEnabled: Bool?
     let signupMode: String?
@@ -712,6 +714,7 @@ private struct ScheduleRow: Decodable {
     let signupFields: [SignupField]?
     enum CodingKeys: String, CodingKey {
         case id, day, title, emoji, location, description, anytime, links
+        case imageUrl    = "image_url"
         case startTime   = "start_time"
         case isPrivate   = "is_private"
         case leadName    = "lead_name"
