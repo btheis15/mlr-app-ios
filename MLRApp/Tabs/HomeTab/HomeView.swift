@@ -47,14 +47,8 @@ struct HomeView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
 
-                        // ── 1. Northwoods mesh hero (Phase 4) ─────────────
-                        HomeHero(
-                            isAdmin: env.isAdmin,
-                            previewingDate: previewDate != nil,
-                            onSearch: { showSearch = true },
-                            onDatePreview: { showDatePicker = true }
-                        )
-                        .padding(.bottom, 6)
+                        // ── 1. MLR logo hero ──────────────────────────────
+                        logoHero(geometry: geometry)
 
                         // Admin preview banner — shown when viewing Home as a future date.
                         if let pd = previewDate {
@@ -266,6 +260,48 @@ struct HomeView: View {
         }
         }
         .buttonStyle(.pressable)
+    }
+
+    @ViewBuilder
+    private func logoHero(geometry: GeometryProxy) -> some View {
+        let logoWidth = min(geometry.size.width * 0.46, 180.0)
+        HStack {
+            Spacer()
+            SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
+                .scaledToFit()
+                .frame(maxWidth: logoWidth)
+                .padding(.top, 10)
+                .padding(.bottom, 4)
+            Spacer()
+        }
+        // Search everything up north — people, events, committees, work, chats.
+        .overlay(alignment: .trailing) {
+            Button { showSearch = true } label: {
+                Image(systemName: "magnifyingglass")
+                    .font(.mlrScaled(18, weight: .semibold))
+                    .foregroundStyle(Color.mlrPrimary)
+                    .padding(10)
+                    .contentShape(Rectangle())
+            }
+            .accessibilityLabel("Search Up North")
+            .padding(.trailing, 4)
+        }
+        // Admin-only: date preview button (leading).
+        .overlay(alignment: .leading) {
+            if env.isAdmin {
+                Button { showDatePicker = true } label: {
+                    Image(systemName: previewDate == nil
+                          ? "calendar.badge.clock"
+                          : "calendar.badge.exclamationmark")
+                        .font(.mlrScaled(18, weight: .semibold))
+                        .foregroundStyle(previewDate == nil ? Color.mlrPrimary : .orange)
+                        .padding(10)
+                        .contentShape(Rectangle())
+                }
+                .accessibilityLabel("View Home as a date")
+                .padding(.leading, 4)
+            }
+        }
     }
 
     @ViewBuilder
