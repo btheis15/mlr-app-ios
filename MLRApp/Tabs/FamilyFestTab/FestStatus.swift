@@ -93,7 +93,7 @@ private struct PlanningCard: View {
                     .font(.mlrScaled(18, weight: .semibold))
                     .foregroundStyle(Color.mlrFest)
                 Text("\(season.daysUntilStart) days until the Fest")
-                    .font(.festSerif(16, weight: .bold))
+                    .font(.festSerif(19, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                     .contentTransition(.numericText())
                 Spacer()
@@ -189,7 +189,7 @@ private struct WrapCard: View {
                 Text("📸")
                     .font(.mlrScaled(22))
                 Text("Thanks for a great Fest!")
-                    .font(.festSerif(16, weight: .bold))
+                    .font(.festSerif(19, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                 Spacer()
             }

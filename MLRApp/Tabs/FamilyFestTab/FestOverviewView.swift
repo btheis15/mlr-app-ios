@@ -249,8 +249,8 @@ private struct FestDaySection: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(day.uppercased())
-                    .font(.mlrScaled(11, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.65))
+                    .font(.mlrScaled(14, weight: .semibold))
+                    .foregroundStyle(Color.mlrFest.opacity(0.75))
                     .tracking(1.2)
                 Spacer()
                 // Self-hides when WeatherKit has no forecast for the date.
@@ -340,13 +340,13 @@ private struct FestCoverCaption: View {
     var body: some View {
         VStack(spacing: 6) {
             Text("⚜ Ye Olde Family Feste ⚜")
-                .font(.festSerif(14, weight: .bold))
+                .font(.festSerif(17, weight: .bold))
                 .tracking(2)
                 .textCase(.uppercase)
                 .foregroundStyle(Color.mlrFest)
 
             Text("\(FamilyFestConfig.dateRangeLabel), \(String(FamilyFestConfig.year))")
-                .font(.festSerif(15, weight: .bold))
+                .font(.festSerif(19, weight: .bold))
                 .foregroundStyle(Color.mlrFest)
 
             Text("Muskellunge Lake Resort · Tomahawk, WI")
@@ -368,7 +368,7 @@ private struct FestInfoCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.festSerif(15, weight: .bold))
+                .font(.festSerif(19, weight: .bold))
                 .foregroundStyle(Color.mlrFest)
             content
         }
@@ -381,66 +381,32 @@ private struct FestInfoCard<Content: View>: View {
 /// All-week, no-set-time activities (the scavenger hunt).
 private struct FestAnytimeCard: View {
     @Environment(AppEnvironment.self) private var env
-    @State private var editing: ScheduleItem?
     private var items: [ScheduleItem] { env.festContentService.schedule.filter { $0.day == "Anytime" } }
-
-    /// Admin / committee runner, or this activity's own lead or crew (migration 0110).
-    private func canEdit(_ item: ScheduleItem) -> Bool {
-        guard env.isSignedIn, let me = env.currentProfile?.id else { return false }
-        return env.isAdmin
-            || env.festContentService.userCanEditFest
-            || item.leadUserId == me
-            || item.crewUserIds.contains(me)
-    }
 
     var body: some View {
         if !items.isEmpty {
-            FestInfoCard(title: "All week — anytime") {
-                VStack(alignment: .leading, spacing: 8) {
-                    ForEach(items) { item in
-                        VStack(alignment: .leading, spacing: 6) {
-                            if let url = item.imageUrl.flatMap(URL.init(string:)) {
-                                KFImage(url)
-                                    .resizable().scaledToFill()
-                                    .frame(maxWidth: .infinity).frame(height: 130)
-                                    .clipped()
-                                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                            }
-                            HStack(alignment: .top, spacing: 8) {
-                                VStack(alignment: .leading, spacing: 3) {
-                                    Text(item.title)
-                                        .font(.festSerif(14, weight: .bold))
-                                        .foregroundStyle(Color.mlrFest)
-                                    if let desc = item.description {
-                                        Text(desc)
-                                            .font(.mlrScaled(12))
-                                            .foregroundStyle(Color.mlrFestInk.opacity(0.75))
-                                            .fixedSize(horizontal: false, vertical: true)
-                                    }
-                                }
-                                Spacer(minLength: 0)
-                                if canEdit(item) {
-                                    Button { editing = item } label: {
-                                        Image(systemName: "pencil")
-                                            .font(.mlrScaled(13, weight: .semibold))
-                                            .foregroundStyle(Color.mlrFest)
-                                            .padding(4)
-                                    }
-                                    .buttonStyle(.plain)
-                                }
-                            }
+            // Phase 3.3: anytime items expand/collapse EXACTLY like the weekday
+            // cards — same ExpandableScheduleRow + festCardStyle structure as
+            // FestDaySection. (Anytime items are regular anytime schedule events
+            // since migration 0141, so ExpandableScheduleRow's edit routing —
+            // FestScheduleEditSheet — is already correct for them.)
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("ALL WEEK — ANYTIME")
+                        .font(.mlrScaled(14, weight: .semibold))
+                        .foregroundStyle(Color.mlrFest.opacity(0.75))
+                        .tracking(1.2)
+                    Spacer()
+                }
+                VStack(spacing: 0) {
+                    ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
+                        ExpandableScheduleRow(item: item)
+                        if idx < items.count - 1 {
+                            Divider().background(Color.mlrFest.opacity(0.15))
                         }
                     }
                 }
-            }
-            .sheet(item: $editing) { item in
-                // Anytime items are now regular (anytime) schedule events after the
-                // 0141 merge, so they edit through the shared schedule editor.
-                NavigationStack {
-                    FestScheduleEditSheet(item: item) {
-                        await env.festContentService.reload()
-                    }
-                }
+                .festCardStyle(cornerRadius: 12)
             }
         }
     }

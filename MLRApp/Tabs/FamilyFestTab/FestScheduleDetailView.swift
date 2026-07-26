@@ -310,21 +310,21 @@ struct ExpandableScheduleRow: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
             Text(MLRFormat.time(item.time))
-                .font(.mlrScaled(12, weight: .medium, design: .monospaced))
+                .font(.mlrScaled(14, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                 .frame(width: 62, alignment: .leading)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title)
-                    .font(.festSerif(14, weight: .bold))
+                    .font(.festSerif(18, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                     .multilineTextAlignment(.leading)
 
                 if let location = item.location, !isExpanded {
                     if env.isSignedIn {
                         Label(location, systemImage: "mappin.and.ellipse")
-                            .font(.mlrScaled(12))
+                            .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFest.opacity(0.6))
                             .lineLimit(1)
                     } else {
@@ -498,18 +498,18 @@ struct ExpandableDinnerRow: View {
         HStack(alignment: .top, spacing: 14) {
             // Serving time in the left column, exactly like every other event row.
             Text(MLRFormat.time(dinner.time))
-                .font(.mlrScaled(12, weight: .medium, design: .monospaced))
+                .font(.mlrScaled(14, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.mlrFestInk.opacity(0.6))
                 .frame(width: 62, alignment: .leading)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("Dinner")
-                    .font(.festSerif(14, weight: .bold))
+                    .font(.festSerif(18, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                 // Head chef — what's on the menu.
                 Text(chefMenuLine)
-                    .font(.mlrScaled(12))
+                    .font(.mlrScaled(14))
                     .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                     .lineLimit(1)
             }

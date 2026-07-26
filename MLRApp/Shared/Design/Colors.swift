@@ -43,19 +43,19 @@ extension Color {
     // Family Fest heraldic wine + parchment (the FF section's identity).
     // Parchment becomes a dark warm brown in dark mode so the section still reads
     // as a distinct "Renaissance" world rather than the resort's pure-black canvas.
-    static let mlrFest          = Color(light: "#801c32", dark: "#D85A77")
-    static let mlrFestLight     = Color(light: "#fdf6f0", dark: "#302820")
-    static let mlrFestParchment = Color(light: "#f5ede0", dark: "#221B15")
+    static let mlrFest          = Color(light: "#6B0F24", dark: "#E0708A")
+    static let mlrFestLight     = Color(light: "#F6E4CF", dark: "#3A2A22")
+    static let mlrFestParchment = Color(light: "#ECDCBE", dark: "#1E1712")
     /// Raised card surface inside the Fest section — white on parchment (light),
     /// clearly elevated warm brown in dark mode. Use for day-section cards, info
     /// cards, and utility links so they stand out against the parchment page bg.
-    static let mlrFestCard      = Color(light: "#ffffff", dark: "#3A2E22")
+    static let mlrFestCard      = Color(light: "#FBF3E1", dark: "#40332A")
     /// Fest BODY text — warm sepia ink on light parchment, warm cream on dark.
     /// Reserve `mlrFest` (wine) for headings/accents; body should use this so it
     /// stops reading as low-contrast tinted grey. (Renaissance manuscript ink.)
-    static let mlrFestInk       = Color(light: "#3a2a18", dark: "#EDE3D3")
+    static let mlrFestInk       = Color(light: "#33240F", dark: "#F1E7D6")
     /// Aged-gold heraldic accent — ornamental dividers, crest motifs, gilt rules.
-    static let mlrFestGold      = Color(light: "#a67c1a", dark: "#D9B24C")
+    static let mlrFestGold      = Color(light: "#C29A2E", dark: "#E7C05A")
 
     // Payment brand colors (Fest pay rows, member pay links). Brand-fixed hues,
     // nudged lighter on dark so the pills stay legible on OLED.

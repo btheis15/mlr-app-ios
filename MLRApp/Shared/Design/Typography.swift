@@ -164,13 +164,20 @@ extension View {
     /// rather than flat tiles.
     func festCardStyle(cornerRadius: CGFloat = 16) -> some View {
         self
-            .background(Color.mlrFestCard)
+            .background(
+                ZStack {
+                    Color.mlrFestCard
+                    // Low-opacity heraldic wash along the top edge — gilded panel.
+                    LinearGradient(colors: [Color.mlrFestGold.opacity(0.12), .clear],
+                                   startPoint: .top, endPoint: .center)
+                }
+            )
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.mlrFestGold.opacity(0.35), lineWidth: 1)
+                    .stroke(Color.mlrFestGold.opacity(0.6), lineWidth: 1)
             )
-            .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
+            .shadow(.medium)
     }
 }
 
