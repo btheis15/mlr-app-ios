@@ -63,11 +63,7 @@ struct TournamentSetupSheet: View {
         Form {
             Section("Name") { TextField("e.g. Cornhole tournament", text: $newTitle) }
             Section("Format") {
-                Picker("Format", selection: $newFormat) {
-                    Text("Bracket").tag(TournamentFormat.single_elim)
-                    Text("Round-robin").tag(TournamentFormat.round_robin)
-                    Text("Pools").tag(TournamentFormat.pools_bracket)
-                }.pickerStyle(.segmented)
+                FormatCards(selection: $newFormat)
                 Text(formatBlurb(newFormat)).font(.mlrScaled(12)).foregroundStyle(.secondary)
             }
             Section("Who competes") {
@@ -93,11 +89,7 @@ struct TournamentSetupSheet: View {
     private func manage(_ t: Tournament) -> some View {
         List {
             Section("Format") {
-                Picker("Format", selection: Binding(get: { t.format }, set: { f in if f != t.format { run { try await env.tournamentsService.setFormat(id: t.id, format: f) } } })) {
-                    Text("Bracket").tag(TournamentFormat.single_elim)
-                    Text("Round-robin").tag(TournamentFormat.round_robin)
-                    Text("Pools").tag(TournamentFormat.pools_bracket)
-                }.pickerStyle(.segmented)
+                FormatCards(selection: Binding(get: { t.format }, set: { f in if f != t.format { run { try await env.tournamentsService.setFormat(id: t.id, format: f) } } }))
                 Text(formatBlurb(t.format)).font(.mlrScaled(12)).foregroundStyle(.secondary)
             }
 
@@ -124,7 +116,7 @@ struct TournamentSetupSheet: View {
                             Text(t.entrants.first { $0.id == id }?.displayName ?? "—").font(.mlrScaled(15))
                         }
                     }
-                    .onMove { from, to in order.move(fromOffsets: from, toOffset: to) }
+                    .onMove { from, to in Haptics.select(); order.move(fromOffsets: from, toOffset: to) }
                     .onDelete { offsets in
                         let ids = offsets.map { order[$0] }
                         order.remove(atOffsets: offsets)
@@ -310,6 +302,7 @@ struct MatchResultSheet: View {
     @State private var busy = false
     @State private var notice: String?
     @State private var errorText: String?
+    @State private var confettiTrigger = 0
 
     private var e1: UUID? { match.slot1EntrantId }
     private var e2: UUID? { match.slot2EntrantId }
@@ -334,6 +327,11 @@ struct MatchResultSheet: View {
             Form {
                 Section("Tap the winner") {
                     winnerButton(e1, score: $s1)
+                    Text("VS")
+                        .font(.mlrScaled(13, weight: .black, design: .rounded))
+                        .foregroundStyle(Color.mlrTextSubtle)
+                        .frame(maxWidth: .infinity)
+                        .listRowSeparator(.hidden)
                     winnerButton(e2, score: $s2)
                     Button(showScores ? "Hide scores" : "Add scores (optional)") { showScores.toggle() }
                         .font(.mlrScaled(14, weight: .medium)).foregroundStyle(Color.mlrPrimary)
@@ -369,6 +367,7 @@ struct MatchResultSheet: View {
                     }
                 }
             }
+            .overlay(ConfettiView(trigger: confettiTrigger).allowsHitTesting(false))
             .navigationTitle(decided ? "Change the result" : "Who won?")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
@@ -391,15 +390,29 @@ struct MatchResultSheet: View {
     @ViewBuilder
     private func winnerButton(_ id: UUID?, score: Binding<Int>) -> some View {
         let picked = winner != nil && winner == id
-        VStack(spacing: 8) {
-            Button { if let id { winner = id } } label: {
-                HStack {
-                    Text(name(id)).font(.mlrScaled(16, weight: .semibold)).foregroundStyle(Color.mlrText)
+        return VStack(spacing: 8) {
+            Button {
+                if let id { winner = id; Haptics.select() }
+            } label: {
+                HStack(spacing: 12) {
+                    // Entrant medallion (initial — entrants carry no avatar URLs).
+                    Text(String(name(id).prefix(1)).uppercased())
+                        .font(.mlrScaled(17, weight: .bold))
+                        .foregroundStyle(picked ? .white : Color.mlrPrimary)
+                        .frame(width: 40, height: 40)
+                        .background(picked ? Color.mlrPrimary : Color.mlrPrimaryLight)
+                        .clipShape(Circle())
+                    Text(name(id)).font(.mlrScaled(17, weight: .semibold)).foregroundStyle(Color.mlrText)
                     Spacer()
                     Image(systemName: picked ? "checkmark.circle.fill" : "circle")
+                        .font(.mlrScaled(22))
                         .foregroundStyle(picked ? Color.mlrPrimary : Color.mlrTextSubtle)
+                        .symbolEffect(.bounce, value: picked)
                 }
+                .padding(.vertical, 6)
+                .contentShape(Rectangle())
             }
+            .buttonStyle(.pressable)
             .disabled(id == nil)
             if showScores {
                 Stepper("Score: \(score.wrappedValue)", value: score, in: 0...199)
@@ -415,7 +428,11 @@ struct MatchResultSheet: View {
         busy = true; errorText = nil; defer { busy = false }
         do {
             try await env.tournamentsService.recordResult(matchId: match.id, winnerId: w, score1: showScores ? s1 : nil, score2: showScores ? s2 : nil)
-            onChanged(); dismiss()
+            confettiTrigger += 1
+            Haptics.success()
+            onChanged()
+            try? await Task.sleep(nanoseconds: 600_000_000)   // let the burst read
+            dismiss()
         } catch { errorText = "Couldn't save — try again." }
     }
     private func clear() async {
@@ -434,5 +451,46 @@ struct MatchResultSheet: View {
             try await env.tournamentsService.scheduleMatch(matchId: match.id, at: hasTime ? matchTime : nil, reminderMinutes: (hasTime && remind) ? [15] : [])
             notice = hasTime ? "Scheduled ✓" : "Cleared ✓"; onChanged()
         } catch { notice = "Couldn't save the time." }
+    }
+}
+
+
+// MARK: - Format selection cards (Phase 2.7)
+
+/// Tappable format cards with icons — replaces the bare segmented picker.
+private struct FormatCards: View {
+    @Binding var selection: TournamentFormat
+
+    private static let items: [(TournamentFormat, String, String)] = [
+        (.single_elim,   "Bracket",     "trophy"),
+        (.round_robin,   "Round-robin", "arrow.triangle.2.circlepath"),
+        (.pools_bracket, "Pools",       "square.grid.2x2"),
+    ]
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(Self.items, id: \.0) { format, label, icon in
+                let picked = selection == format
+                Button {
+                    selection = format
+                } label: {
+                    VStack(spacing: 6) {
+                        Image(systemName: icon)
+                            .font(.mlrScaled(20, weight: .semibold))
+                        Text(label)
+                            .font(.mlrScaled(11, weight: .semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                    }
+                    .foregroundStyle(picked ? .white : Color.mlrPrimary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 12)
+                    .background(picked ? Color.mlrPrimary : Color.mlrPrimaryLight)
+                    .clipShape(RoundedRectangle(cornerRadius: MLRRadius.button))
+                }
+                .buttonStyle(.pressable)
+            }
+        }
+        .mlrFeedback(.selection, trigger: selection)
     }
 }

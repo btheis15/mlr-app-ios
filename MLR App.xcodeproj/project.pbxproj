@@ -37,6 +37,7 @@
 		D31B538C3013A0E800C8D189 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538B3013A0E800C8D189 /* Motion.swift */; };
 		D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538D3013A0F900C8D189 /* Feedback.swift */; };
 		D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */; };
+		D31B53923013A61A00C8D189 /* BracketDiagram.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53913013A61A00C8D189 /* BracketDiagram.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -278,6 +279,7 @@
 		D31B538B3013A0E800C8D189 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
 		D31B538D3013A0F900C8D189 /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
 		D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshHeroBackground.swift; sourceTree = "<group>"; };
+		D31B53913013A61A00C8D189 /* BracketDiagram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BracketDiagram.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -578,6 +580,7 @@
 				D31B537B3012B5E600C8D189 /* PrivateActivityViews.swift */,
 				D31B53813012B72000C8D189 /* TournamentContainerView.swift */,
 				D31B53833012CA5000C8D189 /* TournamentManageViews.swift */,
+				D31B53913013A61A00C8D189 /* BracketDiagram.swift */,
 			);
 			path = Events;
 			sourceTree = "<group>";
@@ -1196,6 +1199,7 @@
 				D3EA3D96301145120092AE8E /* MeetingsService.swift in Sources */,
 				D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */,
 				D31B538A3013A0CC00C8D189 /* Metrics.swift in Sources */,
+				D31B53923013A61A00C8D189 /* BracketDiagram.swift in Sources */,
 				D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */,
 				D33F9E952FEC086700603CE7 /* FestScheduleView.swift in Sources */,
 				D33F9E962FEC086700603CE7 /* SignInView.swift in Sources */,
