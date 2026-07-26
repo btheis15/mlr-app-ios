@@ -22,6 +22,8 @@ struct NotificationRow: View {
             return Color.mlrInfo
         case .committeeJoin, .committeeJoinRequest:
             return Color.mlrAccent
+        case .adminTest:
+            return Color.mlrAccent
         default:
             return Color.mlrPrimary
         }
@@ -172,6 +174,7 @@ struct NotificationRow: View {
         case .tournamentPublished:  return "trophy.fill"
         case .tournamentMatchReady: return "target"
         case .tournamentChampion:   return "medal.fill"
+        case .adminTest:            return "testtube.2"
         }
     }
 
@@ -222,6 +225,7 @@ struct NotificationRow: View {
         case .tournamentPublished:  return "Tournament"
         case .tournamentMatchReady: return "Match"
         case .tournamentChampion:   return "Champion"
+        case .adminTest:            return "Test"
         }
     }
 }
