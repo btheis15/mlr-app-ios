@@ -18,7 +18,9 @@ struct EventCard: View {
     var body: some View {
         Button(action: onTap) {
             VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top) {
+                HStack(alignment: .top, spacing: 12) {
+                    // Bold date block anchors the card (Phase 5).
+                    DateMedallion(isoDate: event.startDate, tint: accent)
                     VStack(alignment: .leading, spacing: 6) {
                         KindBadge(kind: event.kind)
                         Text(event.title)
@@ -57,6 +59,7 @@ struct EventCard: View {
                                 .font(.mlrScaled(11))
                             Text("\(summary.going) going")
                                 .font(.mlrScaled(13, weight: .medium))
+                                .numericTransition()
                         }
                         .foregroundStyle(accent)
                     }
@@ -77,12 +80,19 @@ struct EventCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .overlay(
                 RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(event.isFamilyFest ? Color.mlrFest.opacity(0.25) : .clear,
+                    .strokeBorder(event.isFamilyFest ? Color.mlrFest.opacity(0.25) : Color.mlrBorder,
                                   lineWidth: 1)
             )
+            // Kind color band along the leading edge.
+            .overlay(alignment: .leading) {
+                UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 16)
+                    .fill(accent)
+                    .frame(width: 4)
+            }
+            .shadow(.medium)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 

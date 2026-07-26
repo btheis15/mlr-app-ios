@@ -76,7 +76,7 @@ struct EventsView: View {
                     }
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .background(Color.mlrSurface)
             .navigationTitle("Events")
             .toolbar {
                 ToolbarItem(placement: .principal) {
@@ -173,17 +173,28 @@ struct EventsView: View {
                                 ) {
                                     selectedEvent = event
                                 }
+                                .scrollEntrance()
                             }
                         }
                         .padding(.horizontal, 16)
                     } header: {
-                        Text(group.month)
-                            .font(.mlrScaled(13, weight: .bold))
-                            .foregroundStyle(Color.mlrTextMuted)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 16)
-                            .padding(.vertical, 8)
-                            .background(Color(.systemGroupedBackground))
+                        HStack(spacing: 10) {
+                            Text(group.month)
+                                .font(.mlrScaled(20, weight: .bold, design: .rounded))
+                                .foregroundStyle(Color.mlrText)
+                            Rectangle()
+                                .fill(Color.mlrCampfire.opacity(0.5))
+                                .frame(height: 2)
+                                .clipShape(Capsule())
+                            Text("\(group.events.count)")
+                                .font(.mlrScaled(13, weight: .bold))
+                                .foregroundStyle(Color.mlrCampfire)
+                                .numericTransition()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(Color.mlrSurface)
                     }
                 }
             }
@@ -209,7 +220,8 @@ struct EventsView: View {
                     .foregroundStyle(Color.mlrTextMuted)
                 ForEach(activities) { activity in
                     Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
+                        .scrollEntrance()
                 }
             }
             .padding(.horizontal, 16)
