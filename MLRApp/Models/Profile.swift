@@ -52,6 +52,10 @@ enum NotifType: String, Codable, CaseIterable {
     case tournamentMatchReady = "tournament_match_ready"
     case tournamentChampion = "tournament_champion"
     case broadcast
+    // An admin deliberately pinging ONE specific member to check their
+    // notification settings (mlr-app migration 0156) — bypasses notif_types
+    // like broadcast, so it's not offered as a toggle in Notification prefs.
+    case adminTest = "admin_test"
 }
 
 // MARK: - Profile
