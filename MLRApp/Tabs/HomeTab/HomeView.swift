@@ -47,8 +47,14 @@ struct HomeView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
 
-                        // ── 1. MLR logo hero ──────────────────────────────
-                        logoHero(geometry: geometry)
+                        // ── 1. Northwoods mesh hero (Phase 4) ─────────────
+                        HomeHero(
+                            isAdmin: env.isAdmin,
+                            previewingDate: previewDate != nil,
+                            onSearch: { showSearch = true },
+                            onDatePreview: { showDatePicker = true }
+                        )
+                        .padding(.bottom, 6)
 
                         // Admin preview banner — shown when viewing Home as a future date.
                         if let pd = previewDate {
@@ -204,11 +210,39 @@ struct HomeView: View {
     // Events · Committees / People · Ask for Help / Local Places · Cabin Stay.
     private var quickActionsGrid: some View {
         let cols = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-        return LazyVGrid(columns: cols, spacing: 12) {
-            NavigationLink(destination: EventsView()) {
-                HomeTile(icon: "calendar", title: "Events",
-                         subtitle: "RSVP — gatherings & work weekends.", tint: Color.mlrPrimary)
+        return VStack(spacing: 12) {
+        // Events promoted to a full-width hero tile with a mini mesh wash.
+        NavigationLink(destination: EventsView()) {
+            HStack(spacing: 14) {
+                Image(systemName: "calendar")
+                    .font(.mlrScaled(24, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 48, height: 48)
+                    .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 12))
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Events")
+                        .font(.mlrScaled(18, weight: .bold, design: .rounded))
+                    Text("RSVP — gatherings & work weekends.")
+                        .font(.mlrScaled(12))
+                        .opacity(0.9)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.mlrScaled(13, weight: .bold))
             }
+            .foregroundStyle(.white)
+            .padding(16)
+            .background(
+                ZStack {
+                    LinearGradient(colors: [.mlrPrimary, .mlrPrimaryDark],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                    LinearGradient(colors: [Color.mlrSun.opacity(0.25), .clear],
+                                   startPoint: .topTrailing, endPoint: .center)
+                }
+            )
+            .clipShape(RoundedRectangle(cornerRadius: MLRRadius.card))
+            .shadow(.medium)
+        }
+        LazyVGrid(columns: cols, spacing: 12) {
             NavigationLink(destination: CommitteesView()) {
                 HomeTile(icon: "person.3.fill", title: "Committees",
                          subtitle: "Join a crew — there's a spot for you.", tint: Color.mlrAccent)
@@ -230,51 +264,11 @@ struct HomeView: View {
                          subtitle: "Reserve a room for any week.", tint: Color.mlrPrimary)
             }
         }
-        .buttonStyle(.plain)
+        }
+        .buttonStyle(.pressable)
     }
 
     @ViewBuilder
-    private func logoHero(geometry: GeometryProxy) -> some View {
-        let logoWidth = min(geometry.size.width * 0.46, 180.0)
-        HStack {
-            Spacer()
-            SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
-                .scaledToFit()
-                .frame(maxWidth: logoWidth)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
-            Spacer()
-        }
-        // Search everything up north — people, events, committees, work, chats.
-        .overlay(alignment: .trailing) {
-            Button { showSearch = true } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.mlrScaled(18, weight: .semibold))
-                    .foregroundStyle(Color.mlrPrimary)
-                    .padding(10)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Search Up North")
-            .padding(.trailing, 4)
-        }
-        // Admin-only: date preview button (leading).
-        .overlay(alignment: .leading) {
-            if env.isAdmin {
-                Button { showDatePicker = true } label: {
-                    Image(systemName: previewDate == nil
-                          ? "calendar.badge.clock"
-                          : "calendar.badge.exclamationmark")
-                        .font(.mlrScaled(18, weight: .semibold))
-                        .foregroundStyle(previewDate == nil ? Color.mlrPrimary : .orange)
-                        .padding(10)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityLabel("View Home as a date")
-                .padding(.leading, 4)
-            }
-        }
-    }
-
     private func previewBanner(date: Date) -> some View {
         let f = DateFormatter()
         f.dateStyle = .medium
@@ -413,7 +407,10 @@ struct HomeTile: View {
                 .font(.mlrScaled(22, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 44, height: 44)
-                .background(tint.opacity(0.12))
+                .background(
+                    LinearGradient(colors: [tint.opacity(0.18), tint.opacity(0.07)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 12))
 
             Text(title)

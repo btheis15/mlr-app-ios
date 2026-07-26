@@ -10,7 +10,7 @@ import SwiftUI
 
 /// Which brand world the hero paints.
 enum HeroTheme {
-    case northwoods            // campfire → sun → dusk (Home / resort surfaces)
+    case northwoods            // forest pines → lake glow (Home / resort surfaces)
     case fest                  // heraldic wine → gold (Family Fest)
     case accent(Color)         // single-accent wash (feature areas)
 
@@ -18,10 +18,13 @@ enum HeroTheme {
     var colors: [Color] {
         switch self {
         case .northwoods:
+            // Deep forest greens with a soft lake-blue glow at the heart —
+            // deliberately NO warm campfire/sun/dusk hues here: mixing the full
+            // accent set read as a rainbow/tie-dye wash instead of "north woods".
             return [
-                .mlrDusk,     .mlrPrimary,  .mlrLake,
-                .mlrCampfire, .mlrSun,      .mlrPrimary,
-                .mlrSun,      .mlrCampfire, .mlrDusk,
+                .mlrPrimaryDark, .mlrPrimary,     .mlrPrimaryDark,
+                .mlrPrimary,     .mlrLake,        .mlrPrimary,
+                .mlrPrimaryDark, .mlrPrimaryDark, .mlrPrimary,
             ]
         case .fest:
             return [
@@ -42,7 +45,7 @@ enum HeroTheme {
     /// brand gradients).
     @MainActor var fallback: LinearGradient {
         switch self {
-        case .northwoods: return .northwoodsSunset
+        case .northwoods: return .northwoodsForest
         case .fest:       return .festHeraldic
         case .accent(let c):
             return LinearGradient(colors: [c, c.opacity(0.7)],

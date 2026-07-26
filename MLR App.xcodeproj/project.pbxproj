@@ -38,6 +38,7 @@
 		D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538D3013A0F900C8D189 /* Feedback.swift */; };
 		D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */; };
 		D31B53923013A61A00C8D189 /* BracketDiagram.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53913013A61A00C8D189 /* BracketDiagram.swift */; };
+		D31B53943016506100C8D189 /* HomeHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53933016506100C8D189 /* HomeHero.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
 		D33F9E5D2FEC086700603CE7 /* MLRAppShortcuts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFA2FEC086700603CE7 /* MLRAppShortcuts.swift */; };
 		D33F9E5E2FEC086700603CE7 /* AdminAlertComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E4B2FEC086700603CE7 /* AdminAlertComposer.swift */; };
@@ -280,6 +281,7 @@
 		D31B538D3013A0F900C8D189 /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
 		D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshHeroBackground.swift; sourceTree = "<group>"; };
 		D31B53913013A61A00C8D189 /* BracketDiagram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BracketDiagram.swift; sourceTree = "<group>"; };
+		D31B53933016506100C8D189 /* HomeHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHero.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
 		D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		D33F9DE22FEC086700603CE7 /* MLRApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRApp.swift; sourceTree = "<group>"; };
@@ -825,6 +827,7 @@
 				D3F9D88430093D9E006874DA /* OnThisDayCard.swift */,
 				D31B5368301169A400C8D189 /* HomeAdminDashboardCard.swift */,
 				D31B53853013928900C8D189 /* TeeTimesView.swift */,
+				D31B53933016506100C8D189 /* HomeHero.swift */,
 			);
 			path = HomeTab;
 			sourceTree = "<group>";
@@ -1082,6 +1085,7 @@
 			isa = PBXSourcesBuildPhase;
 			files = (
 				D31B537E3012B69400C8D189 /* Tournament.swift in Sources */,
+				D31B53943016506100C8D189 /* HomeHero.swift in Sources */,
 				D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */,
 				D3512BE430057B41008BBC44 /* MjtHouseDuesView.swift in Sources */,
 				D31B53803012B6C600C8D189 /* TournamentsService.swift in Sources */,

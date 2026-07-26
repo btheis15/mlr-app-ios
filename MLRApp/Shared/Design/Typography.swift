@@ -203,6 +203,14 @@ extension LinearGradient {
             startPoint: .topLeading, endPoint: .bottomTrailing)
     }
 
+    /// Deep forest → lake sweep — the "north woods" hero wash (greens + lake
+    /// blue only; no warm sunset hues, which read as tie-dye on a big hero).
+    static var northwoodsForest: LinearGradient {
+        LinearGradient(
+            colors: [.mlrPrimaryDark, .mlrPrimary, .mlrLake],
+            startPoint: .topLeading, endPoint: .bottomTrailing)
+    }
+
     /// Heraldic wine→gold gradient for the Family Fest hero banner.
     static var festHeraldic: LinearGradient {
         LinearGradient(
