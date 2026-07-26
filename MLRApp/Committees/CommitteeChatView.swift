@@ -101,10 +101,21 @@ struct CommitteeChatView: View {
                         } label: {
                             Label("Email members", systemImage: "envelope")
                         }
-                        Button {
-                            Task { await toggleMute() }
-                        } label: {
-                            Label(isMuted ? "Unmute" : "Mute", systemImage: isMuted ? "bell" : "bell.slash")
+                        if isMuted {
+                            Button {
+                                Task { await setMute(false) }
+                            } label: {
+                                Label("Unmute", systemImage: "bell")
+                            }
+                        } else {
+                            Menu {
+                                Button("For 1 day") { Task { await setMute(true, until: .now.addingTimeInterval(86_400)) } }
+                                Button("For 3 days") { Task { await setMute(true, until: .now.addingTimeInterval(3 * 86_400)) } }
+                                Button("For 7 days") { Task { await setMute(true, until: .now.addingTimeInterval(7 * 86_400)) } }
+                                Button("Until I unmute") { Task { await setMute(true) } }
+                            } label: {
+                                Label("Mute", systemImage: "bell.slash")
+                            }
                         }
                     } label: {
                         Image(systemName: isMuted ? "bell.slash.fill" : "ellipsis.circle")
@@ -132,9 +143,10 @@ struct CommitteeChatView: View {
         }
     }
 
-    private func toggleMute() async {
-        isMuted.toggle()
-        await env.committeeService.setAreaMute(committeeId: committee.id, area: area, muted: isMuted)
+    /// Mute for a duration (web #409), permanently (until nil), or unmute.
+    private func setMute(_ muted: Bool, until: Date? = nil) async {
+        isMuted = muted
+        await env.committeeService.setAreaMute(committeeId: committee.id, area: area, muted: muted, mutedUntil: until)
         Haptics.tap()
     }
 

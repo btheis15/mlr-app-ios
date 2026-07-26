@@ -19,6 +19,7 @@ struct HouseChatView: View {
 
     @State private var members: [Profile] = []
     @State private var showMembers = false
+    @State private var isMuted = false
     @State private var canOrganizeMeeting = false
     @State private var showMeetingComposer = false
     @State private var meetingRefreshID = 0
@@ -86,8 +87,24 @@ struct HouseChatView: View {
                         } label: {
                             Label("Email members", systemImage: "envelope")
                         }
+                        if isMuted {
+                            Button {
+                                Task { await setMute(false) }
+                            } label: {
+                                Label("Unmute", systemImage: "bell")
+                            }
+                        } else {
+                            Menu {
+                                Button("For 1 day") { Task { await setMute(true, until: .now.addingTimeInterval(86_400)) } }
+                                Button("For 3 days") { Task { await setMute(true, until: .now.addingTimeInterval(3 * 86_400)) } }
+                                Button("For 7 days") { Task { await setMute(true, until: .now.addingTimeInterval(7 * 86_400)) } }
+                                Button("Until I unmute") { Task { await setMute(true) } }
+                            } label: {
+                                Label("Mute", systemImage: "bell.slash")
+                            }
+                        }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: isMuted ? "bell.slash.fill" : "ellipsis.circle")
                     }
                 }
             }
@@ -110,6 +127,13 @@ struct HouseChatView: View {
             env.chatPollsService.unsubscribeFromPolls(scope: pollScope)
             typing.stop()
         }
+    }
+
+    /// Mute for a duration (web #409), permanently (until nil), or unmute.
+    private func setMute(_ muted: Bool, until: Date? = nil) async {
+        isMuted = muted
+        await env.housesService.setHouseMute(houseId: house.id, muted: muted, mutedUntil: until)
+        Haptics.tap()
     }
 
     /// The meeting room this house chat maps to.
@@ -404,6 +428,7 @@ struct HouseChatView: View {
         isLoading = false
         await env.housesService.markRead(houseId: house.id)
         canOrganizeMeeting = await env.meetingsService.canOrganize(scope: meetingScope)
+        isMuted = await env.housesService.isHouseMuted(houseId: house.id)
         await loadPolls()
         env.chatPollsService.subscribeToPolls(scope: pollScope) { Task { await loadPolls() } }
 

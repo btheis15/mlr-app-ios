@@ -84,7 +84,8 @@ final class SignupsService {
                 .from("fest_schedule_slots")
                 .select("*")
                 .eq("schedule_item_id", value: itemId.uuidString)
-                .order("position", ascending: true)
+                .order("day", ascending: true, nullsFirst: true)
+                .order("start_time", ascending: true)
                 .execute()
                 .value
         } catch {
