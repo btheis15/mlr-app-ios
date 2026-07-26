@@ -147,7 +147,7 @@ struct SignInChip: View {
                 .background(Color.mlrPrimaryLight)
                 .clipShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 

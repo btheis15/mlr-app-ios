@@ -167,7 +167,7 @@ private struct MemberRow: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             // Quick action bar — gated for guests
             Protected {
@@ -191,7 +191,7 @@ private struct QuickActionBar: View {
                 Button { onText(phone) } label: {
                     chipLabel("Text", "message.fill")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 actionChip("Call", "phone.fill", url: "tel://\(digits)")
             }
             if let venmo = member.venmoHandle, !venmo.isEmpty {

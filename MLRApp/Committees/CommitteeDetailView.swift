@@ -162,7 +162,7 @@ struct CommitteeDetailView: View {
                             .background(Color.mlrPrimary.opacity(0.1))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
 
                 // Email sits right under the chat entry.
@@ -178,7 +178,7 @@ struct CommitteeDetailView: View {
                             .background(Color.mlrPrimary.opacity(0.1))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
 
                 if canManage {
@@ -191,7 +191,7 @@ struct CommitteeDetailView: View {
                             .background(Color.mlrPrimary.opacity(0.1))
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
 
                 if canReview && !pendingForCommittee.isEmpty {
@@ -285,7 +285,7 @@ struct CommitteeDetailView: View {
                         .background(Color.mlrPrimary.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             Button { confirmLeave = true } label: {
@@ -300,7 +300,7 @@ struct CommitteeDetailView: View {
                 .background(Color.mlrDanger.opacity(0.1))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(leaving)
         }
     }
@@ -362,7 +362,7 @@ struct CommitteeDetailView: View {
             Label("Open committee chat", systemImage: "bubble.left.and.bubble.right.fill")
                 .primaryButton()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     // MARK: - Join requests
@@ -407,13 +407,13 @@ struct CommitteeDetailView: View {
                             .font(.mlrScaled(24))
                             .foregroundStyle(Color.mlrTextSubtle)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     Button { review(req, approve: true) } label: {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.mlrScaled(24))
                             .foregroundStyle(Color.mlrPrimary)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }
@@ -514,7 +514,7 @@ struct CommitteeDetailView: View {
             } label: {
                 AvatarView(url: entry.isLinked ? entry.profile?.avatarUrl : nil, size: .small)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(!entry.isLinked)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -525,7 +525,7 @@ struct CommitteeDetailView: View {
                         .font(.mlrScaled(15, weight: .medium))
                         .foregroundStyle(Color.mlrText)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(!entry.isLinked)
                 if entry.isPending {
                     Text("Pending verification")
@@ -552,7 +552,7 @@ struct CommitteeDetailView: View {
                         .font(.mlrScaled(16))
                         .foregroundStyle(Color.mlrTextSubtle)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(.horizontal, 14)

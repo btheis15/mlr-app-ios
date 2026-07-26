@@ -218,7 +218,7 @@ struct LeadRow: View {
                         .background(Color.mlrFest.opacity(0.1))
                         .clipShape(Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
                 Button {
                     // Message action
@@ -230,7 +230,7 @@ struct LeadRow: View {
                         .background(Color.mlrFest.opacity(0.1))
                         .clipShape(Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
     }
@@ -287,7 +287,7 @@ struct ExpandableScheduleRow: View {
     var body: some View {
         VStack(spacing: 0) {
             Button(action: toggle) { header }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(!hasDetail && !canEditItem)
 
             if isExpanded { expanded }
@@ -427,7 +427,7 @@ struct ExpandableScheduleRow: View {
                         .font(.mlrScaled(13, weight: .medium))
                         .foregroundStyle(Color.mlrFest)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
             }
@@ -475,7 +475,7 @@ struct ExpandableDinnerRow: View {
     var body: some View {
         VStack(spacing: 0) {
             Button(action: toggle) { header }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
             if isExpanded { expanded }
         }
@@ -595,7 +595,7 @@ struct ExpandableDinnerRow: View {
                             .font(.mlrScaled(13, weight: .medium))
                             .foregroundStyle(Color.mlrFest)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     if canManageCrew {
                         Spacer()
                         Button { showCrewSheet = true } label: {
@@ -603,7 +603,7 @@ struct ExpandableDinnerRow: View {
                                 .font(.mlrScaled(13, weight: .medium))
                                 .foregroundStyle(Color.mlrFest)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
                 .padding(.horizontal, 14)

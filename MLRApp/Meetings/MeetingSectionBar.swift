@@ -38,7 +38,7 @@ struct MeetingSectionBar: View {
                 // Self-padding so callers can embed us in a spacing-0 container:
                 // idle → this whole Group renders nothing and adds no gap.
                 Button { openMeeting = featured } label: { bar(featured) }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .padding(.horizontal, surface == .chat ? 12 : 16)
                     .padding(.top, surface == .chat ? 8 : 12)
                     .padding(.bottom, surface == .chat ? 8 : 0)

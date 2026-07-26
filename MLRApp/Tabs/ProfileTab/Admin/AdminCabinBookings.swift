@@ -335,7 +335,7 @@ private struct BookingRow: View {
                 .background(color)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func outlineButton(_ title: String, icon: String, color: Color, action: @escaping () -> Void) -> some View {
@@ -346,7 +346,7 @@ private struct BookingRow: View {
                 .frame(maxWidth: .infinity, minHeight: 32)
                 .overlay(RoundedRectangle(cornerRadius: 8).stroke(color.opacity(0.4), lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private var dateRange: String {

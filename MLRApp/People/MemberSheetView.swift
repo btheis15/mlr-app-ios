@@ -130,7 +130,7 @@ struct MemberSheetView: View {
                             contactRowLabel("Text", MLRFormat.phone(phone),
                                             "message.fill", showsChevron: true)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                     if !member.email.isEmpty {
                         contactRow("Email", member.email, "envelope.fill",
@@ -150,7 +150,7 @@ struct MemberSheetView: View {
                             contactRowLabel("Add to Contacts", member.name,
                                             "person.crop.circle.badge.plus", showsChevron: true)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                     if (member.phone?.isEmpty ?? true) && member.email.isEmpty {
                         Text("No contact info on file.")
@@ -241,7 +241,7 @@ struct MemberSheetView: View {
                                 .font(.mlrScaled(13, weight: .semibold))
                                 .foregroundStyle(birthdayAdded ? Color.mlrSuccess : Color.mlrPrimary)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                         .disabled(birthdayAdded)
 
                         if let birthdayError {
@@ -397,7 +397,7 @@ private struct MemberAdminCard: View {
                     row(isAdmin ? "Remove admin" : "Make admin",
                         icon: isAdmin ? "shield.slash.fill" : "shield.fill")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(working)
 
                 Divider().padding(.leading, 44)
@@ -421,7 +421,7 @@ private struct MemberAdminCard: View {
                 Button { showEditInfo = true } label: {
                     row("Edit member info", icon: "pencil")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(working)
 
                 Divider().padding(.leading, 44)
@@ -429,7 +429,7 @@ private struct MemberAdminCard: View {
                 Button(role: .destructive) { showRemove = true } label: {
                     row("Remove member", icon: "trash.fill", tint: Color.mlrDanger)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(working)
             }
             if let errorText {

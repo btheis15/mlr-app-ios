@@ -308,7 +308,7 @@ private struct FestUtilityLink<Destination: View>: View {
             .padding(.vertical, 13)
             .festCardStyle(cornerRadius: 12)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 

@@ -131,7 +131,7 @@ struct WorkItemDetailSheet: View {
                         .font(.mlrScaled(14, weight: .semibold))
                         .foregroundStyle(Color.mlrPrimary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(marking)
                 .padding(.top, 2)
             } else if current.isDone {
@@ -188,7 +188,7 @@ struct WorkItemDetailSheet: View {
                         .frame(width: 140, height: 140)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }
@@ -243,7 +243,7 @@ struct WorkItemDetailSheet: View {
                                 .font(.mlrScaled(11))
                                 .foregroundStyle(Color.mlrTextSubtle)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
                 MentionText(comment.text, baseFont: .mlrScaled(14))

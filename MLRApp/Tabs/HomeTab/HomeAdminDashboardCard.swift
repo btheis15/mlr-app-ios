@@ -31,7 +31,7 @@ struct HomeAdminDashboardCard: View {
                     }
                     .contentShape(Rectangle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
                 // Secondary Alerts quick-link → the unified broadcast composer (#351).
                 NavigationLink { AdminBroadcastComposer() } label: {
@@ -45,7 +45,7 @@ struct HomeAdminDashboardCard: View {
                     .background(Color.white.opacity(0.18))
                     .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
             .padding(14)
             .background(Color.mlrPrimaryDark)

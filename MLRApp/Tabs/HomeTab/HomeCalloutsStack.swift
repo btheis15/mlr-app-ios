@@ -251,7 +251,7 @@ struct HomeCalloutCard: View {
                                     .shadow(radius: 2)
                                     .padding(8)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
             }
@@ -274,7 +274,7 @@ struct HomeCalloutCard: View {
                                     .foregroundStyle(Color.mlrTextSubtle)
                                     .padding(4)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     } else if let title = callout.title?.nilIfEmpty {
                         Text(title)
@@ -310,7 +310,7 @@ struct HomeCalloutCard: View {
                                 .background(Color.mlrPrimary)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
 
                     if let ends = callout.endsOn {
@@ -339,7 +339,7 @@ struct HomeCalloutCard: View {
                             alignment: .top
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(isMarkingDone)
             }
         }
@@ -359,7 +359,7 @@ struct HomeCalloutCard: View {
                 actionLabel(link: link)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .padding(.top, hasAbove ? 4 : 0)
     }
 

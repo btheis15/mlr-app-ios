@@ -55,7 +55,7 @@ struct GlobalSearchView: View {
                     Section(group.title) {
                         ForEach(group.hits) { hit in
                             Button { open(hit) } label: { row(hit) }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressable)
                         }
                     }
                 }
@@ -64,7 +64,7 @@ struct GlobalSearchView: View {
                     Section("In conversations") {
                         ForEach(conversationHits) { hit in
                             Button { openConversation(hit) } label: { conversationRow(hit) }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressable)
                         }
                     }
                 }

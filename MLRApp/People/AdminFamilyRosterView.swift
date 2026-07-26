@@ -36,7 +36,7 @@ struct AdminFamilyRosterView: View {
             } else {
                 Section {
                     ForEach(entries) { entry in
-                        Button { editing = entry } label: { row(entry) }.buttonStyle(.plain)
+                        Button { editing = entry } label: { row(entry) }.buttonStyle(.pressable)
                     }
                 } footer: {
                     Text("\(entries.count) on the roster. Anyone added to a committee before they're on the app lands here automatically — edits you make here (name, email, phone) carry over to their committee spot, and everything links to their account when they sign up.")

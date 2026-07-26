@@ -27,7 +27,7 @@ struct AdminCalloutsView: View {
                     Button { editing = callout } label: {
                         calloutRow(callout)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }

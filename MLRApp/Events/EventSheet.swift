@@ -187,7 +187,7 @@ struct EventSheet: View {
                         .background((calendarAdded ? Color.mlrSuccess : accent).opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(calendarAdded)
                 .popoverTip(AddToCalendarTip())
 
@@ -202,7 +202,7 @@ struct EventSheet: View {
                         .background(accent.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             if let location = event.location, !location.isEmpty {
@@ -222,7 +222,7 @@ struct EventSheet: View {
                         .background(accent.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             if let calendarError {
@@ -321,7 +321,7 @@ struct EventSheet: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(isSaving)
     }
 
@@ -452,7 +452,7 @@ struct EventSheet: View {
                         .background(Color.mlrDanger.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
     }

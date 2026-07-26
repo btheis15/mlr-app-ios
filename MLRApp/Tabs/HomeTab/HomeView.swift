@@ -287,7 +287,7 @@ struct HomeView: View {
                     .foregroundStyle(.orange.opacity(0.8))
                     .padding(4)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -322,7 +322,7 @@ struct HomeView: View {
                     fullWidth: true
                 )
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             NavigationLink(destination: HelpView()) {
                 HomeTile(
@@ -476,7 +476,7 @@ private struct CollapsibleHomeSection<Content: View>: View {
                 .cardStyle()
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             if isOpen {
                 content

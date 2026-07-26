@@ -171,7 +171,7 @@ struct AdminInviteView: View {
             .clipShape(RoundedRectangle(cornerRadius: 14))
         }
         .disabled(sending || validEntries.isEmpty)
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private var resultsCard: some View {

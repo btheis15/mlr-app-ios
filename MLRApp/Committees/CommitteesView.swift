@@ -182,7 +182,7 @@ private struct CommitteeRowCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     @ViewBuilder
@@ -214,7 +214,7 @@ private struct CommitteeRowCard: View {
                         .clipShape(Capsule())
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(isJoining)
         }
     }
@@ -277,7 +277,7 @@ struct CommitteeJoinSheet: View {
                                 }
                                 .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     } header: {
                         Text("Which areas do you want to help with?")

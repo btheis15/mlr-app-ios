@@ -38,7 +38,7 @@ struct FestDinnersDetailView: View {
                                     .clipShape(Capsule())
                                     .overlay(Capsule().strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
 

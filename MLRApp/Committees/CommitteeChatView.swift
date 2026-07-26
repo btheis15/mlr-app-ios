@@ -258,7 +258,7 @@ struct CommitteeChatView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(Color.mlrTextSubtle)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 6)
                 .background(Color.mlrCard)
@@ -397,7 +397,7 @@ struct CommitteeChatView: View {
                             .background(Color.mlrPrimary).clipShape(Capsule())
                             .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -722,7 +722,7 @@ private struct MessageBubble: View {
                         .clipShape(Capsule())
                         .overlay(Capsule().stroke(expanded ? Color.mlrPrimary : (mine ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder), lineWidth: expanded ? 1.5 : 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .accessibilityLabel("See who reacted \(item.emoji)")
                 }
             }
@@ -773,7 +773,7 @@ private struct MessageBubble: View {
                             RoundedRectangle(cornerRadius: 1).fill(Color.mlrPrimary).frame(width: 2.5).padding(.vertical, 4)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 if !message.media.isEmpty {
                     ChatMediaView(media: message.media, isOwn: isOwn)

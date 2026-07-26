@@ -193,7 +193,7 @@ struct FamilyFestSpotlight: View {
             .padding(14)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func liveEventRow(_ event: ScheduleItem) -> some View {
@@ -281,7 +281,7 @@ struct FamilyFestSpotlight: View {
             .padding(14)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     // MARK: - Smart shortcut
@@ -293,7 +293,7 @@ struct FamilyFestSpotlight: View {
         } label: {
             ctaLabel(icon: "hand.raised.fill", text: "Join the Family Fest committee")
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func ctaLabel(icon: String, text: String) -> some View {

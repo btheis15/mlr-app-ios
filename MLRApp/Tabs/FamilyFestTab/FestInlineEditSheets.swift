@@ -80,7 +80,7 @@ struct FestScheduleEditSheet: View {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundStyle(Color.mlrTextSubtle)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     } else {
                         LabeledContent("Name") {
@@ -111,7 +111,7 @@ struct FestScheduleEditSheet: View {
                                 .keyboardType(.URL)
                             Button { links.removeAll { $0.id == link.id } } label: {
                                 Image(systemName: "minus.circle.fill").foregroundStyle(Color.mlrDanger)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.pressable)
                         }
                     }
                 }
@@ -331,7 +331,7 @@ struct FestCrewAssignSheet: View {
                                 Image(systemName: "minus.circle.fill")
                                     .foregroundStyle(Color.mlrDanger)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
                 }
@@ -431,7 +431,7 @@ struct InlineMemberPickerSheet: View {
                             .foregroundStyle(Color.mlrText)
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
             .searchable(text: $search, prompt: "Search members")
             .overlay {

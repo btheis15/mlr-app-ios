@@ -294,7 +294,7 @@ private struct HelpRequestCard: View {
                         }
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(10)
@@ -318,13 +318,13 @@ private struct HelpRequestCard: View {
             Button(role: .destructive, action: onCancel) {
                 buttonLabel("Cancel my request", color: .mlrDanger, filled: false)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(isWorking)
         } else if hasResponded {
             Button(action: onWithdraw) {
                 buttonLabel("On my way — tap to withdraw", color: .mlrTextMuted, filled: false)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(isWorking)
         } else if !request.isCovered {
             Button(action: onRespond) {

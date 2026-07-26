@@ -61,7 +61,7 @@ struct AdminView: View {
                         description: "Branded welcome email · signs them straight in"
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             Section("Content & Moderation") {

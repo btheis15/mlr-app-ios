@@ -119,7 +119,7 @@ private struct AnnouncementBannerRow: View {
                     .foregroundStyle(kindTextColor.opacity(0.6))
                     .padding(6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

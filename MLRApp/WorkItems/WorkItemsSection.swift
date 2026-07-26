@@ -36,7 +36,7 @@ struct WorkItemRow: View {
                     }
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(onCheck == nil || item.isDone || checking)
 
             VStack(alignment: .leading, spacing: 4) {

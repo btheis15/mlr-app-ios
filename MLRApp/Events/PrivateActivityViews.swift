@@ -242,7 +242,7 @@ struct PrivateActivityComposer: View {
                             Spacer()
                             Button { invited.removeAll { $0.id == p.id } } label: {
                                 Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.pressable)
                         }
                     }
                     // Add someone who isn't on the app yet (by name).
@@ -261,7 +261,7 @@ struct PrivateActivityComposer: View {
                             Spacer()
                             Button { typedNames.removeAll { $0 == name } } label: {
                                 Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.pressable)
                         }
                     }
                     Toggle("Notify people I add", isOn: $notify)
@@ -486,7 +486,7 @@ struct PrivateActivitySheet: View {
                         if canManage && m.userId != activity.createdBy {
                             Button { Task { await removeMember(m) } } label: {
                                 Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.pressable)
                         }
                     }
                 }

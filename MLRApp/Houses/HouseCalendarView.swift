@@ -192,7 +192,7 @@ struct HouseCalendarView: View {
             .background(isToday ? Color.mlrPrimaryLight : Color.clear)
             .clipShape(RoundedRectangle(cornerRadius: 8))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func legendDot(_ color: Color, _ label: String) -> some View {
@@ -322,6 +322,6 @@ private struct StayRow: View {
             .padding(12)
             .cardStyle()
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }

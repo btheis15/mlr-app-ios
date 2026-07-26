@@ -110,7 +110,7 @@ struct AskForHelpSheet: View {
                                             : Color.mlrCard)
                                 .clipShape(Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
             }
@@ -214,7 +214,7 @@ struct AskForHelpSheet: View {
                 .background(Color.mlrCard)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             if linkedWorkItem != nil {
                 Text("Later today we'll ask if this got done — tapping “Yes” checks it off the list.")
                     .font(.mlrCaption)
@@ -253,7 +253,7 @@ struct AskForHelpSheet: View {
                     } label: {
                         Image(systemName: "minus.circle.fill").foregroundStyle(Color.mlrDanger)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
             HStack {

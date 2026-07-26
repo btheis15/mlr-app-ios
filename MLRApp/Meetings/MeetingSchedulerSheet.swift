@@ -139,7 +139,7 @@ struct MeetingSchedulerSheet: View {
                         .background(Color.mlrSurface).clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrBorder, lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(16)
@@ -187,7 +187,7 @@ struct MeetingSchedulerSheet: View {
                 }
                 .font(.mlrScaled(12)).foregroundStyle(Color.mlrTextMuted)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             if isExpanded { whoReacted(s) }
 
@@ -211,7 +211,7 @@ struct MeetingSchedulerSheet: View {
                         .background(Color.mlrPrimary.opacity(0.1)).clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrPrimary.opacity(0.2), lineWidth: 1))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
         .padding(12)
@@ -233,7 +233,7 @@ struct MeetingSchedulerSheet: View {
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .overlay(RoundedRectangle(cornerRadius: 10).stroke(selected ? availColor(opt) : Color.mlrBorder, lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func availColor(_ opt: MeetingAvailability) -> Color {
@@ -277,7 +277,7 @@ struct MeetingSchedulerSheet: View {
                         .background(Color.mlrCard).clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mlrBorder, lineWidth: 1))
                 }
-                .buttonStyle(.plain).disabled(saving)
+                .buttonStyle(.pressable).disabled(saving)
             }
             Button { confirmDelete = true } label: {
                 Text("Delete").font(.mlrScaled(12, weight: .semibold)).foregroundStyle(Color.mlrDanger)
@@ -285,7 +285,7 @@ struct MeetingSchedulerSheet: View {
                     .background(Color.mlrCard).clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mlrBorder, lineWidth: 1))
             }
-            .buttonStyle(.plain).disabled(saving)
+            .buttonStyle(.pressable).disabled(saving)
         }
         .confirmationDialog("Cancel \"\(meeting.title)\"? Members will see it as cancelled.", isPresented: $confirmCancel, titleVisibility: .visible) {
             Button("Cancel meeting", role: .destructive) { Task { await cancel() } }
@@ -413,7 +413,7 @@ struct MeetingSchedulerSheet: View {
                     .background(Color.mlrSurface).clipShape(RoundedRectangle(cornerRadius: 12))
                     .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mlrBorder, lineWidth: 1))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.horizontal, 20).padding(.vertical, 12).background(.bar)
     }
