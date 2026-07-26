@@ -128,7 +128,7 @@ struct CommitteeEmailComposer: View {
                                 .background(selectedArea == area ? Color.mlrPrimary.opacity(0.1) : Color.mlrCard)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
                 }
@@ -153,7 +153,7 @@ struct CommitteeEmailComposer: View {
                                 }
                                 .padding(.vertical, 8)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                             Divider()
                         }
                     }

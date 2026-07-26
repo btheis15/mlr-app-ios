@@ -95,7 +95,7 @@ private struct AttendanceSegment: View {
                     .stroke(borderColor, lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(!isEnabled)
         .opacity(isEnabled ? 1 : 0.45)
         .accessibilityElement(children: .ignore)

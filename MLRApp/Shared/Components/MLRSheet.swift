@@ -97,7 +97,7 @@ struct CloseButton: View {
                 .background(Color.mlrCard)
                 .clipShape(Circle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }
 

@@ -59,7 +59,7 @@ struct CommitteeMemberManageSheet: View {
                             } label: {
                                 Image(systemName: "minus.circle.fill").foregroundStyle(Color.mlrDanger)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
                     HStack {

@@ -101,10 +101,21 @@ struct CommitteeChatView: View {
                         } label: {
                             Label("Email members", systemImage: "envelope")
                         }
-                        Button {
-                            Task { await toggleMute() }
-                        } label: {
-                            Label(isMuted ? "Unmute" : "Mute", systemImage: isMuted ? "bell" : "bell.slash")
+                        if isMuted {
+                            Button {
+                                Task { await setMute(false) }
+                            } label: {
+                                Label("Unmute", systemImage: "bell")
+                            }
+                        } else {
+                            Menu {
+                                Button("For 1 day") { Task { await setMute(true, until: .now.addingTimeInterval(86_400)) } }
+                                Button("For 3 days") { Task { await setMute(true, until: .now.addingTimeInterval(3 * 86_400)) } }
+                                Button("For 7 days") { Task { await setMute(true, until: .now.addingTimeInterval(7 * 86_400)) } }
+                                Button("Until I unmute") { Task { await setMute(true) } }
+                            } label: {
+                                Label("Mute", systemImage: "bell.slash")
+                            }
                         }
                     } label: {
                         Image(systemName: isMuted ? "bell.slash.fill" : "ellipsis.circle")
@@ -132,9 +143,10 @@ struct CommitteeChatView: View {
         }
     }
 
-    private func toggleMute() async {
-        isMuted.toggle()
-        await env.committeeService.setAreaMute(committeeId: committee.id, area: area, muted: isMuted)
+    /// Mute for a duration (web #409), permanently (until nil), or unmute.
+    private func setMute(_ muted: Bool, until: Date? = nil) async {
+        isMuted = muted
+        await env.committeeService.setAreaMute(committeeId: committee.id, area: area, muted: muted, mutedUntil: until)
         Haptics.tap()
     }
 
@@ -258,7 +270,7 @@ struct CommitteeChatView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(Color.mlrTextSubtle)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 6)
                 .background(Color.mlrCard)
@@ -397,7 +409,7 @@ struct CommitteeChatView: View {
                             .background(Color.mlrPrimary).clipShape(Capsule())
                             .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -722,7 +734,7 @@ private struct MessageBubble: View {
                         .clipShape(Capsule())
                         .overlay(Capsule().stroke(expanded ? Color.mlrPrimary : (mine ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder), lineWidth: expanded ? 1.5 : 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .accessibilityLabel("See who reacted \(item.emoji)")
                 }
             }
@@ -773,7 +785,7 @@ private struct MessageBubble: View {
                             RoundedRectangle(cornerRadius: 1).fill(Color.mlrPrimary).frame(width: 2.5).padding(.vertical, 4)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 if !message.media.isEmpty {
                     ChatMediaView(media: message.media, isOwn: isOwn)

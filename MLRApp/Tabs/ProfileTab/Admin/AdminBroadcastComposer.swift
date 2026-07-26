@@ -55,10 +55,14 @@ struct AdminBroadcastComposer: View {
                     Section {
                         Menu {
                             ForEach(festActivities) { item in
-                                Button(item.title) { autofill(from: item) }
+                                Button(item.title) { Haptics.tap(); autofill(from: item) }
+                            }
+                            Divider()
+                            Button(role: .destructive) { Haptics.tap(); requestReset() } label: {
+                                Label("Start fresh (clear all)", systemImage: "arrow.counterclockwise")
                             }
                         } label: {
-                            Label("Remind about an activity (autofills)", systemImage: "sparkles")
+                            Label("Attach an activity / start fresh", systemImage: "sparkles")
                                 .font(.mlrScaled(14, weight: .medium))
                         }
                     }
@@ -145,6 +149,10 @@ struct AdminBroadcastComposer: View {
                 }
                 .listRowBackground(Color.clear)
             }
+            .confirmationDialog("Clear this notification?", isPresented: $confirmReset, titleVisibility: .visible) {
+                Button("Start fresh", role: .destructive) { resetToBlank() }
+                Button("Cancel", role: .cancel) {}
+            }
             .navigationTitle("Broadcast")
             .navigationBarTitleDisplayMode(.inline)
             .task {
@@ -173,6 +181,29 @@ struct AdminBroadcastComposer: View {
     }
 
     // MARK: - Activity autofill (#393)
+
+    @State private var confirmReset = false
+
+    /// Anything worth protecting from an accidental wipe?
+    private var hasContent: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty
+            || !messageBody.trimmingCharacters(in: .whitespaces).isEmpty
+            || selectedEventId != nil || linkUrl != nil || scheduleAt != nil
+    }
+
+    /// Route through a confirmation only when there IS content (Phase 8).
+    private func requestReset() {
+        if hasContent { confirmReset = true } else { resetToBlank() }
+    }
+
+    /// Return ALL composer state to its initial defaults (leaves isPosting/posted).
+    private func resetToBlank() {
+        title = ""; messageBody = ""
+        kind = .info; expiry = .sixHours; audience = .everyone
+        toBanner = true; toActivity = false; toEmail = false
+        selectedEventId = nil; excludeNotAttending = true
+        linkUrl = nil; scheduleAt = nil; error = nil
+    }
 
     private var festActivities: [ScheduleItem] {
         env.festContentService.schedule.filter { !$0.isPrivate }

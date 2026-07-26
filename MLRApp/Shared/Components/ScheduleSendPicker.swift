@@ -52,6 +52,6 @@ struct ScheduleSendPicker: View {
                         .stroke(isOn ? Color.mlrPrimary.opacity(0.3) : Color.mlrBorder, lineWidth: 1)
                 )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 }

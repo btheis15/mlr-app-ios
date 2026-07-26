@@ -160,7 +160,7 @@ struct RosterEditSheet: View {
             .background((isLead ? Color.mlrPrimary : Color.mlrTextMuted).opacity(0.12))
             .clipShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func seed() {

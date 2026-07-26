@@ -136,7 +136,7 @@ struct ChatPollCard: View {
             .background(Color.mlrSurface)
             .clipShape(RoundedRectangle(cornerRadius: 10))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(isClosed || busy)
 
         // Inline write-in for the "Other" option once it's selected.
@@ -169,7 +169,7 @@ struct ChatPollCard: View {
                         .font(.mlrScaled(11, weight: .semibold))
                         .foregroundStyle(Color.mlrPrimary)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
     }

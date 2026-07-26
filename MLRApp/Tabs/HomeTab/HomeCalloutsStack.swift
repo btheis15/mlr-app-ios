@@ -146,12 +146,21 @@ private struct SwipeableCalloutCard: View {
             .offset(x: dragX)
             .rotationEffect(.degrees(dragX / 20))
             .opacity(flying ? 0 : 1)
-            .gesture(
-                DragGesture()
+            // simultaneousGesture + a horizontal-dominance guard so vertical
+            // drags stay with the page ScrollView (an exclusive, unconstrained
+            // DragGesture here was swallowing Home's scroll when the finger
+            // started on the callout deck).
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 12)
                     .onChanged { v in
+                        guard abs(v.translation.width) > abs(v.translation.height) else { return }
                         dragX = v.translation.width
                     }
                     .onEnded { v in
+                        guard abs(v.translation.width) > abs(v.translation.height) else {
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { dragX = 0 }
+                            return
+                        }
                         if abs(v.translation.width) > SWIPE_THRESHOLD
                             || abs(v.predictedEndTranslation.width) > SWIPE_THRESHOLD * 1.5 {
                             fling(direction: v.translation.width > 0 ? 1 : -1)
@@ -242,7 +251,7 @@ struct HomeCalloutCard: View {
                                     .shadow(radius: 2)
                                     .padding(8)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
             }
@@ -265,7 +274,7 @@ struct HomeCalloutCard: View {
                                     .foregroundStyle(Color.mlrTextSubtle)
                                     .padding(4)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     } else if let title = callout.title?.nilIfEmpty {
                         Text(title)
@@ -301,7 +310,7 @@ struct HomeCalloutCard: View {
                                 .background(Color.mlrPrimary)
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
 
                     if let ends = callout.endsOn {
@@ -330,7 +339,7 @@ struct HomeCalloutCard: View {
                             alignment: .top
                         )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(isMarkingDone)
             }
         }
@@ -350,7 +359,7 @@ struct HomeCalloutCard: View {
                 actionLabel(link: link)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .padding(.top, hasAbove ? 4 : 0)
     }
 

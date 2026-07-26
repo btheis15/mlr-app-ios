@@ -50,13 +50,13 @@ struct HouseHubView: View {
                                  subtitle: "Who's up & when", tint: Color.mlrPrimary,
                                  fullWidth: false, minHeight: hubCardMinHeight)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     NavigationLink(destination: HouseChatView(house: house, assumeMember: true)) {
                         HomeTile(icon: "bubble.left.and.bubble.right.fill", title: "House chat",
                                  subtitle: "Talk to your house", tint: Color.mlrInfo,
                                  fullWidth: false, minHeight: hubCardMinHeight)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 if !loading {
                     Text(calSubtitle).font(.mlrCaption).foregroundStyle(Color.mlrTextMuted).padding(.horizontal, 4)
@@ -99,7 +99,7 @@ struct HouseHubView: View {
                     .frame(maxWidth: .infinity, minHeight: hubCardMinHeight, alignment: .leading)
                     .cardStyle()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
                 // Who's staying lives on the House calendar (surfaced via the
                 // "Next up:" line on the calendar card above) — no separate
@@ -167,7 +167,7 @@ struct HouseHubHomeCard: View {
                         }
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
 
                     // Dedicated Chat button → straight into the house chat room (#349).
                     NavigationLink(destination: HouseChatView(house: house, assumeMember: true)) {
@@ -182,7 +182,7 @@ struct HouseHubHomeCard: View {
                         .background(Color.white.opacity(0.18))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 .padding(14)
                 .background(Color.mlrPrimary)

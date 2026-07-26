@@ -101,7 +101,7 @@ struct AdminModerationView: View {
                         } label: {
                             Image(systemName: "xmark.circle.fill").foregroundStyle(Color.mlrTextSubtle)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
             } header: {

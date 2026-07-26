@@ -99,7 +99,7 @@ struct ReminderScheduler: View {
                         .padding(.horizontal, 10).padding(.vertical, 4)
                         .background(Color.mlrAccent.opacity(0.12)).clipShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(busyId == it.id)
             }
         }
@@ -159,7 +159,7 @@ struct ReminderScheduler: View {
                         .background(canAdd ? Color.mlrPrimary : Color.mlrTextSubtle)
                         .clipShape(RoundedRectangle(cornerRadius: 9))
                 }
-                .buttonStyle(.plain).disabled(!canAdd)
+                .buttonStyle(.pressable).disabled(!canAdd)
                 Button("Cancel") { adding = false }
                     .font(.mlrScaled(12, weight: .medium)).foregroundStyle(Color.mlrTextMuted)
             }

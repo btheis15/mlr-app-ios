@@ -231,7 +231,7 @@ struct ProfileView: View {
                                 Image(systemName: "map.fill")
                                     .foregroundStyle(Color.mlrPrimary)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                             .accessibilityLabel("Open address in Maps")
                         }
                     }

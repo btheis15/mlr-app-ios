@@ -67,7 +67,7 @@ private struct PlacesSection: View {
                 .padding(16)
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .cardStyle()
 
             if expanded {
@@ -138,7 +138,7 @@ private struct LocalPlaceCard: View {
                         } label: {
                             PlaceChip(label: "Directions", icon: "map")
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
             }

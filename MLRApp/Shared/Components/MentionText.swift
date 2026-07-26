@@ -160,7 +160,7 @@ struct MentionAutocomplete: View {
                         .padding(.vertical, 9)
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
 
                     if profile.id != filtered.last?.id {
                         Divider()
@@ -545,7 +545,7 @@ struct ChatComposer: View {
                     .scaleEffect(canSend ? 1 : 0.9)
                     .animation(.spring(response: 0.3, dampingFraction: 0.6), value: canSend)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(!canSend)
             }
             .padding(.horizontal, 12)

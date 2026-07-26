@@ -218,7 +218,7 @@ struct LeadRow: View {
                         .background(Color.mlrFest.opacity(0.1))
                         .clipShape(Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
                 Button {
                     // Message action
@@ -230,7 +230,7 @@ struct LeadRow: View {
                         .background(Color.mlrFest.opacity(0.1))
                         .clipShape(Circle())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
     }
@@ -287,7 +287,7 @@ struct ExpandableScheduleRow: View {
     var body: some View {
         VStack(spacing: 0) {
             Button(action: toggle) { header }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(!hasDetail && !canEditItem)
 
             if isExpanded { expanded }
@@ -310,21 +310,23 @@ struct ExpandableScheduleRow: View {
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
             Text(MLRFormat.time(item.time))
-                .font(.mlrScaled(12, weight: .medium, design: .monospaced))
+                .font(.mlrScaled(14, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.mlrFestInk.opacity(0.6))
-                .frame(width: 62, alignment: .leading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .frame(width: 78, alignment: .leading)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title)
-                    .font(.festSerif(14, weight: .bold))
+                    .font(.festSerif(18, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                     .multilineTextAlignment(.leading)
 
                 if let location = item.location, !isExpanded {
                     if env.isSignedIn {
                         Label(location, systemImage: "mappin.and.ellipse")
-                            .font(.mlrScaled(12))
+                            .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrFest.opacity(0.6))
                             .lineLimit(1)
                     } else {
@@ -425,7 +427,7 @@ struct ExpandableScheduleRow: View {
                         .font(.mlrScaled(13, weight: .medium))
                         .foregroundStyle(Color.mlrFest)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
             }
@@ -464,10 +466,16 @@ struct ExpandableDinnerRow: View {
         return env.isAdmin || env.festContentService.userCanEditFest || dinner.chefUserId == uid
     }
 
+    /// "Head chef — what's on the menu" (menu omitted while still TBD).
+    private var chefMenuLine: String {
+        let menu = dinner.menuLines.joined(separator: ", ")
+        return menu.isEmpty || dinner.menu == "TBD" ? dinner.chef : "\(dinner.chef) — \(menu)"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             Button(action: toggle) { header }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
             if isExpanded { expanded }
         }
@@ -490,18 +498,22 @@ struct ExpandableDinnerRow: View {
 
     private var header: some View {
         HStack(alignment: .top, spacing: 14) {
-            Image(systemName: "fork.knife")
-                .font(.mlrScaled(13, weight: .semibold))
-                .foregroundStyle(Color.mlrFest.opacity(0.7))
-                .frame(width: 62, alignment: .leading)
+            // Serving time in the left column, exactly like every other event row.
+            Text(MLRFormat.time(dinner.time))
+                .font(.mlrScaled(14, weight: .medium, design: .monospaced))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.6))
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .frame(width: 78, alignment: .leading)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("Dinner")
-                    .font(.festSerif(14, weight: .bold))
+                    .font(.festSerif(18, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
-                Text("\(dinner.chef) · \(MLRFormat.time(dinner.time))")
-                    .font(.mlrScaled(12))
+                // Head chef — what's on the menu.
+                Text(chefMenuLine)
+                    .font(.mlrScaled(14))
                     .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                     .lineLimit(1)
             }
@@ -583,7 +595,7 @@ struct ExpandableDinnerRow: View {
                             .font(.mlrScaled(13, weight: .medium))
                             .foregroundStyle(Color.mlrFest)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     if canManageCrew {
                         Spacer()
                         Button { showCrewSheet = true } label: {
@@ -591,7 +603,7 @@ struct ExpandableDinnerRow: View {
                                 .font(.mlrScaled(13, weight: .medium))
                                 .foregroundStyle(Color.mlrFest)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
                 .padding(.horizontal, 14)

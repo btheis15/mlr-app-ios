@@ -171,7 +171,7 @@ struct WorkItemComposer: View {
                             .background(urgency == u ? Color.mlrPrimary : Color.mlrCard)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }
@@ -215,7 +215,7 @@ struct WorkItemComposer: View {
                     .stroke(selected ? Color.mlrPrimary.opacity(0.3) : Color.mlrBorder, lineWidth: 1)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private var peopleSection: some View {
@@ -255,7 +255,7 @@ struct WorkItemComposer: View {
                 .clipShape(Circle())
                 .overlay(Circle().stroke(Color.mlrBorder, lineWidth: 1))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(!enabled)
     }
 
@@ -367,7 +367,7 @@ struct WorkItemComposer: View {
                                 .stroke(selectedEventId == ev.id ? Color.mlrPrimary.opacity(0.3) : Color.mlrBorder, lineWidth: 1)
                         )
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }
@@ -389,7 +389,7 @@ struct WorkItemComposer: View {
                             .background(status == s ? Color.mlrPrimary : Color.mlrCard)
                             .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }

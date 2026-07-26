@@ -540,8 +540,13 @@ final class FestContentService {
                 day: r.anytime == true ? "Anytime" : (Self.weekday(from: r.day) ?? r.day),
                 isoDate: r.anytime == true ? nil : r.day,
                 // An "Anytime all week" event with no set time isn't pending a
-                // decision — show "No specific time", not "TBD" (web #378).
-                time: r.startTime?.nilIfBlank ?? (r.anytime == true ? "No specific time" : "TBD"),
+                // decision — "No specific time", not "TBD" (web #378). If it takes
+                // TIMED sign-ups, the times live in the sign-up card, so point
+                // there instead: "Specific time slots" (web #416).
+                time: r.startTime?.nilIfBlank ?? (
+                    r.anytime == true
+                        ? ((r.signupEnabled ?? false) && r.signupMode != "headcount" ? "Specific time slots" : "No specific time")
+                        : "TBD"),
                 title: Self.titled(emoji: r.emoji, title: r.title),
                 location: r.location?.nilIfBlank ?? "TBD",
                 description: r.description,

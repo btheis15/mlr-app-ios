@@ -126,7 +126,7 @@ struct CabinRequestSheet: View {
                             }
                             .padding(14).background(Color.mlrCard).clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                         if forUser != nil {
                             Toggle("Email them a confirmation", isOn: $emailForUser)
                                 .font(.mlrScaled(13)).tint(Color.mlrPrimary)
@@ -431,7 +431,7 @@ struct RoomPickRow: View {
             .padding(.vertical, 12)
             .opacity(room.available ? 1 : 0.5)
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(!room.available)
     }
 }
@@ -497,7 +497,7 @@ private struct CabinPickCard: View {
                     .stroke(isSelected ? Color.mlrPrimary : Color.clear, lineWidth: 2.5)
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     /// "🛏️ 4 beds · 4 rooms" when bed count is known, else just the room count.

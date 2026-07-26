@@ -117,7 +117,7 @@ struct HouseDaySheet: View {
                                     }
                                     .padding(12).cardStyle()
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressable)
                             }
                         }
                     }
@@ -141,7 +141,7 @@ struct HouseDaySheet: View {
                                     }
                                     .padding(12).cardStyle()
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressable)
                             }
                         }
                     }

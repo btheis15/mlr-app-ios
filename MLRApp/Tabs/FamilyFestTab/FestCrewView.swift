@@ -50,7 +50,7 @@ struct FestCrewView: View {
                             .background(Color.mlrFest)
                             .clipShape(Capsule())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .disabled(festEvent == nil)
                 }
                 .padding(.horizontal, 16)

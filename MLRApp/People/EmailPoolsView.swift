@@ -81,7 +81,7 @@ struct EmailPoolsView: View {
                 else { Image(systemName: "chevron.right").font(.caption).foregroundStyle(Color.mlrTextSubtle) }
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(loadingPool != nil)
     }
 }

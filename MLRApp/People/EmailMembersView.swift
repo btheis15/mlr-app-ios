@@ -113,7 +113,7 @@ struct EmailMembersView: View {
                                 .background(selectedArea == area ? Color.mlrPrimary.opacity(0.1) : Color.mlrCard)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
                 }
@@ -136,7 +136,7 @@ struct EmailMembersView: View {
                                 }
                                 .padding(.vertical, 8)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                             Divider()
                         }
                     }

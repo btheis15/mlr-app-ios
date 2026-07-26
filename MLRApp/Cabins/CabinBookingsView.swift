@@ -214,7 +214,7 @@ private struct BookingCard: View {
                             .padding(.vertical, 8)
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .background(Color.mlrDanger.opacity(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .disabled(isCancelling)
@@ -232,7 +232,7 @@ private struct BookingCard: View {
                         .background(Color.mlrPrimary.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             if booking.status == .approved {
@@ -246,7 +246,7 @@ private struct BookingCard: View {
                         .background((calendarAdded ? Color.mlrSuccess : Color.mlrPrimary).opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(calendarAdded)
             }
         }

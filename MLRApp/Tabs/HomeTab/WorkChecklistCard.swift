@@ -85,7 +85,7 @@ struct WorkChecklistCard: View {
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 10)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 } else if !done.isEmpty {
                     Divider()
@@ -115,7 +115,7 @@ struct WorkChecklistCard: View {
                         .padding(.horizontal, 14)
                         .padding(.vertical, 10)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     if doneExpanded {
                         ForEach(done) { item in
                             Divider().padding(.leading, 14)
@@ -186,7 +186,7 @@ struct WorkChecklistCard: View {
                 }
                 .contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             Button {
                 if env.isSignedIn { composing = true } else { env.authService.promptSignIn() }
@@ -198,7 +198,7 @@ struct WorkChecklistCard: View {
                     .background(Color.mlrPrimary.opacity(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 12)

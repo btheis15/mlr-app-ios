@@ -509,23 +509,33 @@ final class CommitteeService {
     }
 
     /// Mute or unmute a channel's push notifications (migration 0063).
-    func setAreaMute(committeeId: UUID, area: String?, muted: Bool) async {
-        struct Params: Encodable { let cid: String; let p_area: String?; let p_muted: Bool }
+    /// `mutedUntil` nil = permanent (the old toggle behavior); a date = timed
+    /// mute that auto-expires (migration 0155 / web #409).
+    func setAreaMute(committeeId: UUID, area: String?, muted: Bool, mutedUntil: Date? = nil) async {
+        struct Params: Encodable { let cid: String; let p_area: String?; let p_muted: Bool; let p_muted_until: String? }
+        let until = mutedUntil.map { ISO8601DateFormatter().string(from: $0) }
         _ = try? await supabase
-            .rpc("set_area_mute", params: Params(cid: committeeId.uuidString, p_area: area, p_muted: muted))
+            .rpc("set_area_mute", params: Params(cid: committeeId.uuidString, p_area: area, p_muted: muted, p_muted_until: until))
             .execute()
     }
 
-    /// Whether the caller has muted a channel.
+    /// Whether the caller has muted a channel — permanent, or a timed mute whose
+    /// muted_until is still in the future (migration 0155).
     func isAreaMuted(committeeId: UUID, area: String?) async -> Bool {
-        struct Row: Decodable { let muted: Bool }
+        struct Row: Decodable {
+            let muted: Bool
+            let mutedUntil: Date?
+            enum CodingKeys: String, CodingKey { case muted; case mutedUntil = "muted_until" }
+        }
         let rows: [Row] = (try? await supabase
             .from("committee_area_reads")
-            .select("muted")
+            .select("muted, muted_until")
             .eq("committee_id", value: committeeId.uuidString)
             .eq("area", value: area ?? "")
             .limit(1).execute().value) ?? []
-        return rows.first?.muted ?? false
+        guard let row = rows.first, row.muted else { return false }
+        if let until = row.mutedUntil { return until > Date() }   // timed mute still active?
+        return true                                               // permanent
     }
 
     // MARK: - Chat channels (Messages-style conversation list)
