@@ -312,7 +312,9 @@ struct ExpandableScheduleRow: View {
             Text(MLRFormat.time(item.time))
                 .font(.mlrScaled(14, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.mlrFestInk.opacity(0.6))
-                .frame(width: 62, alignment: .leading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .frame(width: 78, alignment: .leading)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 3) {
@@ -500,7 +502,9 @@ struct ExpandableDinnerRow: View {
             Text(MLRFormat.time(dinner.time))
                 .font(.mlrScaled(14, weight: .medium, design: .monospaced))
                 .foregroundStyle(Color.mlrFestInk.opacity(0.6))
-                .frame(width: 62, alignment: .leading)
+                .lineLimit(1)
+                .minimumScaleFactor(0.65)
+                .frame(width: 78, alignment: .leading)
                 .padding(.top, 1)
 
             VStack(alignment: .leading, spacing: 3) {
