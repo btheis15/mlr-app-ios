@@ -127,6 +127,21 @@ struct CalloutComposerView: View {
 
     private var isNew: Bool { existing == nil }
 
+    @State private var confirmReset = false
+    private var hasContent: Bool {
+        !title.isEmpty || !body_.isEmpty || !imageUrl.isEmpty || !links.isEmpty
+            || !startsOn.isEmpty || !endsOn.isEmpty || hasDeadline || signupItemId != nil
+    }
+    private func requestReset() { if hasContent { confirmReset = true } else { resetToBlank() } }
+    /// Clears EVERYTHING including the linked activity (Phase 8) — the picker's
+    /// "None" stays available for unlinking just the activity.
+    private func resetToBlank() {
+        title = ""; body_ = ""; imageUrl = ""; links = []
+        startsOn = ""; endsOn = ""; hasDeadline = false; deadlineDate = Date()
+        isActive = true; signupItemId = nil
+        alsoNotify = false; alsoEmail = false; saveError = nil
+    }
+
     var body: some View {
         Form {
             Section("Card Content") {
@@ -304,6 +319,17 @@ struct CalloutComposerView: View {
             }
         }
         .navigationTitle(isNew ? "New Callout" : "Edit Callout")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { Haptics.tap(); requestReset() } label: {
+                    Label("Start fresh", systemImage: "arrow.counterclockwise")
+                }
+            }
+        }
+        .confirmationDialog("Clear this callout?", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Start fresh", role: .destructive) { resetToBlank() }
+            Button("Cancel", role: .cancel) {}
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }

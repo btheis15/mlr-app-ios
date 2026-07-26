@@ -39,6 +39,20 @@ struct AdminNotificationComposer: View {
     @State private var selectedEventId: String? = nil
     @State private var excludeNotAttending: Bool = true
     @State private var scheduleAt: Date? = nil   // nil = send now (migration 0097)
+    @State private var confirmReset = false
+
+    private var hasContent: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty
+            || !messageBody.trimmingCharacters(in: .whitespaces).isEmpty
+            || !linkUrl.trimmingCharacters(in: .whitespaces).isEmpty
+            || selectedEventId != nil || scheduleAt != nil
+    }
+    private func requestReset() { if hasContent { confirmReset = true } else { resetToBlank() } }
+    private func resetToBlank() {
+        title = ""; messageBody = ""; linkUrl = ""
+        audience = .everyone; alsoBanner = false; bannerExpiry = .sixHours
+        selectedEventId = nil; excludeNotAttending = true; scheduleAt = nil
+    }
     @State private var isSending = false
     @State private var error: String? = nil
     @State private var sent = false
@@ -178,6 +192,17 @@ struct AdminNotificationComposer: View {
                     .disabled(!canSend || isSending)
                 }
                 .listRowBackground(Color.clear)
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { Haptics.tap(); requestReset() } label: {
+                        Label("Start fresh", systemImage: "arrow.counterclockwise")
+                    }
+                }
+            }
+            .confirmationDialog("Clear this notification?", isPresented: $confirmReset, titleVisibility: .visible) {
+                Button("Start fresh", role: .destructive) { resetToBlank() }
+                Button("Cancel", role: .cancel) {}
             }
             .navigationTitle("Send Notification")
             .navigationBarTitleDisplayMode(.inline)
