@@ -44,6 +44,21 @@ final class PostsService {
         }
     }
 
+    /// One post by id, joined the same way the feed is. Used by the notification
+    /// deep link — a push names a single post, which may not be in `posts` yet
+    /// (or at all, if it was removed since). Returns nil rather than throwing so
+    /// the caller can fall back to the feed.
+    func fetchPost(id: UUID) async -> Post? {
+        let row: PostRow? = try? await supabase
+            .from("posts")
+            .select(Self.postSelect)
+            .eq("id", value: id.uuidString)
+            .single()
+            .execute()
+            .value
+        return row?.toPost
+    }
+
     // MARK: - Create
 
     /// Create a post with optional media (in order), tagged members, and a

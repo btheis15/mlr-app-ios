@@ -19,6 +19,9 @@ struct CommitteeChatView: View {
     /// Set true when opened from a place that already knows membership (the Feed
     /// conversation list / committee detail), so we don't gate on myMemberships.
     var assumeMember: Bool = false
+    /// Opened from a notification about one message (a chat @mention) — scroll to
+    /// it on first load instead of jumping to the newest.
+    var focusMessageId: UUID? = nil
 
     @State private var isMuted = false
     @State private var showMembers = false
@@ -380,9 +383,14 @@ struct CommitteeChatView: View {
             .onChange(of: messages.count) { old, new in
                 guard !messages.isEmpty else { return }
                 if !didInitialScroll {
-                    // Jump straight to the newest on first open (no animation).
+                    // Jump straight to the newest on first open (no animation) —
+                    // or to the message a notification pointed at, when it loaded.
                     didInitialScroll = true
-                    proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                    if let focusMessageId, messages.contains(where: { $0.id == focusMessageId }) {
+                        proxy.scrollTo("m-\(focusMessageId.uuidString)", anchor: .center)
+                    } else {
+                        proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                    }
                 } else if atBottom || messages.last?.authorId == env.currentProfile?.id {
                     // Smooth-follow only when already at bottom, and always for my own sends.
                     withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }

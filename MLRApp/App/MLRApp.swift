@@ -157,16 +157,17 @@ class NotificationDelegate: NSObject, UNUserNotificationCenterDelegate {
             return
         }
 
-        // Plain tap on the notification body → deep-link into the app.
-        if let targetType = userInfo["target_type"] as? String,
-           let targetId = userInfo["target_id"] as? String {
-            NotificationCenter.default.post(
-                name: .notificationTapped,
-                object: nil,
-                userInfo: ["target_type": targetType, "target_id": targetId]
-            )
+        // Plain tap on the notification body → deep-link into the app. Hand the
+        // WHOLE payload over (not just target_type/target_id): `url` carries the
+        // ids those two don't — a Family Fest schedule item, a private activity —
+        // and `committee_id` rides along for a join request. Routed through
+        // PendingNotificationTap so a tap that cold-launched the app isn't lost
+        // before RootView subscribes; see NotificationActions.swift.
+        let info = userInfo
+        Task { @MainActor in
+            PendingNotificationTap.shared.deliver(info)
+            completionHandler()
         }
-        completionHandler()
     }
 }
 

@@ -63,6 +63,7 @@
 		D33F9E712FEC086700603CE7 /* NotificationRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E302FEC086700603CE7 /* NotificationRow.swift */; };
 		D33F9E722FEC086700603CE7 /* AuthService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE52FEC086700603CE7 /* AuthService.swift */; };
 		D33F9E732FEC086700603CE7 /* NotificationActions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */; };
+		D3E1A0022FEC086700603CE7 /* NotificationDeepLink.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E1A0012FEC086700603CE7 /* NotificationDeepLink.swift */; };
 		D33F9E742FEC086700603CE7 /* EventSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DF22FEC086700603CE7 /* EventSheet.swift */; };
 		D33F9E752FEC086700603CE7 /* PushToggleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E552FEC086700603CE7 /* PushToggleView.swift */; };
 		D33F9E762FEC086700603CE7 /* MLRSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E232FEC086700603CE7 /* MLRSheet.swift */; };
@@ -321,6 +322,7 @@
 		D33F9E0B2FEC086700603CE7 /* MapsHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapsHelper.swift; sourceTree = "<group>"; };
 		D33F9E0C2FEC086700603CE7 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
 		D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActions.swift; sourceTree = "<group>"; };
+		D3E1A0012FEC086700603CE7 /* NotificationDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationDeepLink.swift; sourceTree = "<group>"; };
 		D33F9E0E2FEC086700603CE7 /* Payments.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Payments.swift; sourceTree = "<group>"; };
 		D33F9E112FEC086700603CE7 /* MemberSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemberSheetView.swift; sourceTree = "<group>"; };
 		D33F9E122FEC086700603CE7 /* PeopleDirectoryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PeopleDirectoryView.swift; sourceTree = "<group>"; };
@@ -671,6 +673,7 @@
 				D33F9E0B2FEC086700603CE7 /* MapsHelper.swift */,
 				D33F9E0C2FEC086700603CE7 /* MessageComposer.swift */,
 				D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */,
+				D3E1A0012FEC086700603CE7 /* NotificationDeepLink.swift */,
 				D33F9E0E2FEC086700603CE7 /* Payments.swift */,
 				D36347552FFDDFA5001D52C8 /* ContentIndexer.swift */,
 			);
@@ -1136,6 +1139,7 @@
 				D33F9E722FEC086700603CE7 /* AuthService.swift in Sources */,
 				D33F9EEC2FF4502100603CE7 /* RosterEditSheet.swift in Sources */,
 				D33F9E732FEC086700603CE7 /* NotificationActions.swift in Sources */,
+				D3E1A0022FEC086700603CE7 /* NotificationDeepLink.swift in Sources */,
 				D33F9E742FEC086700603CE7 /* EventSheet.swift in Sources */,
 				D31B53723012A51F00C8D189 /* ChatPollCard.swift in Sources */,
 				D33F9E752FEC086700603CE7 /* PushToggleView.swift in Sources */,
