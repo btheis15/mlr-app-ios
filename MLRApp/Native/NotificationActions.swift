@@ -149,15 +149,42 @@ enum NotificationActionHandler {
             }
         case .declineJoin:
             // Foreground — open the app to the committee so the admin reviews first.
-            NotificationCenter.default.post(
-                name: .notificationTapped, object: nil,
-                userInfo: [
-                    "target_type": "committee_join_request",
-                    "target_id": (userInfo["request_id"] as? String) ?? "",
-                    "committee_id": (userInfo["committee_id"] as? String) ?? ""
-                ])
+            PendingNotificationTap.shared.deliver([
+                "target_type": "committee_join_request",
+                "target_id": (userInfo["request_id"] as? String) ?? "",
+                "committee_id": (userInfo["committee_id"] as? String) ?? ""
+            ])
         }
     }
+}
+
+/// A tapped notification, held until the app has somewhere to put it.
+///
+/// `.notificationTapped` is a plain NotificationCenter post, so a tap that COLD
+/// LAUNCHES the app can be delivered before RootView subscribes — and a
+/// NotificationCenter post with no listener is simply dropped, which is why a
+/// tap used to leave the member on whatever screen they were on. `deliver` posts
+/// for the live listener AND keeps the payload queued; RootView clears it as soon
+/// as it handles one and drains whatever's left in its `.task`, so exactly one of
+/// the two paths acts on any given tap.
+@MainActor
+final class PendingNotificationTap {
+    static let shared = PendingNotificationTap()
+
+    private var pending: [AnyHashable: Any]?
+
+    func deliver(_ info: [AnyHashable: Any]) {
+        pending = info
+        NotificationCenter.default.post(name: .notificationTapped, object: nil, userInfo: info)
+    }
+
+    /// The queued tap, if the live listener never picked it up.
+    func drain() -> [AnyHashable: Any]? {
+        defer { pending = nil }
+        return pending
+    }
+
+    func clear() { pending = nil }
 }
 
 /// A tiny queue the app drains on next foreground to present the birthday composer.

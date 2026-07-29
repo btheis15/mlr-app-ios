@@ -16,6 +16,9 @@ struct HouseChatView: View {
     /// Set true when opened from a place that already knows membership (the Feed
     /// conversation list), so we don't gate on the profile's house_id.
     var assumeMember: Bool = false
+    /// Opened from a notification about one message (a chat @mention) — scroll to
+    /// it on first load instead of jumping to the newest.
+    var focusMessageId: UUID? = nil
 
     @State private var members: [Profile] = []
     @State private var showMembers = false
@@ -351,8 +354,14 @@ struct HouseChatView: View {
             .onChange(of: messages.count) { old, new in
                 guard !messages.isEmpty else { return }
                 if !didInitialScroll {
+                    // Newest on first open — or the message a notification pointed
+                    // at, once it's loaded.
                     didInitialScroll = true
-                    proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                    if let focusMessageId, messages.contains(where: { $0.id == focusMessageId }) {
+                        proxy.scrollTo("m-\(focusMessageId.uuidString)", anchor: .center)
+                    } else {
+                        proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                    }
                 } else if atBottom || messages.last?.authorId == env.currentProfile?.id {
                     withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
                 } else if new > old {
