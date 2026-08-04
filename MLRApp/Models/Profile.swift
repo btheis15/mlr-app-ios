@@ -1,5 +1,20 @@
 import Foundation
 
+extension KeyedDecodingContainer {
+    /// Decodes a `[RawRepresentable<String>]` array leniently: one unrecognized
+    /// raw value (e.g. a push/notif category the backend added before this
+    /// build shipped) no longer discards every OTHER value — `try? decode([T]
+    /// .self)` fails the WHOLE array on a single bad element, which used to
+    /// silently wipe a member's entire push-type selection to `[]` whenever
+    /// `push_types` contained even one category iOS's `PushType` enum didn't
+    /// yet know about. Falls back to `[]` only when the column itself is
+    /// missing/null/not an array at all.
+    func decodeLeniently<T: RawRepresentable & Decodable>(_ type: [T].Type, forKey key: Key) -> [T] where T.RawValue == String {
+        guard let raw = try? decode([String].self, forKey: key) else { return [] }
+        return raw.compactMap(T.init(rawValue:))
+    }
+}
+
 // MARK: - Push & Notification Types
 
 enum PushType: String, Codable, CaseIterable {
@@ -20,6 +35,14 @@ enum PushType: String, Codable, CaseIterable {
     case meetingProposed = "meeting_proposed"
     case meetingScheduled = "meeting_scheduled"
     case cabinMessage = "cabin_message"
+    case newPost = "new_post"
+    case postComment = "post_comment"
+    case chatPollCreated = "chat_poll_created"
+    case tournamentPublished = "tournament_published"
+    case tournamentMatchReady = "tournament_match_ready"
+    case tournamentChampion = "tournament_champion"
+    case privateActivityInvite = "private_activity_invite"
+    case signupReminder = "signup_reminder"
 }
 
 enum NotifType: String, Codable, CaseIterable {
@@ -182,8 +205,8 @@ extension Profile {
         notifyNewMembers   = (try? c.decode(Bool.self, forKey: .notifyNewMembers)) ?? true
         emailAlerts     = (try? c.decode(Bool.self, forKey: .emailAlerts)) ?? true
         pushLevel       = try? c.decodeIfPresent(String.self, forKey: .pushLevel)
-        pushTypes       = (try? c.decode([PushType].self, forKey: .pushTypes)) ?? []
-        notifTypes      = (try? c.decode([NotifType].self, forKey: .notifTypes)) ?? []
+        pushTypes       = c.decodeLeniently([PushType].self, forKey: .pushTypes)
+        notifTypes      = c.decodeLeniently([NotifType].self, forKey: .notifTypes)
         pushPrompted    = (try? c.decode(Bool.self, forKey: .pushPrompted)) ?? false
         isAdmin         = (try? c.decode(Bool.self, forKey: .isAdmin)) ?? false
         betaTester      = (try? c.decode(Bool.self, forKey: .betaTester)) ?? false

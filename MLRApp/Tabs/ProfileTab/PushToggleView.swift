@@ -108,6 +108,14 @@ struct PushToggleView: View {
                     pushToggle(for: .helpResponse, label: "Help responses",        desc: "When someone's on their way to help you", icon: "figure.walk")
                     pushToggle(for: .workItemCreated, label: "New work items",     desc: "When a new work item is added", icon: "wrench.and.screwdriver.fill")
                     pushToggle(for: .houseStayCreated, label: "New house stays",    desc: "New stays added to your house calendar", icon: "house.fill")
+                    pushToggle(for: .newPost, label: "New posts in the Feed",       desc: "When anyone shares a new post to the family feed — on by default", icon: "newspaper.fill")
+                    pushToggle(for: .postComment, label: "Comments on my posts",    desc: "When someone comments on a post you shared — on by default", icon: "bubble.left.and.text.bubble.right.fill")
+                    pushToggle(for: .signupReminder, label: "Activity reminders",   desc: "Before a Family Fest time slot you signed up for starts — on by default", icon: "alarm.fill")
+                    pushToggle(for: .chatPollCreated, label: "New quick poll",      desc: "When someone starts a poll in a committee or house chat you're in", icon: "chart.bar.fill")
+                    pushToggle(for: .tournamentPublished, label: "Tournament bracket set", desc: "When the bracket goes live for an activity you're entered in", icon: "trophy.fill")
+                    pushToggle(for: .tournamentMatchReady, label: "My next match is ready", desc: "When your next game in a tournament is set", icon: "sportscourt.fill")
+                    pushToggle(for: .tournamentChampion, label: "Tournament champion", desc: "When a tournament you're in crowns its winner", icon: "crown.fill")
+                    pushToggle(for: .privateActivityInvite, label: "Invited to an activity", desc: "When someone adds you to a private activity or game", icon: "person.2.badge.gearshape.fill")
 
                     if env.isAdmin {
                         pushToggle(for: .committeeJoinRequest, label: "Committee join requests", desc: "Admins only: when a member asks to join a committee", icon: "person.badge.clock")
@@ -275,6 +283,7 @@ struct PushToggleView: View {
     private static let defaultPushTypes: Set<PushType> = [
         .alerts, .birthdays, .committeeJoin, .cabinDecision, .cabinMessage,
         .postTag, .postMention, .postReply, .chat, .helpRequest, .helpResponse,
+        .postComment, .newPost, .signupReminder,
     ]
 
     @MainActor
