@@ -143,11 +143,16 @@ struct CommitteeDetailView: View {
             VStack(alignment: .leading, spacing: 24) {
                 header
 
-                // Every committee-level action as a compact 2-across tile grid —
-                // replaces the old column of full-width bars, which was a full
-                // screen of chrome before the roster (the thing people came for)
-                // scrolled into view. Mirrors web's PR #490 action grid.
-                actionGrid
+                // Every way to reach the group, collapsed by default under
+                // "Reach the group" (mirrors web PR #500) — a compact 2-across
+                // tile grid instead of a permanent column of full-width bars,
+                // which was a full screen of chrome before the roster (the
+                // thing people came for) scrolled into view.
+                if hasReach {
+                    CollapsibleSection(title: "Reach the group", emoji: "💬", subtitle: reachSubtitle) {
+                        actionGrid
+                    }
+                }
 
                 // A live/upcoming meeting still gets its own full-width bar — it's
                 // live state to read, not an action to tap. Renders nothing when
@@ -410,13 +415,23 @@ struct CommitteeDetailView: View {
         }
     }
 
+    // "Add a member" deliberately does NOT live in this grid — that's a roster
+    // action (its own inline "＋ Add" pill next to the roster heading below),
+    // not a way to "reach" the group. Matches web: `reachActions` is chat tiles
+    // + schedule/email only (PR #490/#500), never add-member.
+
+    private var hasChatTile: Bool { isMember }
+    private var hasLeadsTile: Bool { iAmLead && !committee.isArchived }
+    private var hasMeetingTile: Bool { canOrganizeMeeting && !committee.isArchived }
+    private var hasEmailTile: Bool { env.isSignedIn && !allEmails.isEmpty }
+
     /// Every committee-level action, as grid tiles, in priority order. Chat and
     /// Leads chat are `NavigationLink`s; the rest fire sheet/composer state.
     /// Each self-hides exactly as its old full-width bar did.
     @ViewBuilder
     private var actionGrid: some View {
         ActionTileGrid(count: actionTileCount) {
-            if isMember {
+            if hasChatTile {
                 NavigationLink {
                     CommitteeChatView(committee: committee, members: [])
                 } label: {
@@ -426,7 +441,7 @@ struct CommitteeDetailView: View {
                 .buttonStyle(.pressable)
                 .actionTileEntrance(index: 0)
             }
-            if iAmLead && !committee.isArchived {
+            if hasLeadsTile {
                 NavigationLink {
                     CommitteeChatView(committee: committee, members: [], area: "Leads",
                                       channelTitle: "Leads", assumeMember: true)
@@ -436,38 +451,39 @@ struct CommitteeDetailView: View {
                 .buttonStyle(.pressable)
                 .actionTileEntrance(index: 1)
             }
-            if canOrganizeMeeting && !committee.isArchived {
+            if hasMeetingTile {
                 Button { showMeetingComposer = true } label: {
                     ActionTileLabel(systemImage: "calendar.badge.plus", title: "Schedule a meeting")
                 }
                 .buttonStyle(.pressable)
                 .actionTileEntrance(index: 2)
             }
-            if env.isSignedIn && !allEmails.isEmpty {
+            if hasEmailTile {
                 Button { showEmail = true } label: {
                     ActionTileLabel(systemImage: "envelope.fill", title: "Email these members")
                 }
                 .buttonStyle(.pressable)
                 .actionTileEntrance(index: 3)
             }
-            if canManage {
-                Button { addingNew = true } label: {
-                    ActionTileLabel(systemImage: "person.badge.plus", title: "Add a member")
-                }
-                .buttonStyle(.pressable)
-                .actionTileEntrance(index: 4)
-            }
         }
     }
 
     private var actionTileCount: Int {
-        var n = 0
-        if isMember { n += 1 }
-        if iAmLead && !committee.isArchived { n += 1 }
-        if canOrganizeMeeting && !committee.isArchived { n += 1 }
-        if env.isSignedIn && !allEmails.isEmpty { n += 1 }
-        if canManage { n += 1 }
-        return n
+        [hasChatTile, hasLeadsTile, hasMeetingTile, hasEmailTile].filter { $0 }.count
+    }
+
+    private var hasReach: Bool { actionTileCount > 0 }
+
+    /// Names what's inside while the "Reach the group" section is collapsed,
+    /// mirroring web's `reachSubtitle` exactly.
+    private var reachSubtitle: String {
+        [
+            (hasChatTile || hasLeadsTile) ? "Chat" : nil,
+            hasEmailTile ? "email" : nil,
+            hasMeetingTile ? "schedule a meeting" : nil,
+        ]
+        .compactMap { $0 }
+        .joined(separator: " · ")
     }
 
     // MARK: - Join requests

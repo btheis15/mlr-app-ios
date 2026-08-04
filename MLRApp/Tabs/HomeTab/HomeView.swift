@@ -336,7 +336,7 @@ struct HomeView: View {
 
     // "App & Help" — guided tour, share the app, help & how-to
     private var appHelpSection: some View {
-        CollapsibleHomeSection(
+        CollapsibleSection(
             title: "App & Help",
             emoji: "📲",
             subtitle: "Take the tour · Share · Help"
@@ -464,62 +464,6 @@ struct HomeTile: View {
         .padding(14)
         .frame(maxWidth: .infinity, minHeight: minHeight ?? 88, maxHeight: .infinity, alignment: .leading)
         .cardStyle()
-    }
-}
-
-// MARK: - CollapsibleHomeSection
-// A tappable header card (emoji + title + subtitle + rotating chevron) that
-// reveals its content when open. Mirrors the web app's CollapsibleSection —
-// both Home groups start collapsed.
-
-private struct CollapsibleHomeSection<Content: View>: View {
-    let title: String
-    let emoji: String
-    let subtitle: String
-    let content: Content
-
-    @State private var isOpen = false
-
-    init(title: String, emoji: String, subtitle: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.emoji = emoji
-        self.subtitle = subtitle
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) { isOpen.toggle() }
-            } label: {
-                HStack(spacing: 12) {
-                    Text(emoji).font(.mlrScaled(20))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(title)
-                            .font(.mlrScaled(16, weight: .semibold))
-                            .foregroundStyle(Color.mlrText)
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(Color.mlrTextMuted)
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.mlrScaled(14, weight: .semibold))
-                        .foregroundStyle(Color.mlrTextSubtle)
-                        .rotationEffect(.degrees(isOpen ? 90 : 0))
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity)
-                .cardStyle()
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.pressable)
-
-            if isOpen {
-                content
-            }
-        }
     }
 }
 

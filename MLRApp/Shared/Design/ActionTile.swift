@@ -18,6 +18,36 @@ import SwiftUI
 //   .buttonStyle(.pressable)
 //   .actionTileEntrance(index: i)
 
+// MARK: - Equal height across the whole grid, not just within a row
+//
+// `LazyVGrid` only equalizes height WITHIN a row — a tile several rows down
+// whose label wraps to a 2nd line can make just THAT row taller than the
+// others, so the grid reads as uneven even though no single tile looks wrong
+// on its own. This is the same defect class web's PR #501 fixed for its CSS
+// grid (there, `min-h` only set a floor; the fix was a fixed height). A fixed
+// point-value isn't safe here — a longer label at a large Dynamic Type size
+// could clip — so instead every tile reports its own natural (unconstrained)
+// height upward, `ActionTileGrid` takes the max, and feeds it back down so
+// every tile — regardless of row — locks to the tallest one actually needed.
+
+private struct ActionTileHeightKey: PreferenceKey {
+    static let defaultValue: CGFloat = 0
+    static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+        value = max(value, nextValue())
+    }
+}
+
+private struct ActionTileEqualHeightKey: EnvironmentKey {
+    static let defaultValue: CGFloat? = nil
+}
+
+private extension EnvironmentValues {
+    var actionTileEqualHeight: CGFloat? {
+        get { self[ActionTileEqualHeightKey.self] }
+        set { self[ActionTileEqualHeightKey.self] = newValue }
+    }
+}
+
 struct ActionTileLabel: View {
     enum Tone { case primary, neutral, danger }
 
@@ -25,6 +55,8 @@ struct ActionTileLabel: View {
     let title: String
     var tone: Tone = .neutral
     var badge: String? = nil
+
+    @Environment(\.actionTileEqualHeight) private var equalHeight
 
     var body: some View {
         VStack(alignment: .leading, spacing: MLRSpacing.sm) {
@@ -51,6 +83,14 @@ struct ActionTileLabel: View {
         .foregroundStyle(foreground)
         .padding(MLRSpacing.md)
         .frame(minHeight: 78, maxWidth: .infinity, alignment: .topLeading)
+        // Once ActionTileGrid has measured every tile's natural height, this
+        // pins ALL of them to the tallest — never below it, so nothing clips.
+        .frame(height: equalHeight)
+        .background(
+            GeometryReader { proxy in
+                Color.clear.preference(key: ActionTileHeightKey.self, value: proxy.size.height)
+            }
+        )
         .background(background)
     }
 
@@ -90,6 +130,8 @@ struct ActionTileGrid<Content: View>: View {
     let count: Int
     let content: () -> Content
 
+    @State private var tileHeight: CGFloat?
+
     private let columns = [GridItem(.flexible(), spacing: MLRSpacing.sm),
                             GridItem(.flexible(), spacing: MLRSpacing.sm)]
 
@@ -102,6 +144,10 @@ struct ActionTileGrid<Content: View>: View {
         if count > 0 {
             LazyVGrid(columns: columns, spacing: MLRSpacing.sm) {
                 content()
+            }
+            .environment(\.actionTileEqualHeight, tileHeight)
+            .onPreferenceChange(ActionTileHeightKey.self) { measured in
+                if measured > 0 { tileHeight = measured }
             }
         }
     }
