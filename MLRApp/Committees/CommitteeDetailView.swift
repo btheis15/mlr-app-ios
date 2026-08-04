@@ -66,7 +66,6 @@ struct CommitteeDetailView: View {
     }
 
     private var roleBased: Bool { !areas.isEmpty }
-    private var canManage: Bool { env.isAdmin }   // app admins have universal privileges
 
     /// A lead of this committee (per the roster) may also review join requests —
     /// matching the web app, which gates approval on `isAdmin || committee lead`.
@@ -75,6 +74,11 @@ struct CommitteeDetailView: View {
         return roster.contains { $0.linkedUserId == me.id && $0.isLead }
     }
     private var canReview: Bool { env.isAdmin || iAmLead }
+    /// Leads get full roster control of their OWN committee (migrations
+    /// 0172/0177 widened the write RLS to `is_committee_lead_slug`) — add/
+    /// remove people, edit them, assign areas, set/unset other leads. Never
+    /// during "View as" (read-only there, matching web's `!previewAsId`).
+    private var canManage: Bool { (env.isAdmin || iAmLead) && !env.isPreviewing }
 
     /// My own linked roster entry, if I'm on this committee's roster.
     private var myEntry: CommitteeRosterEntry? {
