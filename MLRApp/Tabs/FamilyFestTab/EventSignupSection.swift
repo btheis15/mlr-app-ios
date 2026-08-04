@@ -98,9 +98,9 @@ struct EventSignupSection: View {
                 }
             }
             .sheet(item: $teamPrompt) { prompt in
-                TeamSignupSheet(teamSize: item.signupTeamSize ?? 2) { members, teamName in
+                TeamSignupSheet(teamSize: item.signupTeamSize ?? 2) { members, typedNames, teamName in
                     Task { await performTeamSignUp(slotStart: prompt.slotStart, slotId: prompt.slotId,
-                                                   members: members, teamName: teamName) }
+                                                   members: members, typedNames: typedNames, teamName: teamName) }
                 }
             }
         }
@@ -231,13 +231,16 @@ struct EventSignupSection: View {
         }
     }
 
-    private func performTeamSignUp(slotStart: String?, slotId: UUID?, members: [Profile], teamName: String?) async {
+    private func performTeamSignUp(slotStart: String?, slotId: UUID?, members: [Profile], typedNames: [String], teamName: String?) async {
         guard let itemUUID, !busy else { return }
         busy = true; errorText = nil
         defer { busy = false }
-        // The signer (userId nil = caller) plus the picked teammates.
+        // The signer (userId nil = caller) plus the picked teammates — linked
+        // members or, for anyone not on the app yet, a typed name (0143's
+        // linked-or-typed idiom).
         var team: [SignupsService.TeamMemberInput] = [.init(userId: env.currentProfile?.id, name: nil)]
         team += members.map { .init(userId: $0.id, name: $0.displayName) }
+        team += typedNames.map { .init(userId: nil, name: $0) }
         do {
             try await env.signupsService.signUpTeam(itemId: itemUUID, slotStart: slotStart, slotId: slotId,
                                                     members: team, teamName: teamName)
@@ -371,26 +374,64 @@ private extension String {
 /// Pick your teammates (the signer is added automatically) + an optional team name.
 private struct TeamSignupSheet: View {
     let teamSize: Int
-    let onSubmit: ([Profile], String?) -> Void
+    /// Linked teammates, typed (account-less) names, and an optional team name.
+    let onSubmit: ([Profile], [String], String?) -> Void
 
     @Environment(\.dismiss) private var dismiss
     @State private var teamName = ""
     @State private var mates: [Profile] = []
+    @State private var typedNames: [String] = []
+    @State private var typedName = ""
+    @State private var showPicker = false
 
     private var needed: Int { max(1, teamSize - 1) }   // minus the signer
+    private var haveCount: Int { mates.count + typedNames.count }
+    private var canSubmit: Bool { haveCount >= needed }
 
     var body: some View {
         NavigationStack {
-            VStack(spacing: 0) {
-                Form {
-                    Section("Team name (optional)") { TextField("e.g. The Ringers", text: $teamName) }
-                    Section {
-                        Text("Pick \(needed) teammate\(needed == 1 ? "" : "s") — you're already on the team.")
-                            .font(.mlrScaled(13)).foregroundStyle(.secondary)
+            Form {
+                Section("Team name (optional)") { TextField("e.g. The Ringers", text: $teamName) }
+
+                Section {
+                    Button { showPicker = true } label: {
+                        Label(mates.isEmpty ? "Add app members" : "\(mates.count) added", systemImage: "person.badge.plus")
                     }
+                    ForEach(mates) { p in
+                        HStack(spacing: 10) {
+                            AvatarView(profile: p, size: .small)
+                            Text(p.displayName).font(.mlrScaled(14))
+                            Spacer()
+                            Button { mates.removeAll { $0.id == p.id } } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
+                            }.buttonStyle(.pressable)
+                        }
+                    }
+                    // A teammate who isn't on the app yet, by name (0143's
+                    // linked-or-typed idiom, mirroring individual sign-ups).
+                    HStack {
+                        TextField("Or add a name (not on the app)", text: $typedName)
+                        Button("Add") {
+                            let n = typedName.trimmingCharacters(in: .whitespaces)
+                            guard !n.isEmpty else { return }
+                            typedNames.append(n); typedName = ""
+                        }
+                        .disabled(typedName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    ForEach(typedNames, id: \.self) { name in
+                        HStack {
+                            Text(name).font(.mlrScaled(14))
+                            Spacer()
+                            Button { typedNames.removeAll { $0 == name } } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
+                            }.buttonStyle(.pressable)
+                        }
+                    }
+                } header: {
+                    Text("Teammates")
+                } footer: {
+                    Text("Pick \(needed) teammate\(needed == 1 ? "" : "s") — you're already on the team.")
                 }
-                .frame(maxHeight: 160)
-                MemberMultiPicker(selected: $mates)
             }
             .navigationTitle("Sign up a team")
             .navigationBarTitleDisplayMode(.inline)
@@ -398,11 +439,14 @@ private struct TeamSignupSheet: View {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Sign up") {
-                        onSubmit(mates, teamName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : teamName)
+                        onSubmit(mates, typedNames, teamName.trimmingCharacters(in: .whitespaces).isEmpty ? nil : teamName)
                         dismiss()
                     }
-                    .disabled(mates.isEmpty)
+                    .disabled(!canSubmit)
                 }
+            }
+            .sheet(isPresented: $showPicker) {
+                MemberMultiPicker(selected: $mates)
             }
         }
     }
