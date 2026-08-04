@@ -416,8 +416,17 @@ struct PrivateActivitySheet: View {
                         Menu {
                             Button { showEdit = true } label: { Label("Edit details", systemImage: "pencil") }
                             Button { showInvite = true } label: { Label("Invite people", systemImage: "person.badge.plus") }
-                            Button(role: .destructive) { Task { await archiveOrDelete(activity) } } label: {
-                                Label(activity.isArchived ? "Delete" : "Archive", systemImage: "archivebox")
+                            if activity.isArchived {
+                                Button { Task { await restore(activity) } } label: {
+                                    Label("Restore", systemImage: "arrow.uturn.backward")
+                                }
+                                Button(role: .destructive) { Task { await delete(activity) } } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            } else {
+                                Button(role: .destructive) { Task { await archive(activity) } } label: {
+                                    Label("Archive", systemImage: "archivebox")
+                                }
                             }
                         } label: { Image(systemName: "ellipsis.circle") }
                     }
@@ -594,12 +603,16 @@ struct PrivateActivitySheet: View {
         try? await env.privateActivitiesService.removeMember(memberId: m.id)
         await reload(); onChanged()
     }
-    private func archiveOrDelete(_ activity: PrivateActivity) async {
-        if activity.isArchived {
-            try? await env.privateActivitiesService.delete(id: activityId)
-        } else {
-            try? await env.privateActivitiesService.setArchived(id: activityId, archived: true)
-        }
+    private func archive(_ activity: PrivateActivity) async {
+        try? await env.privateActivitiesService.setArchived(id: activityId, archived: true)
+        onChanged(); dismiss()
+    }
+    private func restore(_ activity: PrivateActivity) async {
+        try? await env.privateActivitiesService.setArchived(id: activityId, archived: false)
+        await reload(); onChanged()
+    }
+    private func delete(_ activity: PrivateActivity) async {
+        try? await env.privateActivitiesService.delete(id: activityId)
         onChanged(); dismiss()
     }
 }
@@ -612,20 +625,65 @@ private struct InviteToActivitySheet: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State private var selected: [Profile] = []
+    @State private var typedNames: [String] = []   // people not on the app yet
+    @State private var typedName = ""
+    @State private var notify = true
+    @State private var showPicker = false
     @State private var busy = false
+
+    private var canAdd: Bool { (!selected.isEmpty || !typedNames.isEmpty) && !busy }
 
     var body: some View {
         NavigationStack {
-            MemberMultiPicker(selected: $selected)
-                .navigationTitle("Invite people")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(busy ? "Adding…" : "Add") { Task { await add() } }
-                            .disabled(selected.isEmpty || busy)
+            Form {
+                Section {
+                    Button { showPicker = true } label: {
+                        Label(selected.isEmpty ? "Add app members" : "\(selected.count) added", systemImage: "person.badge.plus")
                     }
+                    ForEach(selected) { p in
+                        HStack(spacing: 10) {
+                            AvatarView(profile: p, size: .small)
+                            Text(p.displayName).font(.mlrScaled(14))
+                            Spacer()
+                            Button { selected.removeAll { $0.id == p.id } } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
+                            }.buttonStyle(.pressable)
+                        }
+                    }
+                    // Add someone who isn't on the app yet (by name).
+                    HStack {
+                        TextField("Or add a name (not on the app)", text: $typedName)
+                        Button("Add") {
+                            let n = typedName.trimmingCharacters(in: .whitespaces)
+                            guard !n.isEmpty else { return }
+                            typedNames.append(n); typedName = ""
+                        }
+                        .disabled(typedName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    ForEach(typedNames, id: \.self) { name in
+                        HStack {
+                            Text(name).font(.mlrScaled(14))
+                            Spacer()
+                            Button { typedNames.removeAll { $0 == name } } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
+                            }.buttonStyle(.pressable)
+                        }
+                    }
+                    Toggle("Notify people I add", isOn: $notify)
                 }
+            }
+            .navigationTitle("Invite people")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(busy ? "Adding…" : "Add") { Task { await add() } }
+                        .disabled(!canAdd)
+                }
+            }
+            .sheet(isPresented: $showPicker) {
+                MemberMultiPicker(selected: $selected)
+            }
         }
     }
 
@@ -633,7 +691,11 @@ private struct InviteToActivitySheet: View {
         busy = true; defer { busy = false }
         for p in selected {
             _ = try? await env.privateActivitiesService.addMember(
-                activityId: activityId, member: .init(userId: p.id, name: p.displayName), notify: true)
+                activityId: activityId, member: .init(userId: p.id, name: p.displayName), notify: notify)
+        }
+        for name in typedNames {
+            _ = try? await env.privateActivitiesService.addMember(
+                activityId: activityId, member: .init(userId: nil, name: name), notify: notify)
         }
         onInvited(); dismiss()
     }
