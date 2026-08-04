@@ -16,6 +16,9 @@ import PhotosUI
 
 struct CommentsView: View {
     let post: Post
+    /// A specific comment to scroll to on open — set from a post_comment/reply/
+    /// mention notification's `&comment=<id>` (migration 0164).
+    var focusCommentId: UUID? = nil
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
@@ -152,25 +155,34 @@ struct CommentsView: View {
                 Spacer()
             }
         } else {
-            List {
-                ForEach(comments) { comment in
-                    CommentRow(
-                        comment: comment,
-                        isSignedIn: env.isSignedIn,
-                        canReport: env.isSignedIn && comment.authorId != env.currentProfile?.id,
-                        canDelete: canDelete(comment),
-                        onReport: {
-                            await reportComment(comment)
-                        },
-                        onDelete: {
-                            await deleteComment(comment)
-                        }
-                    )
-                    .listRowSeparator(.hidden)
-                    .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            ScrollViewReader { proxy in
+                List {
+                    ForEach(comments) { comment in
+                        CommentRow(
+                            comment: comment,
+                            isSignedIn: env.isSignedIn,
+                            canReport: env.isSignedIn && comment.authorId != env.currentProfile?.id,
+                            canDelete: canDelete(comment),
+                            onReport: {
+                                await reportComment(comment)
+                            },
+                            onDelete: {
+                                await deleteComment(comment)
+                            }
+                        )
+                        .id(comment.id)
+                        .listRowSeparator(.hidden)
+                        .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                    }
+                }
+                .listStyle(.plain)
+                .onAppear {
+                    guard let focusCommentId, comments.contains(where: { $0.id == focusCommentId }) else { return }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        withAnimation { proxy.scrollTo(focusCommentId, anchor: .center) }
+                    }
                 }
             }
-            .listStyle(.plain)
         }
     }
 

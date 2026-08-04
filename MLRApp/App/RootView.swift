@@ -18,6 +18,9 @@ struct RootView: View {
     @State private var pendingHouseHub: House?
     @State private var pendingCommitteeChat: PendingCommitteeChat?
     @State private var pendingPost: Post?
+    /// A specific comment to scroll to + flash within `pendingPost`'s thread
+    /// (migration 0164) — set alongside pendingPost, read once by CommentsView.
+    @State private var pendingCommentId: UUID?
     @State private var pendingScheduleItem: ScheduleItem?
     @State private var pendingPrivateActivity: PendingPrivateActivity?
     @State private var showHelpRequests = false
@@ -104,7 +107,7 @@ struct RootView: View {
         // reaction) opens that one post's thread — the same sheet the comment
         // button on a PostCard opens, which leads with a recap of the post itself.
         .sheet(item: $pendingPost) { post in
-            CommentsView(post: post)
+            CommentsView(post: post, focusCommentId: pendingCommentId)
         }
         // A Family Fest sign-up reminder / tournament ping → that event's detail.
         .sheet(item: $pendingScheduleItem) { item in
@@ -189,9 +192,9 @@ struct RootView: View {
         guard let info else { return }
         PendingNotificationTap.shared.clear()
         switch NotificationDeepLink(userInfo: info) {
-        case .post(let id):
+        case .post(let id, let commentId):
             selectedTab = .feed
-            resolvePost(id)
+            resolvePost(id, commentId: commentId)
         case .feed:
             selectedTab = .feed
         case .committeeMessage(let id):
@@ -239,8 +242,9 @@ struct RootView: View {
     /// Resolve the post behind a post notification (new post, comment, reply,
     /// @mention, tag, reaction) and open its thread. Falls back to the Feed tab if
     /// the post is gone or held for review.
-    private func resolvePost(_ id: UUID) {
+    private func resolvePost(_ id: UUID, commentId: UUID? = nil) {
         Task { @MainActor in
+            pendingCommentId = commentId
             pendingPost = await env.postsService.fetchPost(id: id)
         }
     }

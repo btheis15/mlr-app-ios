@@ -24,7 +24,7 @@ final class NotificationsService {
             let rows: [NotifRow] = try await supabase
                 .from("notifications")
                 .select("""
-                    id, recipient_id, type, title, body, entity_type, entity_id,
+                    id, recipient_id, type, title, body, entity_type, entity_id, url,
                     seen_at, read_at, expires_at, created_at,
                     profiles!actor_id(display_name, avatar_url)
                 """)
@@ -434,7 +434,7 @@ final class NotificationsService {
                     if let row: NotifRow = try? await supabase
                         .from("notifications")
                         .select("""
-                            id, recipient_id, type, title, body, entity_type, entity_id,
+                            id, recipient_id, type, title, body, entity_type, entity_id, url,
                             seen_at, read_at, expires_at, created_at,
                             profiles!actor_id(display_name, avatar_url)
                         """)
@@ -500,6 +500,7 @@ private struct NotifRow: Decodable {
     let body: String?
     let entityType: String?
     let entityId: String?
+    let url: String?
     let seenAt: Date?
     let readAt: Date?
     let expiresAt: Date?
@@ -513,6 +514,7 @@ private struct NotifRow: Decodable {
         case title, body
         case entityType = "entity_type"
         case entityId = "entity_id"
+        case url
         case seenAt = "seen_at"
         case readAt = "read_at"
         case expiresAt = "expires_at"
@@ -538,6 +540,7 @@ private struct NotifRow: Decodable {
             body: body,
             targetType: entityType,
             targetId: entityId,
+            url: url,
             actorName: profiles?.name,
             actorAvatarUrl: profiles?.avatarUrl,
             seenAt: seenAt,

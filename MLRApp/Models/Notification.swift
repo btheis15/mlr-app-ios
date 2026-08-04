@@ -10,6 +10,9 @@ struct AppNotification: Codable, Identifiable, Equatable {
     var body: String?
     var targetType: String? // maps to entity_type in DB
     var targetId: String?   // maps to entity_id in DB
+    /// The web deep link (e.g. carries `&comment=<id>` a post_comment/reply/
+    /// mention notification can't express via targetType/targetId alone).
+    var url: String? = nil
     var actorName: String?      // populated from profiles join, not a flat column
     var actorAvatarUrl: String? // populated from profiles join, not a flat column
     var seenAt: Date?

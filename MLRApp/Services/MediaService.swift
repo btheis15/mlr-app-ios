@@ -291,15 +291,19 @@ final class MediaService {
     /// Search everything the signed-in member can see, by MEANING, via the mini's
     /// POST /search — the mini embeds the query on-device and runs the RLS-scoped
     /// search_conversations() RPC AS this member (we forward their access token),
-    /// so results never leak past what the Feed/chats already show. Returns [] on
-    /// any failure (not signed in, query too short, mini unreachable off Tailscale)
-    /// so the UI degrades to a clean empty state — matching the web + iOS media.
-    func searchConversations(query: String, limit: Int = 20) async -> [ConversationSearchHit] {
+    /// so results never leak past what the Feed/chats already show. Returns []
+    /// for the cases that mean "no results" (not signed in, query too short, a
+    /// 401 — session expired mid-search) but THROWS for a genuine failure
+    /// (mini unreachable, any other non-2xx status) so the caller can show a
+    /// distinct "Search is unavailable" state instead of a false empty —
+    /// mirrors web's lib/search.ts exactly.
+    func searchConversations(query: String, limit: Int = 20) async throws -> [ConversationSearchHit] {
         let q = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard q.count >= 2,
-              let session = try? await supabase.auth.session,
-              let url = URL(string: "\(Self.miniServerURL)/search")
-        else { return [] }
+        guard q.count >= 2 else { return [] }
+        guard let session = try? await supabase.auth.session else { return [] }
+        guard let url = URL(string: "\(Self.miniServerURL)/search") else {
+            throw MediaError.miniServerError
+        }
 
         var req = URLRequest(url: url)
         req.httpMethod = "POST"
@@ -308,14 +312,12 @@ final class MediaService {
         req.httpBody = try? JSONSerialization.data(withJSONObject: ["q": q, "limit": limit])
         req.timeoutInterval = 8
 
-        do {
-            let (data, resp) = try await URLSession.shared.data(for: req)
-            guard let http = resp as? HTTPURLResponse, http.statusCode == 200 else { return [] }
-            struct Envelope: Decodable { let results: [ConversationSearchHit]? }
-            return (try JSONDecoder().decode(Envelope.self, from: data)).results ?? []
-        } catch {
-            return []
-        }
+        let (data, resp) = try await URLSession.shared.data(for: req)
+        guard let http = resp as? HTTPURLResponse else { throw MediaError.miniServerError }
+        if http.statusCode == 401 { return [] }   // session expired mid-search — treat as no results
+        guard http.statusCode == 200 else { throw MediaError.miniServerError }
+        struct Envelope: Decodable { let results: [ConversationSearchHit]? }
+        return (try JSONDecoder().decode(Envelope.self, from: data)).results ?? []
     }
 
     /// Extract bucket and object path from a Supabase Storage public URL.
