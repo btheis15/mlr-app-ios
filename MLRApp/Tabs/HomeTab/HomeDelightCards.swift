@@ -189,34 +189,46 @@ struct WhosUpNorthCard: View {
         let today = isoToday()
         var byId: [UUID: UpNorthPerson] = [:]
 
-        // 1. Events covering today — fetch IDs fresh so we don't depend on
-        //    EventsService having loaded before this card's task fires.
+        // 1. Events ACTUALLY HAPPENING today (started, not past end — no grace
+        //    either side, unlike Ask-for-Help: this card should clear the moment
+        //    an event ends, not keep showing everyone for a couple more days).
+        //    Day-aware on day-RSVP events (Family Fest) — a Mon–Wed attendee
+        //    isn't shown Thursday. Mirrors web's lib/presence.ts `presentFromAttendance`.
+        //    Fetched fresh so we don't depend on EventsService having loaded first.
         do {
             let eventRows: [EventIdFetchRow] = try await supabase
                 .from("events")
-                .select("id, start_date, end_date")
+                .select("id, start_date, end_date, day_rsvp")
                 .lte("start_date", value: today)
                 .execute()
                 .value
 
             // Filter client-side: event must end on or after today.
             // Events without end_date are single-day; include when start = today.
-            let todayIds = eventRows.filter { row in
+            let todayEvents = eventRows.filter { row in
                 let end = row.endDate ?? row.startDate
                 return end >= today
-            }.map(\.id)
+            }
+            let todayIds = todayEvents.map(\.id)
+            let dayRsvpIds = Set(todayEvents.filter { $0.dayRsvp == true }.map(\.id))
 
             if !todayIds.isEmpty {
                 let attRows: [AttendanceFetchRow] = try await supabase
                     .from("event_attendance")
-                    .select("user_id, status, profiles!user_id(id, display_name, avatar_url)")
+                    .select("event_id, user_id, status, days, profiles!user_id(id, display_name, avatar_url)")
                     .in("event_id", values: todayIds)
-                    .in("status", values: ["going", "maybe"])
                     .execute()
                     .value
 
                 for row in attRows {
                     guard row.userId != myId, let p = row.profiles else { continue }
+                    let going: Bool
+                    if dayRsvpIds.contains(row.eventId), let days = row.days, !days.isEmpty {
+                        going = days[today] == "going"
+                    } else {
+                        going = row.status == "going" || (row.days?.values.contains("going") ?? false)
+                    }
+                    guard going else { continue }
                     byId[row.userId] = UpNorthPerson(
                         id: row.userId,
                         name: p.displayName ?? "Member",
@@ -250,6 +262,30 @@ struct WhosUpNorthCard: View {
             }
         } catch {
             // Not fatal — admins see cabin guests; non-admins see event attendees only.
+        }
+
+        // 3. House-calendar stays covering today (start_date <= today <= end_date,
+        //    end inclusive). RLS scopes this to the viewer's own house — a
+        //    non-member simply gets fewer rows, never an error.
+        do {
+            let stayRows: [HouseStayFetchRow] = try await supabase
+                .from("house_stays")
+                .select("created_by, profiles:created_by(id, display_name, avatar_url)")
+                .lte("start_date", value: today)
+                .gte("end_date", value: today)
+                .execute()
+                .value
+
+            for row in stayRows {
+                guard row.createdBy != myId, let p = row.profiles else { continue }
+                byId[row.createdBy] = UpNorthPerson(
+                    id: row.createdBy,
+                    name: p.displayName ?? "Member",
+                    avatarUrl: p.avatarUrl
+                )
+            }
+        } catch {
+            // Not fatal — house stays are visible only to that house's members.
         }
 
         people = Array(byId.values).sorted { $0.name < $1.name }
@@ -296,13 +332,17 @@ private struct ProfileSnippet: Decodable {
 }
 
 private struct AttendanceFetchRow: Decodable {
+    let eventId: String
     let userId: UUID
     let status: String
+    let days: [String: String]?
     let profiles: ProfileSnippet?
 
     enum CodingKeys: String, CodingKey {
+        case eventId = "event_id"
         case userId  = "user_id"
         case status
+        case days
         case profiles
     }
 }
@@ -321,10 +361,22 @@ private struct EventIdFetchRow: Decodable {
     let id: String
     let startDate: String
     let endDate: String?
+    let dayRsvp: Bool?
 
     enum CodingKeys: String, CodingKey {
         case id
         case startDate = "start_date"
         case endDate   = "end_date"
+        case dayRsvp   = "day_rsvp"
+    }
+}
+
+private struct HouseStayFetchRow: Decodable {
+    let createdBy: UUID
+    let profiles: ProfileSnippet?
+
+    enum CodingKeys: String, CodingKey {
+        case createdBy = "created_by"
+        case profiles
     }
 }
