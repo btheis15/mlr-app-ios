@@ -377,44 +377,6 @@ struct PostCard: View {
     }
 }
 
-// MARK: - ReactionButton
-
-struct ReactionButton: View {
-    let emoji: String
-    let count: Int
-    let isSelected: Bool
-    let onTap: () -> Void
-
-    var body: some View {
-        Button(action: onTap) {
-            HStack(spacing: 4) {
-                Text(emoji)
-                    .font(.mlrScaled(15))
-                if count > 0 {
-                    Text("\(count)")
-                        .font(.mlrScaled(13, weight: .semibold))
-                        .foregroundStyle(isSelected ? Color.mlrPrimary : Color.mlrTextMuted)
-                        .numericTransition()
-                }
-            }
-            .padding(.horizontal, count > 0 ? 10 : 8)
-            .padding(.vertical, 5)
-            .background(isSelected ? Color.mlrPrimaryLight : Color.mlrCard)
-            .clipShape(Capsule())
-            .overlay(
-                Capsule()
-                    .strokeBorder(
-                        isSelected ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder,
-                        lineWidth: 1
-                    )
-            )
-        }
-        .buttonStyle(.pressable)
-        .animation(.easeInOut(duration: 0.12), value: isSelected)
-        .animation(.easeInOut(duration: 0.12), value: count)
-    }
-}
-
 // MARK: - PostMediaTile
 // A single feed media item in a uniform SQUARE frame (matches the web MediaGrid):
 // a portrait photo center-crops to a square (still reads upright — tap opens the
