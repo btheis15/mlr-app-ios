@@ -102,6 +102,13 @@ struct HomeCallout: Identifiable, Equatable {
     /// Linked Family Fest schedule item (migration 0137) — the card borrows its
     /// photo/details, and shows a "📝 Sign up" button when it takes sign-ups.
     var signupItemId: String? = nil
+    /// Linked resort event (migration 0096) — pairs with `excludeNotAttending`
+    /// to hide the card from anyone who explicitly RSVP'd "Can't make it".
+    var eventId: String? = nil
+    var excludeNotAttending: Bool = false
+    /// Linked Drop Box folder (migration 0172) — shows a "📸 Add & see photos"
+    /// button deep-linking straight into that shared album.
+    var dropBoxId: String? = nil
 
     /// Whether this callout should be shown today (yyyy-MM-dd string).
     func isLive(today: String) -> Bool {
@@ -250,7 +257,10 @@ final class FestContentService {
                     dismissId: row.dismissId ?? row.id.uuidString,
                     position: row.position ?? 0,
                     isActive: row.isActive ?? true,
-                    signupItemId: row.signupItemId?.uuidString
+                    signupItemId: row.signupItemId?.uuidString,
+                    eventId: row.eventId,
+                    excludeNotAttending: row.excludeNotAttending ?? false,
+                    dropBoxId: row.dropBoxId?.uuidString
                 )
             }
         } catch {
@@ -753,6 +763,9 @@ private struct CalloutRow: Decodable {
     let position: Int?
     let isActive: Bool?
     let signupItemId: UUID?   // migration 0137 — linked fest schedule item
+    let eventId: String?      // migration 0096 — event targeting
+    let excludeNotAttending: Bool?
+    let dropBoxId: UUID?      // migration 0172 — linked Drop Box folder
 
     struct CalloutLinkRow: Decodable {
         let href: String
@@ -769,6 +782,9 @@ private struct CalloutRow: Decodable {
         case position
         case isActive  = "is_active"
         case signupItemId = "signup_item_id"
+        case eventId = "event_id"
+        case excludeNotAttending = "exclude_not_attending"
+        case dropBoxId = "drop_box_id"
     }
 }
 

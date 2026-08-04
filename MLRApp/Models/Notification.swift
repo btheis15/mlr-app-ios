@@ -58,6 +58,10 @@ struct Announcement: Codable, Identifiable, Equatable {
     /// row from before this column existed) still show, matching the DB's
     /// own column default.
     var showBanner: Bool = true
+    /// Migration 0096 — pairs with `excludeNotAttending` to hide the banner
+    /// from anyone who explicitly RSVP'd "Can't make it" to the linked event.
+    var eventId: String? = nil
+    var excludeNotAttending: Bool = false
 
     enum CodingKeys: String, CodingKey {
         // The DB column is `severity` ('info' | 'alert'); AnnouncementKind maps to/from it.
@@ -66,11 +70,14 @@ struct Announcement: Codable, Identifiable, Equatable {
         case expiresAt = "expires_at"
         case createdAt = "created_at"
         case showBanner = "show_banner"
+        case eventId = "event_id"
+        case excludeNotAttending = "exclude_not_attending"
     }
 
-    init(id: String, title: String, body: String?, kind: AnnouncementKind, expiresAt: Date?, createdAt: Date?, showBanner: Bool = true) {
+    init(id: String, title: String, body: String?, kind: AnnouncementKind, expiresAt: Date?, createdAt: Date?, showBanner: Bool = true, eventId: String? = nil, excludeNotAttending: Bool = false) {
         self.id = id; self.title = title; self.body = body; self.kind = kind
         self.expiresAt = expiresAt; self.createdAt = createdAt; self.showBanner = showBanner
+        self.eventId = eventId; self.excludeNotAttending = excludeNotAttending
     }
 
     init(from decoder: Decoder) throws {
@@ -82,6 +89,8 @@ struct Announcement: Codable, Identifiable, Equatable {
         expiresAt = try c.decodeIfPresent(Date.self, forKey: .expiresAt)
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
         showBanner = try c.decodeIfPresent(Bool.self, forKey: .showBanner) ?? true
+        eventId = try c.decodeIfPresent(String.self, forKey: .eventId)
+        excludeNotAttending = try c.decodeIfPresent(Bool.self, forKey: .excludeNotAttending) ?? false
     }
 
     var isExpired: Bool {

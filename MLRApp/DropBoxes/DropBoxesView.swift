@@ -105,11 +105,18 @@ private extension String {
 
 // MARK: - DropBoxDetailView
 
-private struct DropBoxDetailView: View {
+/// Not `private` — also opened directly from a Home callout deep-link
+/// (migration 0172, see HomeCalloutCard's "📸 Add & see photos" button).
+struct DropBoxDetailView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
 
     let boxId: UUID
+
+    // A stored `private var` on any property forces Swift's synthesized
+    // memberwise init to be file-private too — so an explicit init is needed
+    // for the cross-file deep-link call site above.
+    init(boxId: UUID) { self.boxId = boxId }
 
     @State private var pickerItems: [PhotosPickerItem] = []
     @State private var uploading = false
@@ -207,6 +214,14 @@ private struct DropBoxDetailView: View {
                 }
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        // Deep-linked here directly (a Home callout, migration 0172) can land
+        // before DropBoxesView's own `.task` has ever fetched — make sure this
+        // detail view can always self-load rather than spinning forever.
+        .task {
+            if env.dropBoxesService.boxes.isEmpty {
+                await env.dropBoxesService.fetchBoxes()
             }
         }
     }
