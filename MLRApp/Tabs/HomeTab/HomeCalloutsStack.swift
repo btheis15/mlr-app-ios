@@ -244,103 +244,86 @@ struct HomeCalloutCard: View {
                 KFImage(url)
                     .placeholder {
                         Color.mlrSurface
-                            .frame(maxWidth: .infinity, minHeight: 200)
+                            .frame(maxWidth: .infinity, minHeight: 220)
                             .overlay(ProgressView())
                     }
                     .onFailure { _ in imageLoadFailed = true }
                     .resizable()
                     .scaledToFit()
-                    // Cap height so a tall portrait image doesn't push all content off-screen.
-                    .frame(maxWidth: .infinity, maxHeight: 360)
+                    .frame(maxWidth: .infinity, maxHeight: 380)
                     .clipped()
-                    // Dismiss X in top-right corner over the image
-                    .overlay(alignment: .topTrailing) {
-                        if let dismiss = onDismiss {
-                            Button(action: dismiss) {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 20))
-                                    .foregroundStyle(.white.opacity(0.85))
-                                    .shadow(radius: 2)
-                                    .padding(8)
-                            }
-                            .buttonStyle(.pressable)
-                        }
-                    }
             }
 
             // Text block
             if hasText {
-                VStack(alignment: .leading, spacing: 6) {
-                    // Header row: title + dismiss X (when no image)
-                    if !hasImage, let dismiss = onDismiss {
-                        HStack(alignment: .top) {
-                            if let title = callout.title?.nilIfEmpty {
-                                Text(title)
-                                    .font(.mlrScaled(14, weight: .bold))
-                                    .foregroundStyle(Color.mlrText)
-                            }
-                            Spacer()
-                            Button(action: dismiss) {
-                                Image(systemName: "xmark")
-                                    .font(.mlrScaled(11, weight: .semibold))
-                                    .foregroundStyle(Color.mlrTextSubtle)
-                                    .padding(4)
-                            }
-                            .buttonStyle(.pressable)
+                VStack(alignment: .leading, spacing: 0) {
+                    // Eyebrow row — only text-only cards get this branded label
+                    if !hasImage {
+                        HStack(spacing: 5) {
+                            Image(systemName: "megaphone.fill")
+                                .font(.system(size: 10, weight: .semibold))
+                            Text("ANNOUNCEMENT")
+                                .font(.system(size: 10, weight: .black))
+                                .tracking(1.3)
                         }
-                    } else if let title = callout.title?.nilIfEmpty {
+                        .foregroundStyle(Color.mlrPrimary.opacity(0.8))
+                        .padding(.bottom, 10)
+                    }
+
+                    if let title = callout.title?.nilIfEmpty {
                         Text(title)
-                            .font(.mlrScaled(14, weight: .bold))
+                            .font(.mlrScaled(18, weight: .bold))
                             .foregroundStyle(Color.mlrText)
+                            .padding(.trailing, onDismiss != nil ? 30 : 0)
+                            .padding(.bottom, callout.body?.nilIfEmpty != nil ? 8 : 0)
                     }
 
                     if let body = callout.body?.nilIfEmpty {
                         Text(body)
-                            .font(.mlrScaled(13))
+                            .font(.mlrScaled(14))
                             .foregroundStyle(Color.mlrTextMuted)
+                            .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
                     }
 
                     if !callout.links.isEmpty {
-                        VStack(spacing: 6) {
+                        VStack(spacing: 8) {
                             ForEach(Array(callout.links.enumerated()), id: \.offset) { _, link in
                                 actionButton(link: link)
                             }
                         }
+                        .padding(.top, 12)
                     }
 
-                    // Linked Fest activity's Sign up button — only when the
-                    // activity takes sign-ups (#407). Opens the activity detail
-                    // (which hosts the sign-up section).
                     if let activity = linkedActivity, activity.signupEnabled {
                         Button { signupItem = activity } label: {
                             Text("📝 Sign up")
-                                .font(.mlrScaled(13, weight: .semibold))
+                                .font(.mlrScaled(14, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 9)
+                                .padding(.vertical, 12)
                                 .background(Color.mlrPrimary)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.pressable)
+                        .padding(.top, 12)
                     }
 
-                    // Linked Drop Box folder (migration 0172) — deep-links
-                    // straight into that shared album.
                     if let dropBoxId = callout.dropBoxId, let uuid = UUID(uuidString: dropBoxId) {
                         Button {
                             if env.isSignedIn { dropBoxTarget = DropBoxTarget(id: uuid) }
                             else { env.authService.promptSignIn() }
                         } label: {
                             Text("📸 Add & see photos")
-                                .font(.mlrScaled(13, weight: .semibold))
+                                .font(.mlrScaled(14, weight: .semibold))
                                 .foregroundStyle(.white)
                                 .frame(maxWidth: .infinity)
-                                .padding(.vertical, 9)
+                                .padding(.vertical, 12)
                                 .background(Color.mlrAccent)
-                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.pressable)
+                        .padding(.top, 12)
                     }
 
                     if let ends = callout.endsOn {
@@ -348,9 +331,10 @@ struct HomeCalloutCard: View {
                             .font(.mlrScaled(11))
                             .foregroundStyle(Color.mlrTextSubtle)
                             .frame(maxWidth: .infinity, alignment: .center)
+                            .padding(.top, 10)
                     }
                 }
-                .padding(14)
+                .padding(hasImage ? 16 : 20)
             }
 
             // "I did this" — permanent completion button (migration 0098).
@@ -360,7 +344,7 @@ struct HomeCalloutCard: View {
                         .font(.mlrScaled(12, weight: .semibold))
                         .foregroundStyle(Color.mlrPrimary)
                         .frame(maxWidth: .infinity)
-                        .padding(.vertical, 11)
+                        .padding(.vertical, 13)
                         .background(Color.mlrSurface)
                         .overlay(
                             Rectangle()
@@ -373,7 +357,51 @@ struct HomeCalloutCard: View {
                 .disabled(isMarkingDone)
             }
         }
-        .cardStyle()
+        // Rich gradient background for text-only cards; plain for image cards.
+        .background {
+            ZStack {
+                Color.mlrCard
+                if !hasImage {
+                    LinearGradient(
+                        colors: [Color.mlrPrimary.opacity(0.11), Color.mlrPrimary.opacity(0)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    )
+                }
+            }
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 18))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18)
+                .stroke(
+                    LinearGradient(
+                        colors: hasImage
+                            ? [Color.mlrBorder, Color.mlrBorder]
+                            : [Color.mlrPrimary.opacity(0.5), Color.mlrPrimary.opacity(0.12)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1.5
+                )
+        }
+        .shadow(color: hasImage ? .black.opacity(0.09) : Color.mlrPrimary.opacity(0.15),
+                radius: 18, x: 0, y: 7)
+        .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
+        // Floating dismiss — pill button in the top-right corner
+        .overlay(alignment: .topTrailing) {
+            if let dismiss = onDismiss {
+                Button(action: dismiss) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(hasImage ? Color.white : Color.mlrTextSubtle)
+                        .frame(width: 26, height: 26)
+                        .background(hasImage
+                            ? AnyShapeStyle(.black.opacity(0.35))
+                            : AnyShapeStyle(.ultraThinMaterial))
+                        .clipShape(Circle())
+                }
+                .buttonStyle(.pressable)
+                .padding(12)
+            }
+        }
         .sheet(item: $signupItem) { item in
             NavigationStack { FestScheduleDetailView(item: item) }
         }
@@ -402,16 +430,16 @@ struct HomeCalloutCard: View {
         let digits = isTel ? String(link.href.dropFirst(4)) : nil
         return HStack {
             Text(link.label?.nilIfEmpty ?? (isTel ? "📞 Call" : isExt ? "Open link" : "✉️ Email"))
-                .font(.mlrScaled(13, weight: .semibold))
+                .font(.mlrScaled(14, weight: .semibold))
                 .foregroundStyle(Color.mlrPrimary)
             Spacer()
             if let t = digits { Text(formatPhone(t)).font(.mlrScaled(13)).foregroundStyle(Color.mlrPrimary.opacity(0.7)) }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 11)
-        .background(Color.mlrPrimary.opacity(0.08))
-        .clipShape(RoundedRectangle(cornerRadius: 10))
-        .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(Color.mlrPrimary.opacity(0.18), lineWidth: 1))
+        .padding(.horizontal, 16)
+        .padding(.vertical, 13)
+        .background(Color.mlrPrimary.opacity(0.09))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+        .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.mlrPrimary.opacity(0.22), lineWidth: 1))
     }
 
     private func formattedDate(_ iso: String) -> String {
