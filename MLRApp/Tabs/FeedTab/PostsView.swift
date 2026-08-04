@@ -81,17 +81,24 @@ private struct ConversationsList: View {
             let live = channels.filter { !$0.isArchived }
             let archived = channels.filter { $0.isArchived }
 
-            // Group live channels by committee so each committee gets its own
-            // section header (e.g. "Family Fest" → General / Leads / Helpers).
-            let committeeOrder = live.reduce(into: [UUID]()) { acc, ch in
-                if !acc.contains(ch.committee.id) { acc.append(ch.committee.id) }
+            // Mirror the web Feed grouping: Lead chats → Full helping crew → Roles.
+            let leadChats    = live.filter { $0.area?.lowercased() == "leads" }
+            let generalChats = live.filter { $0.area == nil }
+            let roleChats    = live.filter { let a = $0.area; return a != nil && a?.lowercased() != "leads" }
+
+            if !leadChats.isEmpty {
+                Section("Lead chats") {
+                    ForEach(leadChats) { channelLink($0) }
+                }
             }
-            ForEach(committeeOrder, id: \.self) { committeeId in
-                let group = live.filter { $0.committee.id == committeeId }
-                if let first = group.first {
-                    Section(first.committee.name) {
-                        ForEach(group) { channelLink($0) }
-                    }
+            if !generalChats.isEmpty {
+                Section("Full helping crew") {
+                    ForEach(generalChats) { channelLink($0) }
+                }
+            }
+            if !roleChats.isEmpty {
+                Section("Roles & subcommittees") {
+                    ForEach(roleChats) { channelLink($0) }
                 }
             }
 
@@ -119,10 +126,30 @@ private struct ConversationsList: View {
         } label: {
             ConversationRow(
                 emoji: channel.committee.emoji ?? "💬",
-                title: channel.title,
-                subtitle: channel.subtitle,
+                title: displayTitle(for: channel),
+                subtitle: displaySubtitle(for: channel),
                 summary: summaries[channel.id]
             )
+        }
+    }
+
+    private func displayTitle(for channel: ChatChannel) -> String {
+        switch channel.area?.lowercased() {
+        case "leads":
+            return channel.committee.name  // section header says "Lead chats"
+        case nil:
+            return channel.committee.name  // section header says "Full helping crew"
+        default:
+            return channel.title           // area name (e.g. "Meals")
+        }
+    }
+
+    private func displaySubtitle(for channel: ChatChannel) -> String? {
+        switch channel.area?.lowercased() {
+        case "leads", nil:
+            return nil                     // committee name already in the title
+        default:
+            return channel.committee.name  // "Family Fest" under "Meals"
         }
     }
 
