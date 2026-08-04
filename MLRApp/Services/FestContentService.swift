@@ -188,8 +188,10 @@ final class FestContentService {
             if let c { config = c }
             if !du.isEmpty { dues = du }
             // Migration 0141 merged the old fest_activities into fest_schedule_items
-            // as anytime events, so the schedule is now the single source — no
-            // separate fetchActivities() (that would double-count the copies).
+            // as anytime events, so the schedule is now the single source. iOS
+            // dropped its own fest_activities read entirely (the dead
+            // fetchActivities()/ActivityRow/FestActivityEditSheet trio this used
+            // to feed were removed) rather than double-counting the copies.
             let combined = s
             if !combined.isEmpty { schedule = combined }
             if !d.isEmpty { dinners = d }
@@ -573,51 +575,6 @@ final class FestContentService {
         }
     }
 
-    private func fetchActivities() async throws -> [ScheduleItem] {
-        let rows: [ActivityRow] = try await supabase
-            .from("fest_activities").select("*").eq("fest_year", value: year)
-            .order("position", ascending: true)
-            .execute().value
-        return rows.map { r in
-            // Anytime activities render via the existing "Anytime" schedule slot.
-            let detail = [r.blurb, r.details].compactMap { $0?.nilIfBlank }.joined(separator: " ")
-            return ScheduleItem(
-                id: r.id.uuidString,
-                day: "Anytime",
-                isoDate: nil,
-                time: "Any time",
-                title: Self.titled(emoji: r.emoji, title: r.title),
-                location: r.location,
-                description: detail.isEmpty ? nil : detail,
-                isPrivate: false,
-                leads: [],
-                leadUserId: r.leadUserId,
-                crewUserIds: r.crewUserIds ?? []
-            )
-        }
-    }
-
-    /// Update an "Anytime" activity's details subset (location + details) — the
-    /// self-editable fields for a lead/crew member (migration 0110). Writes the
-    /// fest_activities row directly; RLS gates who may.
-    func updateActivityDetails(activityId: UUID, location: String?, details: String?) async throws {
-        var payload: [String: AnyJSON] = [
-            "location": j(location),
-            "details":  j(details),
-        ]
-        if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
-        try await supabase.from("fest_activities").update(payload).eq("id", value: activityId.uuidString).execute()
-    }
-
-    /// The raw editable fields for one activity (for the inline edit sheet).
-    func fetchActivityRaw(activityId: UUID) async -> (location: String?, details: String?)? {
-        struct Raw: Decodable { let location: String?; let details: String? }
-        let row: Raw? = try? await supabase
-            .from("fest_activities").select("location, details")
-            .eq("id", value: activityId.uuidString).single().execute().value
-        return row.map { ($0.location, $0.details) }
-    }
-
     private func fetchDinners() async throws -> [FestDinner] {
         let rows: [DinnerRow] = try await supabase
             .from("fest_dinners").select("*").eq("fest_year", value: year)
@@ -747,22 +704,6 @@ private struct ScheduleRow: Decodable {
         case signupTeamSize     = "signup_team_size"
         case signupFields       = "signup_fields"
         case signupHideNames    = "signup_hide_names"
-    }
-}
-
-private struct ActivityRow: Decodable {
-    let id: UUID
-    let title: String
-    let emoji: String?
-    let blurb: String?
-    let details: String?
-    let location: String?
-    let leadUserId: UUID?
-    let crewUserIds: [UUID]?
-    enum CodingKeys: String, CodingKey {
-        case id, title, emoji, blurb, details, location
-        case leadUserId = "lead_user_id"
-        case crewUserIds = "crew_user_ids"
     }
 }
 
