@@ -10,6 +10,9 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: Tab = .home
     @State private var showSplash = true
+    /// Tracks whether the main content is opaque — decoupled from showSplash so
+    /// the cross-fade can start while SplashView's logo is still mid-flight.
+    @State private var mainVisible = false
     @State private var showAskForHelp = false
     @State private var showAddWorkItem = false
     @State private var pendingCommittee: Committee?
@@ -33,21 +36,29 @@ struct RootView: View {
     var body: some View {
         ZStack {
             MainTabView(selectedTab: $selectedTab)
-                .opacity(showSplash ? 0 : 1)
+                .opacity(mainVisible ? 1 : 0)
 
             if showSplash {
-                SplashView {
-                    withAnimation(.easeOut(duration: 0.3)) {
+                SplashView(
+                    onBeginExit: {
+                        // Fade main content in while the logo flies to the header —
+                        // the overlap is what makes it read as "landing in place."
+                        withAnimation(.easeOut(duration: 0.45)) { mainVisible = true }
+                    },
+                    onComplete: {
+                        // Safety: ensure main is visible even if onBeginExit was skipped
+                        // (e.g. the Reduce Motion path calls onComplete directly).
+                        mainVisible = true
                         showSplash = false
+                        // A tap that COLD-LAUNCHED the app is delivered before
+                        // `.onReceive` below is subscribed, so it lands in the queue
+                        // instead of the live listener — drain it now the splash is
+                        // out of the way (see PendingNotificationTap).
+                        if let tap = PendingNotificationTap.shared.drain() {
+                            handleNotificationTap(tap)
+                        }
                     }
-                    // A tap that COLD-LAUNCHED the app is delivered before
-                    // `.onReceive` below is subscribed, so it lands in the queue
-                    // instead of the live listener — drain it now the splash is out
-                    // of the way (see PendingNotificationTap).
-                    if let tap = PendingNotificationTap.shared.drain() {
-                        handleNotificationTap(tap)
-                    }
-                }
+                )
             }
         }
         // Admin "view as" preview — a floating banner over everything while active.
@@ -505,13 +516,17 @@ struct MainTabView: View {
 // asset/bundled font, so geometry is known on the very first frame.
 
 struct SplashView: View {
+    let onBeginExit: () -> Void
     let onComplete: () -> Void
+
     @State private var glowOpacity: Double = 0
     @State private var logoScale: CGFloat = 0.6
     @State private var logoOpacity: Double = 0
     @State private var wordmarkOpacity: Double = 0
     @State private var wordmarkOffset: CGFloat = 8
-    @State private var lifted = false
+    // Exit states — logo flies toward the HomeHero header position.
+    @State private var logoExitOffset: CGFloat = 0
+    @State private var logoExitOpacity: Double = 1
 
     var body: some View {
         ZStack {
@@ -530,7 +545,11 @@ struct SplashView: View {
                     .frame(width: 140)
                     .shadow(.medium)
                     .scaleEffect(logoScale)
-                    .opacity(logoOpacity)
+                    // logoExitOpacity multiplied so the logo fades as it flies up;
+                    // logoOpacity is the entrance fade-in (kept separate).
+                    .opacity(logoOpacity * logoExitOpacity)
+                    // Flies upward independently of the wordmark during exit.
+                    .offset(y: logoExitOffset)
 
                 Text("Muskellunge Lake Resort")
                     .font(.script(26))
@@ -538,13 +557,11 @@ struct SplashView: View {
                     .opacity(wordmarkOpacity)
                     .offset(y: wordmarkOffset)
             }
-            .offset(y: lifted ? -18 : 0)
-            .opacity(lifted ? 0 : 1)
         }
         .onAppear { animateIn() }
-        // Respect reduce motion — skip animation
+        // Respect reduce motion — skip animation entirely.
         .accessibilityReduceMotion(true) {
-            self.modifier(ImmediateSplashModifier(onComplete: onComplete))
+            self.modifier(ImmediateSplashModifier(onBeginExit: onBeginExit, onComplete: onComplete))
         }
     }
 
@@ -564,11 +581,28 @@ struct SplashView: View {
             Haptics.tap()
         }
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.05) {
-            withAnimation(.easeIn(duration: 0.3)) {
-                lifted = true
+            // Signal parent to fade the main content in — the cross-fade with
+            // the upward logo flight creates the "lands in header" impression.
+            onBeginExit()
+
+            // Glow and wordmark fade out first.
+            withAnimation(.easeOut(duration: 0.25)) {
                 glowOpacity = 0
+                wordmarkOpacity = 0
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+
+            // Logo springs upward toward the HomeHero header position and fades
+            // as it arrives. The exact distance is proportional to screen height
+            // so it clears the header on both compact and large devices.
+            let flyDistance = max(200, UIScreen.main.bounds.height * 0.27)
+            withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
+                logoExitOffset = -flyDistance
+            }
+            withAnimation(.easeIn(duration: 0.42)) {
+                logoExitOpacity = 0
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.52) {
                 onComplete()
             }
         }
@@ -576,9 +610,13 @@ struct SplashView: View {
 }
 
 private struct ImmediateSplashModifier: ViewModifier {
+    let onBeginExit: () -> Void
     let onComplete: () -> Void
     func body(content: Content) -> some View {
-        Color.clear.onAppear { onComplete() }
+        Color.clear.onAppear {
+            onBeginExit()
+            onComplete()
+        }
     }
 }
 

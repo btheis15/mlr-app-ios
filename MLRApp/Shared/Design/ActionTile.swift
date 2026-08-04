@@ -82,7 +82,7 @@ struct ActionTileLabel: View {
         }
         .foregroundStyle(foreground)
         .padding(MLRSpacing.md)
-        .frame(minHeight: 78, maxWidth: .infinity, alignment: .topLeading)
+        .frame(maxWidth: .infinity, minHeight: 78, alignment: .topLeading)
         // Once ActionTileGrid has measured every tile's natural height, this
         // pins ALL of them to the tallest — never below it, so nothing clips.
         .frame(height: equalHeight)

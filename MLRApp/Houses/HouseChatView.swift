@@ -327,6 +327,10 @@ struct HouseChatView: View {
                                     reactorName: { reactorName($0) }
                                 )
                                 .id(entry.id)
+                                .transition(.asymmetric(
+                                    insertion: .offset(y: 16).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
                             case .poll(let poll):
                                 ChatPollCard(
                                     poll: poll,
@@ -337,6 +341,10 @@ struct HouseChatView: View {
                                 )
                                 .padding(.horizontal, 12)
                                 .id(entry.id)
+                                .transition(.asymmetric(
+                                    insertion: .offset(y: 16).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
                             }
                         }
                     }
@@ -450,10 +458,15 @@ struct HouseChatView: View {
         env.housesService.subscribeToMessages(
             houseId: house.id,
             onInsert: { msg in
-                if !messages.contains(where: { $0.id == msg.id }) {
+                guard !messages.contains(where: { $0.id == msg.id }) else { return }
+                if MLRMotion.reduceMotion {
                     messages.append(msg)
-                    Task { await env.housesService.markRead(houseId: house.id) }
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        messages.append(msg)
+                    }
                 }
+                Task { await env.housesService.markRead(houseId: house.id) }
             },
             onUpdate: { msg in
                 if let idx = messages.firstIndex(where: { $0.id == msg.id }) {
@@ -531,7 +544,13 @@ struct HouseChatView: View {
                 text: text, editedAt: nil, deletedAt: nil, createdAt: .now,
                 media: [], reactions: [])
             temp.replyToId = replyTo?.id
-            messages.append(temp)
+            if MLRMotion.reduceMotion {
+                messages.append(temp)
+            } else {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                    messages.append(temp)
+                }
+            }
             let savedDraft = draft
             draft = ""
             replyingTo = nil
@@ -566,7 +585,13 @@ struct HouseChatView: View {
             let msg = try await env.housesService.sendMessage(
                 houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded, replyToId: replyTo?.id)
             if !messages.contains(where: { $0.id == msg.id }) {
-                messages.append(msg)
+                if MLRMotion.reduceMotion {
+                    messages.append(msg)
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        messages.append(msg)
+                    }
+                }
             }
             draft = ""
             replyingTo = nil

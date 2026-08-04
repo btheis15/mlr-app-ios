@@ -355,6 +355,10 @@ struct CommitteeChatView: View {
                                     reactorName: { reactorName($0) }
                                 )
                                 .id(entry.id)
+                                .transition(.asymmetric(
+                                    insertion: .offset(y: 16).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
                             case .poll(let poll):
                                 ChatPollCard(
                                     poll: poll,
@@ -365,6 +369,10 @@ struct CommitteeChatView: View {
                                 )
                                 .padding(.horizontal, 12)
                                 .id(entry.id)
+                                .transition(.asymmetric(
+                                    insertion: .offset(y: 16).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
                             }
                         }
                     }
@@ -510,11 +518,16 @@ struct CommitteeChatView: View {
             committeeId: committee.id,
             area: area,
             onInsert: { msg in
-                if !messages.contains(where: { $0.id == msg.id }) {
+                guard !messages.contains(where: { $0.id == msg.id }) else { return }
+                if MLRMotion.reduceMotion {
                     messages.append(msg)
-                    // Keep this channel marked read while it's open.
-                    Task { await env.committeeService.markAreaRead(committeeId: committee.id, area: area) }
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        messages.append(msg)
+                    }
                 }
+                // Keep this channel marked read while it's open.
+                Task { await env.committeeService.markAreaRead(committeeId: committee.id, area: area) }
             },
             onUpdate: { msg in
                 if let idx = messages.firstIndex(where: { $0.id == msg.id }) {
@@ -597,7 +610,13 @@ struct CommitteeChatView: View {
                 text: text, editedAt: nil, deletedAt: nil, createdAt: .now, area: area,
                 media: [], reactions: [])
             temp.replyToId = replyTo?.id
-            messages.append(temp)
+            if MLRMotion.reduceMotion {
+                messages.append(temp)
+            } else {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                    messages.append(temp)
+                }
+            }
             let savedDraft = draft
             draft = ""
             replyingTo = nil
@@ -632,7 +651,13 @@ struct CommitteeChatView: View {
             let msg = try await env.committeeService.sendMessage(
                 committeeId: committee.id, area: area, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded, replyToId: replyTo?.id)
             if !messages.contains(where: { $0.id == msg.id }) {
-                messages.append(msg)
+                if MLRMotion.reduceMotion {
+                    messages.append(msg)
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        messages.append(msg)
+                    }
+                }
             }
             draft = ""
             replyingTo = nil
