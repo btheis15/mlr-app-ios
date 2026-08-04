@@ -101,6 +101,7 @@
 		D33F9E982FEC086700603CE7 /* FamilyFestSpotlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E452FEC086700603CE7 /* FamilyFestSpotlight.swift */; };
 		D33F9E992FEC086700603CE7 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E472FEC086700603CE7 /* HomeView.swift */; };
 		D33F9E9A2FEC086700603CE7 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E2D2FEC086700603CE7 /* Formatters.swift */; };
+		D3A0000000000000000000BD /* Owner.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AD /* Owner.swift */; };
 		D33F9E9B2FEC086700603CE7 /* FestPayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E372FEC086700603CE7 /* FestPayView.swift */; };
 		D33F9E9C2FEC086700603CE7 /* SeedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E062FEC086700603CE7 /* SeedData.swift */; };
 		D33F9E9D2FEC086700603CE7 /* NextEventIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFB2FEC086700603CE7 /* NextEventIntent.swift */; };
@@ -355,6 +356,7 @@
 		D33F9E2A2FEC086700603CE7 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		D33F9E2C2FEC086700603CE7 /* FestSeason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestSeason.swift; sourceTree = "<group>"; };
 		D33F9E2D2FEC086700603CE7 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AD /* Owner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Owner.swift; sourceTree = "<group>"; };
 		D33F9E302FEC086700603CE7 /* NotificationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationRow.swift; sourceTree = "<group>"; };
 		D33F9E312FEC086700603CE7 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		D33F9E332FEC086700603CE7 /* FestCrewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestCrewView.swift; sourceTree = "<group>"; };
@@ -775,6 +777,7 @@
 			children = (
 				D33F9E2C2FEC086700603CE7 /* FestSeason.swift */,
 				D33F9E2D2FEC086700603CE7 /* Formatters.swift */,
+				D3A0000000000000000000AD /* Owner.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -1247,6 +1250,7 @@
 				D33F9E982FEC086700603CE7 /* FamilyFestSpotlight.swift in Sources */,
 				D33F9E992FEC086700603CE7 /* HomeView.swift in Sources */,
 				D33F9E9A2FEC086700603CE7 /* Formatters.swift in Sources */,
+				D3A0000000000000000000BD /* Owner.swift in Sources */,
 				D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */,
 				D33F9E9B2FEC086700603CE7 /* FestPayView.swift in Sources */,
 				D33F9E9C2FEC086700603CE7 /* SeedData.swift in Sources */,
