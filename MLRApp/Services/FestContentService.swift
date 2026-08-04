@@ -597,7 +597,7 @@ final class FestContentService {
             .from("fest_dinners").select("*").eq("fest_year", value: year)
             .order("day", ascending: true).order("position", ascending: true)
             .execute().value
-        return rows.map { r in
+        let dinners = rows.map { r in
             FestDinner(
                 id: r.id.uuidString,
                 day: Self.weekday(from: r.day) ?? r.day,
@@ -611,6 +611,10 @@ final class FestContentService {
                 crew: r.houses ?? []
             )
         }
+        // Sort by calendar weekday order (Sun=0…Sat=6) since DB stores day as
+        // weekday name or ISO date — both sort alphabetically, not chronologically.
+        let order = ["Sunday":0,"Monday":1,"Tuesday":2,"Wednesday":3,"Thursday":4,"Friday":5,"Saturday":6]
+        return dinners.sorted { (order[$0.day] ?? 99) < (order[$1.day] ?? 99) }
     }
 
     private func fetchPayees() async throws -> [Payee] {

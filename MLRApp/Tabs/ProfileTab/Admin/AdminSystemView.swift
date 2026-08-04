@@ -23,6 +23,9 @@ struct AdminSystemView: View {
         let upToDate: Bool
         let behind: Int
         let startedAt: String
+        let mediaBytesUsed: Int?
+        let diskBytesTotal: Int?
+        let diskBytesFree: Int?
     }
     struct RestartResult: Decodable {
         let ok: Bool
@@ -64,6 +67,15 @@ struct AdminSystemView: View {
                             .foregroundStyle(status.upToDate ? Color.mlrSuccess : Color.mlrWarning)
                     }
                     LabeledContent("Running since") { Text(formatted(status.startedAt)) }
+                    if let mediaBytes = status.mediaBytesUsed {
+                        LabeledContent("Media folder") { Text(fmtBytes(mediaBytes)) }
+                    }
+                    if let total = status.diskBytesTotal, let free = status.diskBytesFree {
+                        LabeledContent("Disk usage") {
+                            Text("\(fmtBytes(total - free)) / \(fmtBytes(total))")
+                                .foregroundStyle((Double(total - free) / Double(total)) > 0.85 ? Color.mlrWarning : Color.primary)
+                        }
+                    }
                 }
             }
 
@@ -134,5 +146,12 @@ struct AdminSystemView: View {
     private func formatted(_ iso: String) -> String {
         guard let d = ISO8601DateFormatter().date(from: iso) else { return iso }
         return d.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func fmtBytes(_ bytes: Int) -> String {
+        let b = Double(bytes)
+        if b >= 1e9 { return String(format: "%.1f GB", b / 1e9) }
+        if b >= 1e6 { return String(format: "%.1f MB", b / 1e6) }
+        return String(format: "%.0f KB", b / 1e3)
     }
 }

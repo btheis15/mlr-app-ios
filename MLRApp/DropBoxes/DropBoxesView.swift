@@ -127,7 +127,7 @@ struct DropBoxDetailView: View {
     @State private var confirmDelete = false
     @State private var error: String?
 
-    private let columns = [GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6), GridItem(.flexible(), spacing: 6)]
+    private let columns = [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)]
 
     // Read straight off the observed service value (matching HouseHubView's
     // idiom) — @Observable makes this a tracked dependency, so the grid
@@ -173,12 +173,11 @@ struct DropBoxDetailView: View {
                                 .font(.mlrCaption).foregroundStyle(Color.mlrTextMuted)
                                 .padding(.horizontal, 12)
                         } else {
-                            LazyVGrid(columns: columns, spacing: 6) {
+                            LazyVGrid(columns: columns, spacing: 2) {
                                 ForEach(box.sortedItems) { item in
                                     thumb(item, in: box)
                                 }
                             }
-                            .padding(.horizontal, 6)
                         }
                     }
                     .padding(.vertical, 12)
@@ -235,8 +234,9 @@ struct DropBoxDetailView: View {
         } label: {
             ZStack(alignment: .bottomLeading) {
                 MediaThumb(url: item.displayUrl)
-                    .aspectRatio(1, contentMode: .fill)
-                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .scaledToFill()
+                    .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
+                    .clipped()
                 if item.isVideo {
                     Image(systemName: "play.circle.fill")
                         .font(.mlrScaled(18))
@@ -253,9 +253,10 @@ struct DropBoxDetailView: View {
                         .padding(4)
                 }
             }
+            .aspectRatio(1, contentMode: .fit)
+            .clipped()
         }
         .buttonStyle(.plain)
-        .aspectRatio(1, contentMode: .fill)
         .contextMenu {
             if held && env.isAdmin {
                 Button { Task { await setStatus(item, .visible) } } label: { Label("Approve", systemImage: "checkmark.circle") }

@@ -95,8 +95,8 @@ struct FamilyFestSpotlight: View {
         }
         var sortKey: String {
             switch self {
-            case .event(let e):  return e.time
-            case .dinner(let d): return d.time
+            case .event(let e):  return festNormalizeTime(e.time)
+            case .dinner(let d): return festNormalizeTime(d.time)
             }
         }
     }
@@ -344,6 +344,29 @@ struct FamilyFestSpotlight: View {
         .padding(.vertical, 12)
         .contentShape(Rectangle())
     }
+}
+
+// MARK: - Time normalizer
+
+/// Zero-padded 24h "HH:mm" key for lexical sort of mixed-format time strings.
+/// Handles 24h ("14:30"), 12h ("6:30 PM", "9 AM"), and "TBD" (sorts last).
+private func festNormalizeTime(_ raw: String) -> String {
+    let t = raw.trimmingCharacters(in: .whitespaces)
+    if t.isEmpty || t.uppercased() == "TBD" { return "23:59" }
+    let parts = t.split(separator: ":").map(String.init)
+    if parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1].prefix(2)), !t.lowercased().contains("m") {
+        return String(format: "%02d:%02d", h, m)
+    }
+    let fmt = DateFormatter()
+    fmt.locale = Locale(identifier: "en_US_POSIX")
+    for f in ["h:mm a", "h a", "h:mm", "h"] {
+        fmt.dateFormat = f
+        if let d = fmt.date(from: t) {
+            let cal = Calendar.current
+            return String(format: "%02d:%02d", cal.component(.hour, from: d), cal.component(.minute, from: d))
+        }
+    }
+    return t
 }
 
 // MARK: - PulsingDot

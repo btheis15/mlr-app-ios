@@ -81,9 +81,17 @@ private struct ConversationsList: View {
             let live = channels.filter { !$0.isArchived }
             let archived = channels.filter { $0.isArchived }
 
-            if !live.isEmpty {
-                Section("Committee chats") {
-                    ForEach(live) { channelLink($0) }
+            // Group live channels by committee so each committee gets its own
+            // section header (e.g. "Family Fest" → General / Leads / Helpers).
+            let committeeOrder = live.reduce(into: [UUID]()) { acc, ch in
+                if !acc.contains(ch.committee.id) { acc.append(ch.committee.id) }
+            }
+            ForEach(committeeOrder, id: \.self) { committeeId in
+                let group = live.filter { $0.committee.id == committeeId }
+                if let first = group.first {
+                    Section(first.committee.name) {
+                        ForEach(group) { channelLink($0) }
+                    }
                 }
             }
 

@@ -77,7 +77,6 @@ struct PeopleDirectoryView: View {
                 }, onText: { phone in
                     composeState = MessageComposeState(recipients: [phone], body: "")
                 })
-                .scrollEntrance()
             }
         }
         .listStyle(.plain)
