@@ -23,6 +23,7 @@ struct CommitteeDetailView: View {
     @State private var showMyAreas = false
     @State private var confirmLeave = false
     @State private var leaving = false
+    @State private var stepDownBusy = false
 
     // Committee-page meeting scheduling (#326/#327): organizers (admins or leads)
     // can schedule right from the page and aim it at the whole committee or a
@@ -248,11 +249,14 @@ struct CommitteeDetailView: View {
             MemberSheetView(member: profile)
         }
         .sheet(isPresented: $showMyAreas) {
-            MyCommitteeAreasSheet(
-                committeeId: committee.id,
-                allAreas: areas,
-                current: myAreas
-            ) { Task { await load() } }
+            if let myEntry {
+                MyCommitteeAreasSheet(
+                    committee: committee,
+                    entry: myEntry,
+                    allAreas: areas,
+                    canManageRoster: canManage
+                ) { Task { await load() } }
+            }
         }
         .sheet(isPresented: $showMeetingComposer) {
             MeetingComposer(
@@ -271,13 +275,28 @@ struct CommitteeDetailView: View {
 
     // MARK: - Self-service (my membership)
 
+    /// Areas I currently lead (raw " · Lead" roles, base-stripped) — gets each
+    /// chip its own step-down ✕, matching web's MyCommitteeCard.
+    private var myLeadAreas: [String] {
+        (myEntry?.roles ?? []).filter { $0.hasSuffix(" · Lead") }.map { String($0.dropLast(" · Lead".count)) }
+    }
+
     private var selfServiceSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel(text: "Your membership")
 
+            if myEntry?.isCommitteeLead == true {
+                Text("★ Lead of this committee")
+                    .font(.mlrScaled(11, weight: .bold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(Color.mlrPrimary)
+                    .clipShape(Capsule())
+            }
+
             if roleBased {
                 if !myAreas.isEmpty {
-                    FlowChips(items: myAreas)
+                    myAreaChips
                 }
                 Button { showMyAreas = true } label: {
                     Label(myAreas.isEmpty ? "Choose your areas" : "Edit your areas",
@@ -287,6 +306,21 @@ struct CommitteeDetailView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
                         .background(Color.mlrPrimary.opacity(0.1))
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.pressable)
+            }
+
+            if iAmLead {
+                NavigationLink {
+                    CommitteeChatView(committee: committee, members: [], area: "Leads", channelTitle: "Leads", assumeMember: true)
+                } label: {
+                    Label("Open the Leads chat", systemImage: "bubble.left.and.bubble.right.fill")
+                        .font(.mlrScaled(15, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 12)
+                        .background(Color.mlrPrimary)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.pressable)
@@ -325,6 +359,52 @@ struct CommitteeDetailView: View {
             await load()
         } catch {
             print("[CommitteeDetail] leave error: \(error)")
+        }
+    }
+
+    /// My own area chips — a lead area gets a one-tap step-down ✕ (stays on
+    /// the area as a volunteer). Writes through `saveRosterEntry` directly so
+    /// only the tapped area's suffix is touched — every other area/role (incl.
+    /// a committee-level `isCommitteeLead`) is preserved untouched.
+    private var myAreaChips: some View {
+        FlowLayout(spacing: 6) {
+            ForEach(myAreas, id: \.self) { area in
+                let lead = myLeadAreas.contains(area)
+                HStack(spacing: 3) {
+                    Text(area)
+                    if lead {
+                        Text("· Lead").opacity(0.8)
+                        Button { Task { await stepDown(area) } } label: {
+                            Image(systemName: "xmark")
+                        }
+                        .buttonStyle(.plain)
+                        .disabled(stepDownBusy)
+                        .accessibilityLabel("Step down as Lead of \(area)")
+                    }
+                }
+                .font(.mlrScaled(11, weight: .semibold))
+                .foregroundStyle(lead ? .white : Color.mlrPrimary)
+                .padding(.horizontal, 8).padding(.vertical, 3)
+                .background(lead ? Color.mlrPrimary : Color.mlrPrimaryLight)
+                .clipShape(Capsule())
+            }
+        }
+    }
+
+    private func stepDown(_ area: String) async {
+        guard let myEntry, !stepDownBusy else { return }
+        stepDownBusy = true
+        defer { stepDownBusy = false }
+        let roles = myEntry.roles.map { $0 == "\(area) · Lead" ? area : $0 }
+        do {
+            try await env.committeeService.saveRosterEntry(
+                id: myEntry.id, committeeSlug: committee.slug, name: myEntry.name,
+                email: myEntry.email, phone: myEntry.phone, roles: roles,
+                linkedUserId: myEntry.linkedUserId, isCommitteeLead: myEntry.isCommitteeLead
+            )
+            await load()
+        } catch {
+            print("[CommitteeDetail] stepDown error: \(error)")
         }
     }
 

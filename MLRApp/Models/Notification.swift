@@ -53,6 +53,11 @@ struct Announcement: Codable, Identifiable, Equatable {
     var kind: AnnouncementKind
     var expiresAt: Date?
     var createdAt: Date?
+    /// Migration 0126 — lets a send email the opted-in list without ever
+    /// painting the top-of-app banner. Defaults true so seed rows (and any
+    /// row from before this column existed) still show, matching the DB's
+    /// own column default.
+    var showBanner: Bool = true
 
     enum CodingKeys: String, CodingKey {
         // The DB column is `severity` ('info' | 'alert'); AnnouncementKind maps to/from it.
@@ -60,6 +65,23 @@ struct Announcement: Codable, Identifiable, Equatable {
         case kind = "severity"
         case expiresAt = "expires_at"
         case createdAt = "created_at"
+        case showBanner = "show_banner"
+    }
+
+    init(id: String, title: String, body: String?, kind: AnnouncementKind, expiresAt: Date?, createdAt: Date?, showBanner: Bool = true) {
+        self.id = id; self.title = title; self.body = body; self.kind = kind
+        self.expiresAt = expiresAt; self.createdAt = createdAt; self.showBanner = showBanner
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        id = try c.decode(String.self, forKey: .id)
+        title = try c.decode(String.self, forKey: .title)
+        body = try c.decodeIfPresent(String.self, forKey: .body)
+        kind = try c.decode(AnnouncementKind.self, forKey: .kind)
+        expiresAt = try c.decodeIfPresent(Date.self, forKey: .expiresAt)
+        createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt)
+        showBanner = try c.decodeIfPresent(Bool.self, forKey: .showBanner) ?? true
     }
 
     var isExpired: Bool {

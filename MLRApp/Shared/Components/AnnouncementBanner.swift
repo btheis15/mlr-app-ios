@@ -22,6 +22,7 @@ struct AnnouncementBannerStack: View {
     private var visible: [Announcement] {
         let all = Announcement.seed + dbAnnouncements
         return all.filter { announcement in
+            announcement.showBanner &&
             !announcement.isExpired &&
             !env.dismissedAnnouncementIds.contains(announcement.id)
         }
