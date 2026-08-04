@@ -47,7 +47,7 @@ struct FamilyFestSpotlight: View {
             if let day = season.dayNumber { return "Live now · Day \(day) of \(season.totalDays)" }
             return "Live now"
         case .wrap:
-            return "That's a wrap · \(season.wrapDaysLeft) day\(season.wrapDaysLeft == 1 ? "" : "s") to post photos"
+            return "That's a wrap · add your photos"
         }
     }
 
@@ -262,10 +262,7 @@ struct FamilyFestSpotlight: View {
                 Text("Thanks for a great week Up North")
                     .font(.festSerif(16, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
-                let tail = season.wrapDaysLeft > 0
-                    ? "Album's open \(season.wrapDaysLeft) more \(season.wrapDaysLeft == 1 ? "day" : "days")."
-                    : ""
-                Text("Add the photos you didn't get to share yet\(tail.isEmpty ? "." : " — \(tail)")")
+                Text("Add the photos you didn't get to share yet.")
                     .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrFestInk.opacity(0.8))
                 Text("Add your photos →")

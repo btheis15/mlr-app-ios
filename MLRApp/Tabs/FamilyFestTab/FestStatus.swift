@@ -195,10 +195,7 @@ private struct WrapCard: View {
                     Spacer()
                 }
 
-                let tail = season.wrapDaysLeft > 0
-                    ? "Album's open \(season.wrapDaysLeft) more \(season.wrapDaysLeft == 1 ? "day" : "days") — "
-                    : ""
-                Text("\(tail)add the photos you didn't get to share.")
+                Text("Add the photos you didn't get to share.")
                     .font(.mlrScaled(13))
                     .foregroundStyle(Color.mlrFestInk.opacity(0.8))
                     .fixedSize(horizontal: false, vertical: true)
