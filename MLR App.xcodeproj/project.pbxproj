@@ -94,6 +94,7 @@
 		D33F9E902FEC086700603CE7 /* Committee.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E002FEC086700603CE7 /* Committee.swift */; };
 		D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DED2FEC086700603CE7 /* CommitteeDetailView.swift */; };
 		D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E0B2FEC086700603CE7 /* MapsHelper.swift */; };
+		D3A0000000000000000000BF /* OneShotLocationFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AF /* OneShotLocationFetcher.swift */; };
 		D33F9E932FEC086700603CE7 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */; };
 		D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DF32FEC086700603CE7 /* EventsView.swift */; };
 		D33F9E952FEC086700603CE7 /* FestScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E3A2FEC086700603CE7 /* FestScheduleView.swift */; };
@@ -328,6 +329,7 @@
 		D33F9E092FEC086700603CE7 /* ContactsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsService.swift; sourceTree = "<group>"; };
 		D33F9E0A2FEC086700603CE7 /* HapticsAndShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsAndShare.swift; sourceTree = "<group>"; };
 		D33F9E0B2FEC086700603CE7 /* MapsHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapsHelper.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AF /* OneShotLocationFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotLocationFetcher.swift; sourceTree = "<group>"; };
 		D33F9E0C2FEC086700603CE7 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
 		D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActions.swift; sourceTree = "<group>"; };
 		D3E1A0012FEC086700603CE7 /* NotificationDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationDeepLink.swift; sourceTree = "<group>"; };
@@ -689,6 +691,7 @@
 				D33F9E092FEC086700603CE7 /* ContactsService.swift */,
 				D33F9E0A2FEC086700603CE7 /* HapticsAndShare.swift */,
 				D33F9E0B2FEC086700603CE7 /* MapsHelper.swift */,
+				D3A0000000000000000000AF /* OneShotLocationFetcher.swift */,
 				D33F9E0C2FEC086700603CE7 /* MessageComposer.swift */,
 				D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */,
 				D3E1A0012FEC086700603CE7 /* NotificationDeepLink.swift */,
@@ -1233,6 +1236,7 @@
 				D33F9E902FEC086700603CE7 /* Committee.swift in Sources */,
 				D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */,
 				D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */,
+				D3A0000000000000000000BF /* OneShotLocationFetcher.swift in Sources */,
 				D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */,
 				D31B53673011694F00C8D189 /* AdminBroadcastComposer.swift in Sources */,
 				D3F9D876300710BC006874DA /* PollsView.swift in Sources */,
