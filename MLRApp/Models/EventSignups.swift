@@ -93,6 +93,17 @@ final class SignupsService {
         }
     }
 
+    /// Update a named slot's per-slot capacity in-place.
+    /// Pass nil to remove the cap (unlimited).
+    func updateSlotCapacity(slotId: UUID, capacity: Int?) async throws {
+        struct Payload: Encodable { let capacity: Int? }
+        try await supabase
+            .from("fest_schedule_slots")
+            .update(Payload(capacity: capacity))
+            .eq("id", value: slotId.uuidString)
+            .execute()
+    }
+
     /// Sign someone up. Pass `slotId` (slots mode), `slotStart` (interval), or
     /// neither (headcount). `forUserId`/`name` nil ⇒ the caller. Teams are not
     /// yet supported here (individual sign-up only).

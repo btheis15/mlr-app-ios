@@ -91,6 +91,11 @@ struct CommitteeChatView: View {
                             }
                         }
                         Button {
+                            showCreatePoll = true
+                        } label: {
+                            Label("Create a poll", systemImage: "chart.bar")
+                        }
+                        Button {
                             Task { await loadMembers() }
                             showMembers = true
                         } label: {
@@ -288,8 +293,7 @@ struct CommitteeChatView: View {
                     isEditing: editingMessage != nil,
                     sending: sending,
                     onSend: { attachments in Task { await send(attachments) } },
-                    onCancelEdit: { cancelEdit() },
-                    onCreatePoll: { showCreatePoll = true }
+                    onCancelEdit: { cancelEdit() }
                 )
             }
         }

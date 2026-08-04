@@ -111,6 +111,8 @@ struct FamilyFestSpotlight: View {
         VStack(spacing: 0) {
             if season.phase == .live {
                 liveDayCard
+            } else if season.phase == .wrap {
+                wrapCard
             } else {
                 compactCard
             }
@@ -248,7 +250,37 @@ struct FamilyFestSpotlight: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    // MARK: - Compact card (off-season / planning / wrap)
+    // MARK: - Wrap card (photos nudge — links straight to the photo album)
+
+    private var wrapCard: some View {
+        NavigationLink(destination: DropBoxesView()) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("🎆 Family Fest · That's a Wrap")
+                    .font(.mlrScaled(10, weight: .bold))
+                    .foregroundStyle(Color.mlrAccent)
+                    .tracking(0.6)
+                Text("Thanks for a great week Up North")
+                    .font(.festSerif(16, weight: .bold))
+                    .foregroundStyle(Color.mlrFest)
+                let tail = season.wrapDaysLeft > 0
+                    ? "Album's open \(season.wrapDaysLeft) more \(season.wrapDaysLeft == 1 ? "day" : "days")."
+                    : ""
+                Text("Add the photos you didn't get to share yet\(tail.isEmpty ? "." : " — \(tail)")")
+                    .font(.mlrScaled(13))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.8))
+                Text("Add your photos →")
+                    .font(.mlrScaled(12, weight: .semibold))
+                    .foregroundStyle(Color.mlrAccent)
+                    .padding(.top, 2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.pressable)
+    }
+
+    // MARK: - Compact card (off-season / planning)
 
     private var compactCard: some View {
         NavigationLink(destination: FestOverviewView()) {

@@ -34,6 +34,10 @@ struct FestScheduleEditSheet: View {
     @State private var signupSlotMinutes = 15
     @State private var signupHideNames = false
 
+    // Per-slot capacity editing (slots mode only).
+    @State private var slotList: [ScheduleSlot] = []
+    @State private var slotCapacities: [UUID: String] = [:]
+
     // Edit-and-notify (#393) — admin-only, default OFF; sends on save when on.
     @State private var notifyOnSave = false
     @State private var notifyMessage = ""
@@ -155,9 +159,36 @@ struct FestScheduleEditSheet: View {
                     Text("Sign-ups")
                 } footer: {
                     Text(signupMode == "slots"
-                         ? "Named-slot lists are edited on the web for now."
+                         ? "Named-slot lists are managed on the web. You can edit each slot's capacity below."
                          : "Members can sign up right on the event.")
                         .font(.caption)
+                }
+
+                // Per-slot capacity editor (slots mode) — add/remove slots on the web.
+                if signupEnabled && signupMode == "slots" && !slotList.isEmpty {
+                    Section {
+                        ForEach(slotList) { slot in
+                            HStack {
+                                Text(slotDisplayLabel(slot))
+                                    .font(.mlrScaled(14))
+                                    .foregroundStyle(Color.mlrText)
+                                Spacer()
+                                TextField("No limit", text: Binding(
+                                    get: { slotCapacities[slot.id] ?? (slot.capacity.map(String.init) ?? "") },
+                                    set: { slotCapacities[slot.id] = $0 }
+                                ))
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 70)
+                            }
+                        }
+                    } header: {
+                        Text("Slot capacities")
+                    } footer: {
+                        Text("Override the default capacity for individual slots. Leave blank to use the default above.")
+                            .font(.caption)
+                    }
+                    .task(id: signupMode) { await loadSlots() }
                 }
             }
 
@@ -203,7 +234,12 @@ struct FestScheduleEditSheet: View {
                 leadName   = profile.name
             }
         }
-        .onAppear { seed() }
+        .onAppear {
+            seed()
+            if (item.signupMode ?? "interval") == "slots" {
+                Task { await loadSlots() }
+            }
+        }
     }
 
     private func seed() {
@@ -232,6 +268,18 @@ struct FestScheduleEditSheet: View {
     private static func hhmm(_ d: Date) -> String {
         let c = Calendar.current.dateComponents([.hour, .minute], from: d)
         return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
+    }
+
+    private func loadSlots() async {
+        guard let uid = UUID(uuidString: item.id) else { return }
+        slotList = await env.signupsService.fetchSlots(itemId: uid)
+    }
+
+    private func slotDisplayLabel(_ slot: ScheduleSlot) -> String {
+        if let label = slot.label, !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return label }
+        let start = MLRFormat.time(slot.startTime)
+        if let end = slot.endTime, !end.isEmpty { return "\(start)–\(MLRFormat.time(end))" }
+        return start
     }
 
     private func save() async {
@@ -270,6 +318,16 @@ struct FestScheduleEditSheet: View {
                 links:       cleanedLinks,
                 signup:      signupConfig
             )
+            // Save any changed per-slot capacities (slots mode).
+            if signupMode == "slots" {
+                for slot in slotList {
+                    let raw = slotCapacities[slot.id]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let newCap = raw.isEmpty ? nil : Int(raw)
+                    if newCap != slot.capacity {
+                        try await env.signupsService.updateSlotCapacity(slotId: slot.id, capacity: newCap)
+                    }
+                }
+            }
             // Optional: tell everyone about the change (#393). Admin-only, opt-in.
             if canAssignLead, notifyOnSave {
                 let msg = notifyMessage.trimBlank

@@ -140,10 +140,15 @@ struct WhosUpNorthCard: View {
     }
 
     @State private var people: [UpNorthPerson] = []
+    @State private var showRoster = false
 
     var body: some View {
         if env.isSignedIn, !people.isEmpty {
-            card
+            Button { showRoster = true } label: { card }
+                .buttonStyle(.pressable)
+                .sheet(isPresented: $showRoster) {
+                    UpNorthRosterSheet(people: people)
+                }
         }
     }
 
@@ -161,6 +166,9 @@ struct WhosUpNorthCard: View {
                         .foregroundStyle(Color.mlrTextSubtle)
                 }
                 Spacer()
+                Image(systemName: "chevron.right")
+                    .font(.mlrScaled(12, weight: .semibold))
+                    .foregroundStyle(Color.mlrTextSubtle)
             }
 
             ScrollView(.horizontal, showsIndicators: false) {
@@ -183,6 +191,71 @@ struct WhosUpNorthCard: View {
         .cardStyle()
         .task { await load() }
     }
+}
+
+// MARK: - Up North roster sheet
+
+private struct UpNorthRosterSheet: View {
+    let people: [WhosUpNorthCard.UpNorthPerson]
+    @Environment(\.dismiss) private var dismiss
+    @State private var selectedProfile: Profile? = nil
+    @State private var loadingId: UUID? = nil
+
+    var body: some View {
+        NavigationStack {
+            List {
+                Section {
+                    ForEach(people) { person in
+                        Button {
+                            guard loadingId == nil else { return }
+                            Task {
+                                loadingId = person.id
+                                let profile: Profile? = try? await supabase
+                                    .from("profiles")
+                                    .select("*")
+                                    .eq("id", value: person.id.uuidString)
+                                    .single()
+                                    .execute()
+                                    .value
+                                selectedProfile = profile
+                                loadingId = nil
+                            }
+                        } label: {
+                            HStack(spacing: 12) {
+                                AvatarView(url: person.avatarUrl, size: .small)
+                                Text(person.name)
+                                    .font(.mlrScaled(15, weight: .medium))
+                                    .foregroundStyle(Color.mlrText)
+                                Spacer()
+                                if loadingId == person.id {
+                                    ProgressView().scaleEffect(0.8)
+                                }
+                            }
+                        }
+                        .buttonStyle(.pressable)
+                    }
+                } header: {
+                    Text("\(people.count) \(people.count == 1 ? "person" : "people") at the resort today")
+                }
+            }
+            .navigationTitle("Who's Up North")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Done") { dismiss() }
+                }
+            }
+        }
+        .presentationDetents([.medium, .large])
+        .sheet(item: $selectedProfile) { profile in
+            MemberSheetView(member: profile)
+        }
+    }
+}
+
+// MARK: - WhosUpNorthCard data loading (continued)
+
+extension WhosUpNorthCard {
 
     private func load() async {
         guard let myId = env.currentProfile?.id else { return }

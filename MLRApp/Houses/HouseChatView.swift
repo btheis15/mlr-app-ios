@@ -78,6 +78,11 @@ struct HouseChatView: View {
                             }
                         }
                         Button {
+                            showCreatePoll = true
+                        } label: {
+                            Label("Create a poll", systemImage: "chart.bar")
+                        }
+                        Button {
                             showMembers = true
                         } label: {
                             Label("See members", systemImage: "person.2.fill")
@@ -273,8 +278,7 @@ struct HouseChatView: View {
                 isEditing: editingMessage != nil,
                 sending: sending,
                 onSend: { attachments in Task { await send(attachments) } },
-                onCancelEdit: { cancelEdit() },
-                onCreatePoll: { showCreatePoll = true }
+                onCancelEdit: { cancelEdit() }
             )
         }
         .background(Color(.systemGroupedBackground))
