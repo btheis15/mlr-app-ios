@@ -562,13 +562,14 @@ final class CommitteeService {
             let archivedAreas: Set<String> = committeeArchived ? Set(myAreas)
                 : Set(allAreas.filter { $0.isArchived }.map(\.area))
             // A private "Leads" chat (migrations 0172/0177) — anyone holding an
-            // area " · Lead" role OR the committee-level is_lead flag. Backs off
-            // if an admin ever names a real role literally "Leads" (mirrors the
-            // SQL guard in can_access_committee_area), so the sentinel can't
-            // hijack a real role.
-            let hasRealLeadsArea = allAreas.contains { $0.area.lowercased() == "leads" }
+            // area " · Lead" role OR the committee-level is_lead flag. Mirrors
+            // the web's !myAreas.includes("Leads") guard: skip the synthetic
+            // channel only when the user already holds a real "Leads" area
+            // assignment (which would produce its own channel below), not just
+            // because the committee has a "Leads" area that the user isn't in.
             let iAmLead = roster.contains { $0.linkedUserId == userId && $0.isLead }
-            if iAmLead && !hasRealLeadsArea {
+            let hasLeadsAsOwnArea = myAreas.contains { $0.lowercased() == "leads" }
+            if iAmLead && !hasLeadsAsOwnArea {
                 channels.append(ChatChannel(committee: committee, area: "Leads",
                                             title: "Leads", subtitle: committee.name,
                                             isArchived: committeeArchived))
