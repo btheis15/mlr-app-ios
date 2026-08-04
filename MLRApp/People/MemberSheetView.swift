@@ -119,11 +119,12 @@ struct MemberSheetView: View {
         VStack(alignment: .leading, spacing: 8) {
             SectionLabel(text: "Contact")
             Protected {
-                VStack(spacing: 10) {
+                VStack(spacing: 0) {
                     if let phone = member.phone, !phone.isEmpty {
                         let digits = phone.filter(\.isNumber)
                         contactRow("Call", MLRFormat.phone(phone), "phone.fill",
                                    url: "tel://\(digits)")
+                        Divider().padding(.leading, 42)
                         Button {
                             composeState = MessageComposeState(recipients: [phone], body: "")
                         } label: {
@@ -131,15 +132,18 @@ struct MemberSheetView: View {
                                             "message.fill", showsChevron: true)
                         }
                         .buttonStyle(.pressable)
+                        Divider().padding(.leading, 42)
                     }
                     if !member.email.isEmpty {
                         contactRow("Email", member.email, "envelope.fill",
                                    url: "mailto:\(member.email)")
+                        Divider().padding(.leading, 42)
                     }
                     if let address = member.address, !address.isEmpty {
                         let q = address.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? ""
                         contactRow("Get directions", address, "mappin.and.ellipse",
                                    url: "http://maps.apple.com/?q=\(q)")
+                        Divider().padding(.leading, 42)
                     }
 
                     let hasPhone = !(member.phone?.isEmpty ?? true)
@@ -157,6 +161,7 @@ struct MemberSheetView: View {
                             .font(.mlrCaption)
                             .foregroundStyle(Color.mlrTextMuted)
                             .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.vertical, 12)
                     }
                 }
             }
@@ -210,9 +215,10 @@ struct MemberSheetView: View {
             VStack(alignment: .leading, spacing: 8) {
                 SectionLabel(text: "Send a payment")
                 Protected {
-                    VStack(spacing: 10) {
-                        ForEach(payMethods) { m in
+                    VStack(spacing: 0) {
+                        ForEach(Array(payMethods.enumerated()), id: \.element.id) { idx, m in
                             VStack(spacing: 0) {
+                                if idx > 0 { Divider().padding(.leading, 42) }
                                 contactRow(m.label, m.value, m.icon, url: m.url,
                                            preferred: m.key.lowercased() == pref,
                                            tint: payTint(m.key))
@@ -293,15 +299,15 @@ struct MemberSheetView: View {
     private func contactRowLabel(_ label: String, _ value: String, _ icon: String,
                                  showsChevron: Bool, preferred: Bool = false,
                                  tint: Color = .mlrPrimary) -> some View {
-        HStack(spacing: 12) {
+        HStack(spacing: 14) {
             Image(systemName: icon)
-                .font(.mlrScaled(16))
+                .font(.mlrScaled(17))
                 .foregroundStyle(tint)
-                .frame(width: 24)
-            VStack(alignment: .leading, spacing: 1) {
+                .frame(width: 28)
+            VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 6) {
                     Text(label)
-                        .font(.mlrScaled(12))
+                        .font(.mlrScaled(13))
                         .foregroundStyle(Color.mlrTextMuted)
                     if preferred {
                         Text("Preferred")
@@ -314,16 +320,17 @@ struct MemberSheetView: View {
                     }
                 }
                 Text(value)
-                    .font(.mlrScaled(15, weight: .medium))
+                    .font(.mlrScaled(16, weight: .medium))
                     .foregroundStyle(Color.mlrText)
             }
             Spacer()
             if showsChevron {
                 Image(systemName: "arrow.up.right")
-                    .font(.mlrScaled(12, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(Color.mlrTextSubtle)
             }
         }
+        .padding(.vertical, 12)
         .contentShape(Rectangle())
     }
 
