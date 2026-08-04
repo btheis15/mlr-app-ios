@@ -17,15 +17,31 @@ struct AdminSystemView: View {
     @State private var restarting = false
     @State private var note: String?
 
+    struct DiskInfo: Decodable {
+        let totalBytes: Int
+        let freeBytes: Int
+        let usedBytes: Int
+        let external: Bool
+    }
+    struct UsageCategory: Decodable {
+        let key: String
+        let label: String
+        let bytes: Int
+        let files: Int
+    }
+    struct UsageInfo: Decodable {
+        let totalBytes: Int
+        let totalFiles: Int
+        let categories: [UsageCategory]
+    }
     struct ServerStatus: Decodable {
         let ok: Bool
         let commit: String
         let upToDate: Bool
         let behind: Int
         let startedAt: String
-        let mediaBytesUsed: Int?
-        let diskBytesTotal: Int?
-        let diskBytesFree: Int?
+        let disk: DiskInfo?
+        let usage: UsageInfo?
     }
     struct RestartResult: Decodable {
         let ok: Bool
@@ -67,13 +83,20 @@ struct AdminSystemView: View {
                             .foregroundStyle(status.upToDate ? Color.mlrSuccess : Color.mlrWarning)
                     }
                     LabeledContent("Running since") { Text(formatted(status.startedAt)) }
-                    if let mediaBytes = status.mediaBytesUsed {
-                        LabeledContent("Media folder") { Text(fmtBytes(mediaBytes)) }
+                    if let usage = status.usage {
+                        LabeledContent("App storage") {
+                            Text("\(fmtBytes(usage.totalBytes)) · \(usage.totalFiles) files")
+                        }
                     }
-                    if let total = status.diskBytesTotal, let free = status.diskBytesFree {
-                        LabeledContent("Disk usage") {
-                            Text("\(fmtBytes(total - free)) / \(fmtBytes(total))")
-                                .foregroundStyle((Double(total - free) / Double(total)) > 0.85 ? Color.mlrWarning : Color.primary)
+                    if let disk = status.disk {
+                        let pct = Double(disk.usedBytes) / Double(max(disk.totalBytes, 1))
+                        LabeledContent("Disk") {
+                            Text("\(fmtBytes(disk.usedBytes)) / \(fmtBytes(disk.totalBytes))\(disk.external ? " (ext)" : "")")
+                                .foregroundStyle(pct > 0.85 ? Color.mlrWarning : Color.primary)
+                        }
+                        LabeledContent("Free") {
+                            Text(fmtBytes(disk.freeBytes))
+                                .foregroundStyle(pct > 0.85 ? Color.mlrWarning : Color.mlrSuccess)
                         }
                     }
                 }
