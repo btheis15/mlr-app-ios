@@ -143,7 +143,8 @@ private struct FestScheduleEditor: View {
         let day = FestDays.options(env.festContentService.config).first ?? FamilyFestConfig.startDate
         return FestScheduleDraft(id: nil, day: day, anytime: false, startTime: nil, endTime: nil, title: "", emoji: nil,
                                  location: nil, description: nil, bring: nil, isPrivate: false,
-                                 leadUserId: nil, leadName: nil, leadPhone: nil, position: items.count)
+                                 leadUserId: nil, leadName: nil, leadPhone: nil, position: items.count,
+                                 tournamentEnabled: false)
     }
     private func load() async { loading = true; items = await env.festContentService.editableSchedule(); loading = false }
     private func deleteRows(_ idx: IndexSet) async {
@@ -198,6 +199,7 @@ private struct ScheduleEditSheet: View {
                     TextField("Description", text: optional($draft.description), axis: .vertical).lineLimit(2...5)
                     TextField("What to bring (optional)", text: optional($draft.bring), axis: .vertical).lineLimit(1...3)
                     Toggle("Private (members only)", isOn: $draft.isPrivate)
+                    Toggle("🏆 Tournament", isOn: $draft.tournamentEnabled)
                 }
             }
             .navigationTitle(draft.id == nil ? "Add event" : "Edit event")

@@ -44,6 +44,8 @@ struct FestScheduleDraft: Identifiable, Equatable {
     var leadName: String?
     var leadPhone: String?
     var position: Int
+    /// Migration 0147 — gates the "🏆 Tournament" section on this activity.
+    var tournamentEnabled: Bool = false
 }
 
 struct FestDinnerDraft: Identifiable, Equatable {
@@ -423,7 +425,7 @@ final class FestContentService {
             "location": j(d.location), "description": j(d.description), "bring": j(d.bring),
             "is_private": .bool(d.isPrivate), "lead_name": j(d.leadName), "lead_phone": j(d.leadPhone),
             "lead_user_id": d.leadUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
-            "position": .integer(d.position),
+            "position": .integer(d.position), "tournament_enabled": .bool(d.tournamentEnabled),
         ]
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_schedule_items", id: d.id, payload: p)
@@ -812,11 +814,12 @@ private struct ScheduleRowFull: Decodable {
     let lead_name: String?
     let lead_phone: String?
     let position: Int
+    let tournament_enabled: Bool?   // migration 0147
     var draft: FestScheduleDraft {
         FestScheduleDraft(id: id, day: day, anytime: anytime ?? false, startTime: start_time, endTime: end_time, title: title,
                           emoji: emoji, location: location, description: description, bring: bring,
                           isPrivate: is_private, leadUserId: lead_user_id, leadName: lead_name,
-                          leadPhone: lead_phone, position: position)
+                          leadPhone: lead_phone, position: position, tournamentEnabled: tournament_enabled ?? false)
     }
 }
 
