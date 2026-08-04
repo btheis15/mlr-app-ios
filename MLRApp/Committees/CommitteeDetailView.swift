@@ -543,9 +543,10 @@ struct CommitteeDetailView: View {
                         .sorted { a, b in
                             a.roles.contains("\(area) · Lead") && !b.roles.contains("\(area) · Lead")
                         }
-                    if !inArea.isEmpty {
-                        areaCard(area: area, entries: inArea)
-                    }
+                    // Render every role, including empty ones — a role with zero
+                    // volunteers is exactly the thing a prospective helper needs
+                    // to see (mirrors web's CommitteeRoster fix for this same bug).
+                    areaCard(area: area, entries: inArea)
                 }
                 // Anyone on the roster with no area assigned yet.
                 let unassigned = roster.filter { $0.roles.isEmpty }
@@ -563,10 +564,16 @@ struct CommitteeDetailView: View {
             Text(area)
                 .font(.mlrScaled(15, weight: .semibold))
                 .foregroundStyle(Color.mlrText)
-            VStack(spacing: 0) {
-                ForEach(entries) { entry in
-                    rosterRow(entry, showLead: entry.roles.contains("\(area) · Lead"))
-                    if entry.id != entries.last?.id { Divider().padding(.leading, 52) }
+            if entries.isEmpty {
+                Text("Nobody on this one yet")
+                    .font(.mlrScaled(13))
+                    .foregroundStyle(Color.mlrTextMuted)
+            } else {
+                VStack(spacing: 0) {
+                    ForEach(entries) { entry in
+                        rosterRow(entry, showLead: entry.roles.contains("\(area) · Lead"))
+                        if entry.id != entries.last?.id { Divider().padding(.leading, 52) }
+                    }
                 }
             }
         }

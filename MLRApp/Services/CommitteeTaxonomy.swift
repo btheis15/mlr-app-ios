@@ -38,6 +38,28 @@ extension CommitteeService {
         }
     }
 
+    /// Live (non-archived) area names for every committee, in ONE round-trip —
+    /// what the Committees browse list uses to show subcommittee chips without
+    /// a query per row (mirrors web's `fetchAreasByCommittee`).
+    func fetchAreasByCommittee() async -> [String: [String]] {
+        struct Row: Decodable { let committeeSlug: String; let area: String
+            enum CodingKeys: String, CodingKey { case committeeSlug = "committee_slug"; case area } }
+        do {
+            let rows: [Row] = try await supabase
+                .from("committee_areas")
+                .select("committee_slug, area")
+                .filter("archived_at", operator: "is", value: "null")
+                .order("area", ascending: true)
+                .execute().value
+            var out: [String: [String]] = [:]
+            for r in rows { out[r.committeeSlug, default: []].append(r.area) }
+            return out
+        } catch {
+            print("[CommitteeService] fetchAreasByCommittee error: \(error)")
+            return [:]
+        }
+    }
+
     // MARK: Committee RPCs (admin-only; RLS enforces is_admin)
 
     @discardableResult
