@@ -65,16 +65,23 @@ struct HomeView: View {
 
                             // ── 2. Weather — "what's it like Up North right now" ──
                             // Self-hides on load failure — never leaves an empty gap.
+                            // Every card below gets `.scrollEntrance()` — a gentle
+                            // fade/scale/rise as it crosses into view, so the whole
+                            // feed feels alive while scrolling, not just on first
+                            // load (Reduce Motion turns this into a no-op).
                             HomeWeatherCard()
+                                .scrollEntrance()
 
                             // ── 3. Announcement banner ────────────────────
                             AnnouncementBannerStack()
+                                .scrollEntrance()
 
                             // ── 4. Callout cards + fest spotlight ─────────
                             // Admin-managed swipeable callout cards (home_callouts,
                             // migration 0083) stack above the permanent FamilyFestSpotlight
                             // base — same shape as the web's HomeSpotlight/CalloutStack.
                             HomeCalloutsStack(season: festSeason, previewDate: previewDateString)
+                                .scrollEntrance()
 
                             // ── 5. Upcoming event ─────────────────────────
                             if let event = spotlightEvent {
@@ -86,22 +93,27 @@ struct HomeView: View {
                                         await updateAttendance(event: event, status: status)
                                     }
                                 )
+                                .scrollEntrance()
                             }
 
                             // ── 5. Your house — hub for calendar, chat & to-do ──
                             // Self-hides for guests and anyone not in a house.
                             // Promoted above checklist to match web layout (Jul 2026).
                             HouseHubHomeCard()
+                                .scrollEntrance()
 
                             // ── 5b. Admin dashboard shortcut (admins only) ──
                             // Self-hides for non-admins and during "View as" preview.
                             HomeAdminDashboardCard()
+                                .scrollEntrance()
 
                             // ── 6. Work Checklist (standalone collapsible card) ──
                             WorkChecklistCard()
+                                .scrollEntrance()
 
                             // ── 6b. Polls — self-hides when no open poll ──────────
                             PollHomeCard()
+                                .scrollEntrance()
 
                             // ── 7. Quick actions — every destination, always visible ──
                             // Replaces the two collapsed accordions (Communication /
@@ -110,11 +122,15 @@ struct HomeView: View {
 
                             // ── 8. Delight cards — birthdays, who's up north, memory ─
                             UpcomingBirthdaysCard()
+                                .scrollEntrance()
                             WhosUpNorthCard()
+                                .scrollEntrance()
                             OnThisDayCard()
+                                .scrollEntrance()
 
                             // ── 9. App & Help ────────────────────────────
                             appHelpSection
+                                .scrollEntrance()
 
                             // ── 8. Heritage footer ────────────────────────
                             heritageFooter
@@ -213,30 +229,37 @@ struct HomeView: View {
                 HomeTile(icon: "calendar", title: "Events",
                          subtitle: "RSVP — gatherings & work weekends.", tint: Color.mlrPrimary)
             }
+            .cardEntrance(index: 0)
             NavigationLink(destination: CommitteesView()) {
                 HomeTile(icon: "person.3.fill", title: "Committees",
                          subtitle: "Join a crew — there's a spot for you.", tint: Color.mlrAccent)
             }
+            .cardEntrance(index: 1)
             NavigationLink(destination: PeopleDirectoryView()) {
                 HomeTile(icon: "person.2.fill", title: "People",
                          subtitle: "Find & contact everyone.", tint: Color.mlrInfo)
             }
+            .cardEntrance(index: 2)
             NavigationLink(destination: HelpRequestsView()) {
                 HomeTile(icon: "hand.raised.fill", title: "Ask for Help",
                          subtitle: "Request a hand at the resort.", tint: Color.mlrPrimary)
             }
+            .cardEntrance(index: 3)
             NavigationLink(destination: LocalPlacesView()) {
                 HomeTile(icon: "mappin.and.ellipse", title: "Local Places",
                          subtitle: "Tee times, food & favorites.", tint: Color.mlrInfo)
             }
+            .cardEntrance(index: 4)
             NavigationLink(destination: CabinBookingsView()) {
                 HomeTile(icon: "house.lodge.fill", title: "Cabin Stay",
                          subtitle: "Reserve a room for any week.", tint: Color.mlrPrimary)
             }
+            .cardEntrance(index: 5)
             NavigationLink(destination: DropBoxesView()) {
                 HomeTile(icon: "photo.stack.fill", title: "Drop Box",
                          subtitle: "Dump & browse shared photos.", tint: Color.mlrAccent)
             }
+            .cardEntrance(index: 6)
         }
         .buttonStyle(.pressable)
     }

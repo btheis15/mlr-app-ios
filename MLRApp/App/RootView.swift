@@ -479,6 +479,13 @@ struct MainTabView: View {
                 .tag(Tab.profile)
         }
         .tint(Color.mlrPrimary)
+        // A light selection tick on every tab switch — the kind of small,
+        // native-feeling touch that makes the bar feel considered rather than
+        // stock. Skipped on the very first appearance (no real "switch" yet).
+        .onChange(of: selectedTab) { oldValue, newValue in
+            guard oldValue != newValue else { return }
+            Haptics.select()
+        }
         .task {
             if env.isSignedIn, let userId = env.currentProfile?.id {
                 await env.notificationsService.fetchUnreadCount(userId: userId)
