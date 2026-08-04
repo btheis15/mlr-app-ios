@@ -199,6 +199,9 @@ struct CabinRoomAvailability: Codable, Identifiable, Equatable {
     let roomId: UUID
     let name: String
     let beds: Int
+    /// Free-form note shown to members in the picker, e.g. "small room, no
+    /// closet" (migration 0094) — the RPC returns it, this just wasn't decoded.
+    let description: String?
     let active: Bool
     let available: Bool
 
@@ -206,6 +209,6 @@ struct CabinRoomAvailability: Codable, Identifiable, Equatable {
 
     enum CodingKeys: String, CodingKey {
         case roomId   = "room_id"
-        case name, beds, active, available
+        case name, beds, description, active, available
     }
 }
