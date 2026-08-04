@@ -98,6 +98,14 @@ struct AdminView: View {
                     title: "Scheduled",
                     description: "Upcoming & recent scheduled broadcasts"
                 )
+
+                adminLink(
+                    destination: NotificationTestView(),
+                    icon: "bell.badge.fill",
+                    iconColor: Color.mlrPrimary,
+                    title: "Notification Test",
+                    description: "Ping one member, track who's confirmed"
+                )
             }
 
             Section("Bookings") {

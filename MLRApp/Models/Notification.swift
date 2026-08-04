@@ -119,3 +119,17 @@ enum AnnouncementKind: String, Codable {
     /// The DB `severity` value this kind persists as.
     var severity: String { self == .info ? "info" : "alert" }
 }
+
+// MARK: - Notification test roster (migrations 0156-0157)
+// Admin → Notification Test: send one test push to a specific member, and a
+// "confirmed" checklist of who's been manually verified to actually receive
+// pushes. Mirrors web's lib/notificationTest.ts `NotificationTestMember`.
+
+struct NotificationTestMember: Codable, Identifiable, Equatable {
+    let id: UUID
+    var name: String
+    var avatarUrl: String?
+    var confirmed: Bool
+    var confirmedAt: Date?
+    var confirmedByName: String?
+}

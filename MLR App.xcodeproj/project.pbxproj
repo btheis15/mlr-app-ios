@@ -223,6 +223,7 @@
 		D3F9D87D300934F0006874DA /* AdminCabinDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */; };
 		D3F9D87F30093C6C006874DA /* ScheduleSendPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */; };
 		D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */; };
+		D3A0000000000000000000BC /* NotificationTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AC /* NotificationTestView.swift */; };
 		D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */; };
 		D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88430093D9E006874DA /* OnThisDayCard.swift */; };
 		D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */; };
@@ -469,6 +470,7 @@
 		D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCabinDetails.swift; sourceTree = "<group>"; };
 		D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSendPicker.swift; sourceTree = "<group>"; };
 		D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminScheduledBroadcasts.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AC /* NotificationTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTestView.swift; sourceTree = "<group>"; };
 		D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledBroadcast.swift; sourceTree = "<group>"; };
 		D3F9D88430093D9E006874DA /* OnThisDayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDayCard.swift; sourceTree = "<group>"; };
 		D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyCommitteeAreasSheet.swift; sourceTree = "<group>"; };
@@ -866,6 +868,7 @@
 				D3F9D8663006C288006874DA /* AdminHelpContactView.swift */,
 				D3F9D86A3006CC02006874DA /* AdminCalloutsView.swift */,
 				D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */,
+				D3A0000000000000000000AC /* NotificationTestView.swift */,
 				D3F9D88A300948A5006874DA /* PreviewAsView.swift */,
 				D3F9D89A3009870A006874DA /* AdminMembersView.swift */,
 				D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */,
@@ -1270,6 +1273,7 @@
 				D31B5361301168CC00C8D189 /* EmailMembersView.swift in Sources */,
 				D33F9EA62FEC086700603CE7 /* EventComposer.swift in Sources */,
 				D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */,
+				D3A0000000000000000000BC /* NotificationTestView.swift in Sources */,
 				D31B53743012A82E00C8D189 /* EventSignups.swift in Sources */,
 				D33F9EA72FEC086700603CE7 /* HomeNavigationStubs.swift in Sources */,
 				D33F9EA82FEC086700603CE7 /* MentionText.swift in Sources */,
