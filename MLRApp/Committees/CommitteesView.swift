@@ -117,6 +117,7 @@ struct CommitteesView: View {
                             joinSheetCommittee = committee
                         }
                     )
+                    .scrollEntrance()
                 }
             }
             .padding(.horizontal, 16)
