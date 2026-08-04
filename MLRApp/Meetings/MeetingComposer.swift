@@ -244,7 +244,7 @@ struct MeetingComposer: View {
                     .foregroundStyle(Color.mlrTextMuted)
                     .frame(width: 30, height: 30)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
     }
 

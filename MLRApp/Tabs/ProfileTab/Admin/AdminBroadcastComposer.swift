@@ -25,6 +25,10 @@ struct AdminBroadcastComposer: View {
     @State private var messageBody = ""
     @State private var kind: AnnouncementKind = .info
     @State private var expiry: ExpiryWindow = .sixHours
+    /// The Activity tab entry's own expiry — separate from the banner's,
+    /// since past it the item just stops counting toward the bell badge
+    /// rather than disappearing. `nil` = doesn't expire (the default).
+    @State private var feedExpiry: ExpiryWindow? = nil
     @State private var audience: Audience = .everyone
 
     // Channels (≥1 required).
@@ -55,10 +59,14 @@ struct AdminBroadcastComposer: View {
                     Section {
                         Menu {
                             ForEach(festActivities) { item in
-                                Button(item.title) { autofill(from: item) }
+                                Button(item.title) { Haptics.tap(); autofill(from: item) }
+                            }
+                            Divider()
+                            Button(role: .destructive) { Haptics.tap(); requestReset() } label: {
+                                Label("Start fresh (clear all)", systemImage: "arrow.counterclockwise")
                             }
                         } label: {
-                            Label("Remind about an activity (autofills)", systemImage: "sparkles")
+                            Label("Attach an activity / start fresh", systemImage: "sparkles")
                                 .font(.mlrScaled(14, weight: .medium))
                         }
                     }
@@ -113,6 +121,20 @@ struct AdminBroadcastComposer: View {
                     }
                 }
 
+                if toActivity {
+                    Section {
+                        Picker("Expiry", selection: $feedExpiry) {
+                            Text("Doesn't expire").tag(ExpiryWindow?.none)
+                            ForEach(ExpiryWindow.allCases) { Text($0.label).tag(ExpiryWindow?.some($0)) }
+                        }
+                        .pickerStyle(.menu)
+                    } header: {
+                        Text("Activity tab expiry")
+                    } footer: {
+                        Text("Past this, the item stays in the list but stops counting toward the bell badge.")
+                    }
+                }
+
                 EventTargetPicker(events: upcomingEvents,
                                   selectedEventId: $selectedEventId,
                                   excludeNotAttending: $excludeNotAttending)
@@ -145,6 +167,10 @@ struct AdminBroadcastComposer: View {
                 }
                 .listRowBackground(Color.clear)
             }
+            .confirmationDialog("Clear this notification?", isPresented: $confirmReset, titleVisibility: .visible) {
+                Button("Start fresh", role: .destructive) { resetToBlank() }
+                Button("Cancel", role: .cancel) {}
+            }
             .navigationTitle("Broadcast")
             .navigationBarTitleDisplayMode(.inline)
             .task {
@@ -173,6 +199,29 @@ struct AdminBroadcastComposer: View {
     }
 
     // MARK: - Activity autofill (#393)
+
+    @State private var confirmReset = false
+
+    /// Anything worth protecting from an accidental wipe?
+    private var hasContent: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty
+            || !messageBody.trimmingCharacters(in: .whitespaces).isEmpty
+            || selectedEventId != nil || linkUrl != nil || scheduleAt != nil
+    }
+
+    /// Route through a confirmation only when there IS content (Phase 8).
+    private func requestReset() {
+        if hasContent { confirmReset = true } else { resetToBlank() }
+    }
+
+    /// Return ALL composer state to its initial defaults (leaves isPosting/posted).
+    private func resetToBlank() {
+        title = ""; messageBody = ""
+        kind = .info; expiry = .sixHours; feedExpiry = nil; audience = .everyone
+        toBanner = true; toActivity = false; toEmail = false
+        selectedEventId = nil; excludeNotAttending = true
+        linkUrl = nil; scheduleAt = nil; error = nil
+    }
 
     private var festActivities: [ScheduleItem] {
         env.festContentService.schedule.filter { !$0.isPrivate }
@@ -217,6 +266,7 @@ struct AdminBroadcastComposer: View {
                 if toActivity {
                     let payload = BroadcastPayload(
                         title: trimmedTitle, body: bodyOrNil, audience: audience.rawValue,
+                        expiryHours: feedExpiry?.hours,
                         eventId: eventId, excludeNotAttending: eventId != nil ? exclude : nil)
                     try await env.notificationsService.scheduleBroadcast(kind: .notification, payload: payload, scheduledAt: scheduleAt)
                 }
@@ -233,7 +283,7 @@ struct AdminBroadcastComposer: View {
             if toActivity {
                 try await env.notificationsService.sendBroadcast(
                     title: trimmedTitle, body: bodyOrNil, audience: audience.broadcast,
-                    mirrorBanner: false, url: linkUrl, expiresAt: expiry.expiresAt,
+                    mirrorBanner: false, url: linkUrl, expiresAt: feedExpiry?.expiresAt,
                     eventId: eventId, excludeNotAttending: exclude)
             }
             posted = true

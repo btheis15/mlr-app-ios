@@ -12,6 +12,7 @@ struct HouseHubView: View {
     let house: House
 
     @State private var stays: [HouseStay] = []
+    @State private var lists: [HouseList] = []
     @State private var loading = true
     @State private var showRulesEditor = false
     // Locally reflects a just-saved edit without re-navigating (the passed-in
@@ -41,8 +42,8 @@ struct HouseHubView: View {
                 // MJT House dues reminder — self-hides for other houses and outside the fest window.
                 MjtHouseDuesCard(house: house)
 
-                // ── Calendar & chat — the two primary destinations, 2-up (#359) ──
-                SectionLabel(text: "Calendar & chat")
+                // ── Calendar, chat & lists — the primary destinations, 2-up (#359) ──
+                SectionLabel(text: "Calendar, chat & lists")
                 LazyVGrid(columns: [GridItem(.flexible(), spacing: 12),
                                     GridItem(.flexible(), spacing: 12)], spacing: 12) {
                     NavigationLink(destination: HouseCalendarView(house: house)) {
@@ -50,13 +51,19 @@ struct HouseHubView: View {
                                  subtitle: "Who's up & when", tint: Color.mlrPrimary,
                                  fullWidth: false, minHeight: hubCardMinHeight)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     NavigationLink(destination: HouseChatView(house: house, assumeMember: true)) {
                         HomeTile(icon: "bubble.left.and.bubble.right.fill", title: "House chat",
                                  subtitle: "Talk to your house", tint: Color.mlrInfo,
                                  fullWidth: false, minHeight: hubCardMinHeight)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
+                    NavigationLink(destination: HouseListsView(house: house)) {
+                        HomeTile(icon: "checklist", title: "Lists",
+                                 subtitle: listsSubtitle, tint: Color.mlrAccent,
+                                 fullWidth: false, minHeight: hubCardMinHeight)
+                    }
+                    .buttonStyle(.pressable)
                 }
                 if !loading {
                     Text(calSubtitle).font(.mlrCaption).foregroundStyle(Color.mlrTextMuted).padding(.horizontal, 4)
@@ -99,7 +106,7 @@ struct HouseHubView: View {
                     .frame(maxWidth: .infinity, minHeight: hubCardMinHeight, alignment: .leading)
                     .cardStyle()
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
                 // Who's staying lives on the House calendar (surfaced via the
                 // "Next up:" line on the calendar card above) — no separate
@@ -115,7 +122,10 @@ struct HouseHubView: View {
         .navigationTitle(house.name)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            stays = await env.housesService.fetchStays(houseId: house.id)
+            async let s = env.housesService.fetchStays(houseId: house.id)
+            async let l = env.housesService.fetchLists(houseId: house.id)
+            stays = await s
+            lists = await l
             loading = false
         }
         .sheet(isPresented: $showRulesEditor) {
@@ -131,6 +141,13 @@ struct HouseHubView: View {
             return "Next up: \(next.label) · \(next.dateRangeLabel)"
         }
         return "No stays yet — add when you're going up."
+    }
+
+    /// The top list + its progress, mirroring web's Hub tile subtitle.
+    private var listsSubtitle: String {
+        if loading { return "Groceries, packing, checklists" }
+        guard let top = lists.first else { return "No lists yet" }
+        return "\(top.title) — \(top.summary)"
     }
 }
 
@@ -167,7 +184,7 @@ struct HouseHubHomeCard: View {
                         }
                         .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
 
                     // Dedicated Chat button → straight into the house chat room (#349).
                     NavigationLink(destination: HouseChatView(house: house, assumeMember: true)) {
@@ -182,7 +199,7 @@ struct HouseHubHomeCard: View {
                         .background(Color.white.opacity(0.18))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 .padding(14)
                 .background(Color.mlrPrimary)

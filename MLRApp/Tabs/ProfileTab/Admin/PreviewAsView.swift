@@ -118,7 +118,7 @@ struct PreviewBanner: View {
                     .background(.white.opacity(0.25))
                     .clipShape(Capsule())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .foregroundStyle(.white)
         .padding(.horizontal, 16)

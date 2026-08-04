@@ -22,9 +22,19 @@ struct AnnouncementBannerStack: View {
     private var visible: [Announcement] {
         let all = Announcement.seed + dbAnnouncements
         return all.filter { announcement in
+            announcement.showBanner &&
             !announcement.isExpired &&
-            !env.dismissedAnnouncementIds.contains(announcement.id)
+            !env.dismissedAnnouncementIds.contains(announcement.id) &&
+            !isHiddenForEvent(announcement)
         }
+    }
+
+    /// Mirrors web's `isHiddenForEventTarget()` (migration 0096) — hides the
+    /// banner ONLY from someone who explicitly RSVP'd "Can't make it" to the
+    /// linked event; a no-response (or Going/Maybe) member still sees it.
+    private func isHiddenForEvent(_ announcement: Announcement) -> Bool {
+        guard announcement.excludeNotAttending, let eventId = announcement.eventId else { return false }
+        return env.eventsService.attendances[eventId]?.effectiveStatus() == .notGoing
     }
 
     var body: some View {
@@ -119,7 +129,7 @@ private struct AnnouncementBannerRow: View {
                     .foregroundStyle(kindTextColor.opacity(0.6))
                     .padding(6)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 10)

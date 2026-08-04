@@ -56,6 +56,19 @@ struct AdminAlertComposer: View {
     @State private var isPosting = false
     @State private var error: String? = nil
     @State private var posted = false
+    @State private var confirmReset = false
+
+    private var hasContent: Bool {
+        !title.trimmingCharacters(in: .whitespaces).isEmpty
+            || !messageBody.trimmingCharacters(in: .whitespaces).isEmpty
+            || selectedEventId != nil || scheduleAt != nil
+    }
+    private func requestReset() { if hasContent { confirmReset = true } else { resetToBlank() } }
+    private func resetToBlank() {
+        title = ""; messageBody = ""
+        kind = .info; expiry = .sixHours; mirrorToNotif = false
+        selectedEventId = nil; excludeNotAttending = true; scheduleAt = nil; error = nil
+    }
 
     private var canPost: Bool { !title.trimmingCharacters(in: .whitespaces).isEmpty }
     private var upcomingEvents: [ResortEvent] { env.eventsService.upcomingEvents }
@@ -173,6 +186,17 @@ struct AdminAlertComposer: View {
                     .disabled(!canPost || isPosting)
                 }
                 .listRowBackground(Color.clear)
+            }
+            .toolbar {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { Haptics.tap(); requestReset() } label: {
+                        Label("Start fresh", systemImage: "arrow.counterclockwise")
+                    }
+                }
+            }
+            .confirmationDialog("Clear this alert?", isPresented: $confirmReset, titleVisibility: .visible) {
+                Button("Start fresh", role: .destructive) { resetToBlank() }
+                Button("Cancel", role: .cancel) {}
             }
             .navigationTitle("Post Announcement")
             .navigationBarTitleDisplayMode(.inline)

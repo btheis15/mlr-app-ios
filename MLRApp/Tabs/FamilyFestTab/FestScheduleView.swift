@@ -45,7 +45,7 @@ struct FestScheduleView: View {
                                 NavigationLink(destination: FestScheduleDetailView(item: item)) {
                                     ScheduleRow(item: item, isSignedIn: env.isSignedIn)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressable)
                             }
                         }
                         .background(Color.mlrFestParchment)
@@ -69,7 +69,7 @@ struct FestScheduleView: View {
                                 NavigationLink(destination: FestScheduleDetailView(item: item)) {
                                     ScheduleRow(item: item, isSignedIn: env.isSignedIn)
                                 }
-                                .buttonStyle(.plain)
+                                .buttonStyle(.pressable)
                             }
                         }
                         .background(Color.mlrFestParchment)

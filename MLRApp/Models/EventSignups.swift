@@ -84,12 +84,24 @@ final class SignupsService {
                 .from("fest_schedule_slots")
                 .select("*")
                 .eq("schedule_item_id", value: itemId.uuidString)
-                .order("position", ascending: true)
+                .order("day", ascending: true, nullsFirst: true)
+                .order("start_time", ascending: true)
                 .execute()
                 .value
         } catch {
             return []
         }
+    }
+
+    /// Update a named slot's per-slot capacity in-place.
+    /// Pass nil to remove the cap (unlimited).
+    func updateSlotCapacity(slotId: UUID, capacity: Int?) async throws {
+        struct Payload: Encodable { let capacity: Int? }
+        try await supabase
+            .from("fest_schedule_slots")
+            .update(Payload(capacity: capacity))
+            .eq("id", value: slotId.uuidString)
+            .execute()
     }
 
     /// Sign someone up. Pass `slotId` (slots mode), `slotStart` (interval), or
@@ -143,6 +155,49 @@ final class SignupsService {
     func remove(signupId: UUID) async throws {
         struct P: Encodable { let p_signup: String }
         try await supabase.rpc("remove_schedule_signup", params: P(p_signup: signupId.uuidString)).execute()
+    }
+
+    /// Per-slot headcount that isn't row-limited by RLS (migration 0167) — the
+    /// only way to show an accurate count when `signupHideNames` blocks a plain
+    /// select down to just the viewer's own row. Keyed by slot id, "HH:MM" start,
+    /// or "headcount" for the item's single no-slot bucket.
+    func fetchSignupCounts(itemId: UUID) async -> [String: Int] {
+        struct Row: Decodable { let slotStart: String?; let slotId: UUID?; let cnt: Int
+            enum CodingKeys: String, CodingKey { case slotStart = "slot_start"; case slotId = "slot_id"; case cnt }
+        }
+        struct P: Encodable { let p_item: String }
+        do {
+            let rows: [Row] = try await supabase
+                .rpc("fest_schedule_signup_counts", params: P(p_item: itemId.uuidString))
+                .execute().value
+            var out: [String: Int] = [:]
+            for r in rows {
+                let key = r.slotId?.uuidString ?? r.slotStart ?? "headcount"
+                out[key, default: 0] += r.cnt
+            }
+            return out
+        } catch {
+            return [:]
+        }
+    }
+
+    /// On-demand "your time is soon" nudge for everyone in ONE slot (migration
+    /// 0158) — distinct from the fully automatic pre-configured cron (0140).
+    /// `minutes` is descriptive only; nil ⇒ a plain "is coming up" wording.
+    /// Gated server-side to the item's creator predicate (admin/fest-editor OR
+    /// its lead/crew). Returns the number of people notified.
+    @discardableResult
+    func sendSlotReminderNow(itemId: UUID, slotStart: String?, slotId: UUID?, minutes: Int? = nil, email: Bool = false) async throws -> Int {
+        let params: [String: AnyJSON] = [
+            "p_kind":       .string("schedule"),
+            "p_item":       .string(itemId.uuidString),
+            "p_slot_id":    slotId.map { AnyJSON.string($0.uuidString) } ?? .null,
+            "p_slot_start": slotId == nil ? (slotStart.map { AnyJSON.string($0) } ?? .null) : .null,
+            "p_minutes":    minutes.map { AnyJSON.double(Double($0)) } ?? .null,
+            "p_email":      .bool(email),
+        ]
+        let count: Int? = try await supabase.rpc("send_signup_slot_reminder_now", params: params).execute().value
+        return count ?? 0
     }
 
     /// "HH:MM" start times from start up to (not reaching) end, `minutes` apart —

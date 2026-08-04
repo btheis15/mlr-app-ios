@@ -63,7 +63,7 @@ struct WelcomeCard: View {
                         .foregroundStyle(Color.mlrTextMuted)
                         .padding(8)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             // Bullet points

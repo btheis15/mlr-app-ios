@@ -73,7 +73,7 @@ struct HomeWeatherCard: View {
                 }
                 .padding(14)
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(daily.count <= 1)
 
             // 5-day strip — revealed on tap

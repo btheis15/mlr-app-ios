@@ -55,9 +55,9 @@ struct TeeTimesView: View {
                             }
                             .foregroundStyle(Color.mlrPrimary)
                             .padding(.horizontal, 14).padding(.vertical, 12)
-                            .background(Color.mlrCard)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
+                            .cardStyle(cornerRadius: 12, elevation: .medium)
                         }
+                        .buttonStyle(.pressable)
                     }
                 }
 
@@ -74,9 +74,9 @@ struct TeeTimesView: View {
                         .foregroundStyle(Color.mlrPrimary)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
-                        .background(Color.mlrCard)
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                        .cardStyle(cornerRadius: 12, elevation: .medium)
                     }
+                    .buttonStyle(.pressable)
                 }
 
                 Text("Tee times, pricing, and booking are managed by Inshalla Country Club via foreUP. Tapping a day opens foreUP's secure booking page pre-filtered to that day — your tee time, account, and payment all live there. Or call to book by phone.")
@@ -103,9 +103,9 @@ struct TeeTimesView: View {
                 .foregroundStyle(Color.mlrPrimary)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
-                .background(Color.mlrCard)
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .cardStyle(cornerRadius: 12, elevation: .low)
             }
+            .buttonStyle(.pressable)
         }
     }
 

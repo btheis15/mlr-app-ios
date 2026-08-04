@@ -22,6 +22,12 @@ struct TournamentContainerView: View {
     @State private var rearranging = false
     @State private var pickedUp: (matchId: UUID, slot: Int)?
     @State private var errorText: String?
+    // Celebration + bracket presentation (overhaul Phase 2).
+    @State private var confettiTrigger = 0
+    @State private var bracketMode: BracketMode = .diagram
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    enum BracketMode: String, CaseIterable { case diagram = "Diagram", byRound = "By round" }
 
     enum LiveTab: String, CaseIterable { case bracket = "Bracket", standings = "Standings", pools = "Pools", games = "Games" }
 
@@ -78,13 +84,7 @@ struct TournamentContainerView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 if let champ = t.winnerEntrantId {
-                    Label("Champion: \(t.entrantName(champ))", systemImage: "crown.fill")
-                        .font(.mlrScaled(17, weight: .bold))
-                        .foregroundStyle(Color.mlrWarning)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 8)
-                        .background(Color.mlrWarning.opacity(0.12))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                    ChampionBanner(name: t.entrantName(champ))
                 }
 
                 if rearranging {
@@ -110,6 +110,14 @@ struct TournamentContainerView: View {
                 }
             }
             .padding(16)
+        }
+        .overlay(ConfettiView(trigger: confettiTrigger).allowsHitTesting(false))
+        .onChange(of: t.winnerEntrantId) { old, new in
+            // Fire the celebration exactly once, when a champion is first crowned.
+            if old == nil, new != nil {
+                confettiTrigger += 1
+                Haptics.success()
+            }
         }
     }
 
@@ -144,8 +152,37 @@ struct TournamentContainerView: View {
             if t.format == .pools_bracket && !t.hasKnockoutBracket {
                 knockoutPending(t)
             } else {
+                bracketArea(t)
+            }
+        }
+    }
+
+    /// THE BIG BRACKET (Phase 2.4): the connected diagram is the default; the
+    /// round-pager remains as a compact fallback — automatic under Reduce Motion
+    /// or for very large draws, and always reachable via the toggle.
+    @ViewBuilder
+    private func bracketArea(_ t: Tournament) -> some View {
+        let stage: MatchStage? = t.format == .pools_bracket ? .bracket : nil
+        let diagramAvailable = !reduceMotion && t.maxRound <= 5
+        let useDiagram = diagramAvailable && bracketMode == .diagram
+
+        VStack(spacing: 12) {
+            if diagramAvailable {
+                Picker("Bracket view", selection: $bracketMode) {
+                    ForEach(BracketMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
+                }
+                .pickerStyle(.segmented)
+            }
+            if useDiagram {
+                BracketDiagram(
+                    tournament: t, stageFilter: stage,
+                    canManage: canManage, rearranging: rearranging, pickedUp: pickedUp,
+                    onOpen: { resultMatch = $0 }, onSlotTap: { m, s in handleSlotTap(t, m, s) })
+                .frame(height: 460)
+                .cardStyle(cornerRadius: MLRRadius.card, elevation: .low)
+            } else {
                 TournamentBracketView(
-                    tournament: t, stageFilter: t.format == .pools_bracket ? .bracket : nil,
+                    tournament: t, stageFilter: stage,
                     canManage: canManage, rearranging: rearranging, pickedUp: pickedUp,
                     onOpen: { resultMatch = $0 }, onSlotTap: { m, s in handleSlotTap(t, m, s) })
             }
@@ -312,21 +349,22 @@ private struct MatchCard: View {
     private var bye: Bool { (match.slot1EntrantId != nil) != (match.slot2EntrantId != nil) && match.status == .complete }
     private var tappable: Bool { !rearranging && canManage && (bothSet || match.status == .complete) && !bye }
 
+    private var isLive: Bool { match.status == .ready || match.status == .in_progress }
+
     var body: some View {
         VStack(spacing: 0) {
             slotRow(match.slot1EntrantId, score: match.slot1Score, slot: 1)
             Divider()
             slotRow(match.slot2EntrantId, score: match.slot2Score, slot: 2)
-            if match.isPlayIn || match.status == .ready || match.scheduledAt != nil {
+            if match.isPlayIn || isLive || match.scheduledAt != nil {
                 footer
             }
         }
-        .background(Color.mlrCard)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
-        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(rearranging ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder, lineWidth: 1))
+        .cardStyle(cornerRadius: 14, elevation: .medium)
+        .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(rearranging ? Color.mlrPrimary.opacity(0.45) : Color.clear, lineWidth: 1.5))
         .opacity(bye ? 0.7 : 1)
         .contentShape(Rectangle())
-        .onTapGesture { if tappable { onOpen() } }
+        .onTapGesture { if tappable { Haptics.tap(); onOpen() } }
     }
 
     @ViewBuilder
@@ -334,30 +372,52 @@ private struct MatchCard: View {
         let isWinner = match.winnerEntrantId != nil && entrantId == match.winnerEntrantId
         let isPicked = rearranging && pickedUp?.matchId == match.id && pickedUp?.slot == slot
         let label = entrantId != nil ? tournament.entrantName(entrantId) : (match.status == .complete ? "Bye" : "TBD")
-        HStack {
+        let seed = tournament.entrants.first { $0.id == entrantId }?.seed
+        HStack(spacing: 8) {
+            // Gold accent bar marks the winning row.
+            RoundedRectangle(cornerRadius: 1)
+                .fill(isWinner ? Color.mlrFestGold : Color.clear)
+                .frame(width: 3, height: 20)
+            if let seed {
+                Text("\(seed)")
+                    .font(.mlrScaled(10, weight: .bold))
+                    .foregroundStyle(Color.mlrTextSubtle)
+                    .frame(width: 16)
+            }
             Text(label)
                 .font(.mlrScaled(15, weight: isWinner ? .bold : .regular))
                 .foregroundStyle(entrantId != nil ? Color.mlrText : Color.mlrTextSubtle)
                 .lineLimit(1)
+            if isWinner {
+                Image(systemName: "crown.fill")
+                    .font(.mlrScaled(10))
+                    .foregroundStyle(Color.mlrFestGold)
+            }
             Spacer()
             if rearranging {
                 if entrantId != nil { Text(isPicked ? "moving…" : "move").font(.mlrScaled(11, weight: .semibold)).foregroundStyle(Color.mlrPrimary) }
             } else if let score {
-                Text("\(score)").font(.mlrScaled(15, weight: .bold)).monospacedDigit()
+                Text("\(score)").font(.mlrScaled(15, weight: .bold)).monospacedDigit().numericTransition()
             }
         }
-        .padding(.horizontal, 14).padding(.vertical, 11)
-        .background(isPicked ? Color.mlrPrimary.opacity(0.15) : (isWinner ? Color.mlrPrimary.opacity(0.08) : Color.clear))
+        .padding(.horizontal, 12).padding(.vertical, 11)
+        .background(isPicked ? Color.mlrPrimary.opacity(0.25) : (isWinner ? Color.mlrPrimary.opacity(0.08) : Color.clear))
+        .scaleEffect(isPicked ? 1.02 : 1)
+        .animation(MLRMotion.spring, value: isPicked)
         .contentShape(Rectangle())
-        .onTapGesture { if rearranging && canManage { onSlotTap(slot) } }
+        .onTapGesture { if rearranging && canManage { Haptics.select(); onSlotTap(slot) } }
     }
 
     private var footer: some View {
         HStack {
             if match.isPlayIn {
                 Text("PLAY-IN").font(.mlrScaled(10, weight: .bold)).foregroundStyle(Color.mlrPrimary).tracking(0.6)
-            } else if match.status == .ready {
-                Text("READY").font(.mlrScaled(10, weight: .bold)).foregroundStyle(Color.mlrPrimary).tracking(0.6)
+            } else if isLive {
+                HStack(spacing: 5) {
+                    PulsingLiveDot(color: .mlrSuccess).scaleEffect(0.8)
+                    Text(match.status == .in_progress ? "LIVE" : "READY")
+                        .font(.mlrScaled(10, weight: .bold)).foregroundStyle(Color.mlrSuccess).tracking(0.6)
+                }
             }
             if let at = match.scheduledAt, match.status != .complete {
                 Text("🕒 \(at.formatted(date: .omitted, time: .shortened))").font(.mlrScaled(10)).foregroundStyle(Color.mlrTextMuted)
@@ -391,21 +451,93 @@ private struct StandingsTable: View {
             .font(.mlrScaled(11, weight: .semibold)).foregroundStyle(Color.mlrTextMuted)
             .padding(.horizontal, 12).padding(.vertical, 6)
             ForEach(rows) { r in
-                HStack {
-                    Text("\(r.rank)").font(.mlrScaled(13, weight: .bold)).foregroundStyle(Color.mlrTextMuted).frame(width: 22, alignment: .leading)
-                    Text(r.name).font(.mlrScaled(14, weight: r.entrantId == leaderId ? .bold : .regular)).lineLimit(1)
-                    if r.entrantId == leaderId { Image(systemName: "crown.fill").font(.mlrScaled(10)).foregroundStyle(Color.mlrWarning) }
-                    Spacer()
-                    Text(r.record).font(.mlrScaled(13, weight: .medium)).monospacedDigit().frame(width: 56, alignment: .trailing)
-                    if showScores {
-                        Text(r.diff >= 0 ? "+\(r.diff)" : "\(r.diff)").font(.mlrScaled(12)).foregroundStyle(Color.mlrTextMuted).monospacedDigit().frame(width: 44, alignment: .trailing)
+                let medal = medalColor(rank: r.rank)
+                VStack(spacing: 4) {
+                    HStack {
+                        // Rank — medal symbol for the podium, plain number after.
+                        Group {
+                            if let medal {
+                                Image(systemName: "medal.fill").font(.mlrScaled(12)).foregroundStyle(medal)
+                            } else {
+                                Text("\(r.rank)").font(.mlrScaled(13, weight: .bold)).foregroundStyle(Color.mlrTextMuted)
+                            }
+                        }
+                        .frame(width: 22, alignment: .leading)
+                        Text(r.name).font(.mlrScaled(14, weight: r.entrantId == leaderId || r.rank == 1 ? .bold : .regular)).lineLimit(1)
+                        if r.entrantId == leaderId { Image(systemName: "crown.fill").font(.mlrScaled(10)).foregroundStyle(Color.mlrFestGold) }
+                        Spacer()
+                        Text(r.record).font(.mlrScaled(13, weight: .medium)).monospacedDigit().numericTransition().frame(width: 56, alignment: .trailing)
+                        if showScores {
+                            Text(r.diff >= 0 ? "+\(r.diff)" : "\(r.diff)").font(.mlrScaled(12)).foregroundStyle(Color.mlrTextMuted).monospacedDigit().numericTransition().frame(width: 44, alignment: .trailing)
+                        }
                     }
+                    // Win% mini-bar.
+                    GeometryReader { geo in
+                        ZStack(alignment: .leading) {
+                            Capsule().fill(Color.mlrBorder.opacity(0.5))
+                            Capsule().fill(medal ?? Color.mlrPrimary.opacity(0.55))
+                                .frame(width: max(3, geo.size.width * winPct(r)))
+                        }
+                    }
+                    .frame(height: 3)
                 }
-                .padding(.horizontal, 12).padding(.vertical, 9)
+                .padding(.horizontal, 12).padding(.vertical, 8)
+                .background(medal.map { $0.opacity(0.07) } ?? Color.clear)
                 Divider()
             }
         }
-        .background(Color.mlrCard)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .cardStyle(cornerRadius: 14, elevation: .low)
+    }
+
+    private func medalColor(rank: Int) -> Color? {
+        switch rank {
+        case 1: return .mlrFestGold
+        case 2: return Color(light: "#8E9196", dark: "#B9BDC4")   // silver
+        case 3: return Color(light: "#B0662C", dark: "#D08A50")   // bronze
+        default: return nil
+        }
+    }
+
+    private func winPct(_ r: Standing) -> CGFloat {
+        guard r.played > 0 else { return 0 }
+        return CGFloat(Double(r.wins) + 0.5 * Double(r.ties)) / CGFloat(r.played)
+    }
+}
+
+// MARK: - Champion banner (Phase 2.4)
+
+/// The gold champion reveal — confetti + success haptic fire from the container
+/// when `winnerEntrantId` first becomes non-nil.
+private struct ChampionBanner: View {
+    let name: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var bounce = 0
+
+    var body: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "trophy.fill")
+                .font(.mlrScaled(28, weight: .bold))
+                .symbolEffect(.bounce, value: bounce)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("CHAMPION")
+                    .font(.mlrScaled(11, weight: .bold))
+                    .tracking(1.2)
+                    .opacity(0.85)
+                Text(name)
+                    .font(.mlrScaled(24, weight: .bold, design: .rounded))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+            Spacer()
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 16).padding(.vertical, 14)
+        .gradientCard(
+            LinearGradient(colors: [.mlrFestGold, .mlrSun, .mlrFestGold],
+                           startPoint: .topLeading, endPoint: .bottomTrailing),
+            cornerRadius: MLRRadius.lg, elevation: .high)
+        .onAppear { if !reduceMotion { bounce += 1 } }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("Champion: \(name)")
     }
 }

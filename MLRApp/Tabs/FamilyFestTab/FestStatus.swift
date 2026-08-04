@@ -93,7 +93,7 @@ private struct PlanningCard: View {
                     .font(.mlrScaled(18, weight: .semibold))
                     .foregroundStyle(Color.mlrFest)
                 Text("\(season.daysUntilStart) days until the Fest")
-                    .font(.festSerif(16, weight: .bold))
+                    .font(.festSerif(19, weight: .bold))
                     .foregroundStyle(Color.mlrFest)
                     .contentTransition(.numericText())
                 Spacer()
@@ -184,21 +184,33 @@ private struct WrapCard: View {
     let season: FestSeason
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 8) {
-                Text("📸")
-                    .font(.mlrScaled(22))
-                Text("Thanks for a great Fest!")
-                    .font(.festSerif(16, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
-                Spacer()
-            }
+        NavigationLink(destination: DropBoxesView()) {
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Text("📸")
+                        .font(.mlrScaled(22))
+                    Text("Thanks for a great Fest!")
+                        .font(.festSerif(19, weight: .bold))
+                        .foregroundStyle(Color.mlrFest)
+                    Spacer()
+                }
 
-            Text("\(season.wrapDaysLeft) day\(season.wrapDaysLeft == 1 ? "" : "s") left to post photos")
-                .font(.mlrScaled(13))
-                .foregroundStyle(Color.mlrFestInk.opacity(0.8))
-                .contentTransition(.numericText())
+                let tail = season.wrapDaysLeft > 0
+                    ? "Album's open \(season.wrapDaysLeft) more \(season.wrapDaysLeft == 1 ? "day" : "days") — "
+                    : ""
+                Text("\(tail)add the photos you didn't get to share.")
+                    .font(.mlrScaled(13))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.8))
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text("Add your photos →")
+                    .font(.mlrScaled(12, weight: .semibold))
+                    .foregroundStyle(Color.mlrAccent)
+                    .padding(.top, 2)
+            }
+            .contentShape(Rectangle())
         }
+        .buttonStyle(.pressable)
         .festStatusCard(accent: true)
     }
 }

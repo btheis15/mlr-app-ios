@@ -27,7 +27,7 @@ struct EventSheet: View {
     @State private var myStatus: AttendanceStatus?
     @State private var dayStatuses: [String: AttendanceStatus] = [:]
     @State private var isSaving = false
-    @State private var attendees: [Profile] = []
+    @State private var attendees: [EventAttendee] = []
     @State private var dayAttendees: [FestAttendee] = []   // per-day roster (day_rsvp events)
     @State private var loadingAttendees = true
     @State private var showEditor = false
@@ -36,6 +36,7 @@ struct EventSheet: View {
     @State private var shareState: ShareState?
     @State private var calendarAdded = false
     @State private var calendarError: String?
+    @State private var confettiTrigger = 0
 
     // Per-day RSVP labels — derived from the event's actual [start, end] span
     // (de-hardcoded from the old fixed Sun–Sat fest week).
@@ -82,6 +83,7 @@ struct EventSheet: View {
                 .padding(20)
             }
             .background(Color.mlrSurface)
+            .overlay(ConfettiView(trigger: confettiTrigger).allowsHitTesting(false))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -116,14 +118,30 @@ struct EventSheet: View {
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            KindBadge(kind: event.kind)
-            Text(event.title)
-                .font(event.isFamilyFest
-                      ? .festSerif(28, weight: .bold)
-                      : .mlrScaled(26, weight: .bold))
-                .foregroundStyle(event.isFamilyFest ? Color.mlrFest : Color.mlrText)
+        // Cinematic kind-tinted mesh hero (Phase 5).
+        ZStack(alignment: .bottomLeading) {
+            MeshHeroBackground(theme: event.isFamilyFest ? .fest : .accent(accent))
+            HStack(alignment: .bottom, spacing: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    KindBadge(kind: event.kind)
+                    Text(event.title)
+                        .font(event.isFamilyFest
+                              ? .festSerif(28, weight: .bold)
+                              : .mlrScaled(26, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .shadow(color: .black.opacity(0.3), radius: 2, y: 1)
+                        .minimumScaleFactor(0.7)
+                }
+                Spacer()
+                DateMedallion(isoDate: event.startDate, tint: accent, size: 56)
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .heroOverlayScrim()
         }
+        .frame(height: 170)
+        .clipShape(RoundedRectangle(cornerRadius: MLRRadius.card))
+        .shadow(.medium)
     }
 
     // MARK: - Detail rows
@@ -169,7 +187,7 @@ struct EventSheet: View {
                         .background((calendarAdded ? Color.mlrSuccess : accent).opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(calendarAdded)
                 .popoverTip(AddToCalendarTip())
 
@@ -184,7 +202,7 @@ struct EventSheet: View {
                         .background(accent.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             if let location = event.location, !location.isEmpty {
@@ -204,7 +222,7 @@ struct EventSheet: View {
                         .background(accent.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             if let calendarError {
@@ -303,7 +321,7 @@ struct EventSheet: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .disabled(isSaving)
     }
 
@@ -355,7 +373,7 @@ struct EventSheet: View {
                 // Avatar stack
                 HStack(spacing: -10) {
                     ForEach(attendees.prefix(8)) { person in
-                        AvatarView(profile: person, size: .small)
+                        AvatarView(profile: person.profile, size: .small)
                             .overlay(Circle().stroke(Color.mlrSurface, lineWidth: 2))
                     }
                     if attendees.count > 8 {
@@ -368,8 +386,10 @@ struct EventSheet: View {
                             .overlay(Circle().stroke(Color.mlrSurface, lineWidth: 2))
                     }
                 }
-                // Names
-                Text(attendees.map(\.name).joined(separator: ", "))
+                // Names — an RSVP carried over from a family meeting poll
+                // (migration 0122) and never re-confirmed gets a quiet tag,
+                // visible to whoever's planning; invisible clutter for everyone else.
+                Text(attendees.map { $0.confirmed ? $0.name : "\($0.name) (hasn't confirmed)" }.joined(separator: ", "))
                     .font(.mlrCaption)
                     .foregroundStyle(Color.mlrTextMuted)
             }
@@ -434,7 +454,7 @@ struct EventSheet: View {
                         .background(Color.mlrDanger.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
     }
@@ -465,11 +485,14 @@ struct EventSheet: View {
 
     private func saveStatus(_ status: AttendanceStatus) async {
         guard env.isSignedIn else { env.authService.promptSignIn(); return }
+        let wasGoing = myStatus == .going
         isSaving = true
         defer { isSaving = false }
         do {
             try await env.eventsService.upsertAttendance(eventId: event.id, status: status)
             Haptics.success()
+            // Hero-wide confetti for a FRESH "Going" (Phase 5).
+            if status == .going && !wasGoing { confettiTrigger += 1 }
             await refreshAfterRSVP()
             // A confirmed "Going" is a positive moment — a good time to ask for a
             // rating (the system throttles this automatically).

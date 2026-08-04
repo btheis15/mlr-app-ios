@@ -27,7 +27,7 @@ struct AdminCalloutsView: View {
                     Button { editing = callout } label: {
                         calloutRow(callout)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
         }
@@ -124,8 +124,30 @@ struct CalloutComposerView: View {
     // Linked Fest activity (migration 0137) — card borrows its context and shows
     // a "📝 Sign up" button when the activity takes sign-ups (#407).
     @State private var signupItemId: String? = nil
+    // Event targeting (migration 0096) — hide from anyone who RSVP'd "Can't make it".
+    @State private var eventId: String? = nil
+    @State private var excludeNotAttending: Bool = true
+    // Linked Drop Box folder (migration 0172) — adds a "📸 Add & see photos" button.
+    @State private var dropBoxId: String? = nil
 
     private var isNew: Bool { existing == nil }
+
+    @State private var confirmReset = false
+    private var hasContent: Bool {
+        !title.isEmpty || !body_.isEmpty || !imageUrl.isEmpty || !links.isEmpty
+            || !startsOn.isEmpty || !endsOn.isEmpty || hasDeadline || signupItemId != nil
+            || eventId != nil || dropBoxId != nil
+    }
+    private func requestReset() { if hasContent { confirmReset = true } else { resetToBlank() } }
+    /// Clears EVERYTHING including the linked activity (Phase 8) — the picker's
+    /// "None" stays available for unlinking just the activity.
+    private func resetToBlank() {
+        title = ""; body_ = ""; imageUrl = ""; links = []
+        startsOn = ""; endsOn = ""; hasDeadline = false; deadlineDate = Date()
+        isActive = true; signupItemId = nil
+        eventId = nil; excludeNotAttending = true; dropBoxId = nil
+        alsoNotify = false; alsoEmail = false; saveError = nil
+    }
 
     var body: some View {
         Form {
@@ -150,6 +172,21 @@ struct CalloutComposerView: View {
                 }
             } footer: {
                 Text("The card links to that activity. If it's taking sign-ups, a \"📝 Sign up\" button is added too.")
+            }
+
+            EventTargetPicker(events: env.eventsService.upcomingEvents,
+                               selectedEventId: $eventId,
+                               excludeNotAttending: $excludeNotAttending)
+
+            Section {
+                Picker("Link a Drop Box folder", selection: $dropBoxId) {
+                    Text("None").tag(String?.none)
+                    ForEach(env.dropBoxesService.boxes.filter { !$0.isArchived }) { box in
+                        Text("\(box.emoji ?? "📸") \(box.title)").tag(String?.some(box.id.uuidString))
+                    }
+                }
+            } footer: {
+                Text("Adds a \"📸 Add & see photos\" button that deep-links straight into that shared album.")
             }
 
             Section {
@@ -304,6 +341,17 @@ struct CalloutComposerView: View {
             }
         }
         .navigationTitle(isNew ? "New Callout" : "Edit Callout")
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button { Haptics.tap(); requestReset() } label: {
+                    Label("Start fresh", systemImage: "arrow.counterclockwise")
+                }
+            }
+        }
+        .confirmationDialog("Clear this callout?", isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Start fresh", role: .destructive) { resetToBlank() }
+            Button("Cancel", role: .cancel) {}
+        }
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
@@ -321,6 +369,10 @@ struct CalloutComposerView: View {
             Button("Cancel", role: .cancel) {}
         }
         .onAppear { seed() }
+        .task {
+            if env.eventsService.events.isEmpty { await env.eventsService.fetchEvents() }
+            if env.dropBoxesService.boxes.isEmpty { await env.dropBoxesService.fetchBoxes() }
+        }
     }
 
     private func seed() {
@@ -333,6 +385,9 @@ struct CalloutComposerView: View {
         endsOn   = c.endsOn ?? ""
         isActive = c.isActive
         signupItemId = c.signupItemId
+        eventId = c.eventId
+        excludeNotAttending = c.excludeNotAttending
+        dropBoxId = c.dropBoxId
         if let dl = c.deadlineAt, let date = ISO8601DateFormatter().date(from: dl) {
             hasDeadline = true
             deadlineDate = date
@@ -376,6 +431,9 @@ struct CalloutComposerView: View {
             var dismiss_id: String?
             var position: Int?
             var signup_item_id: String?   // linked Fest activity (migration 0137)
+            var event_id: String?               // event targeting (migration 0096)
+            var exclude_not_attending: Bool?
+            var drop_box_id: String?            // linked Drop Box folder (migration 0172)
         }
 
         let validLinks = links.filter { !$0.href.trimmingCharacters(in: .whitespaces).isEmpty }
@@ -393,7 +451,10 @@ struct CalloutComposerView: View {
             is_active:   isActive,
             dismiss_id:  existing?.dismissId,
             position:    existing?.position,
-            signup_item_id: signupItemId
+            signup_item_id: signupItemId,
+            event_id: eventId,
+            exclude_not_attending: eventId != nil ? excludeNotAttending : nil,
+            drop_box_id: dropBoxId
         )
         do {
             if existing != nil {

@@ -22,6 +22,8 @@ struct NotificationRow: View {
             return Color.mlrInfo
         case .committeeJoin, .committeeJoinRequest:
             return Color.mlrAccent
+        case .adminTest:
+            return Color.mlrAccent
         default:
             return Color.mlrPrimary
         }
@@ -94,23 +96,13 @@ struct NotificationRow: View {
 
     @ViewBuilder
     private var actorAvatar: some View {
-        if let urlStr = notification.actorAvatarUrl,
-           let url = URL(string: urlStr) {
-            AsyncImage(url: url) { phase in
-                switch phase {
-                case .success(let image):
-                    image
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 36, height: 36)
-                        .clipShape(Circle())
-                case .failure, .empty:
-                    placeholderAvatar
-                @unknown default:
-                    placeholderAvatar
-                }
-            }
-            .padding(.trailing, 10)
+        if notification.actorAvatarUrl != nil {
+            // AvatarView: Kingfisher caching + consistent AvatarSize (Phase 7A).
+            AvatarView(url: notification.actorAvatarUrl, size: .small)
+                .padding(.trailing, 10)
+        } else if notification.actorName != nil {
+            placeholderAvatar
+                .padding(.trailing, 10)
         } else {
             kindIconAvatar
                 .padding(.trailing, 10)
@@ -172,6 +164,7 @@ struct NotificationRow: View {
         case .tournamentPublished:  return "trophy.fill"
         case .tournamentMatchReady: return "target"
         case .tournamentChampion:   return "medal.fill"
+        case .adminTest:            return "testtube.2"
         }
     }
 
@@ -222,6 +215,7 @@ struct NotificationRow: View {
         case .tournamentPublished:  return "Tournament"
         case .tournamentMatchReady: return "Match"
         case .tournamentChampion:   return "Champion"
+        case .adminTest:            return "Test"
         }
     }
 }

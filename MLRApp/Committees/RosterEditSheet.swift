@@ -1,12 +1,14 @@
 import SwiftUI
 
 // MARK: - RosterEditSheet
-// App-admin editor for a committee roster entry (migration 0055/0057): add a new
-// person or edit an existing one — link a real account or enter a name + email
-// (shows as "Pending verification" until they verify), set phone, and assign the
-// roles they own. Each area can have any number of Leads (toggle "Lead of …");
-// everyone else in an area is a volunteer with no special call-out. Roster writes
-// are admin-gated by RLS. "Remove" deletes the entry (and thus their membership).
+// Roster entry editor (migration 0055/0057, widened to leads by 0172/0177): add
+// a new person or edit an existing one — link a real account or enter a name +
+// email (shows as "Pending verification" until they verify), set phone, mark
+// them a committee-level lead, and assign the roles they own. Each area can have
+// any number of Leads (toggle "Lead of …"); everyone else in an area is a
+// volunteer with no special call-out. Roster writes are gated by RLS to app
+// admins OR this committee's own leads (never cross-committee). "Remove" deletes
+// the entry (and thus their membership).
 
 struct RosterEditSheet: View {
     @Environment(AppEnvironment.self) private var env
@@ -25,6 +27,7 @@ struct RosterEditSheet: View {
     @State private var linkedName: String?
     @State private var selectedAreas: Set<String> = []
     @State private var leadAreas: Set<String> = []
+    @State private var isCommitteeLead = false
 
     @State private var showPicker = false
     @State private var saving = false
@@ -72,6 +75,13 @@ struct RosterEditSheet: View {
                         .autocorrectionDisabled()
                     TextField("Phone (optional)", text: $phone)
                         .keyboardType(.phonePad)
+                }
+
+                Section {
+                    Toggle("Committee lead", isOn: $isCommitteeLead)
+                        .tint(Color.mlrPrimary)
+                } footer: {
+                    Text("A lead of the whole committee — no subcommittee required. Gets the private Leads chat and can manage this committee's roster.")
                 }
 
                 if roleBased {
@@ -160,7 +170,7 @@ struct RosterEditSheet: View {
             .background((isLead ? Color.mlrPrimary : Color.mlrTextMuted).opacity(0.12))
             .clipShape(Capsule())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func seed() {
@@ -170,6 +180,7 @@ struct RosterEditSheet: View {
         phone = entry.phone ?? ""
         linkedUserId = entry.linkedUserId
         linkedName = entry.profile?.displayName
+        isCommitteeLead = entry.isCommitteeLead
         for role in entry.roles {
             if role.hasSuffix(" · Lead") {
                 let area = String(role.dropLast(" · Lead".count))
@@ -200,7 +211,8 @@ struct RosterEditSheet: View {
                 email: trimmedEmail.isEmpty ? nil : trimmedEmail,
                 phone: trimmedPhone.isEmpty ? nil : trimmedPhone,
                 roles: roles(),
-                linkedUserId: linkedUserId
+                linkedUserId: linkedUserId,
+                isCommitteeLead: isCommitteeLead
             )
             onSaved()
             dismiss()

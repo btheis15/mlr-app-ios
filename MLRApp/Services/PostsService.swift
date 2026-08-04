@@ -44,6 +44,21 @@ final class PostsService {
         }
     }
 
+    /// One post by id, joined the same way the feed is. Used by the notification
+    /// deep link — a push names a single post, which may not be in `posts` yet
+    /// (or at all, if it was removed since). Returns nil rather than throwing so
+    /// the caller can fall back to the feed.
+    func fetchPost(id: UUID) async -> Post? {
+        let row: PostRow? = try? await supabase
+            .from("posts")
+            .select(Self.postSelect)
+            .eq("id", value: id.uuidString)
+            .single()
+            .execute()
+            .value
+        return row?.toPost
+    }
+
     // MARK: - Create
 
     /// Create a post with optional media (in order), tagged members, and a
@@ -140,13 +155,16 @@ final class PostsService {
 
     // MARK: - Comments
 
+    private static let commentSelect = """
+        id, post_id, author_id, text, status, created_at,
+        profiles!author_id(display_name, avatar_url),
+        post_comment_media(storage_path, media_type, position)
+        """
+
     func fetchComments(postId: UUID) async throws -> [PostComment] {
         let rows: [PostCommentRow] = try await supabase
             .from("post_comments")
-            .select("""
-                id, post_id, author_id, text, status, created_at,
-                profiles!author_id(display_name, avatar_url)
-            """)
+            .select(Self.commentSelect)
             .eq("post_id", value: postId.uuidString)
             .order("created_at", ascending: true)
             .execute()
@@ -154,20 +172,23 @@ final class PostsService {
         return rows.map(\.toComment)
     }
 
-    func addComment(postId: UUID, text: String, authorId: UUID, mentionedIds: [UUID] = []) async throws -> PostComment {
+    /// Create a comment with optional media (in order). A photo/video-only
+    /// comment (empty text) is allowed, same "text OR at least one file" rule
+    /// as the post composer — the caller is responsible for enforcing that.
+    func addComment(
+        postId: UUID, text: String, authorId: UUID, mentionedIds: [UUID] = [],
+        media: [(path: String, type: String)] = []
+    ) async throws -> PostComment {
         let params: [String: AnyJSON] = [
             "post_id":   .string(postId.uuidString),
             "author_id": .string(authorId.uuidString),
             "text":      .string(text),
             "status":    .string("visible")
         ]
-        let row: PostCommentRow = try await supabase
+        var row: PostCommentRow = try await supabase
             .from("post_comments")
             .insert(params)
-            .select("""
-                id, post_id, author_id, text, status, created_at,
-                profiles!author_id(display_name, avatar_url)
-            """)
+            .select(Self.commentSelect)
             .single()
             .execute()
             .value
@@ -178,6 +199,28 @@ final class PostsService {
                 ["comment_id": .string(row.id.uuidString), "mentioned_user_id": .string($0.uuidString)]
             }
             try? await supabase.from("post_comment_mentions").insert(rows).execute()
+        }
+
+        // Attachments (0162), same pipeline as a post's media — the caller has
+        // already uploaded each file to the mini under the default "posts"
+        // category (inline-moderated), so this just records the rows.
+        if !media.isEmpty {
+            let mediaRows: [[String: AnyJSON]] = media.enumerated().map { idx, m in
+                [
+                    "comment_id":   .string(row.id.uuidString),
+                    "storage_path": .string(m.path),
+                    "media_type":   .string(m.type),
+                    "position":     .integer(idx)
+                ]
+            }
+            try await supabase.from("post_comment_media").insert(mediaRows).execute()
+            row = try await supabase
+                .from("post_comments")
+                .select(Self.commentSelect)
+                .eq("id", value: row.id.uuidString)
+                .single()
+                .execute()
+                .value
         }
         return row.toComment
     }
@@ -337,6 +380,7 @@ private struct PostCommentRow: Decodable {
     let status: ContentStatus
     let createdAt: Date
     let profiles: PostRow.AuthorInfo?
+    let postCommentMedia: [PostRow.PostMediaRow]?
 
     enum CodingKeys: String, CodingKey {
         case id
@@ -345,10 +389,12 @@ private struct PostCommentRow: Decodable {
         case text, status
         case createdAt = "created_at"
         case profiles
+        case postCommentMedia = "post_comment_media"
     }
 
     var toComment: PostComment {
-        PostComment(
+        let media = (postCommentMedia ?? []).sorted { ($0.position ?? 0) < ($1.position ?? 0) }
+        return PostComment(
             id: id,
             postId: postId,
             authorId: authorId,
@@ -356,7 +402,9 @@ private struct PostCommentRow: Decodable {
             authorAvatarUrl: profiles?.avatarUrl,
             text: text,
             status: status,
-            createdAt: createdAt
+            createdAt: createdAt,
+            mediaUrls: media.map(\.resolvedUrl),
+            mediaIsVideo: media.map(\.isVideo)
         )
     }
 }

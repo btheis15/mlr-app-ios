@@ -9,6 +9,7 @@ import SwiftUI
 // (#381); everyone else gets a clear error.
 
 struct AdminSystemView: View {
+    @Environment(AppEnvironment.self) private var env
     @State private var status: ServerStatus?
     @State private var loading = true
     @State private var loadError: String?
@@ -16,12 +17,31 @@ struct AdminSystemView: View {
     @State private var restarting = false
     @State private var note: String?
 
+    struct DiskInfo: Decodable {
+        let totalBytes: Int
+        let freeBytes: Int
+        let usedBytes: Int
+        let external: Bool
+    }
+    struct UsageCategory: Decodable {
+        let key: String
+        let label: String
+        let bytes: Int
+        let files: Int
+    }
+    struct UsageInfo: Decodable {
+        let totalBytes: Int
+        let totalFiles: Int
+        let categories: [UsageCategory]
+    }
     struct ServerStatus: Decodable {
         let ok: Bool
         let commit: String
         let upToDate: Bool
         let behind: Int
         let startedAt: String
+        let disk: DiskInfo?
+        let usage: UsageInfo?
     }
     struct RestartResult: Decodable {
         let ok: Bool
@@ -32,6 +52,23 @@ struct AdminSystemView: View {
     }
 
     var body: some View {
+        if isOwner(env.currentProfile?.email) {
+            content
+        } else {
+            List {
+                Section {
+                    Text("Not available.")
+                        .font(.mlrScaled(14))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+            .navigationTitle("System")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private var content: some View {
         List {
             Section("Media server (Mac mini)") {
                 if loading {
@@ -46,6 +83,22 @@ struct AdminSystemView: View {
                             .foregroundStyle(status.upToDate ? Color.mlrSuccess : Color.mlrWarning)
                     }
                     LabeledContent("Running since") { Text(formatted(status.startedAt)) }
+                    if let usage = status.usage {
+                        LabeledContent("App storage") {
+                            Text("\(fmtBytes(usage.totalBytes)) · \(usage.totalFiles) files")
+                        }
+                    }
+                    if let disk = status.disk {
+                        let pct = Double(disk.usedBytes) / Double(max(disk.totalBytes, 1))
+                        LabeledContent("Disk") {
+                            Text("\(fmtBytes(disk.usedBytes)) / \(fmtBytes(disk.totalBytes))\(disk.external ? " (ext)" : "")")
+                                .foregroundStyle(pct > 0.85 ? Color.mlrWarning : Color.primary)
+                        }
+                        LabeledContent("Free") {
+                            Text(fmtBytes(disk.freeBytes))
+                                .foregroundStyle(pct > 0.85 ? Color.mlrWarning : Color.mlrSuccess)
+                        }
+                    }
                 }
             }
 
@@ -116,5 +169,12 @@ struct AdminSystemView: View {
     private func formatted(_ iso: String) -> String {
         guard let d = ISO8601DateFormatter().date(from: iso) else { return iso }
         return d.formatted(date: .abbreviated, time: .shortened)
+    }
+
+    private func fmtBytes(_ bytes: Int) -> String {
+        let b = Double(bytes)
+        if b >= 1e9 { return String(format: "%.1f GB", b / 1e9) }
+        if b >= 1e6 { return String(format: "%.1f MB", b / 1e6) }
+        return String(format: "%.0f KB", b / 1e3)
     }
 }

@@ -4,6 +4,7 @@ import SwiftUI
 // Admin hub — entry point to all admin sub-screens.
 
 struct AdminView: View {
+    @Environment(AppEnvironment.self) private var env
     @State private var showInvite = false
 
     var body: some View {
@@ -61,7 +62,7 @@ struct AdminView: View {
                         description: "Branded welcome email · signs them straight in"
                     )
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
 
             Section("Content & Moderation") {
@@ -97,6 +98,14 @@ struct AdminView: View {
                     iconColor: Color.mlrInfo,
                     title: "Scheduled",
                     description: "Upcoming & recent scheduled broadcasts"
+                )
+
+                adminLink(
+                    destination: NotificationTestView(),
+                    icon: "bell.badge.fill",
+                    iconColor: Color.mlrPrimary,
+                    title: "Notification Test",
+                    description: "Ping one member, track who's confirmed"
                 )
             }
 
@@ -134,13 +143,19 @@ struct AdminView: View {
                     description: "Who the Help page says to text or call"
                 )
 
-                adminLink(
-                    destination: AdminSystemView(),
-                    icon: "server.rack",
-                    iconColor: Color.mlrTextMuted,
-                    title: "System",
-                    description: "Media server status · pull latest & restart (owner)"
-                )
+                // Hidden from every admin except lib/owner.ts's OWNER_EMAIL — see
+                // MLRApp/Shared/Utilities/Owner.swift. Restarting the mac mini is
+                // an infrastructure control, not app content, so it's narrower
+                // than the broader `profiles.is_admin` every app admin has.
+                if isOwner(env.currentProfile?.email) {
+                    adminLink(
+                        destination: AdminSystemView(),
+                        icon: "server.rack",
+                        iconColor: Color.mlrTextMuted,
+                        title: "System",
+                        description: "Media server status · pull latest & restart (owner)"
+                    )
+                }
 
                 if let url = URL(string: "https://docs.google.com/forms/create") {
                     Link(destination: url) {

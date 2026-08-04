@@ -23,6 +23,10 @@ final class HousesService {
 
     private var messageChannels: [UUID: RealtimeChannelV2] = [:]
     private var stayChannels: [UUID: RealtimeChannelV2] = [:]
+    // Not private: House Lists (0169) is a separate extension file
+    // (Houses/HouseListsService.swift), mirroring CommitteeTaxonomy.swift's
+    // pattern of extending a Services/*.swift class from elsewhere.
+    var listChannels: [UUID: RealtimeChannelV2] = [:]
 
     // MARK: - Houses
 
@@ -182,6 +186,33 @@ final class HousesService {
     // MARK: - Read state (unread badge)
 
     /// Mark the house chat read (mark_house_read, migration 0065).
+    /// Mute or unmute a house chat's pushes (migration 0155 / web #409).
+    /// `mutedUntil` nil = permanent; a date = timed, auto-expiring.
+    func setHouseMute(houseId: UUID, muted: Bool, mutedUntil: Date? = nil) async {
+        struct Params: Encodable { let hid: String; let p_muted: Bool; let p_muted_until: String? }
+        let until = mutedUntil.map { ISO8601DateFormatter().string(from: $0) }
+        _ = try? await supabase
+            .rpc("set_house_mute", params: Params(hid: houseId.uuidString, p_muted: muted, p_muted_until: until))
+            .execute()
+    }
+
+    /// Whether the caller has muted this house chat (permanent or active timed).
+    func isHouseMuted(houseId: UUID) async -> Bool {
+        struct Row: Decodable {
+            let muted: Bool?
+            let mutedUntil: Date?
+            enum CodingKeys: String, CodingKey { case muted; case mutedUntil = "muted_until" }
+        }
+        let rows: [Row] = (try? await supabase
+            .from("house_reads")
+            .select("muted, muted_until")
+            .eq("house_id", value: houseId.uuidString)
+            .limit(1).execute().value) ?? []
+        guard let row = rows.first, row.muted == true else { return false }
+        if let until = row.mutedUntil { return until > Date() }
+        return true
+    }
+
     func markRead(houseId: UUID) async {
         struct Params: Encodable { let hid: String }
         _ = try? await supabase
@@ -214,15 +245,22 @@ final class HousesService {
             .limit(1).execute().value) ?? []
         let lastRow = last.first
 
-        struct ReadRow: Decodable { let lastReadAt: Date?
-            enum CodingKeys: String, CodingKey { case lastReadAt = "last_read_at" } }
+        struct ReadRow: Decodable { let lastReadAt: Date?; let muted: Bool?; let mutedUntil: Date?
+            enum CodingKeys: String, CodingKey {
+                case lastReadAt = "last_read_at"; case muted; case mutedUntil = "muted_until"
+            } }
         let reads: [ReadRow] = (try? await supabase
             .from("house_reads")
-            .select("last_read_at")
+            .select("last_read_at, muted, muted_until")
             .eq("house_id", value: houseId.uuidString)
             .eq("user_id", value: userId.uuidString)
             .limit(1).execute().value) ?? []
         let lastRead = reads.first?.lastReadAt
+        let muted: Bool = {
+            guard let r = reads.first, r.muted == true else { return false }
+            if let until = r.mutedUntil { return until > Date() }
+            return true
+        }()
 
         var cq = supabase
             .from("house_messages")
@@ -238,7 +276,7 @@ final class HousesService {
             let who = lastRow.authorName.map { "\($0): " } ?? ""
             return who + (lastRow.text ?? "")
         }()
-        return ChannelSummary(lastText: preview, lastAt: lastRow?.createdAt, unread: unread, muted: false)
+        return ChannelSummary(lastText: preview, lastAt: lastRow?.createdAt, unread: unread, muted: muted)
     }
 
     // MARK: - Realtime

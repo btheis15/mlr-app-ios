@@ -24,7 +24,7 @@ final class NotificationsService {
             let rows: [NotifRow] = try await supabase
                 .from("notifications")
                 .select("""
-                    id, recipient_id, type, title, body, entity_type, entity_id,
+                    id, recipient_id, type, title, body, entity_type, entity_id, url,
                     seen_at, read_at, expires_at, created_at,
                     profiles!actor_id(display_name, avatar_url)
                 """)
@@ -320,6 +320,97 @@ final class NotificationsService {
         }
     }
 
+    // MARK: - Notification Test (migrations 0156-0157)
+
+    /// Ping ONE specific member with a test notification (Activity tab + phone
+    /// push). Bypasses notif_types (like a broadcast) and rides an override
+    /// push regardless of the recipient's per-category picks — the point is
+    /// testing the pipeline itself, not respecting a preference.
+    func sendTestNotification(userId: UUID, title: String?, body: String?) async throws {
+        struct Params: Encodable { let p_user: String; let p_title: String?; let p_body: String? }
+        let trimmedTitle = title?.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedBody = body?.trimmingCharacters(in: .whitespacesAndNewlines)
+        try await supabase
+            .rpc("send_test_notification", params: Params(
+                p_user: userId.uuidString,
+                p_title: (trimmedTitle?.isEmpty ?? true) ? nil : trimmedTitle,
+                p_body: (trimmedBody?.isEmpty ?? true) ? nil : trimmedBody
+            ))
+            .execute()
+    }
+
+    /// Every member, with the "Notifications confirmed" checklist state.
+    /// Pre-0157 (missing columns) degrades to a plain roster with every row
+    /// unconfirmed, rather than failing outright.
+    func fetchNotificationTestRoster() async -> [NotificationTestMember] {
+        struct FullRow: Decodable {
+            let id: UUID
+            let displayName: String?
+            let avatarUrl: String?
+            let notificationsConfirmed: Bool?
+            let notificationsConfirmedAt: Date?
+            let notificationsConfirmedBy: UUID?
+            enum CodingKeys: String, CodingKey {
+                case id
+                case displayName = "display_name"
+                case avatarUrl = "avatar_url"
+                case notificationsConfirmed = "notifications_confirmed"
+                case notificationsConfirmedAt = "notifications_confirmed_at"
+                case notificationsConfirmedBy = "notifications_confirmed_by"
+            }
+        }
+        do {
+            let rows: [FullRow] = try await supabase
+                .from("profiles")
+                .select("id, display_name, avatar_url, notifications_confirmed, notifications_confirmed_at, notifications_confirmed_by")
+                .order("display_name", ascending: true)
+                .execute()
+                .value
+            let nameById = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0.displayName ?? "Member") })
+            return rows.map { p in
+                NotificationTestMember(
+                    id: p.id,
+                    name: p.displayName ?? "Member",
+                    avatarUrl: p.avatarUrl,
+                    confirmed: p.notificationsConfirmed ?? false,
+                    confirmedAt: p.notificationsConfirmedAt,
+                    confirmedByName: p.notificationsConfirmedBy.flatMap { nameById[$0] }
+                )
+            }
+        } catch {
+            print("[NotificationsService] fetchNotificationTestRoster error: \(error) — falling back to plain roster")
+            struct BasicRow: Decodable {
+                let id: UUID
+                let displayName: String?
+                let avatarUrl: String?
+                enum CodingKeys: String, CodingKey { case id; case displayName = "display_name"; case avatarUrl = "avatar_url" }
+            }
+            do {
+                let rows: [BasicRow] = try await supabase
+                    .from("profiles")
+                    .select("id, display_name, avatar_url")
+                    .order("display_name", ascending: true)
+                    .execute()
+                    .value
+                return rows.map {
+                    NotificationTestMember(id: $0.id, name: $0.displayName ?? "Member", avatarUrl: $0.avatarUrl, confirmed: false, confirmedAt: nil, confirmedByName: nil)
+                }
+            } catch {
+                print("[NotificationsService] fetchNotificationTestRoster basic fallback error: \(error)")
+                return []
+            }
+        }
+    }
+
+    /// Check/uncheck "Notifications confirmed" for one member — any app admin,
+    /// not scoped to whoever sent the original test ping.
+    func setNotificationTestConfirmed(userId: UUID, value: Bool) async throws {
+        struct Params: Encodable { let p_user: String; let p_value: Bool }
+        try await supabase
+            .rpc("set_notification_test_confirmed", params: Params(p_user: userId.uuidString, p_value: value))
+            .execute()
+    }
+
     // MARK: - Realtime
 
     func subscribeToRealtime(userId: UUID) {
@@ -343,7 +434,7 @@ final class NotificationsService {
                     if let row: NotifRow = try? await supabase
                         .from("notifications")
                         .select("""
-                            id, recipient_id, type, title, body, entity_type, entity_id,
+                            id, recipient_id, type, title, body, entity_type, entity_id, url,
                             seen_at, read_at, expires_at, created_at,
                             profiles!actor_id(display_name, avatar_url)
                         """)
@@ -409,6 +500,7 @@ private struct NotifRow: Decodable {
     let body: String?
     let entityType: String?
     let entityId: String?
+    let url: String?
     let seenAt: Date?
     let readAt: Date?
     let expiresAt: Date?
@@ -422,6 +514,7 @@ private struct NotifRow: Decodable {
         case title, body
         case entityType = "entity_type"
         case entityId = "entity_id"
+        case url
         case seenAt = "seen_at"
         case readAt = "read_at"
         case expiresAt = "expires_at"
@@ -447,6 +540,7 @@ private struct NotifRow: Decodable {
             body: body,
             targetType: entityType,
             targetId: entityId,
+            url: url,
             actorName: profiles?.name,
             actorAvatarUrl: profiles?.avatarUrl,
             seenAt: seenAt,

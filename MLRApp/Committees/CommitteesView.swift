@@ -12,6 +12,10 @@ struct CommitteesView: View {
     @State private var joiningIds: Set<UUID> = []
     @State private var actionError: String?
     @State private var joinSheetCommittee: Committee?
+    /// Subcommittee names per committee slug (one bulk fetch) — shown as chips
+    /// so what roles exist is discoverable without opening each committee,
+    /// matching web's "everything's public to browse" doctrine.
+    @State private var areasBySlug: [String: [String]] = [:]
 
     // Live committees only — archived ones drop out; admin-created ones appear.
     private var committees: [Committee] { env.committeeService.liveCommittees }
@@ -61,10 +65,12 @@ struct CommitteesView: View {
             }
             .task {
                 guard !hasLoaded else { return }
+                async let areas = env.committeeService.fetchAreasByCommittee()
                 await env.committeeService.fetchCommittees()
                 if let userId = await env.authService.userId {
                     await env.committeeService.fetchMyMemberships(userId: userId)
                 }
+                areasBySlug = await areas
                 hasLoaded = true
             }
         }
@@ -102,6 +108,7 @@ struct CommitteesView: View {
                 ForEach(committees) { committee in
                     CommitteeRowCard(
                         committee: committee,
+                        areas: areasBySlug[committee.slug] ?? [],
                         isMember: isMember,
                         isPending: pendingRequestIds.contains(committee.id),
                         isJoining: joiningIds.contains(committee.id),
@@ -110,6 +117,7 @@ struct CommitteesView: View {
                             joinSheetCommittee = committee
                         }
                     )
+                    .scrollEntrance()
                 }
             }
             .padding(.horizontal, 16)
@@ -137,6 +145,8 @@ struct CommitteesView: View {
 
 private struct CommitteeRowCard: View {
     let committee: Committee
+    /// Live subcommittee names for this one committee (may be empty).
+    let areas: [String]
     let isMember: Bool
     let isPending: Bool
     let isJoining: Bool
@@ -146,43 +156,52 @@ private struct CommitteeRowCard: View {
         NavigationLink {
             CommitteeDetailView(committee: committee)
         } label: {
-            HStack(spacing: 14) {
-                Text(committee.emoji ?? "📋")
-                    .font(.mlrScaled(30))
-                    .frame(width: 48, height: 48)
-                    .background(Color.mlrPrimaryLight)
-                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 14) {
+                    Text(committee.emoji ?? "📋")
+                        .font(.mlrScaled(30))
+                        .frame(width: 48, height: 48)
+                        .background(Color.mlrPrimaryLight)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
 
-                VStack(alignment: .leading, spacing: 3) {
-                    HStack(spacing: 6) {
-                        Text(committee.name)
-                            .font(.mlrScaled(16, weight: .semibold))
-                            .foregroundStyle(Color.mlrText)
-                        if committee.isPrivate == true {
-                            Image(systemName: "lock.fill")
-                                .font(.mlrScaled(10))
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 6) {
+                            Text(committee.name)
+                                .font(.mlrScaled(16, weight: .semibold))
+                                .foregroundStyle(Color.mlrText)
+                            if committee.isPrivate == true {
+                                Image(systemName: "lock.fill")
+                                    .font(.mlrScaled(10))
+                                    .foregroundStyle(Color.mlrTextMuted)
+                            }
+                        }
+                        if let desc = committee.description, !desc.isEmpty {
+                            Text(desc)
+                                .font(.mlrScaled(13))
                                 .foregroundStyle(Color.mlrTextMuted)
+                                .lineLimit(2)
+                                .multilineTextAlignment(.leading)
                         }
                     }
-                    if let desc = committee.description, !desc.isEmpty {
-                        Text(desc)
-                            .font(.mlrScaled(13))
-                            .foregroundStyle(Color.mlrTextMuted)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
+
+                    Spacer()
+
+                    trailing
                 }
 
-                Spacer()
-
-                trailing
+                // Subcommittee chips — discoverable without opening the
+                // committee (everything about a committee is public to
+                // browse; chat is the only thing membership buys).
+                if !areas.isEmpty {
+                    AreaChipsRow(areas: areas)
+                }
             }
             .padding(14)
             .background(Color.mlrCard)
             .clipShape(RoundedRectangle(cornerRadius: 16))
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     @ViewBuilder
@@ -214,8 +233,30 @@ private struct CommitteeRowCard: View {
                         .clipShape(Capsule())
                 }
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(isJoining)
+        }
+    }
+}
+
+/// A horizontally-scrolling row of small role chips under a committee's row
+/// card. Kept to a simple ScrollView (not a wrapping flow) since this is a
+/// secondary, glanceable hint — the full grouped roster lives on the detail page.
+private struct AreaChipsRow: View {
+    let areas: [String]
+
+    var body: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 6) {
+                ForEach(areas, id: \.self) { area in
+                    Text(area)
+                        .font(.mlrScaled(11, weight: .semibold))
+                        .foregroundStyle(Color.mlrPrimary)
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(Color.mlrPrimaryLight)
+                        .clipShape(Capsule())
+                }
+            }
         }
     }
 }
@@ -277,7 +318,7 @@ struct CommitteeJoinSheet: View {
                                 }
                                 .contentShape(Rectangle())
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     } header: {
                         Text("Which areas do you want to help with?")

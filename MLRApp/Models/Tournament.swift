@@ -194,9 +194,10 @@ struct Standing: Identifiable {
 }
 
 extension Tournament {
-    /// Round-robin / pool standings. Ranked by win% then point differential then
-    /// points-for then seed (a faithful subset of the web's configurable
-    /// tiebreakers; head-to-head config is a deferred nicety).
+    /// Round-robin / pool standings, ranked by the tournament's own ORDERED
+    /// `tiebreakers` (default win_pct → head_to_head → point_diff →
+    /// points_for) — mirrors web's computeStandings() exactly, including the
+    /// head-to-head lookup, rather than a fixed order.
     func standings(pool: String? = nil) -> [Standing] {
         let field = entrants.filter { $0.withdrawnAt == nil && (pool == nil || $0.pool == pool) }
         let ids = Set(field.map(\.id))
@@ -221,11 +222,28 @@ extension Tournament {
             }
         }
         func winPct(_ r: Standing) -> Double { r.played == 0 ? 0 : (Double(r.wins) + 0.5 * Double(r.ties)) / Double(r.played) }
+        /// -1 when x beat y, 1 when y beat x, 0 when they haven't played (or tied).
+        func headToHead(_ x: Standing, _ y: Standing) -> Int {
+            guard let m = done.first(where: {
+                ($0.slot1EntrantId == x.entrantId && $0.slot2EntrantId == y.entrantId)
+                    || ($0.slot1EntrantId == y.entrantId && $0.slot2EntrantId == x.entrantId)
+            }), let winner = m.winnerEntrantId else { return 0 }
+            return winner == x.entrantId ? -1 : 1
+        }
         func seed(_ id: UUID) -> Int { entrants.first { $0.id == id }?.seed ?? entrants.first { $0.id == id }?.position ?? 1_000_000 }
+        let order = tiebreakers.isEmpty ? ["win_pct", "head_to_head", "point_diff", "points_for"] : tiebreakers
         var sorted = Array(rows.values).sorted { x, y in
-            if winPct(x) != winPct(y) { return winPct(x) > winPct(y) }
-            if x.diff != y.diff { return x.diff > y.diff }
-            if x.pointsFor != y.pointsFor { return x.pointsFor > y.pointsFor }
+            for tb in order {
+                let d: Int
+                switch tb {
+                case "win_pct":       d = winPct(x) == winPct(y) ? 0 : (winPct(x) > winPct(y) ? -1 : 1)
+                case "point_diff":    d = x.diff == y.diff ? 0 : (x.diff > y.diff ? -1 : 1)
+                case "points_for":    d = x.pointsFor == y.pointsFor ? 0 : (x.pointsFor > y.pointsFor ? -1 : 1)
+                case "head_to_head":  d = headToHead(x, y)
+                default:              d = 0
+                }
+                if d != 0 { return d < 0 }
+            }
             return seed(x.entrantId) < seed(y.entrantId)
         }
         for i in sorted.indices { sorted[i].rank = i + 1 }

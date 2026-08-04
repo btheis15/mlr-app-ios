@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreLocation
 
 // MARK: - AskForHelpSheet
 // Compose an Ask-for-Help request: category, what (140 max), how many people,
@@ -17,6 +18,16 @@ struct AskForHelpSheet: View {
     @State private var hasSchedule = false
     @State private var scheduledFor: Date = .now
     @State private var notifyAll = false
+    // "When do you need help?" — right now, or an upcoming event the member
+    // is going to (schedule-ahead targeting, event-gated so this can never
+    // become a random off-resort ask).
+    @State private var targetEvent: ResortEvent? = nil
+    // One-tap GPS pin (optional) — a single on-device location read, not a
+    // live tracker (see OneShotLocationFetcher).
+    @State private var pinCoordinate: CLLocationCoordinate2D? = nil
+    @State private var locationBusy = false
+    @State private var locationError: String? = nil
+    private let locationFetcher = OneShotLocationFetcher()
     @State private var bringItems: [String] = []
     @State private var newItem = ""
     @State private var linkedWorkItem: WorkItem?
@@ -31,6 +42,24 @@ struct AskForHelpSheet: View {
         !what.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !isSubmitting
     }
 
+    /// Upcoming events (strictly after today) the member is RSVP'd going to —
+    /// the pool a "schedule ahead" request can target. Mirrors web's
+    /// `goingFuture` in HelpRequestsView.
+    private var goingFutureEvents: [ResortEvent] {
+        let today = Calendar.current.startOfDay(for: .now)
+        return env.eventsService.events.filter { event in
+            guard let start = event.startDateParsed, start > today else { return false }
+            return env.eventsService.attendances[event.id]?.effectiveStatus() == .going
+        }.sorted { ($0.startDateParsed ?? .distantFuture) < ($1.startDateParsed ?? .distantFuture) }
+    }
+
+    /// The target event's morning (9 AM local) — where `needed_at` lands for
+    /// a scheduled-ahead request, matching web's activityReminderDefaults idiom.
+    private func morningOf(_ event: ResortEvent) -> Date {
+        guard let start = event.startDateParsed else { return .now }
+        return Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: start) ?? start
+    }
+
     var body: some View {
         NavigationStack {
             ScrollView {
@@ -40,9 +69,10 @@ struct AskForHelpSheet: View {
                     whatSection
                     peopleSection
                     whereSection
+                    locationSection
                     scheduleSection
                     itemsSection
-                    notifyAllSection
+                    if targetEvent == nil { notifyAllSection }
 
                     if let submitError {
                         Text(submitError)
@@ -110,7 +140,7 @@ struct AskForHelpSheet: View {
                                             : Color.mlrCard)
                                 .clipShape(Capsule())
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
             }
@@ -165,23 +195,109 @@ struct AskForHelpSheet: View {
         }
     }
 
-    // MARK: - Schedule
+    // MARK: - When (right now, or an upcoming event you're going to)
 
     private var scheduleSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            Toggle(isOn: $hasSchedule.animation()) {
-                Text("Schedule for a specific time")
-                    .font(.mlrScaled(15))
-                    .foregroundStyle(Color.mlrText)
+            SectionLabel(text: "When do you need help?")
+            Button {
+                withAnimation { targetEvent = nil }
+            } label: {
+                whenRow(title: "Right now", subtitle: nil, selected: targetEvent == nil)
             }
-            .tint(Color.mlrFest)
-            if hasSchedule {
-                DatePicker("When", selection: $scheduledFor, displayedComponents: [.date, .hourAndMinute])
+            .buttonStyle(.pressable)
+
+            ForEach(goingFutureEvents) { event in
+                Button {
+                    withAnimation { targetEvent = event }
+                } label: {
+                    whenRow(title: event.title, subtitle: MLRFormat.shortDateISO(event.startDate),
+                            selected: targetEvent?.id == event.id)
+                }
+                .buttonStyle(.pressable)
+            }
+
+            // A scheduled-ahead request is scoped to that event's crew and
+            // anchored to the event date — no separate time picker needed.
+            if targetEvent == nil {
+                Toggle(isOn: $hasSchedule.animation()) {
+                    Text("Schedule for a specific time")
+                        .font(.mlrScaled(15))
+                        .foregroundStyle(Color.mlrText)
+                }
+                .tint(Color.mlrFest)
+                .padding(.top, 4)
+                if hasSchedule {
+                    DatePicker("When", selection: $scheduledFor, displayedComponents: [.date, .hourAndMinute])
+                }
             }
         }
         .padding(14)
         .background(Color.mlrCard)
         .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func whenRow(title: String, subtitle: String?, selected: Bool) -> some View {
+        HStack(spacing: 10) {
+            Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                .foregroundStyle(selected ? Color.mlrFest : Color.mlrTextSubtle)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(title).font(.mlrScaled(14, weight: .medium)).foregroundStyle(Color.mlrText)
+                if let subtitle {
+                    Text(subtitle).font(.mlrScaled(12)).foregroundStyle(Color.mlrTextMuted)
+                }
+            }
+            Spacer()
+        }
+        .contentShape(Rectangle())
+    }
+
+    // MARK: - Location pin
+
+    private var locationSection: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            if let pinCoordinate {
+                HStack(spacing: 10) {
+                    Image(systemName: "mappin.circle.fill").foregroundStyle(Color.mlrFest)
+                    Text("GPS pin added").font(.mlrScaled(14)).foregroundStyle(Color.mlrText)
+                    Spacer()
+                    Button("Remove") { self.pinCoordinate = nil }
+                        .font(.mlrScaled(13, weight: .medium))
+                        .foregroundStyle(Color.mlrTextSubtle)
+                }
+            } else {
+                Button {
+                    Task { await addGPSPin() }
+                } label: {
+                    HStack(spacing: 10) {
+                        if locationBusy { ProgressView() } else { Image(systemName: "location.fill") }
+                        Text("Add my GPS pin")
+                            .font(.mlrScaled(14, weight: .medium))
+                        Spacer()
+                    }
+                    .foregroundStyle(Color.mlrFest)
+                }
+                .buttonStyle(.pressable)
+                .disabled(locationBusy)
+            }
+            if let locationError {
+                Text(locationError).font(.mlrCaption).foregroundStyle(Color.mlrDanger)
+            }
+        }
+        .padding(14)
+        .background(Color.mlrCard)
+        .clipShape(RoundedRectangle(cornerRadius: 12))
+    }
+
+    private func addGPSPin() async {
+        locationBusy = true
+        locationError = nil
+        defer { locationBusy = false }
+        do {
+            pinCoordinate = try await locationFetcher.fetch()
+        } catch {
+            locationError = "Couldn't get your location. Check Settings → Privacy → Location Services."
+        }
     }
 
     // MARK: - Link a Work Checklist task
@@ -214,7 +330,7 @@ struct AskForHelpSheet: View {
                 .background(Color.mlrCard)
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             if linkedWorkItem != nil {
                 Text("Later today we'll ask if this got done — tapping “Yes” checks it off the list.")
                     .font(.mlrCaption)
@@ -253,7 +369,7 @@ struct AskForHelpSheet: View {
                     } label: {
                         Image(systemName: "minus.circle.fill").foregroundStyle(Color.mlrDanger)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
             HStack {
@@ -304,19 +420,21 @@ struct AskForHelpSheet: View {
         defer { isSubmitting = false }
 
         let trimmedWhere = whereText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let effectiveScheduledFor: Date? = targetEvent.map(morningOf) ?? (hasSchedule ? scheduledFor : nil)
         do {
             try await env.helpService.requestHelp(
                 category: category,
                 what: what.trimmingCharacters(in: .whitespacesAndNewlines),
                 neededCount: neededCount,
                 whereDescription: trimmedWhere.isEmpty ? nil : trimmedWhere,
-                latitude: nil,
-                longitude: nil,
-                scheduledFor: hasSchedule ? scheduledFor : nil,
-                notifyAll: notifyAll,
+                latitude: pinCoordinate?.latitude,
+                longitude: pinCoordinate?.longitude,
+                scheduledFor: effectiveScheduledFor,
+                notifyAll: targetEvent == nil && notifyAll,
                 items: bringItems,
                 workItemId: linkedWorkItem?.id,
-                followupAt: linkedWorkItem != nil ? followupTime() : nil
+                followupAt: linkedWorkItem != nil ? followupTime() : nil,
+                targetEventId: targetEvent?.id
             )
             Haptics.success()
             dismiss()

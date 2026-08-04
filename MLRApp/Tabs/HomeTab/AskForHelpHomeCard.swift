@@ -41,7 +41,7 @@ struct AskForHelpHomeCard: View {
                     .background(Color.mlrPrimary)
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
 
             Divider()
 

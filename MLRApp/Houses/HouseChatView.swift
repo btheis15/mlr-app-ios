@@ -16,9 +16,13 @@ struct HouseChatView: View {
     /// Set true when opened from a place that already knows membership (the Feed
     /// conversation list), so we don't gate on the profile's house_id.
     var assumeMember: Bool = false
+    /// Opened from a notification about one message (a chat @mention) — scroll to
+    /// it on first load instead of jumping to the newest.
+    var focusMessageId: UUID? = nil
 
     @State private var members: [Profile] = []
     @State private var showMembers = false
+    @State private var isMuted = false
     @State private var canOrganizeMeeting = false
     @State private var showMeetingComposer = false
     @State private var meetingRefreshID = 0
@@ -74,6 +78,11 @@ struct HouseChatView: View {
                             }
                         }
                         Button {
+                            showCreatePoll = true
+                        } label: {
+                            Label("Create a poll", systemImage: "chart.bar")
+                        }
+                        Button {
                             showMembers = true
                         } label: {
                             Label("See members", systemImage: "person.2.fill")
@@ -86,8 +95,24 @@ struct HouseChatView: View {
                         } label: {
                             Label("Email members", systemImage: "envelope")
                         }
+                        if isMuted {
+                            Button {
+                                Task { await setMute(false) }
+                            } label: {
+                                Label("Unmute", systemImage: "bell")
+                            }
+                        } else {
+                            Menu {
+                                Button("For 1 day") { Task { await setMute(true, until: .now.addingTimeInterval(86_400)) } }
+                                Button("For 3 days") { Task { await setMute(true, until: .now.addingTimeInterval(3 * 86_400)) } }
+                                Button("For 7 days") { Task { await setMute(true, until: .now.addingTimeInterval(7 * 86_400)) } }
+                                Button("Until I unmute") { Task { await setMute(true) } }
+                            } label: {
+                                Label("Mute", systemImage: "bell.slash")
+                            }
+                        }
                     } label: {
-                        Image(systemName: "ellipsis.circle")
+                        Image(systemName: isMuted ? "bell.slash.fill" : "ellipsis.circle")
                     }
                 }
             }
@@ -110,6 +135,13 @@ struct HouseChatView: View {
             env.chatPollsService.unsubscribeFromPolls(scope: pollScope)
             typing.stop()
         }
+    }
+
+    /// Mute for a duration (web #409), permanently (until nil), or unmute.
+    private func setMute(_ muted: Bool, until: Date? = nil) async {
+        isMuted = muted
+        await env.housesService.setHouseMute(houseId: house.id, muted: muted, mutedUntil: until)
+        Haptics.tap()
     }
 
     /// The meeting room this house chat maps to.
@@ -234,7 +266,7 @@ struct HouseChatView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(Color.mlrTextSubtle)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 6)
                 .background(Color.mlrCard)
@@ -246,8 +278,7 @@ struct HouseChatView: View {
                 isEditing: editingMessage != nil,
                 sending: sending,
                 onSend: { attachments in Task { await send(attachments) } },
-                onCancelEdit: { cancelEdit() },
-                onCreatePoll: { showCreatePoll = true }
+                onCancelEdit: { cancelEdit() }
             )
         }
         .background(Color(.systemGroupedBackground))
@@ -300,6 +331,10 @@ struct HouseChatView: View {
                                     reactorName: { reactorName($0) }
                                 )
                                 .id(entry.id)
+                                .transition(.asymmetric(
+                                    insertion: .offset(y: 16).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
                             case .poll(let poll):
                                 ChatPollCard(
                                     poll: poll,
@@ -310,6 +345,10 @@ struct HouseChatView: View {
                                 )
                                 .padding(.horizontal, 12)
                                 .id(entry.id)
+                                .transition(.asymmetric(
+                                    insertion: .offset(y: 16).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
                             }
                         }
                     }
@@ -327,8 +366,14 @@ struct HouseChatView: View {
             .onChange(of: messages.count) { old, new in
                 guard !messages.isEmpty else { return }
                 if !didInitialScroll {
+                    // Newest on first open — or the message a notification pointed
+                    // at, once it's loaded.
                     didInitialScroll = true
-                    proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                    if let focusMessageId, messages.contains(where: { $0.id == focusMessageId }) {
+                        proxy.scrollTo("m-\(focusMessageId.uuidString)", anchor: .center)
+                    } else {
+                        proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                    }
                 } else if atBottom || messages.last?.authorId == env.currentProfile?.id {
                     withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
                 } else if new > old {
@@ -354,7 +399,7 @@ struct HouseChatView: View {
                             .background(Color.mlrPrimary).clipShape(Capsule())
                             .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -404,6 +449,7 @@ struct HouseChatView: View {
         isLoading = false
         await env.housesService.markRead(houseId: house.id)
         canOrganizeMeeting = await env.meetingsService.canOrganize(scope: meetingScope)
+        isMuted = await env.housesService.isHouseMuted(houseId: house.id)
         await loadPolls()
         env.chatPollsService.subscribeToPolls(scope: pollScope) { Task { await loadPolls() } }
 
@@ -416,10 +462,15 @@ struct HouseChatView: View {
         env.housesService.subscribeToMessages(
             houseId: house.id,
             onInsert: { msg in
-                if !messages.contains(where: { $0.id == msg.id }) {
+                guard !messages.contains(where: { $0.id == msg.id }) else { return }
+                if MLRMotion.reduceMotion {
                     messages.append(msg)
-                    Task { await env.housesService.markRead(houseId: house.id) }
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        messages.append(msg)
+                    }
                 }
+                Task { await env.housesService.markRead(houseId: house.id) }
             },
             onUpdate: { msg in
                 if let idx = messages.firstIndex(where: { $0.id == msg.id }) {
@@ -497,7 +548,13 @@ struct HouseChatView: View {
                 text: text, editedAt: nil, deletedAt: nil, createdAt: .now,
                 media: [], reactions: [])
             temp.replyToId = replyTo?.id
-            messages.append(temp)
+            if MLRMotion.reduceMotion {
+                messages.append(temp)
+            } else {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                    messages.append(temp)
+                }
+            }
             let savedDraft = draft
             draft = ""
             replyingTo = nil
@@ -532,7 +589,13 @@ struct HouseChatView: View {
             let msg = try await env.housesService.sendMessage(
                 houseId: house.id, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded, replyToId: replyTo?.id)
             if !messages.contains(where: { $0.id == msg.id }) {
-                messages.append(msg)
+                if MLRMotion.reduceMotion {
+                    messages.append(msg)
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        messages.append(msg)
+                    }
+                }
             }
             draft = ""
             replyingTo = nil
@@ -641,7 +704,7 @@ private struct HouseMessageBubble: View {
                         .clipShape(Capsule())
                         .overlay(Capsule().stroke(expanded ? Color.mlrPrimary : (mine ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder), lineWidth: expanded ? 1.5 : 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .accessibilityLabel("See who reacted \(item.emoji)")
                 }
             }
@@ -692,7 +755,7 @@ private struct HouseMessageBubble: View {
                             RoundedRectangle(cornerRadius: 1).fill(Color.mlrPrimary).frame(width: 2.5).padding(.vertical, 4)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 if !message.media.isEmpty {
                     ChatMediaView(media: message.media, isOwn: isOwn)

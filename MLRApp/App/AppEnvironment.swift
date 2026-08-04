@@ -29,6 +29,7 @@ final class AppEnvironment {
     var signupsService: SignupsService
     var privateActivitiesService: PrivateActivitiesService
     var tournamentsService: TournamentsService
+    var dropBoxesService: DropBoxesService
 
     // Resolved once per session
     var currentProfile: Profile?
@@ -159,6 +160,7 @@ final class AppEnvironment {
         signupsService       = SignupsService()
         privateActivitiesService = PrivateActivitiesService()
         tournamentsService   = TournamentsService()
+        dropBoxesService     = DropBoxesService()
 
         AppEnvironment.activeEventsService    = eventsService
         AppEnvironment.activeHelpService      = helpService

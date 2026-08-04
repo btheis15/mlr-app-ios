@@ -95,8 +95,8 @@ struct FamilyFestSpotlight: View {
         }
         var sortKey: String {
             switch self {
-            case .event(let e):  return e.time
-            case .dinner(let d): return d.time
+            case .event(let e):  return festNormalizeTime(e.time)
+            case .dinner(let d): return festNormalizeTime(d.time)
             }
         }
     }
@@ -111,6 +111,8 @@ struct FamilyFestSpotlight: View {
         VStack(spacing: 0) {
             if season.phase == .live {
                 liveDayCard
+            } else if season.phase == .wrap {
+                wrapCard
             } else {
                 compactCard
             }
@@ -193,7 +195,7 @@ struct FamilyFestSpotlight: View {
             .padding(14)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func liveEventRow(_ event: ScheduleItem) -> some View {
@@ -248,7 +250,37 @@ struct FamilyFestSpotlight: View {
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
-    // MARK: - Compact card (off-season / planning / wrap)
+    // MARK: - Wrap card (photos nudge — links straight to the photo album)
+
+    private var wrapCard: some View {
+        NavigationLink(destination: DropBoxesView()) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text("🎆 Family Fest · That's a Wrap")
+                    .font(.mlrScaled(10, weight: .bold))
+                    .foregroundStyle(Color.mlrAccent)
+                    .tracking(0.6)
+                Text("Thanks for a great week Up North")
+                    .font(.festSerif(16, weight: .bold))
+                    .foregroundStyle(Color.mlrFest)
+                let tail = season.wrapDaysLeft > 0
+                    ? "Album's open \(season.wrapDaysLeft) more \(season.wrapDaysLeft == 1 ? "day" : "days")."
+                    : ""
+                Text("Add the photos you didn't get to share yet\(tail.isEmpty ? "." : " — \(tail)")")
+                    .font(.mlrScaled(13))
+                    .foregroundStyle(Color.mlrFestInk.opacity(0.8))
+                Text("Add your photos →")
+                    .font(.mlrScaled(12, weight: .semibold))
+                    .foregroundStyle(Color.mlrAccent)
+                    .padding(.top, 2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(14)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.pressable)
+    }
+
+    // MARK: - Compact card (off-season / planning)
 
     private var compactCard: some View {
         NavigationLink(destination: FestOverviewView()) {
@@ -281,7 +313,7 @@ struct FamilyFestSpotlight: View {
             .padding(14)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     // MARK: - Smart shortcut
@@ -293,7 +325,7 @@ struct FamilyFestSpotlight: View {
         } label: {
             ctaLabel(icon: "hand.raised.fill", text: "Join the Family Fest committee")
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     private func ctaLabel(icon: String, text: String) -> some View {
@@ -312,6 +344,29 @@ struct FamilyFestSpotlight: View {
         .padding(.vertical, 12)
         .contentShape(Rectangle())
     }
+}
+
+// MARK: - Time normalizer
+
+/// Zero-padded 24h "HH:mm" key for lexical sort of mixed-format time strings.
+/// Handles 24h ("14:30"), 12h ("6:30 PM", "9 AM"), and "TBD" (sorts last).
+private func festNormalizeTime(_ raw: String) -> String {
+    let t = raw.trimmingCharacters(in: .whitespaces)
+    if t.isEmpty || t.uppercased() == "TBD" { return "23:59" }
+    let parts = t.split(separator: ":").map(String.init)
+    if parts.count == 2, let h = Int(parts[0]), let m = Int(parts[1].prefix(2)), !t.lowercased().contains("m") {
+        return String(format: "%02d:%02d", h, m)
+    }
+    let fmt = DateFormatter()
+    fmt.locale = Locale(identifier: "en_US_POSIX")
+    for f in ["h:mm a", "h a", "h:mm", "h"] {
+        fmt.dateFormat = f
+        if let d = fmt.date(from: t) {
+            let cal = Calendar.current
+            return String(format: "%02d:%02d", cal.component(.hour, from: d), cal.component(.minute, from: d))
+        }
+    }
+    return t
 }
 
 // MARK: - PulsingDot

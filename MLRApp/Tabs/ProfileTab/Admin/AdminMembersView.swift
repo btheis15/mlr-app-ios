@@ -38,7 +38,7 @@ struct AdminMembersView: View {
                 Section {
                     ForEach(shown) { m in
                         Button { Task { await open(m) } } label: { row(m) }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                     }
                 } footer: {
                     Text("\(members.count) member\(members.count == 1 ? "" : "s") · \(adminCount) admin\(adminCount == 1 ? "" : "s")")

@@ -173,7 +173,7 @@ private struct PayeeCard: View {
                             .background(Color.black)
                             .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
             }
             if let paypal = payee.paypal?.trimmedNonEmpty {
@@ -238,7 +238,7 @@ private struct PayeeCard: View {
                     .font(.mlrScaled(13, weight: .semibold))
                     .foregroundStyle(copied == label ? Color.mlrSuccess : Color.mlrFestInk.opacity(0.7))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             if let openURL {
                 Link(destination: openURL) {
                     Image(systemName: "arrow.up.right.square")

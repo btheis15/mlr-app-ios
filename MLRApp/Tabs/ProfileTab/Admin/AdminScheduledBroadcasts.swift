@@ -4,17 +4,21 @@ import Supabase
 // MARK: - AdminScheduledBroadcasts
 //
 // The scheduled-broadcast queue (migration 0097): pending items about to fire,
-// plus recently sent/failed ones. Per-row cancel (pending) and reschedule (edit
-// send time, migration 0101). The send itself is server-side (pg_cron) — nothing
-// to trigger here. Mirrors the web AdminScheduledBroadcasts. Realtime-refreshed
-// like AdminCabinBookings.
+// plus recently sent/failed ones. Per-row cancel (pending) and Edit — title,
+// body, the "skip anyone who already marked this callout done" flag (for a
+// callout reminder), and the send time itself (migration 0101). The send
+// itself is server-side (pg_cron) — nothing to trigger here. Mirrors the web
+// AdminScheduledBroadcasts. Realtime-refreshed like AdminCabinBookings.
 
 struct AdminScheduledBroadcasts: View {
     @Environment(AppEnvironment.self) private var env
     @State private var items: [ScheduledBroadcast] = []
     @State private var isLoading = true
     @State private var actionError: String?
-    @State private var rescheduling: ScheduledBroadcast?
+    @State private var editing: ScheduledBroadcast?
+    @State private var editTitle = ""
+    @State private var editBody = ""
+    @State private var editExcludeCalloutDone = true
     @State private var newDate = Date.now.addingTimeInterval(3600)
     @State private var channel: RealtimeChannelV2?
     @State private var showHistory = false
@@ -56,8 +60,8 @@ struct AdminScheduledBroadcasts: View {
         .navigationBarTitleDisplayMode(.large)
         .refreshable { await load() }
         .task { await load(); subscribe() }
-        .sheet(item: $rescheduling) { item in
-            rescheduleSheet(item)
+        .sheet(item: $editing) { item in
+            editSheet(item)
         }
     }
 
@@ -90,9 +94,12 @@ struct AdminScheduledBroadcasts: View {
 
             if showActions {
                 HStack(spacing: 16) {
-                    Button("Reschedule") {
+                    Button("Edit") {
+                        editTitle = item.payload.title
+                        editBody = item.payload.body ?? ""
+                        editExcludeCalloutDone = item.payload.excludeCalloutDone ?? true
                         newDate = max(item.scheduledAt, Date.now.addingTimeInterval(120))
-                        rescheduling = item
+                        editing = item
                     }
                     .font(.mlrScaled(12, weight: .medium))
                     .foregroundStyle(Color.mlrPrimary)
@@ -136,11 +143,29 @@ struct AdminScheduledBroadcasts: View {
         }
     }
 
-    // MARK: - Reschedule sheet
+    // MARK: - Edit sheet
 
-    private func rescheduleSheet(_ item: ScheduledBroadcast) -> some View {
+    private var trimmedEditTitle: String { editTitle.trimmingCharacters(in: .whitespacesAndNewlines) }
+
+    private func editSheet(_ item: ScheduledBroadcast) -> some View {
         NavigationStack {
             Form {
+                if let label = item.payload.sourceLabel {
+                    Section { Label("Reminder for: \(label)", systemImage: "link").foregroundStyle(Color.mlrInfo) }
+                }
+                Section("Title") {
+                    TextField("Title", text: $editTitle)
+                }
+                Section("Body (optional)") {
+                    TextField("Body", text: $editBody, axis: .vertical)
+                        .lineLimit(2...5)
+                }
+                if item.payload.sourceType == "callout" {
+                    Section {
+                        Toggle("Skip anyone who already marked this callout \"done\"", isOn: $editExcludeCalloutDone)
+                            .tint(Color.mlrPrimary)
+                    }
+                }
                 Section("Send at") {
                     DatePicker("Send at", selection: $newDate,
                                in: Date.now.addingTimeInterval(120)...,
@@ -148,16 +173,18 @@ struct AdminScheduledBroadcasts: View {
                         .labelsHidden()
                 }
             }
-            .navigationTitle("Reschedule")
+            .navigationTitle("Edit scheduled \(item.kind == .announcement ? "announcement" : "notification")")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { rescheduling = nil } }
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { editing = nil } }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await reschedule(item) } }.fontWeight(.semibold)
+                    Button("Save") { Task { await saveEdit(item) } }
+                        .fontWeight(.semibold)
+                        .disabled(trimmedEditTitle.isEmpty)
                 }
             }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.medium, .large])
     }
 
     // MARK: - Data
@@ -183,14 +210,22 @@ struct AdminScheduledBroadcasts: View {
         } catch { actionError = "Couldn't cancel." }
     }
 
-    private func reschedule(_ item: ScheduledBroadcast) async {
+    private func saveEdit(_ item: ScheduledBroadcast) async {
+        guard !trimmedEditTitle.isEmpty else { return }
         actionError = nil
+        var payload = item.payload
+        payload.title = trimmedEditTitle
+        let trimmedBody = editBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        payload.body = trimmedBody.isEmpty ? nil : trimmedBody
+        if item.payload.sourceType == "callout" {
+            payload.excludeCalloutDone = editExcludeCalloutDone
+        }
         do {
             try await env.notificationsService.updateScheduledBroadcast(
-                id: item.id, payload: item.payload, scheduledAt: newDate)
-            rescheduling = nil
+                id: item.id, payload: payload, scheduledAt: newDate)
+            editing = nil
             await load()
-        } catch { actionError = "Couldn't reschedule." }
+        } catch { actionError = "Couldn't save changes." }
     }
 
     private func subscribe() {

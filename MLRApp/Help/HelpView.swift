@@ -55,7 +55,7 @@ struct HelpView: View {
                                 .background(Color.mlrPrimary)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                 }
 
@@ -123,7 +123,7 @@ struct HelpView: View {
                         .background(Color.mlrPrimary)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
                 if let tel = URL(string: "tel://\(contactPhone)") {
                     Link(destination: tel) {

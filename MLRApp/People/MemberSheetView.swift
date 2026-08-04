@@ -130,7 +130,7 @@ struct MemberSheetView: View {
                             contactRowLabel("Text", MLRFormat.phone(phone),
                                             "message.fill", showsChevron: true)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                     if !member.email.isEmpty {
                         contactRow("Email", member.email, "envelope.fill",
@@ -150,7 +150,7 @@ struct MemberSheetView: View {
                             contactRowLabel("Add to Contacts", member.name,
                                             "person.crop.circle.badge.plus", showsChevron: true)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                     }
                     if (member.phone?.isEmpty ?? true) && member.email.isEmpty {
                         Text("No contact info on file.")
@@ -175,6 +175,10 @@ struct MemberSheetView: View {
         let value: String
         let icon: String
         let url: String?
+        /// Venmo only — the exact `venmo.com/<handle>?txn=pay` deep link the
+        /// row's own tap-through opens, encoded as a QR so anyone's camera
+        /// (not just an iOS Venmo-app-scheme tap) can scan it.
+        var qrValue: String? = nil
         var id: String { key }
     }
 
@@ -183,7 +187,8 @@ struct MemberSheetView: View {
         var list: [PayMethod] = []
         if let venmo = member.venmoHandle, !venmo.isEmpty {
             let h = venmo.replacingOccurrences(of: "@", with: "")
-            list.append(.init(key: "Venmo", label: "Venmo", value: "@\(h)", icon: "dollarsign.circle.fill", url: "venmo://users/\(h)"))
+            list.append(.init(key: "Venmo", label: "Venmo", value: "@\(h)", icon: "dollarsign.circle.fill",
+                              url: "venmo://users/\(h)", qrValue: "https://venmo.com/\(h)?txn=pay"))
         }
         if let zelle = member.zelleHandle, !zelle.isEmpty {
             list.append(.init(key: "Zelle", label: "Zelle", value: zelle, icon: "z.circle.fill", url: nil))
@@ -207,9 +212,14 @@ struct MemberSheetView: View {
                 Protected {
                     VStack(spacing: 10) {
                         ForEach(payMethods) { m in
-                            contactRow(m.label, m.value, m.icon, url: m.url,
-                                       preferred: m.key.lowercased() == pref,
-                                       tint: payTint(m.key))
+                            VStack(spacing: 0) {
+                                contactRow(m.label, m.value, m.icon, url: m.url,
+                                           preferred: m.key.lowercased() == pref,
+                                           tint: payTint(m.key))
+                                if let qrValue = m.qrValue {
+                                    VenmoQRDisclosure(name: member.name, handle: m.value, urlString: qrValue)
+                                }
+                            }
                         }
                     }
                 }
@@ -241,7 +251,7 @@ struct MemberSheetView: View {
                                 .font(.mlrScaled(13, weight: .semibold))
                                 .foregroundStyle(birthdayAdded ? Color.mlrSuccess : Color.mlrPrimary)
                         }
-                        .buttonStyle(.plain)
+                        .buttonStyle(.pressable)
                         .disabled(birthdayAdded)
 
                         if let birthdayError {
@@ -397,7 +407,7 @@ private struct MemberAdminCard: View {
                     row(isAdmin ? "Remove admin" : "Make admin",
                         icon: isAdmin ? "shield.slash.fill" : "shield.fill")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(working)
 
                 Divider().padding(.leading, 44)
@@ -421,7 +431,7 @@ private struct MemberAdminCard: View {
                 Button { showEditInfo = true } label: {
                     row("Edit member info", icon: "pencil")
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(working)
 
                 Divider().padding(.leading, 44)
@@ -429,7 +439,7 @@ private struct MemberAdminCard: View {
                 Button(role: .destructive) { showRemove = true } label: {
                     row("Remove member", icon: "trash.fill", tint: Color.mlrDanger)
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
                 .disabled(working)
             }
             if let errorText {

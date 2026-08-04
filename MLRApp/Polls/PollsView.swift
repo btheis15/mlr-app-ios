@@ -204,7 +204,7 @@ private struct PollOptionRow: View {
             }
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .opacity(poll.isOpen ? 1 : 0.75)
     }
 }
@@ -246,7 +246,7 @@ struct PollCreatorSheet: View {
                                 Image(systemName: "minus.circle.fill")
                                     .foregroundStyle(Color.mlrDanger)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
                 }
@@ -337,7 +337,7 @@ struct PollHomeCard: View {
                             .foregroundStyle(Color.mlrTextSubtle)
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
 
                 PollCard(poll: poll)
             }

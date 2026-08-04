@@ -32,6 +32,11 @@ struct FestScheduleEditSheet: View {
     @State private var signupStart = FestScheduleEditSheet.defaultTime(18, 0)
     @State private var signupEnd = FestScheduleEditSheet.defaultTime(20, 0)
     @State private var signupSlotMinutes = 15
+    @State private var signupHideNames = false
+
+    // Per-slot capacity editing (slots mode only).
+    @State private var slotList: [ScheduleSlot] = []
+    @State private var slotCapacities: [UUID: String] = [:]
 
     // Edit-and-notify (#393) — admin-only, default OFF; sends on save when on.
     @State private var notifyOnSave = false
@@ -80,7 +85,7 @@ struct FestScheduleEditSheet: View {
                                 Image(systemName: "xmark.circle.fill")
                                     .foregroundStyle(Color.mlrTextSubtle)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     } else {
                         LabeledContent("Name") {
@@ -111,7 +116,7 @@ struct FestScheduleEditSheet: View {
                                 .keyboardType(.URL)
                             Button { links.removeAll { $0.id == link.id } } label: {
                                 Image(systemName: "minus.circle.fill").foregroundStyle(Color.mlrDanger)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.pressable)
                         }
                     }
                 }
@@ -140,6 +145,7 @@ struct FestScheduleEditSheet: View {
                                 .keyboardType(.numberPad).multilineTextAlignment(.trailing)
                         }
                         Stepper("Team size: \(signupTeamSize)", value: $signupTeamSize, in: 1...8)
+                        Toggle("🙈 Hide who's signed up", isOn: $signupHideNames)
                         TextField("Instructions (optional)", text: $signupInstructions, axis: .vertical).lineLimit(1...3)
                         if signupMode == "interval" {
                             DatePicker("First slot", selection: $signupStart, displayedComponents: .hourAndMinute)
@@ -153,9 +159,36 @@ struct FestScheduleEditSheet: View {
                     Text("Sign-ups")
                 } footer: {
                     Text(signupMode == "slots"
-                         ? "Named-slot lists are edited on the web for now."
+                         ? "Named-slot lists are managed on the web. You can edit each slot's capacity below."
                          : "Members can sign up right on the event.")
                         .font(.caption)
+                }
+
+                // Per-slot capacity editor (slots mode) — add/remove slots on the web.
+                if signupEnabled && signupMode == "slots" && !slotList.isEmpty {
+                    Section {
+                        ForEach(slotList) { slot in
+                            HStack {
+                                Text(slotDisplayLabel(slot))
+                                    .font(.mlrScaled(14))
+                                    .foregroundStyle(Color.mlrText)
+                                Spacer()
+                                TextField("No limit", text: Binding(
+                                    get: { slotCapacities[slot.id] ?? (slot.capacity.map(String.init) ?? "") },
+                                    set: { slotCapacities[slot.id] = $0 }
+                                ))
+                                .keyboardType(.numberPad)
+                                .multilineTextAlignment(.trailing)
+                                .frame(width: 70)
+                            }
+                        }
+                    } header: {
+                        Text("Slot capacities")
+                    } footer: {
+                        Text("Override the default capacity for individual slots. Leave blank to use the default above.")
+                            .font(.caption)
+                    }
+                    .task(id: signupMode) { await loadSlots() }
                 }
             }
 
@@ -201,7 +234,12 @@ struct FestScheduleEditSheet: View {
                 leadName   = profile.name
             }
         }
-        .onAppear { seed() }
+        .onAppear {
+            seed()
+            if (item.signupMode ?? "interval") == "slots" {
+                Task { await loadSlots() }
+            }
+        }
     }
 
     private func seed() {
@@ -214,6 +252,7 @@ struct FestScheduleEditSheet: View {
         signupMode         = item.signupMode ?? "interval"
         signupCapacity     = item.signupCapacity.map(String.init) ?? ""
         signupTeamSize     = item.signupTeamSize ?? 1
+        signupHideNames    = item.signupHideNames
         signupInstructions = item.signupInstructions ?? ""
         signupSlotMinutes  = item.signupSlotMinutes ?? 15
         if let s = Self.timeFromHHMM(item.signupStartTime) { signupStart = s }
@@ -229,6 +268,18 @@ struct FestScheduleEditSheet: View {
     private static func hhmm(_ d: Date) -> String {
         let c = Calendar.current.dateComponents([.hour, .minute], from: d)
         return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
+    }
+
+    private func loadSlots() async {
+        guard let uid = UUID(uuidString: item.id) else { return }
+        slotList = await env.signupsService.fetchSlots(itemId: uid)
+    }
+
+    private func slotDisplayLabel(_ slot: ScheduleSlot) -> String {
+        if let label = slot.label, !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return label }
+        let start = MLRFormat.time(slot.startTime)
+        if let end = slot.endTime, !end.isEmpty { return "\(start)–\(MLRFormat.time(end))" }
+        return start
     }
 
     private func save() async {
@@ -252,7 +303,8 @@ struct FestScheduleEditSheet: View {
                 startTime: signupMode == "interval" ? Self.hhmm(signupStart) : nil,
                 endTime: signupMode == "interval" ? Self.hhmm(signupEnd) : nil,
                 instructions: signupInstructions.trimBlank,
-                teamSize: signupTeamSize > 1 ? signupTeamSize : nil)
+                teamSize: signupTeamSize > 1 ? signupTeamSize : nil,
+                hideNames: signupHideNames)
             : nil
         do {
             try await env.festContentService.updateScheduleItem(
@@ -266,6 +318,16 @@ struct FestScheduleEditSheet: View {
                 links:       cleanedLinks,
                 signup:      signupConfig
             )
+            // Save any changed per-slot capacities (slots mode).
+            if signupMode == "slots" {
+                for slot in slotList {
+                    let raw = slotCapacities[slot.id]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let newCap = raw.isEmpty ? nil : Int(raw)
+                    if newCap != slot.capacity {
+                        try await env.signupsService.updateSlotCapacity(slotId: slot.id, capacity: newCap)
+                    }
+                }
+            }
             // Optional: tell everyone about the change (#393). Admin-only, opt-in.
             if canAssignLead, notifyOnSave {
                 let msg = notifyMessage.trimBlank
@@ -331,7 +393,7 @@ struct FestCrewAssignSheet: View {
                                 Image(systemName: "minus.circle.fill")
                                     .foregroundStyle(Color.mlrDanger)
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
                 }
@@ -431,7 +493,7 @@ struct InlineMemberPickerSheet: View {
                             .foregroundStyle(Color.mlrText)
                     }
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
             .searchable(text: $search, prompt: "Search members")
             .overlay {

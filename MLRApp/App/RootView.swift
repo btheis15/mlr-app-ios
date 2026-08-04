@@ -10,13 +10,24 @@ struct RootView: View {
     @Environment(\.scenePhase) private var scenePhase
     @State private var selectedTab: Tab = .home
     @State private var showSplash = true
+    /// Tracks whether the main content is opaque — decoupled from showSplash so
+    /// the cross-fade can start while SplashView's logo is still mid-flight.
+    @State private var mainVisible = false
     @State private var showAskForHelp = false
     @State private var showAddWorkItem = false
     @State private var pendingCommittee: Committee?
     @State private var pendingWorkItem: WorkItem?
-    @State private var pendingHouse: House?
+    @State private var pendingHouseChat: PendingHouseChat?
     @State private var pendingHouseHub: House?
     @State private var pendingCommitteeChat: PendingCommitteeChat?
+    @State private var pendingPost: Post?
+    /// A specific comment to scroll to + flash within `pendingPost`'s thread
+    /// (migration 0164) — set alongside pendingPost, read once by CommentsView.
+    @State private var pendingCommentId: UUID?
+    @State private var pendingScheduleItem: ScheduleItem?
+    @State private var pendingPrivateActivity: PendingPrivateActivity?
+    @State private var showHelpRequests = false
+    @State private var showCabinBookings = false
     @State private var searchRequest: GlobalSearchRequest?
 
     // Siri / Shortcuts → in-app navigation bridge.
@@ -25,14 +36,29 @@ struct RootView: View {
     var body: some View {
         ZStack {
             MainTabView(selectedTab: $selectedTab)
-                .opacity(showSplash ? 0 : 1)
+                .opacity(mainVisible ? 1 : 0)
 
             if showSplash {
-                SplashView {
-                    withAnimation(.easeOut(duration: 0.3)) {
+                SplashView(
+                    onBeginExit: {
+                        // Fade main content in while the logo flies to the header —
+                        // the overlap is what makes it read as "landing in place."
+                        withAnimation(.easeOut(duration: 0.45)) { mainVisible = true }
+                    },
+                    onComplete: {
+                        // Safety: ensure main is visible even if onBeginExit was skipped
+                        // (e.g. the Reduce Motion path calls onComplete directly).
+                        mainVisible = true
                         showSplash = false
+                        // A tap that COLD-LAUNCHED the app is delivered before
+                        // `.onReceive` below is subscribed, so it lands in the queue
+                        // instead of the live listener — drain it now the splash is
+                        // out of the way (see PendingNotificationTap).
+                        if let tap = PendingNotificationTap.shared.drain() {
+                            handleNotificationTap(tap)
+                        }
                     }
-                }
+                )
             }
         }
         // Admin "view as" preview — a floating banner over everything while active.
@@ -63,18 +89,52 @@ struct RootView: View {
         .sheet(item: $pendingWorkItem) { item in
             WorkItemDetailSheet(item: item) { Task { await env.workItemsService.fetchItems() } }
         }
-        // Tapping a house-chat mention (or Siri "open house chat") opens the chat.
-        .sheet(item: $pendingHouse) { house in
-            NavigationStack { HouseChatView(house: house, assumeMember: true) }
+        // Tapping a house-chat mention (or Siri "open house chat") opens the chat,
+        // scrolled to the message the notification was about when there is one.
+        .sheet(item: $pendingHouseChat) { pending in
+            NavigationStack {
+                HouseChatView(house: pending.house, assumeMember: true,
+                              focusMessageId: pending.focusMessageId)
+            }
         }
         .sheet(item: $pendingHouseHub) { house in
             NavigationStack { HouseHubView(house: house) }
         }
-        // Siri / Shortcuts "open committee chat".
+        // A committee-chat @mention notification, or Siri / Shortcuts "open
+        // committee chat" — the area/title/message are set only by the former.
         .sheet(item: $pendingCommitteeChat) { pending in
             NavigationStack {
-                CommitteeChatView(committee: pending.committee, members: pending.members, assumeMember: true)
+                CommitteeChatView(
+                    committee: pending.committee,
+                    members: pending.members,
+                    area: pending.area,
+                    channelTitle: pending.channelTitle,
+                    assumeMember: true,
+                    focusMessageId: pending.focusMessageId
+                )
             }
+        }
+        // Tapping a post notification (new post, comment, reply, @mention, tag,
+        // reaction) opens that one post's thread — the same sheet the comment
+        // button on a PostCard opens, which leads with a recap of the post itself.
+        .sheet(item: $pendingPost) { post in
+            CommentsView(post: post, focusCommentId: pendingCommentId)
+        }
+        // A Family Fest sign-up reminder / tournament ping → that event's detail.
+        .sheet(item: $pendingScheduleItem) { item in
+            NavigationStack { FestScheduleDetailView(item: item) }
+        }
+        // An invite to a private activity / game (migration 0150).
+        .sheet(item: $pendingPrivateActivity) { pending in
+            PrivateActivitySheet(activityId: pending.activityId)
+        }
+        // An "Ask for Help" request, or a cabin-stay decision / guest note. Both
+        // views carry their own NavigationStack.
+        .sheet(isPresented: $showHelpRequests) {
+            HelpRequestsView()
+        }
+        .sheet(isPresented: $showCabinBookings) {
+            CabinBookingsView()
         }
         // `.system.searchInApp` Siri / Apple Intelligence search (or the Home
         // search button) — the destination the search schema navigates to.
@@ -130,20 +190,33 @@ struct RootView: View {
         }
     }
 
+    // MARK: - Notification taps
+    //
+    // A push (or an in-app Activity row) resolves to a NotificationDeepLink, then
+    // to a tab plus — where the notification is ABOUT one thing — the sheet that
+    // already shows that thing in-app. Switching tabs alone isn't enough: the Feed
+    // tab's root is the conversation list for anyone with a committee/house
+    // channel, so `.feed` on its own lands a "shared a new post" tap on a chat
+    // list, which is what the member has to hunt out of.
+
     private func handleNotificationTap(_ info: [AnyHashable: Any]?) {
-        guard let type = info?["target_type"] as? String else { return }
-        switch type {
-        case "post":            selectedTab = .feed
-        case "event":           selectedTab = .home
-        case "notification":    selectedTab = .activity
-        case "committee_chat":  selectedTab = .home
-        case "committee_join_request":
-            resolveCommitteeForRequest(info)
-        case "work_item":
-            resolveWorkItem(info)
-        case "house_message":
-            resolveHouse(info)
-        case "house_stay":
+        guard let info else { return }
+        PendingNotificationTap.shared.clear()
+        switch NotificationDeepLink(userInfo: info) {
+        case .post(let id, let commentId):
+            selectedTab = .feed
+            resolvePost(id, commentId: commentId)
+        case .feed:
+            selectedTab = .feed
+        case .committeeMessage(let id):
+            selectedTab = .feed
+            resolveCommitteeMessage(id)
+        case .committeeJoinRequest(let requestId, let committeeId):
+            resolveCommitteeForRequest(requestId: requestId, committeeId: committeeId)
+        case .houseMessage(let id):
+            selectedTab = .feed
+            resolveHouseMessage(id)
+        case .houseHub:
             // A new stay on the house calendar — open the House Hub. Resolve the
             // viewer's own house (mirrors the house-chat deep link).
             selectedTab = .home
@@ -153,16 +226,43 @@ struct RootView: View {
                     pendingHouseHub = house
                 }
             }
-        default:                selectedTab = .home
+        case .workItem(let id):
+            selectedTab = .home
+            resolveWorkItem(id)
+        case .helpRequests:
+            selectedTab = .home
+            showHelpRequests = true
+        case .cabinStays:
+            selectedTab = .home
+            showCabinBookings = true
+        case .privateActivity(let id):
+            selectedTab = .home
+            pendingPrivateActivity = PendingPrivateActivity(activityId: id)
+        case .festScheduleItem(let id):
+            selectedTab = .fest
+            resolveScheduleItem(id)
+        case .familyFest:
+            selectedTab = .fest
+        case .notifications:
+            selectedTab = .activity
+        case .home:
+            selectedTab = .home
+        }
+    }
+
+    /// Resolve the post behind a post notification (new post, comment, reply,
+    /// @mention, tag, reaction) and open its thread. Falls back to the Feed tab if
+    /// the post is gone or held for review.
+    private func resolvePost(_ id: UUID, commentId: UUID? = nil) {
+        Task { @MainActor in
+            pendingCommentId = commentId
+            pendingPost = await env.postsService.fetchPost(id: id)
         }
     }
 
     /// Resolve a work item behind a comment/mention notification and open its
     /// detail sheet (comments + media).
-    private func resolveWorkItem(_ info: [AnyHashable: Any]?) {
-        guard let idStr = info?["target_id"] as? String, let id = UUID(uuidString: idStr) else {
-            selectedTab = .home; return
-        }
+    private func resolveWorkItem(_ id: UUID) {
         Task { @MainActor in
             let item: WorkItem? = try? await supabase
                 .from("work_items")
@@ -171,16 +271,13 @@ struct RootView: View {
                 .single()
                 .execute()
                 .value
-            if let item { pendingWorkItem = item } else { selectedTab = .home }
+            if let item { pendingWorkItem = item }
         }
     }
 
     /// Resolve the house behind a house-chat mention (entity is the message id)
-    /// and open that house's chat.
-    private func resolveHouse(_ info: [AnyHashable: Any]?) {
-        guard let idStr = info?["target_id"] as? String, let id = UUID(uuidString: idStr) else {
-            selectedTab = .feed; return
-        }
+    /// and open that house's chat, scrolled to the message.
+    private func resolveHouseMessage(_ id: UUID) {
         Task { @MainActor in
             struct Row: Decodable { let houseId: UUID
                 enum CodingKeys: String, CodingKey { case houseId = "house_id" } }
@@ -192,24 +289,61 @@ struct RootView: View {
                 .execute()
                 .value
             if let hid = row?.houseId, let house = await env.housesService.house(withId: hid) {
-                pendingHouse = house
-            } else {
-                selectedTab = .feed
+                pendingHouseChat = PendingHouseChat(house: house, focusMessageId: id)
+            }
+        }
+    }
+
+    /// Resolve the room behind a committee-chat @mention (entity is the message
+    /// id) and open that channel, scrolled to the message. The committee AND the
+    /// role channel come from the message row rather than the notification's web
+    /// url, whose `&area=` is unescaped free text (migration 0063).
+    private func resolveCommitteeMessage(_ id: UUID) {
+        Task { @MainActor in
+            struct Row: Decodable {
+                let committeeId: UUID
+                let area: String?
+                enum CodingKeys: String, CodingKey { case committeeId = "committee_id"; case area }
+            }
+            let row: Row? = try? await supabase
+                .from("committee_messages")
+                .select("committee_id, area")
+                .eq("id", value: id.uuidString)
+                .single()
+                .execute()
+                .value
+            guard let row,
+                  let committee = await env.committeeService.fetchCommittee(byId: row.committeeId)
+            else { return }
+            let members = (try? await env.committeeService.fetchMembers(committeeId: committee.id)) ?? []
+            pendingCommitteeChat = PendingCommitteeChat(
+                committee: committee, members: members,
+                area: row.area, channelTitle: row.area ?? committee.name,
+                focusMessageId: id)
+        }
+    }
+
+    /// Resolve a Family Fest event/activity behind a sign-up reminder or a
+    /// tournament notification and open its detail.
+    private func resolveScheduleItem(_ id: UUID) {
+        Task { @MainActor in
+            await env.festContentService.load()
+            let key = id.uuidString
+            pendingScheduleItem = env.festContentService.schedule.first {
+                $0.id.caseInsensitiveCompare(key) == .orderedSame
             }
         }
     }
 
     /// Resolve the committee behind a join-request notification (by committee id
     /// if the push carried one, else via the request id) and present its detail.
-    private func resolveCommitteeForRequest(_ info: [AnyHashable: Any]?) {
+    private func resolveCommitteeForRequest(requestId: UUID?, committeeId: UUID?) {
         Task { @MainActor in
             let svc = env.committeeService
             var committee: Committee?
-            if let cidStr = info?["committee_id"] as? String, let cid = UUID(uuidString: cidStr) {
-                committee = await svc.fetchCommittee(byId: cid)
-            }
-            if committee == nil, let ridStr = info?["target_id"] as? String, let rid = UUID(uuidString: ridStr) {
-                committee = await svc.fetchCommittee(forRequestId: rid)
+            if let committeeId { committee = await svc.fetchCommittee(byId: committeeId) }
+            if committee == nil, let requestId {
+                committee = await svc.fetchCommittee(forRequestId: requestId)
             }
             if let committee { pendingCommittee = committee }
         }
@@ -241,7 +375,7 @@ struct RootView: View {
             Task { @MainActor in
                 if let hid = env.currentProfile?.houseId,
                    let house = await env.housesService.house(withId: hid) {
-                    pendingHouse = house
+                    pendingHouseChat = PendingHouseChat(house: house)
                 }
             }
         case .search(let term):
@@ -267,12 +401,29 @@ enum Tab: String, CaseIterable {
     case home, feed, fest, activity, profile
 }
 
-// MARK: - Pending committee chat (Siri / Shortcuts open)
+// MARK: - Pending sheets (notification taps / Siri / Shortcuts opens)
 
 struct PendingCommitteeChat: Identifiable {
     let id = UUID()
     let committee: Committee
     let members: [CommitteeMember]
+    /// The role channel; nil = the committee's General channel.
+    var area: String? = nil
+    var channelTitle: String? = nil
+    /// The message a chat-mention notification was about, to scroll to on open.
+    var focusMessageId: UUID? = nil
+}
+
+struct PendingHouseChat: Identifiable {
+    let id = UUID()
+    let house: House
+    /// The message a chat-mention notification was about, to scroll to on open.
+    var focusMessageId: UUID? = nil
+}
+
+struct PendingPrivateActivity: Identifiable {
+    let id = UUID()
+    let activityId: UUID
 }
 
 // MARK: - Main Tab View
@@ -339,6 +490,13 @@ struct MainTabView: View {
                 .tag(Tab.profile)
         }
         .tint(Color.mlrPrimary)
+        // A light selection tick on every tab switch — the kind of small,
+        // native-feeling touch that makes the bar feel considered rather than
+        // stock. Skipped on the very first appearance (no real "switch" yet).
+        .onChange(of: selectedTab) { oldValue, newValue in
+            guard oldValue != newValue else { return }
+            Haptics.select()
+        }
         .task {
             if env.isSignedIn, let userId = env.currentProfile?.id {
                 await env.notificationsService.fetchUnreadCount(userId: userId)
@@ -348,48 +506,117 @@ struct MainTabView: View {
 }
 
 // MARK: - Splash View
+//
+// A multi-stage launch moment rather than a bare scale+fade: a soft tinted
+// glow blooms behind the mark, the logo springs in with a touch of overshoot,
+// the script wordmark rises in a beat later, then the whole lockup lifts and
+// fades away together. Deliberately self-contained (no cross-tab
+// matchedGeometryEffect into HomeHero's async-loaded logo) so it can never
+// visibly stutter waiting on a network image — every element here is a local
+// asset/bundled font, so geometry is known on the very first frame.
 
 struct SplashView: View {
+    let onBeginExit: () -> Void
     let onComplete: () -> Void
-    @State private var scale: CGFloat = 0.7
-    @State private var opacity: Double = 0
+
+    @State private var glowOpacity: Double = 0
+    @State private var logoScale: CGFloat = 0.6
+    @State private var logoOpacity: Double = 0
+    @State private var wordmarkOpacity: Double = 0
+    @State private var wordmarkOffset: CGFloat = 8
+    // Exit states — logo flies toward the HomeHero header position.
+    @State private var logoExitOffset: CGFloat = 0
+    @State private var logoExitOpacity: Double = 1
 
     var body: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
 
-            Image("brand-logo-green")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 140)
-                .scaleEffect(scale)
-                .opacity(opacity)
-        }
-        .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
-                scale = 1
-                opacity = 1
+            Circle()
+                .fill(RadialGradient(colors: [Color.mlrPrimary.opacity(0.22), .clear],
+                                      center: .center, startRadius: 0, endRadius: 160))
+                .frame(width: 320, height: 320)
+                .opacity(glowOpacity)
+
+            VStack(spacing: 10) {
+                Image("brand-logo-green")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 140)
+                    .shadow(.medium)
+                    .scaleEffect(logoScale)
+                    // logoExitOpacity multiplied so the logo fades as it flies up;
+                    // logoOpacity is the entrance fade-in (kept separate).
+                    .opacity(logoOpacity * logoExitOpacity)
+                    // Flies upward independently of the wordmark during exit.
+                    .offset(y: logoExitOffset)
+
+                Text("Muskellunge Lake Resort")
+                    .font(.script(26))
+                    .foregroundStyle(Color.mlrPrimary)
+                    .opacity(wordmarkOpacity)
+                    .offset(y: wordmarkOffset)
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                withAnimation(.easeIn(duration: 0.25)) {
-                    opacity = 0
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    onComplete()
-                }
-            }
         }
-        // Respect reduce motion — skip animation
+        .onAppear { animateIn() }
+        // Respect reduce motion — skip animation entirely.
         .accessibilityReduceMotion(true) {
-            self.modifier(ImmediateSplashModifier(onComplete: onComplete))
+            self.modifier(ImmediateSplashModifier(onBeginExit: onBeginExit, onComplete: onComplete))
+        }
+    }
+
+    private func animateIn() {
+        withAnimation(.easeOut(duration: 0.4)) {
+            glowOpacity = 1
+        }
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.62)) {
+            logoScale = 1
+            logoOpacity = 1
+        }
+        withAnimation(.easeOut(duration: 0.35).delay(0.28)) {
+            wordmarkOpacity = 1
+            wordmarkOffset = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            Haptics.tap()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.05) {
+            // Signal parent to fade the main content in — the cross-fade with
+            // the upward logo flight creates the "lands in header" impression.
+            onBeginExit()
+
+            // Glow and wordmark fade out first.
+            withAnimation(.easeOut(duration: 0.25)) {
+                glowOpacity = 0
+                wordmarkOpacity = 0
+            }
+
+            // Logo springs upward toward the HomeHero header position and fades
+            // as it arrives. The exact distance is proportional to screen height
+            // so it clears the header on both compact and large devices.
+            let flyDistance = max(200, UIScreen.main.bounds.height * 0.27)
+            withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
+                logoExitOffset = -flyDistance
+            }
+            withAnimation(.easeIn(duration: 0.42)) {
+                logoExitOpacity = 0
+            }
+
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.52) {
+                onComplete()
+            }
         }
     }
 }
 
 private struct ImmediateSplashModifier: ViewModifier {
+    let onBeginExit: () -> Void
     let onComplete: () -> Void
     func body(content: Content) -> some View {
-        Color.clear.onAppear { onComplete() }
+        Color.clear.onAppear {
+            onBeginExit()
+            onComplete()
+        }
     }
 }
 

@@ -31,6 +31,7 @@ struct Committee: Codable, Identifiable, Equatable {
 struct CommitteeArea: Codable, Identifiable, Equatable {
     var committeeSlug: String
     var area: String
+    var description: String?  // migration 0179 — "what is this subcommittee for?"
     var archivedAt: Date?
 
     var id: String { "\(committeeSlug)·\(area)" }
@@ -39,6 +40,7 @@ struct CommitteeArea: Codable, Identifiable, Equatable {
     enum CodingKeys: String, CodingKey {
         case committeeSlug = "committee_slug"
         case area
+        case description
         case archivedAt = "archived_at"
     }
 }
@@ -80,6 +82,9 @@ struct CommitteeRosterEntry: Codable, Identifiable, Equatable {
     var position: Int
     var linkedUserId: UUID?
     var profile: LinkedProfile?
+    /// Committee-LEVEL lead marker (migration 0177) — a lead of the whole
+    /// committee, independent of (and not requiring) any area role.
+    var isCommitteeLead: Bool = false
 
     /// Whether a real account has claimed this slot.
     var isLinked: Bool { linkedUserId != nil }
@@ -100,8 +105,10 @@ struct CommitteeRosterEntry: Codable, Identifiable, Equatable {
         if let e = profile?.contactEmail, !e.isEmpty { return e }
         return email
     }
-    /// True when this slot is a Lead of any area.
-    var isLead: Bool { roles.contains { $0.hasSuffix("· Lead") } }
+    /// True when this slot is a Lead of any area, OR a committee-level lead
+    /// (migration 0177) — the unified notion `is_committee_lead()` checks
+    /// server-side (gates the private Leads chat + scoped roster control).
+    var isLead: Bool { isCommitteeLead || roles.contains { $0.hasSuffix("· Lead") } }
 
     struct LinkedProfile: Codable, Equatable {
         var displayName: String?
@@ -120,6 +127,7 @@ struct CommitteeRosterEntry: Codable, Identifiable, Equatable {
         case id, name, email, phone, roles, position
         case linkedUserId = "linked_user_id"
         case profile = "profiles"
+        case isCommitteeLead = "is_lead"
     }
 }
 

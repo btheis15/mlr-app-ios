@@ -19,6 +19,9 @@ struct CommitteeChatView: View {
     /// Set true when opened from a place that already knows membership (the Feed
     /// conversation list / committee detail), so we don't gate on myMemberships.
     var assumeMember: Bool = false
+    /// Opened from a notification about one message (a chat @mention) — scroll to
+    /// it on first load instead of jumping to the newest.
+    var focusMessageId: UUID? = nil
 
     @State private var isMuted = false
     @State private var showMembers = false
@@ -88,6 +91,11 @@ struct CommitteeChatView: View {
                             }
                         }
                         Button {
+                            showCreatePoll = true
+                        } label: {
+                            Label("Create a poll", systemImage: "chart.bar")
+                        }
+                        Button {
                             Task { await loadMembers() }
                             showMembers = true
                         } label: {
@@ -101,10 +109,21 @@ struct CommitteeChatView: View {
                         } label: {
                             Label("Email members", systemImage: "envelope")
                         }
-                        Button {
-                            Task { await toggleMute() }
-                        } label: {
-                            Label(isMuted ? "Unmute" : "Mute", systemImage: isMuted ? "bell" : "bell.slash")
+                        if isMuted {
+                            Button {
+                                Task { await setMute(false) }
+                            } label: {
+                                Label("Unmute", systemImage: "bell")
+                            }
+                        } else {
+                            Menu {
+                                Button("For 1 day") { Task { await setMute(true, until: .now.addingTimeInterval(86_400)) } }
+                                Button("For 3 days") { Task { await setMute(true, until: .now.addingTimeInterval(3 * 86_400)) } }
+                                Button("For 7 days") { Task { await setMute(true, until: .now.addingTimeInterval(7 * 86_400)) } }
+                                Button("Until I unmute") { Task { await setMute(true) } }
+                            } label: {
+                                Label("Mute", systemImage: "bell.slash")
+                            }
                         }
                     } label: {
                         Image(systemName: isMuted ? "bell.slash.fill" : "ellipsis.circle")
@@ -132,9 +151,10 @@ struct CommitteeChatView: View {
         }
     }
 
-    private func toggleMute() async {
-        isMuted.toggle()
-        await env.committeeService.setAreaMute(committeeId: committee.id, area: area, muted: isMuted)
+    /// Mute for a duration (web #409), permanently (until nil), or unmute.
+    private func setMute(_ muted: Bool, until: Date? = nil) async {
+        isMuted = muted
+        await env.committeeService.setAreaMute(committeeId: committee.id, area: area, muted: muted, mutedUntil: until)
         Haptics.tap()
     }
 
@@ -258,7 +278,7 @@ struct CommitteeChatView: View {
                         Image(systemName: "xmark.circle.fill")
                             .foregroundStyle(Color.mlrTextSubtle)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 .padding(.horizontal, 14).padding(.vertical, 6)
                 .background(Color.mlrCard)
@@ -273,8 +293,7 @@ struct CommitteeChatView: View {
                     isEditing: editingMessage != nil,
                     sending: sending,
                     onSend: { attachments in Task { await send(attachments) } },
-                    onCancelEdit: { cancelEdit() },
-                    onCreatePoll: { showCreatePoll = true }
+                    onCancelEdit: { cancelEdit() }
                 )
             }
         }
@@ -340,6 +359,10 @@ struct CommitteeChatView: View {
                                     reactorName: { reactorName($0) }
                                 )
                                 .id(entry.id)
+                                .transition(.asymmetric(
+                                    insertion: .offset(y: 16).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
                             case .poll(let poll):
                                 ChatPollCard(
                                     poll: poll,
@@ -350,6 +373,10 @@ struct CommitteeChatView: View {
                                 )
                                 .padding(.horizontal, 12)
                                 .id(entry.id)
+                                .transition(.asymmetric(
+                                    insertion: .offset(y: 16).combined(with: .opacity),
+                                    removal: .opacity
+                                ))
                             }
                         }
                     }
@@ -368,9 +395,14 @@ struct CommitteeChatView: View {
             .onChange(of: messages.count) { old, new in
                 guard !messages.isEmpty else { return }
                 if !didInitialScroll {
-                    // Jump straight to the newest on first open (no animation).
+                    // Jump straight to the newest on first open (no animation) —
+                    // or to the message a notification pointed at, when it loaded.
                     didInitialScroll = true
-                    proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                    if let focusMessageId, messages.contains(where: { $0.id == focusMessageId }) {
+                        proxy.scrollTo("m-\(focusMessageId.uuidString)", anchor: .center)
+                    } else {
+                        proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                    }
                 } else if atBottom || messages.last?.authorId == env.currentProfile?.id {
                     // Smooth-follow only when already at bottom, and always for my own sends.
                     withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
@@ -397,7 +429,7 @@ struct CommitteeChatView: View {
                             .background(Color.mlrPrimary).clipShape(Capsule())
                             .shadow(color: .black.opacity(0.15), radius: 6, y: 3)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .padding(.bottom, 10)
                     .transition(.move(edge: .bottom).combined(with: .opacity))
                 }
@@ -490,11 +522,16 @@ struct CommitteeChatView: View {
             committeeId: committee.id,
             area: area,
             onInsert: { msg in
-                if !messages.contains(where: { $0.id == msg.id }) {
+                guard !messages.contains(where: { $0.id == msg.id }) else { return }
+                if MLRMotion.reduceMotion {
                     messages.append(msg)
-                    // Keep this channel marked read while it's open.
-                    Task { await env.committeeService.markAreaRead(committeeId: committee.id, area: area) }
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        messages.append(msg)
+                    }
                 }
+                // Keep this channel marked read while it's open.
+                Task { await env.committeeService.markAreaRead(committeeId: committee.id, area: area) }
             },
             onUpdate: { msg in
                 if let idx = messages.firstIndex(where: { $0.id == msg.id }) {
@@ -577,7 +614,13 @@ struct CommitteeChatView: View {
                 text: text, editedAt: nil, deletedAt: nil, createdAt: .now, area: area,
                 media: [], reactions: [])
             temp.replyToId = replyTo?.id
-            messages.append(temp)
+            if MLRMotion.reduceMotion {
+                messages.append(temp)
+            } else {
+                withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                    messages.append(temp)
+                }
+            }
             let savedDraft = draft
             draft = ""
             replyingTo = nil
@@ -612,7 +655,13 @@ struct CommitteeChatView: View {
             let msg = try await env.committeeService.sendMessage(
                 committeeId: committee.id, area: area, text: text, authorId: userId, mentionedIds: mentioned, media: uploaded, replyToId: replyTo?.id)
             if !messages.contains(where: { $0.id == msg.id }) {
-                messages.append(msg)
+                if MLRMotion.reduceMotion {
+                    messages.append(msg)
+                } else {
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) {
+                        messages.append(msg)
+                    }
+                }
             }
             draft = ""
             replyingTo = nil
@@ -722,7 +771,7 @@ private struct MessageBubble: View {
                         .clipShape(Capsule())
                         .overlay(Capsule().stroke(expanded ? Color.mlrPrimary : (mine ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder), lineWidth: expanded ? 1.5 : 1))
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .accessibilityLabel("See who reacted \(item.emoji)")
                 }
             }
@@ -773,7 +822,7 @@ private struct MessageBubble: View {
                             RoundedRectangle(cornerRadius: 1).fill(Color.mlrPrimary).frame(width: 2.5).padding(.vertical, 4)
                         }
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                 }
                 if !message.media.isEmpty {
                     ChatMediaView(media: message.media, isOwn: isOwn)

@@ -88,7 +88,7 @@ final class CommitteeService {
         try await supabase
             .from("committee_roster")
             .select("""
-                id, name, email, phone, roles, position, linked_user_id,
+                id, name, email, phone, roles, position, linked_user_id, is_lead,
                 profiles:linked_user_id(display_name, avatar_url, phone, contact_email)
             """)
             .eq("committee_slug", value: slug)
@@ -116,7 +116,8 @@ final class CommitteeService {
     /// Create or update a roster entry (admin-gated by RLS).
     func saveRosterEntry(
         id: UUID?, committeeSlug: String, name: String,
-        email: String?, phone: String?, roles: [String], linkedUserId: UUID?
+        email: String?, phone: String?, roles: [String], linkedUserId: UUID?,
+        isCommitteeLead: Bool = false
     ) async throws {
         let uid = try? await supabase.auth.session.user.id
         var row: [String: AnyJSON] = [
@@ -126,6 +127,7 @@ final class CommitteeService {
             "phone": phone.map { AnyJSON.string($0) } ?? .null,
             "roles": .array(roles.map { AnyJSON.string($0) }),
             "linked_user_id": linkedUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
+            "is_lead": .bool(isCommitteeLead),
             "updated_at": .string(ISO8601DateFormatter().string(from: Date())),
         ]
         row["updated_by"] = uid.map { AnyJSON.string($0.uuidString) } ?? .null
@@ -509,23 +511,33 @@ final class CommitteeService {
     }
 
     /// Mute or unmute a channel's push notifications (migration 0063).
-    func setAreaMute(committeeId: UUID, area: String?, muted: Bool) async {
-        struct Params: Encodable { let cid: String; let p_area: String?; let p_muted: Bool }
+    /// `mutedUntil` nil = permanent (the old toggle behavior); a date = timed
+    /// mute that auto-expires (migration 0155 / web #409).
+    func setAreaMute(committeeId: UUID, area: String?, muted: Bool, mutedUntil: Date? = nil) async {
+        struct Params: Encodable { let cid: String; let p_area: String?; let p_muted: Bool; let p_muted_until: String? }
+        let until = mutedUntil.map { ISO8601DateFormatter().string(from: $0) }
         _ = try? await supabase
-            .rpc("set_area_mute", params: Params(cid: committeeId.uuidString, p_area: area, p_muted: muted))
+            .rpc("set_area_mute", params: Params(cid: committeeId.uuidString, p_area: area, p_muted: muted, p_muted_until: until))
             .execute()
     }
 
-    /// Whether the caller has muted a channel.
+    /// Whether the caller has muted a channel — permanent, or a timed mute whose
+    /// muted_until is still in the future (migration 0155).
     func isAreaMuted(committeeId: UUID, area: String?) async -> Bool {
-        struct Row: Decodable { let muted: Bool }
+        struct Row: Decodable {
+            let muted: Bool
+            let mutedUntil: Date?
+            enum CodingKeys: String, CodingKey { case muted; case mutedUntil = "muted_until" }
+        }
         let rows: [Row] = (try? await supabase
             .from("committee_area_reads")
-            .select("muted")
+            .select("muted, muted_until")
             .eq("committee_id", value: committeeId.uuidString)
             .eq("area", value: area ?? "")
             .limit(1).execute().value) ?? []
-        return rows.first?.muted ?? false
+        guard let row = rows.first, row.muted else { return false }
+        if let until = row.mutedUntil { return until > Date() }   // timed mute still active?
+        return true                                               // permanent
     }
 
     // MARK: - Chat channels (Messages-style conversation list)
@@ -542,11 +554,25 @@ final class CommitteeService {
             let roster = (try? await fetchRoster(slug: committee.slug)) ?? []
             let myAreas = Self.areas(forUser: userId, in: roster)
             let committeeArchived = committee.isArchived
+            // Fetched once per committee so the "real 'Leads' area" guard below
+            // and the archived-area flagging can share it.
+            let allAreas = await fetchCommitteeAreas(slug: committee.slug, includeArchived: true)
             // Areas archived out from under a member still show (read-only) so
             // history stays reachable — flag them for the "Archived chats" group.
             let archivedAreas: Set<String> = committeeArchived ? Set(myAreas)
-                : Set(await fetchCommitteeAreas(slug: committee.slug, includeArchived: true)
-                        .filter { $0.isArchived }.map(\.area))
+                : Set(allAreas.filter { $0.isArchived }.map(\.area))
+            // A private "Leads" chat (migrations 0172/0177) — anyone holding an
+            // area " · Lead" role OR the committee-level is_lead flag. Backs off
+            // if an admin ever names a real role literally "Leads" (mirrors the
+            // SQL guard in can_access_committee_area), so the sentinel can't
+            // hijack a real role.
+            let hasRealLeadsArea = allAreas.contains { $0.area.lowercased() == "leads" }
+            let iAmLead = roster.contains { $0.linkedUserId == userId && $0.isLead }
+            if iAmLead && !hasRealLeadsArea {
+                channels.append(ChatChannel(committee: committee, area: "Leads",
+                                            title: "Leads", subtitle: committee.name,
+                                            isArchived: committeeArchived))
+            }
             if myAreas.isEmpty {
                 channels.append(ChatChannel(committee: committee, area: nil,
                                             title: committee.name, subtitle: nil,

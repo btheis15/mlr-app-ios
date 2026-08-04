@@ -44,12 +44,22 @@ struct PostCard: View {
             if post.status == .pending {
                 Label("Pending review — only you and admins can see this until it's approved.",
                       systemImage: "hourglass")
-                    .font(.mlrScaled(12))
+                    .font(.mlrScaled(12, weight: .medium))
                     .foregroundStyle(Color.mlrWarning)
+                    .padding(.horizontal, 10).padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.mlrWarning.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrWarning.opacity(0.35), lineWidth: 1))
             } else if post.status == .hidden {
                 Label("Removed by an admin — hidden from the feed.", systemImage: "nosign")
-                    .font(.mlrScaled(12))
+                    .font(.mlrScaled(12, weight: .medium))
                     .foregroundStyle(Color.mlrDanger)
+                    .padding(.horizontal, 10).padding(.vertical, 8)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.mlrDanger.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrDanger.opacity(0.35), lineWidth: 1))
             }
             mediaContent
             if let text = post.text, !text.isEmpty {
@@ -200,7 +210,7 @@ struct PostCard: View {
                             .foregroundStyle(Color.mlrTextMuted)
                             .padding(6)
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(.pressable)
                     .accessibilityLabel(showReactors ? "Hide who reacted" : "See who reacted")
                 }
             }
@@ -249,7 +259,7 @@ struct PostCard: View {
                     .foregroundStyle(Color.mlrTextMuted)
             }
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
     }
 
     // MARK: - Helpers
@@ -311,6 +321,7 @@ struct ReactionButton: View {
                     Text("\(count)")
                         .font(.mlrScaled(13, weight: .semibold))
                         .foregroundStyle(isSelected ? Color.mlrPrimary : Color.mlrTextMuted)
+                        .numericTransition()
                 }
             }
             .padding(.horizontal, count > 0 ? 10 : 8)
@@ -325,7 +336,7 @@ struct ReactionButton: View {
                     )
             )
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.pressable)
         .animation(.easeInOut(duration: 0.12), value: isSelected)
         .animation(.easeInOut(duration: 0.12), value: count)
     }

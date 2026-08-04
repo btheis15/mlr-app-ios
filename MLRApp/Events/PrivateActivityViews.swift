@@ -11,10 +11,14 @@ struct PrivateActivityRow: View {
     let activity: PrivateActivity
     var body: some View {
         HStack(spacing: 12) {
+            // Emoji medallion on a tinted gradient chip.
             Text(activity.emoji?.nilBlank ?? "🎲")
                 .font(.mlrScaled(26))
-                .frame(width: 44, height: 44)
-                .background(Color.mlrPrimary.opacity(0.1))
+                .frame(width: 46, height: 46)
+                .background(
+                    LinearGradient(colors: [Color.mlrPrimary.opacity(0.18), Color.mlrLake.opacity(0.10)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
                 .clipShape(RoundedRectangle(cornerRadius: 12))
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 6) {
@@ -23,15 +27,27 @@ struct PrivateActivityRow: View {
                         .foregroundStyle(Color.mlrText)
                         .lineLimit(1)
                     if activity.tournamentEnabled {
-                        Image(systemName: "trophy.fill")
-                            .font(.mlrScaled(11))
-                            .foregroundStyle(Color.mlrWarning)
+                        // Gold gradient tournament pill.
+                        Label("Tournament", systemImage: "trophy.fill")
+                            .font(.mlrScaled(9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6).padding(.vertical, 2.5)
+                            .background(
+                                LinearGradient(colors: [.mlrFestGold, .mlrSun],
+                                               startPoint: .leading, endPoint: .trailing)
+                            )
+                            .clipShape(Capsule())
+                            .labelStyle(.titleAndIcon)
                     }
                 }
-                Text(subtitle)
-                    .font(.mlrScaled(12))
-                    .foregroundStyle(Color.mlrTextMuted)
-                    .lineLimit(1)
+                HStack(spacing: 6) {
+                    Text(subtitle)
+                        .font(.mlrScaled(12))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .lineLimit(1)
+                        .numericTransition()
+                    InitialsStack(names: goingNames)
+                }
             }
             Spacer(minLength: 0)
             Image(systemName: "chevron.right")
@@ -39,8 +55,11 @@ struct PrivateActivityRow: View {
                 .foregroundStyle(.tertiary)
         }
         .padding(12)
-        .background(Color.mlrCard)
-        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .cardStyle(cornerRadius: 14, elevation: .medium)
+    }
+
+    private var goingNames: [String] {
+        activity.members.filter { $0.rsvp == .going }.map(\.name)
     }
 
     private var subtitle: String {
@@ -49,6 +68,37 @@ struct PrivateActivityRow: View {
         if activity.goingCount > 0 { bits.append("\(activity.goingCount) going") }
         else { bits.append("\(activity.members.count) invited") }
         return bits.joined(separator: " · ")
+    }
+}
+
+/// Small overlapping circles with member initials — the "who's in" garnish for
+/// rows/heroes. (Activity members carry no avatar URLs, so initials stand in.)
+struct InitialsStack: View {
+    let names: [String]
+    var max: Int = 3
+    var diameter: CGFloat = 18
+
+    var body: some View {
+        if !names.isEmpty {
+            HStack(spacing: -diameter * 0.35) {
+                ForEach(Array(names.prefix(max).enumerated()), id: \.offset) { _, name in
+                    Text(String(name.prefix(1)).uppercased())
+                        .font(.system(size: diameter * 0.5, weight: .bold))
+                        .foregroundStyle(Color.mlrPrimary)
+                        .frame(width: diameter, height: diameter)
+                        .background(Color.mlrPrimaryLight)
+                        .clipShape(Circle())
+                        .overlay(Circle().stroke(Color.mlrCard, lineWidth: 1.5))
+                }
+                if names.count > max {
+                    Text("+\(names.count - max)")
+                        .font(.system(size: diameter * 0.45, weight: .semibold))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .padding(.leading, diameter * 0.45)
+                }
+            }
+            .accessibilityHidden(true)
+        }
     }
 }
 
@@ -77,11 +127,89 @@ struct PrivateActivityComposer: View {
 
     private var canCreate: Bool { !title.trimmingCharacters(in: .whitespaces).isEmpty && !creating }
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    static let quickEmojis = ["🎲", "🏆", "🎯", "🃏", "🏐", "⛳️", "🏓", "🎱", "🥏", "🪃"]
+
+    /// The activity as it will appear in the Events list — updates live as you type.
+    private var composerPreview: some View {
+        HStack(spacing: 12) {
+            Text(emoji.nilBlank ?? "🎲")
+                .font(.mlrScaled(26))
+                .frame(width: 46, height: 46)
+                .background(
+                    LinearGradient(colors: [Color.mlrPrimary.opacity(0.18), Color.mlrLake.opacity(0.10)],
+                                   startPoint: .topLeading, endPoint: .bottomTrailing)
+                )
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(title.nilBlank ?? "Your activity")
+                        .font(.mlrScaled(16, weight: .semibold))
+                        .foregroundStyle(title.nilBlank == nil ? Color.mlrTextSubtle : Color.mlrText)
+                        .lineLimit(1)
+                    if tournamentEnabled {
+                        Label("Tournament", systemImage: "trophy.fill")
+                            .font(.mlrScaled(9, weight: .bold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 6).padding(.vertical, 2.5)
+                            .background(LinearGradient(colors: [.mlrFestGold, .mlrSun], startPoint: .leading, endPoint: .trailing))
+                            .clipShape(Capsule())
+                    }
+                }
+                Text(previewSubtitle)
+                    .font(.mlrScaled(12))
+                    .foregroundStyle(Color.mlrTextMuted)
+                    .lineLimit(1)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(12)
+        .cardStyle(cornerRadius: 14, elevation: .medium)
+        .animation(reduceMotion ? nil : MLRMotion.spring, value: tournamentEnabled)
+    }
+
+    private var previewSubtitle: String {
+        var bits: [String] = []
+        if hasDate { bits.append(MLRFormat.shortDate(startsAt)) }
+        if let loc = location.nilBlank { bits.append(loc) }
+        let count = invited.count + typedNames.count
+        bits.append(count == 0 ? "Invite-only" : "\(count) invited")
+        return bits.joined(separator: " · ")
+    }
+
     var body: some View {
         NavigationStack {
             Form {
+                // Live preview — the activity exactly as it will appear (2.1).
+                Section {
+                    composerPreview
+                        .listRowInsets(EdgeInsets())
+                        .listRowBackground(Color.clear)
+                }
+
                 Section("Activity") {
                     TextField("Title (e.g. Baggo tournament)", text: $title)
+                    // Emoji quick-pick + free-text.
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            ForEach(Self.quickEmojis, id: \.self) { e in
+                                Button {
+                                    emoji = e
+                                } label: {
+                                    Text(e)
+                                        .font(.mlrScaled(22))
+                                        .frame(width: 38, height: 38)
+                                        .background(emoji == e ? Color.mlrPrimaryLight : Color.mlrSurface)
+                                        .clipShape(Circle())
+                                        .overlay(Circle().stroke(emoji == e ? Color.mlrPrimary : Color.clear, lineWidth: 1.5))
+                                }
+                                .buttonStyle(.pressable)
+                            }
+                        }
+                        .padding(.vertical, 2)
+                    }
+                    .mlrFeedback(.selection, trigger: emoji)
                     TextField("Emoji (optional)", text: $emoji)
                     TextField("Where (optional)", text: $location)
                     TextField("Details (optional)", text: $description, axis: .vertical).lineLimit(1...4)
@@ -94,15 +222,28 @@ struct PrivateActivityComposer: View {
                 }
                 Section {
                     Toggle("Run a tournament", isOn: $tournamentEnabled)
-                } footer: {
-                    Text("Turns on brackets/standings for this activity.")
+                    if tournamentEnabled {
+                        Label("Brackets, round-robins & standings turn on for this activity — you'll seed players and generate the draw from the activity page.", systemImage: "trophy.fill")
+                            .font(.mlrScaled(12))
+                            .foregroundStyle(Color.mlrFestGold)
+                            .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
+                    }
                 }
+                .animation(reduceMotion ? nil : MLRMotion.spring, value: tournamentEnabled)
                 Section("Invite") {
                     Button { showPicker = true } label: {
                         Label(invited.isEmpty ? "Add app members" : "\(invited.count) added", systemImage: "person.badge.plus")
                     }
+                    // Invited members as removable avatar chips.
                     ForEach(invited) { p in
-                        Text(p.displayName).font(.mlrScaled(14))
+                        HStack(spacing: 10) {
+                            AvatarView(profile: p, size: .small)
+                            Text(p.displayName).font(.mlrScaled(14))
+                            Spacer()
+                            Button { invited.removeAll { $0.id == p.id } } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
+                            }.buttonStyle(.pressable)
+                        }
                     }
                     // Add someone who isn't on the app yet (by name).
                     HStack {
@@ -120,7 +261,7 @@ struct PrivateActivityComposer: View {
                             Spacer()
                             Button { typedNames.removeAll { $0 == name } } label: {
                                 Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.pressable)
                         }
                     }
                     Toggle("Notify people I add", isOn: $notify)
@@ -250,6 +391,7 @@ struct PrivateActivitySheet: View {
     @State private var busy = false
     @State private var showInvite = false
     @State private var showEdit = false
+    @State private var confettiTrigger = 0
 
     private var me: UUID? { env.currentProfile?.id }
     private var canManage: Bool { activity?.canManage(viewerId: me, isAdmin: env.isAdmin) ?? false }
@@ -274,8 +416,17 @@ struct PrivateActivitySheet: View {
                         Menu {
                             Button { showEdit = true } label: { Label("Edit details", systemImage: "pencil") }
                             Button { showInvite = true } label: { Label("Invite people", systemImage: "person.badge.plus") }
-                            Button(role: .destructive) { Task { await archiveOrDelete(activity) } } label: {
-                                Label(activity.isArchived ? "Delete" : "Archive", systemImage: "archivebox")
+                            if activity.isArchived {
+                                Button { Task { await restore(activity) } } label: {
+                                    Label("Restore", systemImage: "arrow.uturn.backward")
+                                }
+                                Button(role: .destructive) { Task { await delete(activity) } } label: {
+                                    Label("Delete", systemImage: "trash")
+                                }
+                            } else {
+                                Button(role: .destructive) { Task { await archive(activity) } } label: {
+                                    Label("Archive", systemImage: "archivebox")
+                                }
                             }
                         } label: { Image(systemName: "ellipsis.circle") }
                     }
@@ -292,6 +443,13 @@ struct PrivateActivitySheet: View {
     @ViewBuilder
     private func content(_ activity: PrivateActivity) -> some View {
         List {
+            // Hero header — mesh band with the emoji medallion + who's hosting.
+            Section {
+                heroHeader(activity)
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
+
             Section {
                 if let desc = activity.description?.nilBlank {
                     Text(desc).font(.mlrBody)
@@ -304,7 +462,7 @@ struct PrivateActivitySheet: View {
                 }
             }
 
-            // My RSVP
+            // My RSVP — confetti + success haptic celebrate a fresh "Going".
             if activity.myMembership(viewerId: me) != nil {
                 Section("Are you in?") {
                     Picker("RSVP", selection: Binding(
@@ -319,7 +477,13 @@ struct PrivateActivitySheet: View {
 
             Section("Who's invited (\(activity.members.count))") {
                 ForEach(activity.sortedMembers) { m in
-                    HStack(spacing: 8) {
+                    HStack(spacing: 10) {
+                        Text(String(m.name.prefix(1)).uppercased())
+                            .font(.mlrScaled(13, weight: .bold))
+                            .foregroundStyle(Color.mlrPrimary)
+                            .frame(width: 28, height: 28)
+                            .background(Color.mlrPrimaryLight)
+                            .clipShape(Circle())
                         Text(m.name).font(.mlrScaled(15, weight: m.isHost ? .semibold : .regular))
                         if m.isHost {
                             Text("Host").font(.mlrScaled(10, weight: .bold)).foregroundStyle(Color.mlrPrimary)
@@ -331,22 +495,90 @@ struct PrivateActivitySheet: View {
                         if canManage && m.userId != activity.createdBy {
                             Button { Task { await removeMember(m) } } label: {
                                 Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
-                            }.buttonStyle(.plain)
+                            }.buttonStyle(.pressable)
                         }
                     }
                 }
             }
 
             if activity.tournamentEnabled {
-                Section("Tournament") {
+                Section {
                     NavigationLink {
                         TournamentContainerView(host: .activity(id: activityId), canManage: canManage)
                     } label: {
-                        Label("Open tournament", systemImage: "trophy.fill")
+                        tournamentCTA
                     }
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
                 }
             }
         }
+        .overlay(ConfettiView(trigger: confettiTrigger).allowsHitTesting(false))
+    }
+
+    /// Mesh hero band: emoji medallion, title, hosts, going count.
+    private func heroHeader(_ activity: PrivateActivity) -> some View {
+        ZStack(alignment: .bottomLeading) {
+            MeshHeroBackground(theme: .accent(.mlrPrimary))
+            VStack(alignment: .leading, spacing: 6) {
+                Text(activity.emoji?.nilBlank ?? "🎲")
+                    .font(.mlrScaled(44))
+                    .frame(width: 68, height: 68)
+                    .background(.white.opacity(0.9))
+                    .clipShape(Circle())
+                    .shadow(.medium)
+                Text(activity.title)
+                    .font(.mlrScaled(26, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .lineLimit(2)
+                    .minimumScaleFactor(0.7)
+                HStack(spacing: 8) {
+                    if !activity.hostNames.isEmpty {
+                        Text("Hosted by \(activity.hostNames.joined(separator: ", "))")
+                            .font(.mlrScaled(12, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.9))
+                            .lineLimit(1)
+                    }
+                    Text("· \(activity.goingCount) going")
+                        .font(.mlrScaled(12, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .numericTransition()
+                }
+            }
+            .padding(16)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .heroOverlayScrim()
+        }
+        .frame(height: 190)
+        .clipShape(RoundedRectangle(cornerRadius: MLRRadius.card))
+    }
+
+    /// Gold gradient tournament CTA card.
+    private var tournamentCTA: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "trophy.fill")
+                .font(.mlrScaled(26, weight: .bold))
+                .symbolEffect(.pulse, options: .repeat(1), value: activity?.tournamentEnabled)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Tournament")
+                    .font(.mlrScaled(17, weight: .bold, design: .rounded))
+                Text(tournamentStatusLine)
+                    .font(.mlrScaled(12, weight: .medium))
+                    .opacity(0.9)
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.mlrScaled(13, weight: .bold))
+        }
+        .foregroundStyle(.white)
+        .padding(.horizontal, 16).padding(.vertical, 14)
+        .gradientCard(
+            LinearGradient(colors: [.mlrFestGold, .mlrSun],
+                           startPoint: .topLeading, endPoint: .bottomTrailing),
+            cornerRadius: MLRRadius.card, elevation: .medium)
+    }
+
+    private var tournamentStatusLine: String {
+        "Bracket, standings & the big board →"
     }
 
     // MARK: Actions
@@ -358,19 +590,29 @@ struct PrivateActivitySheet: View {
         loading = false
     }
     private func setRsvp(_ rsvp: ActivityRsvp) async {
+        let wasGoing = activity?.myMembership(viewerId: me)?.rsvp == .going
         try? await env.privateActivitiesService.setRsvp(activityId: activityId, rsvp: rsvp)
         await reload(); onChanged()
+        // Celebrate a FRESH "Going" (not re-taps of an existing one).
+        if rsvp == .going && !wasGoing {
+            confettiTrigger += 1
+            Haptics.success()
+        }
     }
     private func removeMember(_ m: PrivateActivityMember) async {
         try? await env.privateActivitiesService.removeMember(memberId: m.id)
         await reload(); onChanged()
     }
-    private func archiveOrDelete(_ activity: PrivateActivity) async {
-        if activity.isArchived {
-            try? await env.privateActivitiesService.delete(id: activityId)
-        } else {
-            try? await env.privateActivitiesService.setArchived(id: activityId, archived: true)
-        }
+    private func archive(_ activity: PrivateActivity) async {
+        try? await env.privateActivitiesService.setArchived(id: activityId, archived: true)
+        onChanged(); dismiss()
+    }
+    private func restore(_ activity: PrivateActivity) async {
+        try? await env.privateActivitiesService.setArchived(id: activityId, archived: false)
+        await reload(); onChanged()
+    }
+    private func delete(_ activity: PrivateActivity) async {
+        try? await env.privateActivitiesService.delete(id: activityId)
         onChanged(); dismiss()
     }
 }
@@ -383,20 +625,65 @@ private struct InviteToActivitySheet: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State private var selected: [Profile] = []
+    @State private var typedNames: [String] = []   // people not on the app yet
+    @State private var typedName = ""
+    @State private var notify = true
+    @State private var showPicker = false
     @State private var busy = false
+
+    private var canAdd: Bool { (!selected.isEmpty || !typedNames.isEmpty) && !busy }
 
     var body: some View {
         NavigationStack {
-            MemberMultiPicker(selected: $selected)
-                .navigationTitle("Invite people")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button(busy ? "Adding…" : "Add") { Task { await add() } }
-                            .disabled(selected.isEmpty || busy)
+            Form {
+                Section {
+                    Button { showPicker = true } label: {
+                        Label(selected.isEmpty ? "Add app members" : "\(selected.count) added", systemImage: "person.badge.plus")
                     }
+                    ForEach(selected) { p in
+                        HStack(spacing: 10) {
+                            AvatarView(profile: p, size: .small)
+                            Text(p.displayName).font(.mlrScaled(14))
+                            Spacer()
+                            Button { selected.removeAll { $0.id == p.id } } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
+                            }.buttonStyle(.pressable)
+                        }
+                    }
+                    // Add someone who isn't on the app yet (by name).
+                    HStack {
+                        TextField("Or add a name (not on the app)", text: $typedName)
+                        Button("Add") {
+                            let n = typedName.trimmingCharacters(in: .whitespaces)
+                            guard !n.isEmpty else { return }
+                            typedNames.append(n); typedName = ""
+                        }
+                        .disabled(typedName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    }
+                    ForEach(typedNames, id: \.self) { name in
+                        HStack {
+                            Text(name).font(.mlrScaled(14))
+                            Spacer()
+                            Button { typedNames.removeAll { $0 == name } } label: {
+                                Image(systemName: "minus.circle").foregroundStyle(Color.mlrTextSubtle)
+                            }.buttonStyle(.pressable)
+                        }
+                    }
+                    Toggle("Notify people I add", isOn: $notify)
                 }
+            }
+            .navigationTitle("Invite people")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button(busy ? "Adding…" : "Add") { Task { await add() } }
+                        .disabled(!canAdd)
+                }
+            }
+            .sheet(isPresented: $showPicker) {
+                MemberMultiPicker(selected: $selected)
+            }
         }
     }
 
@@ -404,7 +691,11 @@ private struct InviteToActivitySheet: View {
         busy = true; defer { busy = false }
         for p in selected {
             _ = try? await env.privateActivitiesService.addMember(
-                activityId: activityId, member: .init(userId: p.id, name: p.displayName), notify: true)
+                activityId: activityId, member: .init(userId: p.id, name: p.displayName), notify: notify)
+        }
+        for name in typedNames {
+            _ = try? await env.privateActivitiesService.addMember(
+                activityId: activityId, member: .init(userId: nil, name: name), notify: notify)
         }
         onInvited(); dismiss()
     }

@@ -126,7 +126,7 @@ struct FestDuesCalculator: View {
                     .clipShape(Circle())
                     .overlay(Circle().strokeBorder(Color.mlrFest.opacity(0.2)))
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
             .disabled(count <= min)
             .opacity(count <= min ? 0.3 : 1)
 
@@ -141,7 +141,7 @@ struct FestDuesCalculator: View {
                     .background(Color.mlrFest)
                     .clipShape(Circle())
             }
-            .buttonStyle(.plain)
+            .buttonStyle(.pressable)
         }
     }
 

@@ -141,9 +141,10 @@ private struct FestScheduleEditor: View {
 
     private func newDraft() -> FestScheduleDraft {
         let day = FestDays.options(env.festContentService.config).first ?? FamilyFestConfig.startDate
-        return FestScheduleDraft(id: nil, day: day, startTime: nil, endTime: nil, title: "", emoji: nil,
+        return FestScheduleDraft(id: nil, day: day, anytime: false, startTime: nil, endTime: nil, title: "", emoji: nil,
                                  location: nil, description: nil, bring: nil, isPrivate: false,
-                                 leadUserId: nil, leadName: nil, leadPhone: nil, position: items.count)
+                                 leadUserId: nil, leadName: nil, leadPhone: nil, position: items.count,
+                                 tournamentEnabled: false)
     }
     private func load() async { loading = true; items = await env.festContentService.editableSchedule(); loading = false }
     private func deleteRows(_ idx: IndexSet) async {
@@ -164,8 +165,17 @@ private struct ScheduleEditSheet: View {
         NavigationStack {
             Form {
                 Section("Event") {
-                    Picker("Day", selection: $draft.day) {
-                        ForEach(FestDays.options(env.festContentService.config), id: \.self) { Text(FestDays.label($0)).tag($0) }
+                    Toggle(isOn: $draft.anytime.animation()) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Anytime (no set day)")
+                            Text("Shows in \u{201C}Anytime all week\u{201D} instead of on a day.")
+                                .font(.caption).foregroundStyle(Color.mlrTextMuted)
+                        }
+                    }
+                    if !draft.anytime {
+                        Picker("Day", selection: $draft.day) {
+                            ForEach(FestDays.options(env.festContentService.config), id: \.self) { Text(FestDays.label($0)).tag($0) }
+                        }
                     }
                     TextField("Title (e.g. Lake Day)", text: $draft.title)
                     TextField("Emoji (optional)", text: optional($draft.emoji))
@@ -189,6 +199,7 @@ private struct ScheduleEditSheet: View {
                     TextField("Description", text: optional($draft.description), axis: .vertical).lineLimit(2...5)
                     TextField("What to bring (optional)", text: optional($draft.bring), axis: .vertical).lineLimit(1...3)
                     Toggle("Private (members only)", isOn: $draft.isPrivate)
+                    Toggle("🏆 Tournament", isOn: $draft.tournamentEnabled)
                 }
             }
             .navigationTitle(draft.id == nil ? "Add event" : "Edit event")
@@ -264,13 +275,20 @@ private struct FestDinnerEditor: View {
     }
 }
 
-private struct DinnerEditSheet: View {
+/// Not `private` — the full day/title/chef/houses/crew editor for
+/// `can_edit_fest()` viewers, reused outside the Planner on the Weekly Menu
+/// tab and dinner detail page (see FestDinnersView/FestDinnersDetailView).
+struct DinnerEditSheet: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State var draft: FestDinnerDraft
     @State private var housesText = ""
     @State private var saving = false
     @State private var showMemberPicker = false
+
+    // A stored `private var` forces the synthesized memberwise init to be
+    // file-private — add an explicit one for the cross-file call sites above.
+    init(draft: FestDinnerDraft) { self.draft = draft }
 
     var body: some View {
         NavigationStack {

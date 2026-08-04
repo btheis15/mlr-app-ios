@@ -64,7 +64,7 @@ struct FestPhotosView: View {
                                     .frame(height: 180)
                                     .clipped()
                             }
-                            .buttonStyle(.plain)
+                            .buttonStyle(.pressable)
                         }
                     }
                 }
@@ -123,7 +123,7 @@ struct FestPhotosView: View {
                         .background(Color.mlrFest)
                         .clipShape(Capsule())
                 }
-                .buttonStyle(.plain)
+                .buttonStyle(.pressable)
             }
         }
     }

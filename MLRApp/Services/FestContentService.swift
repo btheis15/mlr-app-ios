@@ -28,6 +28,10 @@ struct FestDuesTier: Identifiable, Equatable {
 struct FestScheduleDraft: Identifiable, Equatable {
     var id: UUID?
     var day: String           // yyyy-MM-dd
+    /// Migration 0139 — "Anytime all week" instead of a set day. `day` is
+    /// still stored/sent even when true (mirrors web); it's just ignored for
+    /// display and grouping.
+    var anytime: Bool = false
     var startTime: String?
     var endTime: String?
     var title: String
@@ -40,6 +44,8 @@ struct FestScheduleDraft: Identifiable, Equatable {
     var leadName: String?
     var leadPhone: String?
     var position: Int
+    /// Migration 0147 — gates the "🏆 Tournament" section on this activity.
+    var tournamentEnabled: Bool = false
 }
 
 struct FestDinnerDraft: Identifiable, Equatable {
@@ -102,6 +108,13 @@ struct HomeCallout: Identifiable, Equatable {
     /// Linked Family Fest schedule item (migration 0137) — the card borrows its
     /// photo/details, and shows a "📝 Sign up" button when it takes sign-ups.
     var signupItemId: String? = nil
+    /// Linked resort event (migration 0096) — pairs with `excludeNotAttending`
+    /// to hide the card from anyone who explicitly RSVP'd "Can't make it".
+    var eventId: String? = nil
+    var excludeNotAttending: Bool = false
+    /// Linked Drop Box folder (migration 0172) — shows a "📸 Add & see photos"
+    /// button deep-linking straight into that shared album.
+    var dropBoxId: String? = nil
 
     /// Whether this callout should be shown today (yyyy-MM-dd string).
     func isLive(today: String) -> Bool {
@@ -188,8 +201,10 @@ final class FestContentService {
             if let c { config = c }
             if !du.isEmpty { dues = du }
             // Migration 0141 merged the old fest_activities into fest_schedule_items
-            // as anytime events, so the schedule is now the single source — no
-            // separate fetchActivities() (that would double-count the copies).
+            // as anytime events, so the schedule is now the single source. iOS
+            // dropped its own fest_activities read entirely (the dead
+            // fetchActivities()/ActivityRow/FestActivityEditSheet trio this used
+            // to feed were removed) rather than double-counting the copies.
             let combined = s
             if !combined.isEmpty { schedule = combined }
             if !d.isEmpty { dinners = d }
@@ -248,7 +263,10 @@ final class FestContentService {
                     dismissId: row.dismissId ?? row.id.uuidString,
                     position: row.position ?? 0,
                     isActive: row.isActive ?? true,
-                    signupItemId: row.signupItemId?.uuidString
+                    signupItemId: row.signupItemId?.uuidString,
+                    eventId: row.eventId,
+                    excludeNotAttending: row.excludeNotAttending ?? false,
+                    dropBoxId: row.dropBoxId?.uuidString
                 )
             }
         } catch {
@@ -402,12 +420,12 @@ final class FestContentService {
     // ── Upserts + deletes ─────────────────────────────────────────────────────
     func saveSchedule(_ d: FestScheduleDraft) async throws {
         var p: [String: AnyJSON] = [
-            "fest_year": .integer(year), "day": .string(d.day), "title": .string(d.title),
+            "fest_year": .integer(year), "day": .string(d.day), "anytime": .bool(d.anytime), "title": .string(d.title),
             "start_time": j(d.startTime), "end_time": j(d.endTime), "emoji": j(d.emoji),
             "location": j(d.location), "description": j(d.description), "bring": j(d.bring),
             "is_private": .bool(d.isPrivate), "lead_name": j(d.leadName), "lead_phone": j(d.leadPhone),
             "lead_user_id": d.leadUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
-            "position": .integer(d.position),
+            "position": .integer(d.position), "tournament_enabled": .bool(d.tournamentEnabled),
         ]
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_schedule_items", id: d.id, payload: p)
@@ -488,6 +506,7 @@ final class FestContentService {
             payload["signup_end_time"]     = signup.endTime.map { AnyJSON.string($0) } ?? .null
             payload["signup_instructions"] = signup.instructions.map { AnyJSON.string($0) } ?? .null
             payload["signup_team_size"]    = signup.teamSize.map { AnyJSON.double(Double($0)) } ?? .null
+            payload["signup_hide_names"]   = .bool(signup.hideNames)
         }
         if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
         try await supabase.from("fest_schedule_items").update(payload).eq("id", value: itemId.uuidString).execute()
@@ -503,6 +522,7 @@ final class FestContentService {
         var endTime: String?
         var instructions: String?
         var teamSize: Int?
+        var hideNames: Bool = false   // migration 0167 — schedule events only
     }
 
     /// Updates only the crew_user_ids on a dinner (admin / canEditFest / chef only).
@@ -540,8 +560,13 @@ final class FestContentService {
                 day: r.anytime == true ? "Anytime" : (Self.weekday(from: r.day) ?? r.day),
                 isoDate: r.anytime == true ? nil : r.day,
                 // An "Anytime all week" event with no set time isn't pending a
-                // decision — show "No specific time", not "TBD" (web #378).
-                time: r.startTime?.nilIfBlank ?? (r.anytime == true ? "No specific time" : "TBD"),
+                // decision — "No specific time", not "TBD" (web #378). If it takes
+                // TIMED sign-ups, the times live in the sign-up card, so point
+                // there instead: "Specific time slots" (web #416).
+                time: r.startTime?.nilIfBlank ?? (
+                    r.anytime == true
+                        ? ((r.signupEnabled ?? false) && r.signupMode != "headcount" ? "Specific time slots" : "No specific time")
+                        : "TBD"),
                 title: Self.titled(emoji: r.emoji, title: r.title),
                 location: r.location?.nilIfBlank ?? "TBD",
                 description: r.description,
@@ -560,54 +585,11 @@ final class FestContentService {
                 signupEndTime: r.signupEndTime,
                 signupInstructions: r.signupInstructions,
                 signupTeamSize: r.signupTeamSize,
-                signupFields: r.signupFields ?? []
+                signupFields: r.signupFields ?? [],
+                signupHideNames: r.signupHideNames ?? false,
+                tournamentEnabled: r.tournamentEnabled ?? false
             )
         }
-    }
-
-    private func fetchActivities() async throws -> [ScheduleItem] {
-        let rows: [ActivityRow] = try await supabase
-            .from("fest_activities").select("*").eq("fest_year", value: year)
-            .order("position", ascending: true)
-            .execute().value
-        return rows.map { r in
-            // Anytime activities render via the existing "Anytime" schedule slot.
-            let detail = [r.blurb, r.details].compactMap { $0?.nilIfBlank }.joined(separator: " ")
-            return ScheduleItem(
-                id: r.id.uuidString,
-                day: "Anytime",
-                isoDate: nil,
-                time: "Any time",
-                title: Self.titled(emoji: r.emoji, title: r.title),
-                location: r.location,
-                description: detail.isEmpty ? nil : detail,
-                isPrivate: false,
-                leads: [],
-                leadUserId: r.leadUserId,
-                crewUserIds: r.crewUserIds ?? []
-            )
-        }
-    }
-
-    /// Update an "Anytime" activity's details subset (location + details) — the
-    /// self-editable fields for a lead/crew member (migration 0110). Writes the
-    /// fest_activities row directly; RLS gates who may.
-    func updateActivityDetails(activityId: UUID, location: String?, details: String?) async throws {
-        var payload: [String: AnyJSON] = [
-            "location": j(location),
-            "details":  j(details),
-        ]
-        if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
-        try await supabase.from("fest_activities").update(payload).eq("id", value: activityId.uuidString).execute()
-    }
-
-    /// The raw editable fields for one activity (for the inline edit sheet).
-    func fetchActivityRaw(activityId: UUID) async -> (location: String?, details: String?)? {
-        struct Raw: Decodable { let location: String?; let details: String? }
-        let row: Raw? = try? await supabase
-            .from("fest_activities").select("location, details")
-            .eq("id", value: activityId.uuidString).single().execute().value
-        return row.map { ($0.location, $0.details) }
     }
 
     private func fetchDinners() async throws -> [FestDinner] {
@@ -615,7 +597,7 @@ final class FestContentService {
             .from("fest_dinners").select("*").eq("fest_year", value: year)
             .order("day", ascending: true).order("position", ascending: true)
             .execute().value
-        return rows.map { r in
+        let dinners = rows.map { r in
             FestDinner(
                 id: r.id.uuidString,
                 day: Self.weekday(from: r.day) ?? r.day,
@@ -629,6 +611,10 @@ final class FestContentService {
                 crew: r.houses ?? []
             )
         }
+        // Sort by calendar weekday order (Sun=0…Sat=6) since DB stores day as
+        // weekday name or ISO date — both sort alphabetically, not chronologically.
+        let order = ["Sunday":0,"Monday":1,"Tuesday":2,"Wednesday":3,"Thursday":4,"Friday":5,"Saturday":6]
+        return dinners.sorted { (order[$0.day] ?? 99) < (order[$1.day] ?? 99) }
     }
 
     private func fetchPayees() async throws -> [Payee] {
@@ -720,6 +706,8 @@ private struct ScheduleRow: Decodable {
     let signupInstructions: String?
     let signupTeamSize: Int?
     let signupFields: [SignupField]?
+    let signupHideNames: Bool?   // migration 0167
+    let tournamentEnabled: Bool? // migration 0147
     enum CodingKeys: String, CodingKey {
         case id, day, title, emoji, location, description, anytime, links, bring
         case imageUrl    = "image_url"
@@ -737,22 +725,8 @@ private struct ScheduleRow: Decodable {
         case signupInstructions = "signup_instructions"
         case signupTeamSize     = "signup_team_size"
         case signupFields       = "signup_fields"
-    }
-}
-
-private struct ActivityRow: Decodable {
-    let id: UUID
-    let title: String
-    let emoji: String?
-    let blurb: String?
-    let details: String?
-    let location: String?
-    let leadUserId: UUID?
-    let crewUserIds: [UUID]?
-    enum CodingKeys: String, CodingKey {
-        case id, title, emoji, blurb, details, location
-        case leadUserId = "lead_user_id"
-        case crewUserIds = "crew_user_ids"
+        case signupHideNames    = "signup_hide_names"
+        case tournamentEnabled  = "tournament_enabled"
     }
 }
 
@@ -802,6 +776,9 @@ private struct CalloutRow: Decodable {
     let position: Int?
     let isActive: Bool?
     let signupItemId: UUID?   // migration 0137 — linked fest schedule item
+    let eventId: String?      // migration 0096 — event targeting
+    let excludeNotAttending: Bool?
+    let dropBoxId: UUID?      // migration 0172 — linked Drop Box folder
 
     struct CalloutLinkRow: Decodable {
         let href: String
@@ -818,6 +795,9 @@ private struct CalloutRow: Decodable {
         case position
         case isActive  = "is_active"
         case signupItemId = "signup_item_id"
+        case eventId = "event_id"
+        case excludeNotAttending = "exclude_not_attending"
+        case dropBoxId = "drop_box_id"
     }
 }
 
@@ -825,6 +805,7 @@ private struct CalloutRow: Decodable {
 private struct ScheduleRowFull: Decodable {
     let id: UUID
     let day: String
+    let anytime: Bool?         // migration 0139
     let start_time: String?
     let end_time: String?
     let title: String
@@ -837,11 +818,12 @@ private struct ScheduleRowFull: Decodable {
     let lead_name: String?
     let lead_phone: String?
     let position: Int
+    let tournament_enabled: Bool?   // migration 0147
     var draft: FestScheduleDraft {
-        FestScheduleDraft(id: id, day: day, startTime: start_time, endTime: end_time, title: title,
+        FestScheduleDraft(id: id, day: day, anytime: anytime ?? false, startTime: start_time, endTime: end_time, title: title,
                           emoji: emoji, location: location, description: description, bring: bring,
                           isPrivate: is_private, leadUserId: lead_user_id, leadName: lead_name,
-                          leadPhone: lead_phone, position: position)
+                          leadPhone: lead_phone, position: position, tournamentEnabled: tournament_enabled ?? false)
     }
 }
 
