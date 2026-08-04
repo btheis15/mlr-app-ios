@@ -28,6 +28,7 @@ struct PostCard: View {
     @State private var shareState: ShareState?
     @State private var showReactors = false
     @State private var reactors: [PostReactor] = []
+    @State private var showEmojiPicker = false
 
     private var canEdit: Bool {
         env.isAdmin || env.currentProfile?.id == post.authorId
@@ -62,10 +63,24 @@ struct PostCard: View {
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrDanger.opacity(0.35), lineWidth: 1))
             }
             mediaContent
+                .onLongPressGesture(minimumDuration: 0.4) {
+                    guard env.isSignedIn else { return }
+                    Haptics.tap()
+                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                        showEmojiPicker = true
+                    }
+                }
             if let text = post.text, !text.isEmpty {
                 MentionText(text)
                     .font(.body)
                     .foregroundStyle(Color.mlrText)
+                    .onLongPressGesture(minimumDuration: 0.4) {
+                        guard env.isSignedIn else { return }
+                        Haptics.tap()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showEmojiPicker = true
+                        }
+                    }
             }
             if !post.tags.isEmpty {
                 Label("With \(post.tags.map(\.name).joined(separator: ", "))", systemImage: "person.2.fill")
@@ -180,26 +195,56 @@ struct PostCard: View {
     }
 
     // MARK: - Reaction row
+    // Facebook/Messages style: only used reactions shown inline as pills.
+    // A smiley button (or long-press on media) opens the emoji picker.
 
     private var reactionRow: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 6) {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 6) {
-                        ForEach(reactionEmojis, id: \.self) { emoji in
-                            ReactionButton(
-                                emoji: emoji,
-                                count: reactionCount(for: emoji),
-                                isSelected: isMineReaction(emoji: emoji),
-                                onTap: {
-                                    Haptics.tap()
-                                    Task { await onReactionToggle(emoji) }
-                                }
-                            )
+                // Used reactions — only emojis with at least one reaction
+                let used = reactionEmojis.filter { reactionCount(for: $0) > 0 }
+                ForEach(used, id: \.self) { emoji in
+                    Button {
+                        Haptics.tap()
+                        Task { await onReactionToggle(emoji) }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Text(emoji).font(.mlrScaled(15))
+                            Text("\(reactionCount(for: emoji))")
+                                .font(.mlrScaled(12, weight: .semibold))
+                                .foregroundStyle(isMineReaction(emoji: emoji) ? Color.mlrPrimary : Color.mlrTextMuted)
                         }
+                        .padding(.horizontal, 9).padding(.vertical, 5)
+                        .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.12) : Color.secondary.opacity(0.08))
+                        .clipShape(Capsule())
+                        .overlay(Capsule().strokeBorder(
+                            isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.35) : Color.secondary.opacity(0.18),
+                            lineWidth: 1))
                     }
+                    .buttonStyle(.pressable)
                 }
-                // "Who reacted" toggle — only when there are reactions.
+
+                // Add-reaction button — opens the emoji picker
+                if env.isSignedIn {
+                    Button {
+                        Haptics.tap()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            showEmojiPicker.toggle()
+                        }
+                    } label: {
+                        Image(systemName: "face.smiling")
+                            .font(.mlrScaled(15))
+                            .foregroundStyle(showEmojiPicker ? Color.mlrPrimary : Color.mlrTextMuted)
+                            .padding(6)
+                            .background(showEmojiPicker ? Color.mlrPrimary.opacity(0.1) : Color.clear)
+                            .clipShape(Circle())
+                    }
+                    .buttonStyle(.pressable)
+                }
+
+                Spacer()
+
+                // "Who reacted" — only when there are reactions
                 if !reactions.isEmpty {
                     Button {
                         withAnimation(.easeInOut(duration: 0.2)) { showReactors.toggle() }
@@ -213,6 +258,34 @@ struct PostCard: View {
                     .buttonStyle(.pressable)
                     .accessibilityLabel(showReactors ? "Hide who reacted" : "See who reacted")
                 }
+            }
+
+            // Floating emoji picker — appears inline below used reactions
+            if showEmojiPicker {
+                HStack(spacing: 2) {
+                    ForEach(reactionEmojis, id: \.self) { emoji in
+                        Button {
+                            Haptics.tap()
+                            Task { await onReactionToggle(emoji) }
+                            withAnimation(.spring(response: 0.25, dampingFraction: 0.7)) {
+                                showEmojiPicker = false
+                            }
+                        } label: {
+                            Text(emoji)
+                                .font(.system(size: 28))
+                                .scaleEffect(isMineReaction(emoji: emoji) ? 0.85 : 1.0)
+                                .padding(6)
+                                .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.12) : Color.clear)
+                                .clipShape(Circle())
+                        }
+                        .buttonStyle(.pressable)
+                    }
+                }
+                .padding(.horizontal, 8).padding(.vertical, 6)
+                .background(.ultraThinMaterial)
+                .clipShape(Capsule())
+                .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
+                .transition(.scale(scale: 0.8, anchor: .topLeading).combined(with: .opacity))
             }
 
             if showReactors {

@@ -140,7 +140,10 @@ private struct ZoomableImage: View {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
                 if scale <= 1 {
-                    dragDown = max(0, value.translation.height)   // swipe-down only
+                    // Only claim vertical-dominant drags — horizontal ones are
+                    // TabView's page swipe and must not be consumed here.
+                    let isVertical = abs(value.translation.height) > abs(value.translation.width)
+                    if isVertical { dragDown = max(0, value.translation.height) }
                 } else {
                     offset = CGSize(width: lastOffset.width + value.translation.width,
                                     height: lastOffset.height + value.translation.height)

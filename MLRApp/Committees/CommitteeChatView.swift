@@ -206,7 +206,13 @@ struct CommitteeChatView: View {
     private func loadMembers() async {
         let roster = (try? await env.committeeService.fetchRoster(slug: committee.slug)) ?? []
         if let area {
-            channelMembers = roster.filter { $0.roles.contains(area) || $0.roles.contains("\(area) · Lead") }
+            if area.lowercased() == "leads" {
+                // Synthetic Leads channel: anyone who is a committee-level lead
+                // (is_lead flag) OR holds any " · Lead" area role.
+                channelMembers = roster.filter { $0.isLead }
+            } else {
+                channelMembers = roster.filter { $0.roles.contains(area) || $0.roles.contains("\(area) · Lead") }
+            }
         } else {
             channelMembers = roster
         }
