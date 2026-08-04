@@ -98,6 +98,60 @@ final class MediaService {
         return json.url
     }
 
+    // MARK: - Drop boxes (migration 0171)
+
+    /// Result of a drop-box upload: the stored url + its small preview
+    /// (migration 0173 — the grid renders this instead of the full-res file).
+    struct DropBoxUploadResult { let url: String; let thumbnailUrl: String? }
+
+    /// Resize to max 1920px and upload a photo to box <boxId>'s folder
+    /// (category=dropbox, no size cap on the mini). No Supabase Storage
+    /// fallback — drop boxes are mini-only, like chat/work-item media.
+    func uploadDropBoxImage(image: UIImage, boxId: UUID) async throws -> DropBoxUploadResult {
+        let resized = resize(image: image, maxDimension: 1920)
+        guard let data = resized.jpegData(compressionQuality: 0.8) else {
+            throw MediaError.encodingFailed
+        }
+        return try await uploadDropBoxFile(data: data, mimeType: "image/jpeg", boxId: boxId)
+    }
+
+    /// Upload a drop-box video (mp4) — the mini transcodes it in the background.
+    func uploadDropBoxVideo(data: Data, boxId: UUID) async throws -> DropBoxUploadResult {
+        try await uploadDropBoxFile(data: data, mimeType: "video/mp4", boxId: boxId)
+    }
+
+    private func uploadDropBoxFile(data: Data, mimeType: String, boxId: UUID) async throws -> DropBoxUploadResult {
+        guard let session = try? await supabase.auth.session else { throw MediaError.miniServerError }
+        var comps = URLComponents(string: "\(Self.miniServerURL)/upload")
+        comps?.queryItems = [
+            URLQueryItem(name: "category", value: "dropbox"),
+            URLQueryItem(name: "room", value: boxId.uuidString),
+        ]
+        guard let url = comps?.url else { throw MediaError.invalidURL }
+
+        var request = URLRequest(url: url, timeoutInterval: 120)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+
+        var body = Data()
+        let ext = mimeType.hasSuffix("jpeg") ? "jpg" : "mp4"
+        body.append("--\(boundary)\r\n")
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"upload.\(ext)\"\r\n")
+        body.append("Content-Type: \(mimeType)\r\n\r\n")
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n")
+        request.httpBody = body
+
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw MediaError.miniServerError
+        }
+        let json = try JSONDecoder().decode(MiniUploadResponse.self, from: responseData)
+        return DropBoxUploadResult(url: json.url, thumbnailUrl: json.thumbnailUrl)
+    }
+
     // MARK: - Chat attachments
 
     /// Result of a chat upload: the stored URL, the server-classified media type
@@ -346,6 +400,7 @@ private struct MiniUploadResponse: Decodable {
     let url: String
     var type: String?          // "image" | "video" | "file" (chat uploads)
     var originalName: String?  // the original filename (chat file uploads)
+    var thumbnailUrl: String?  // small preview url (migration 0173) — grids render this
 }
 
 // MARK: - Data helpers

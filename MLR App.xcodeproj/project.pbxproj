@@ -199,6 +199,9 @@
 		D3A0000000000000000000B6 /* HouseList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A6 /* HouseList.swift */; };
 		D3A0000000000000000000B7 /* HouseListsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A7 /* HouseListsService.swift */; };
 		D3A0000000000000000000B8 /* HouseListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A8 /* HouseListsView.swift */; };
+		D3A0000000000000000000B9 /* DropBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A9 /* DropBox.swift */; };
+		D3A0000000000000000000BA /* DropBoxesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AA /* DropBoxesService.swift */; };
+		D3A0000000000000000000BB /* DropBoxesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AB /* DropBoxesView.swift */; };
 		D3E4FD3D2FFFE7340008DA06 /* FestDuesCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */; };
 		D3EA3D94301144AF0092AE8E /* Meeting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D93301144AF0092AE8E /* Meeting.swift */; };
 		D3EA3D96301145120092AE8E /* MeetingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D95301145120092AE8E /* MeetingsService.swift */; };
@@ -442,6 +445,9 @@
 		D3A0000000000000000000A6 /* HouseList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseList.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A7 /* HouseListsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseListsService.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A8 /* HouseListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseListsView.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000A9 /* DropBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropBox.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AA /* DropBoxesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropBoxesService.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AB /* DropBoxesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropBoxesView.swift; sourceTree = "<group>"; };
 		D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDuesCalculator.swift; sourceTree = "<group>"; };
 		D3EA3D93301144AF0092AE8E /* Meeting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Meeting.swift; sourceTree = "<group>"; };
 		D3EA3D95301145120092AE8E /* MeetingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingsService.swift; sourceTree = "<group>"; };
@@ -667,6 +673,7 @@
 				D31B53773012B54500C8D189 /* PrivateActivity.swift */,
 				D31B537D3012B69400C8D189 /* Tournament.swift */,
 				D3A0000000000000000000A6 /* HouseList.swift */,
+				D3A0000000000000000000A9 /* DropBox.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -722,6 +729,7 @@
 				D31B536E3012A46900C8D189 /* ChatPollsService.swift */,
 				D31B53793012B56400C8D189 /* PrivateActivitiesService.swift */,
 				D31B537F3012B6C600C8D189 /* TournamentsService.swift */,
+				D3A0000000000000000000AA /* DropBoxesService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -929,6 +937,7 @@
 				D3F9D874300710BC006874DA /* Polls */,
 				D3EA3D97301145680092AE8E /* Meetings */,
 				D31B53703012A51F00C8D189 /* Chat */,
+				D3A0000000000000000000C1 /* DropBoxes */,
 			);
 			path = MLRApp;
 			sourceTree = "<group>";
@@ -993,6 +1002,14 @@
 				D363476C2FFEA947001D52C8 /* GlobalSearchView.swift */,
 			);
 			path = Search;
+			sourceTree = "<group>";
+		};
+		D3A0000000000000000000C1 /* DropBoxes */ = {
+			isa = PBXGroup;
+			children = (
+				D3A0000000000000000000AB /* DropBoxesView.swift */,
+			);
+			path = DropBoxes;
 			sourceTree = "<group>";
 		};
 		D3EA3D97301145680092AE8E /* Meetings */ = {
@@ -1311,6 +1328,9 @@
 				D3A0000000000000000000B6 /* HouseList.swift in Sources */,
 				D3A0000000000000000000B7 /* HouseListsService.swift in Sources */,
 				D3A0000000000000000000B8 /* HouseListsView.swift in Sources */,
+				D3A0000000000000000000B9 /* DropBox.swift in Sources */,
+				D3A0000000000000000000BA /* DropBoxesService.swift in Sources */,
+				D3A0000000000000000000BB /* DropBoxesView.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */

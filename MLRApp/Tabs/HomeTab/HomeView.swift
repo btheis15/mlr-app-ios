@@ -199,9 +199,11 @@ struct HomeView: View {
 
     // MARK: - Subviews
 
-    // 2-column grid of the six primary destinations — always visible, no tap
+    // 2-column grid of the primary destinations — always visible, no tap
     // to expand. Row order matches web HomeQuickActions (Brian's ordering):
-    // Events · Committees / People · Ask for Help / Local Places · Cabin Stay.
+    // Events · Committees / People · Ask for Help / Local Places · Cabin Stay,
+    // plus Drop Box (migration 0171 — not yet on web's own quick-actions grid
+    // either; web reaches it from a dedicated tile there).
     private var quickActionsGrid: some View {
         let cols = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
         return VStack(spacing: 12) {
@@ -256,6 +258,10 @@ struct HomeView: View {
             NavigationLink(destination: CabinBookingsView()) {
                 HomeTile(icon: "house.lodge.fill", title: "Cabin Stay",
                          subtitle: "Reserve a room for any week.", tint: Color.mlrPrimary)
+            }
+            NavigationLink(destination: DropBoxesView()) {
+                HomeTile(icon: "photo.stack.fill", title: "Drop Box",
+                         subtitle: "Dump & browse shared photos.", tint: Color.mlrAccent)
             }
         }
         }
