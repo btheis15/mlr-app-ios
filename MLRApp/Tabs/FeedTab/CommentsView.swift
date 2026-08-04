@@ -1,5 +1,6 @@
 import SwiftUI
 import Kingfisher
+import PhotosUI
 
 // MARK: - CommentsView
 // Sheet presenting the comment thread for a post.
@@ -28,7 +29,15 @@ struct CommentsView: View {
     @State private var mentionQuery: String? = nil
     @State private var allProfiles: [Profile] = []
 
+    // Attachments (migration 0162) — same compress/upload pipeline as a post.
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var images: [UIImage] = []
+    @State private var selectedVideo: PhotosPickerItem?
+    @State private var videoData: Data?
+    @State private var isUploading = false
+
     private let charLimit = 300
+    private let maxPhotos = 5
 
     var body: some View {
         NavigationStack {
@@ -67,6 +76,25 @@ struct CommentsView: View {
                 allProfiles = (try? await fetchMemberList()) ?? []
             }
         }
+        .onChange(of: selectedPhotos) { _, items in
+            Task { await loadPhotos(items) }
+        }
+        .onChange(of: selectedVideo) { _, item in
+            Task {
+                guard let item, let data = try? await item.loadTransferable(type: Data.self) else { return }
+                await MainActor.run { videoData = data }
+            }
+        }
+    }
+
+    private func loadPhotos(_ items: [PhotosPickerItem]) async {
+        var loaded: [UIImage] = []
+        for item in items {
+            if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
+                loaded.append(img)
+            }
+        }
+        await MainActor.run { images = loaded }
     }
 
     // MARK: - Post recap
@@ -163,6 +191,31 @@ struct CommentsView: View {
                 .animation(.easeOut(duration: 0.15), value: mentionQuery)
             }
 
+            if !images.isEmpty || videoData != nil {
+                attachmentPreviews
+                    .padding(.horizontal, 12)
+                    .padding(.top, 8)
+            }
+
+            HStack(spacing: 4) {
+                PhotosPicker(selection: $selectedPhotos, maxSelectionCount: maxPhotos, matching: .images) {
+                    Image(systemName: "photo.on.rectangle").font(.mlrScaled(16))
+                }
+                .disabled(isSending || isUploading)
+
+                PhotosPicker(selection: $selectedVideo, matching: .videos) {
+                    Image(systemName: "video.badge.plus").font(.mlrScaled(16))
+                }
+                .disabled(isSending || isUploading)
+                Spacer()
+                if isUploading {
+                    ProgressView().font(.caption)
+                }
+            }
+            .tint(Color.mlrPrimary)
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+
             HStack(alignment: .bottom, spacing: 10) {
                 AvatarView(url: env.currentProfile?.avatarUrl, size: .small)
 
@@ -209,6 +262,43 @@ struct CommentsView: View {
         .background(Color.mlrSurface)
     }
 
+    private var attachmentPreviews: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(Array(images.enumerated()), id: \.offset) { idx, image in
+                    ZStack(alignment: .topTrailing) {
+                        Image(uiImage: image)
+                            .resizable().scaledToFill()
+                            .frame(width: 64, height: 64)
+                            .clipShape(RoundedRectangle(cornerRadius: 10))
+                        Button {
+                            images.remove(at: idx)
+                            if idx < selectedPhotos.count { selectedPhotos.remove(at: idx) }
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.mlrScaled(15)).foregroundStyle(.white).shadow(radius: 2).padding(2)
+                        }
+                    }
+                }
+                if videoData != nil {
+                    ZStack(alignment: .topTrailing) {
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(Color.mlrCard)
+                            .frame(width: 64, height: 64)
+                            .overlay(Image(systemName: "play.circle.fill").font(.mlrScaled(20)).foregroundStyle(Color.mlrTextMuted))
+                        Button {
+                            videoData = nil
+                            selectedVideo = nil
+                        } label: {
+                            Image(systemName: "xmark.circle.fill")
+                                .font(.mlrScaled(15)).foregroundStyle(.white).shadow(radius: 2).padding(2)
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     private var signInPrompt: some View {
         HStack {
             Text("Sign in to comment")
@@ -226,10 +316,14 @@ struct CommentsView: View {
 
     // MARK: - Helpers
 
+    /// A photo/video on its own is a perfectly good comment — text OR at
+    /// least one file, mirroring the post composer's own rule.
     private var canSend: Bool {
-        !commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasText = !commentText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        let hasMedia = !images.isEmpty || videoData != nil
+        return (hasText || hasMedia)
         && commentText.count <= charLimit
-        && !isSending
+        && !isSending && !isUploading
     }
 
     @MainActor
@@ -246,18 +340,34 @@ struct CommentsView: View {
         sendError = nil
         let trimmed = commentText.trimmingCharacters(in: .whitespacesAndNewlines)
         do {
+            var media: [(path: String, type: String)] = []
+            if !images.isEmpty || videoData != nil {
+                isUploading = true
+                for image in images {
+                    let url = try await env.mediaService.uploadPostImage(image: image, userId: profile.id)
+                    media.append((path: url, type: "image"))
+                }
+                if let videoData {
+                    let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: profile.id)
+                    media.append((path: url, type: "video"))
+                }
+                isUploading = false
+            }
             let comment = try await env.postsService.addComment(
                 postId: post.id,
                 text: trimmed,
                 authorId: profile.id,
-                mentionedIds: mentionedUserIds(in: trimmed)
+                mentionedIds: mentionedUserIds(in: trimmed),
+                media: media
             )
             comments.append(comment)
+            images = []; selectedPhotos = []; videoData = nil; selectedVideo = nil
             commentText = ""
             mentionQuery = nil
         } catch {
             sendError = "Couldn't post comment. Please try again."
         }
+        isUploading = false
         isSending = false
     }
 
@@ -364,9 +474,14 @@ struct CommentRow: View {
                         }
                     }
                 }
-                MentionText(comment.text)
-                    .font(.subheadline)
-                    .foregroundStyle(Color.mlrText)
+                if !comment.text.isEmpty {
+                    MentionText(comment.text)
+                        .font(.subheadline)
+                        .foregroundStyle(Color.mlrText)
+                }
+                if !comment.mediaUrls.isEmpty {
+                    CommentMediaRow(comment: comment)
+                }
             }
         }
     }
@@ -376,6 +491,80 @@ struct CommentRow: View {
             return comment.authorName.components(separatedBy: " ").first ?? comment.authorName
         }
         return comment.authorName
+    }
+}
+
+// MARK: - CommentMediaRow
+// A small wrapping row of thumbnails for a comment's attachments (migration
+// 0162) — deliberately lighter than a post's full-bleed MediaGrid/carousel,
+// since this sits inline under a comment. Tapping opens the shared Lightbox,
+// same as a post's own photos.
+
+private struct CommentMediaRow: View {
+    let comment: PostComment
+    @State private var lightbox: CommentLightboxPresentation?
+
+    var body: some View {
+        FlowLayout(spacing: 6) {
+            ForEach(Array(comment.mediaUrls.enumerated()), id: \.offset) { idx, url in
+                let isVideo = idx < comment.mediaIsVideo.count && comment.mediaIsVideo[idx]
+                Button { lightbox = CommentLightboxPresentation(startIndex: idx) } label: {
+                    ZStack {
+                        if isVideo {
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(Color.mlrCard)
+                                .overlay(Image(systemName: "play.circle.fill").font(.mlrScaled(20)).foregroundStyle(Color.mlrTextMuted))
+                        } else {
+                            MediaThumb(url: url)
+                        }
+                    }
+                    .frame(width: 84, height: 84)
+                    .clipShape(RoundedRectangle(cornerRadius: 10))
+                }
+                .buttonStyle(.pressable)
+            }
+        }
+        .fullScreenCover(item: $lightbox) { pres in
+            LightboxView(urls: comment.mediaUrls, isVideo: comment.mediaIsVideo, startIndex: pres.startIndex)
+        }
+    }
+}
+
+private struct CommentLightboxPresentation: Identifiable {
+    let startIndex: Int
+    var id: Int { startIndex }
+}
+
+/// A simple wrapping row layout — no shared component exists yet, so this
+/// mirrors the private copies already in CommitteeDetailView.swift /
+/// HouseCalendarSheets.swift.
+private struct FlowLayout: Layout {
+    var spacing: CGFloat = 6
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let maxWidth = proposal.width ?? .infinity
+        var x: CGFloat = 0, y: CGFloat = 0, rowHeight: CGFloat = 0
+        for sv in subviews {
+            let size = sv.sizeThatFits(.unspecified)
+            if x + size.width > maxWidth && x > 0 { x = 0; y += rowHeight + spacing; rowHeight = 0 }
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
+        return CGSize(width: maxWidth == .infinity ? max(0, x - spacing) : maxWidth,
+                      height: y + rowHeight)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX, y = bounds.minY, rowHeight: CGFloat = 0
+        for sv in subviews {
+            let size = sv.sizeThatFits(.unspecified)
+            if x - bounds.minX + size.width > bounds.width && x > bounds.minX {
+                x = bounds.minX; y += rowHeight + spacing; rowHeight = 0
+            }
+            sv.place(at: CGPoint(x: x, y: y), anchor: .topLeading, proposal: ProposedViewSize(size))
+            x += size.width + spacing
+            rowHeight = max(rowHeight, size.height)
+        }
     }
 }
 
