@@ -488,40 +488,82 @@ struct MainTabView: View {
 }
 
 // MARK: - Splash View
+//
+// A multi-stage launch moment rather than a bare scale+fade: a soft tinted
+// glow blooms behind the mark, the logo springs in with a touch of overshoot,
+// the script wordmark rises in a beat later, then the whole lockup lifts and
+// fades away together. Deliberately self-contained (no cross-tab
+// matchedGeometryEffect into HomeHero's async-loaded logo) so it can never
+// visibly stutter waiting on a network image — every element here is a local
+// asset/bundled font, so geometry is known on the very first frame.
 
 struct SplashView: View {
     let onComplete: () -> Void
-    @State private var scale: CGFloat = 0.7
-    @State private var opacity: Double = 0
+    @State private var glowOpacity: Double = 0
+    @State private var logoScale: CGFloat = 0.6
+    @State private var logoOpacity: Double = 0
+    @State private var wordmarkOpacity: Double = 0
+    @State private var wordmarkOffset: CGFloat = 8
+    @State private var lifted = false
 
     var body: some View {
         ZStack {
             Color(.systemBackground).ignoresSafeArea()
 
-            Image("brand-logo-green")
-                .resizable()
-                .scaledToFit()
-                .frame(width: 140)
-                .scaleEffect(scale)
-                .opacity(opacity)
-        }
-        .onAppear {
-            withAnimation(.spring(response: 0.5, dampingFraction: 0.75)) {
-                scale = 1
-                opacity = 1
+            Circle()
+                .fill(RadialGradient(colors: [Color.mlrPrimary.opacity(0.22), .clear],
+                                      center: .center, startRadius: 0, endRadius: 160))
+                .frame(width: 320, height: 320)
+                .opacity(glowOpacity)
+
+            VStack(spacing: 10) {
+                Image("brand-logo-green")
+                    .resizable()
+                    .scaledToFit()
+                    .frame(width: 140)
+                    .shadow(.medium)
+                    .scaleEffect(logoScale)
+                    .opacity(logoOpacity)
+
+                Text("Muskellunge Lake Resort")
+                    .font(.script(26))
+                    .foregroundStyle(Color.mlrPrimary)
+                    .opacity(wordmarkOpacity)
+                    .offset(y: wordmarkOffset)
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 1.2) {
-                withAnimation(.easeIn(duration: 0.25)) {
-                    opacity = 0
-                }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                    onComplete()
-                }
-            }
+            .offset(y: lifted ? -18 : 0)
+            .opacity(lifted ? 0 : 1)
         }
+        .onAppear { animateIn() }
         // Respect reduce motion — skip animation
         .accessibilityReduceMotion(true) {
             self.modifier(ImmediateSplashModifier(onComplete: onComplete))
+        }
+    }
+
+    private func animateIn() {
+        withAnimation(.easeOut(duration: 0.4)) {
+            glowOpacity = 1
+        }
+        withAnimation(.spring(response: 0.6, dampingFraction: 0.62)) {
+            logoScale = 1
+            logoOpacity = 1
+        }
+        withAnimation(.easeOut(duration: 0.35).delay(0.28)) {
+            wordmarkOpacity = 1
+            wordmarkOffset = 0
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
+            Haptics.tap()
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.05) {
+            withAnimation(.easeIn(duration: 0.3)) {
+                lifted = true
+                glowOpacity = 0
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+                onComplete()
+            }
         }
     }
 }
