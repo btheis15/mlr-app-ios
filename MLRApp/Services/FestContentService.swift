@@ -28,6 +28,10 @@ struct FestDuesTier: Identifiable, Equatable {
 struct FestScheduleDraft: Identifiable, Equatable {
     var id: UUID?
     var day: String           // yyyy-MM-dd
+    /// Migration 0139 — "Anytime all week" instead of a set day. `day` is
+    /// still stored/sent even when true (mirrors web); it's just ignored for
+    /// display and grouping.
+    var anytime: Bool = false
     var startTime: String?
     var endTime: String?
     var title: String
@@ -414,7 +418,7 @@ final class FestContentService {
     // ── Upserts + deletes ─────────────────────────────────────────────────────
     func saveSchedule(_ d: FestScheduleDraft) async throws {
         var p: [String: AnyJSON] = [
-            "fest_year": .integer(year), "day": .string(d.day), "title": .string(d.title),
+            "fest_year": .integer(year), "day": .string(d.day), "anytime": .bool(d.anytime), "title": .string(d.title),
             "start_time": j(d.startTime), "end_time": j(d.endTime), "emoji": j(d.emoji),
             "location": j(d.location), "description": j(d.description), "bring": j(d.bring),
             "is_private": .bool(d.isPrivate), "lead_name": j(d.leadName), "lead_phone": j(d.leadPhone),
@@ -792,6 +796,7 @@ private struct CalloutRow: Decodable {
 private struct ScheduleRowFull: Decodable {
     let id: UUID
     let day: String
+    let anytime: Bool?         // migration 0139
     let start_time: String?
     let end_time: String?
     let title: String
@@ -805,7 +810,7 @@ private struct ScheduleRowFull: Decodable {
     let lead_phone: String?
     let position: Int
     var draft: FestScheduleDraft {
-        FestScheduleDraft(id: id, day: day, startTime: start_time, endTime: end_time, title: title,
+        FestScheduleDraft(id: id, day: day, anytime: anytime ?? false, startTime: start_time, endTime: end_time, title: title,
                           emoji: emoji, location: location, description: description, bring: bring,
                           isPrivate: is_private, leadUserId: lead_user_id, leadName: lead_name,
                           leadPhone: lead_phone, position: position)

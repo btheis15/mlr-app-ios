@@ -141,7 +141,7 @@ private struct FestScheduleEditor: View {
 
     private func newDraft() -> FestScheduleDraft {
         let day = FestDays.options(env.festContentService.config).first ?? FamilyFestConfig.startDate
-        return FestScheduleDraft(id: nil, day: day, startTime: nil, endTime: nil, title: "", emoji: nil,
+        return FestScheduleDraft(id: nil, day: day, anytime: false, startTime: nil, endTime: nil, title: "", emoji: nil,
                                  location: nil, description: nil, bring: nil, isPrivate: false,
                                  leadUserId: nil, leadName: nil, leadPhone: nil, position: items.count)
     }
@@ -164,8 +164,17 @@ private struct ScheduleEditSheet: View {
         NavigationStack {
             Form {
                 Section("Event") {
-                    Picker("Day", selection: $draft.day) {
-                        ForEach(FestDays.options(env.festContentService.config), id: \.self) { Text(FestDays.label($0)).tag($0) }
+                    Toggle(isOn: $draft.anytime.animation()) {
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("Anytime (no set day)")
+                            Text("Shows in \u{201C}Anytime all week\u{201D} instead of on a day.")
+                                .font(.caption).foregroundStyle(Color.mlrTextMuted)
+                        }
+                    }
+                    if !draft.anytime {
+                        Picker("Day", selection: $draft.day) {
+                            ForEach(FestDays.options(env.festContentService.config), id: \.self) { Text(FestDays.label($0)).tag($0) }
+                        }
                     }
                     TextField("Title (e.g. Lake Day)", text: $draft.title)
                     TextField("Emoji (optional)", text: optional($draft.emoji))
