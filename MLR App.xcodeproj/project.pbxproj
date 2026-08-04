@@ -36,6 +36,7 @@
 		D31B538A3013A0CC00C8D189 /* Metrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53893013A0CC00C8D189 /* Metrics.swift */; };
 		D31B538C3013A0E800C8D189 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538B3013A0E800C8D189 /* Motion.swift */; };
 		D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538D3013A0F900C8D189 /* Feedback.swift */; };
+		D3A0000000000000000000C3 /* ActionTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000C2 /* ActionTile.swift */; };
 		D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */; };
 		D31B53923013A61A00C8D189 /* BracketDiagram.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53913013A61A00C8D189 /* BracketDiagram.swift */; };
 		D31B53943016506100C8D189 /* HomeHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53933016506100C8D189 /* HomeHero.swift */; };
@@ -290,6 +291,7 @@
 		D31B53893013A0CC00C8D189 /* Metrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Metrics.swift; sourceTree = "<group>"; };
 		D31B538B3013A0E800C8D189 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
 		D31B538D3013A0F900C8D189 /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000C2 /* ActionTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionTile.swift; sourceTree = "<group>"; };
 		D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshHeroBackground.swift; sourceTree = "<group>"; };
 		D31B53913013A61A00C8D189 /* BracketDiagram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BracketDiagram.swift; sourceTree = "<group>"; };
 		D31B53933016506100C8D189 /* HomeHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHero.swift; sourceTree = "<group>"; };
@@ -774,6 +776,7 @@
 				D31B53893013A0CC00C8D189 /* Metrics.swift */,
 				D31B538B3013A0E800C8D189 /* Motion.swift */,
 				D31B538D3013A0F900C8D189 /* Feedback.swift */,
+				D3A0000000000000000000C2 /* ActionTile.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
@@ -1292,6 +1295,7 @@
 				D3512BE630057B63008BBC44 /* HomeWeatherCard.swift in Sources */,
 				D33F9EA92FEC086700603CE7 /* Payments.swift in Sources */,
 				D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */,
+				D3A0000000000000000000C3 /* ActionTile.swift in Sources */,
 				D33F9EAA2FEC086700603CE7 /* ActivitiesView.swift in Sources */,
 				D33F9EAB2FEC086700603CE7 /* WeatherService.swift in Sources */,
 				D33F9EAC2FEC086700603CE7 /* AskForHelpIntent.swift in Sources */,

@@ -24,6 +24,9 @@ struct CommitteeDetailView: View {
     @State private var confirmLeave = false
     @State private var leaving = false
     @State private var stepDownBusy = false
+    /// Self-service (edit areas / leave) is collapsed by default — rare actions
+    /// that used to cost two always-visible full-width buttons on every visit.
+    @State private var manageOpen = false
 
     // Committee-page meeting scheduling (#326/#327): organizers (admins or leads)
     // can schedule right from the page and aim it at the whole committee or a
@@ -140,63 +143,22 @@ struct CommitteeDetailView: View {
             VStack(alignment: .leading, spacing: 24) {
                 header
 
+                // Every committee-level action as a compact 2-across tile grid —
+                // replaces the old column of full-width bars, which was a full
+                // screen of chrome before the roster (the thing people came for)
+                // scrolled into view. Mirrors web's PR #490 action grid.
+                actionGrid
+
+                // A live/upcoming meeting still gets its own full-width bar — it's
+                // live state to read, not an action to tap. Renders nothing when
+                // no meeting is live/upcoming.
                 if isMember {
-                    // spacing 0 so the meeting card collapses to nothing when idle.
-                    VStack(spacing: 0) {
-                        chatLink
-                        // Response surface for an active committee-wide meeting (#326).
-                        // Renders nothing when idle.
-                        MeetingSectionBar(
-                            scope: .committee(committeeId: committee.id, slug: committee.slug, area: nil),
-                            members: meetingMembers,
-                            surface: .card,
-                            refreshID: meetingRefreshID
-                        )
-                    }
-                }
-
-                // Organizers (admins or committee leads) can schedule a meeting
-                // right from the page — committee-wide or aimed at one role (#327).
-                if canOrganizeMeeting && !committee.isArchived {
-                    Button { showMeetingComposer = true } label: {
-                        Label("Schedule a meeting", systemImage: "calendar.badge.plus")
-                            .font(.mlrScaled(15, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.mlrPrimary.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.pressable)
-                }
-
-                // Email sits right under the chat entry.
-                if env.isSignedIn && !allEmails.isEmpty {
-                    Button {
-                        showEmail = true
-                    } label: {
-                        Label("Email these members", systemImage: "envelope.fill")
-                            .font(.mlrScaled(15, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.mlrPrimary.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.pressable)
-                }
-
-                if canManage {
-                    Button { addingNew = true } label: {
-                        Label("Add a member", systemImage: "person.badge.plus")
-                            .font(.mlrScaled(15, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
-                            .frame(maxWidth: .infinity)
-                            .padding(.vertical, 12)
-                            .background(Color.mlrPrimary.opacity(0.1))
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                    }
-                    .buttonStyle(.pressable)
+                    MeetingSectionBar(
+                        scope: .committee(committeeId: committee.id, slug: committee.slug, area: nil),
+                        members: meetingMembers,
+                        surface: .card,
+                        refreshID: meetingRefreshID
+                    )
                 }
 
                 if canReview && !pendingForCommittee.isEmpty {
@@ -283,7 +245,23 @@ struct CommitteeDetailView: View {
 
     private var selfServiceSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            SectionLabel(text: "Your membership")
+            HStack {
+                SectionLabel(text: "Your membership")
+                Spacer()
+                // Rare self-service actions (edit areas / leave) live behind this
+                // toggle instead of two permanently-visible full-width buttons.
+                Button {
+                    withAnimation(MLRMotion.spring) { manageOpen.toggle() }
+                } label: {
+                    Text(manageOpen ? "Done" : "⋯ Manage")
+                        .font(.mlrScaled(12, weight: .semibold))
+                        .foregroundStyle(Color.mlrPrimary)
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Color.mlrPrimary.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.pressable)
+            }
 
             if myEntry?.isCommitteeLead == true {
                 Text("★ Lead of this committee")
@@ -294,52 +272,45 @@ struct CommitteeDetailView: View {
                     .clipShape(Capsule())
             }
 
-            if roleBased {
-                if !myAreas.isEmpty {
-                    myAreaChips
-                }
-                Button { showMyAreas = true } label: {
-                    Label(myAreas.isEmpty ? "Choose your areas" : "Edit your areas",
-                          systemImage: "checklist")
-                        .font(.mlrScaled(15, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 12)
-                        .background(Color.mlrPrimary.opacity(0.1))
-                        .clipShape(RoundedRectangle(cornerRadius: 12))
-                }
-                .buttonStyle(.pressable)
+            if roleBased && !myAreas.isEmpty {
+                myAreaChips
             }
 
-            if iAmLead {
-                NavigationLink {
-                    CommitteeChatView(committee: committee, members: [], area: "Leads", channelTitle: "Leads", assumeMember: true)
-                } label: {
-                    Label("Open the Leads chat", systemImage: "bubble.left.and.bubble.right.fill")
-                        .font(.mlrScaled(15, weight: .semibold))
-                        .foregroundStyle(.white)
+            if manageOpen {
+                VStack(alignment: .leading, spacing: 10) {
+                    if roleBased {
+                        Button { showMyAreas = true } label: {
+                            Label(myAreas.isEmpty ? "Choose your areas" : "Edit your areas",
+                                  systemImage: "checklist")
+                                .font(.mlrScaled(15, weight: .semibold))
+                                .foregroundStyle(Color.mlrPrimary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 12)
+                                .background(Color.mlrPrimary.opacity(0.1))
+                                .clipShape(RoundedRectangle(cornerRadius: 12))
+                        }
+                        .buttonStyle(.pressable)
+                    }
+
+                    Button { confirmLeave = true } label: {
+                        HStack {
+                            if leaving { ProgressView().tint(Color.mlrDanger) }
+                            Label("Leave committee", systemImage: "rectangle.portrait.and.arrow.right")
+                                .font(.mlrScaled(15, weight: .semibold))
+                                .foregroundStyle(Color.mlrDanger)
+                        }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(Color.mlrPrimary)
+                        .background(Color.mlrDanger.opacity(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
+                    }
+                    .buttonStyle(.pressable)
+                    .disabled(leaving)
                 }
-                .buttonStyle(.pressable)
+                .transition(.asymmetric(
+                    insertion: .opacity.combined(with: .move(edge: .top)),
+                    removal: .opacity))
             }
-
-            Button { confirmLeave = true } label: {
-                HStack {
-                    if leaving { ProgressView().tint(Color.mlrDanger) }
-                    Label("Leave committee", systemImage: "rectangle.portrait.and.arrow.right")
-                        .font(.mlrScaled(15, weight: .semibold))
-                        .foregroundStyle(Color.mlrDanger)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 12)
-                .background(Color.mlrDanger.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
-            }
-            .buttonStyle(.pressable)
-            .disabled(leaving)
         }
     }
 
@@ -439,14 +410,64 @@ struct CommitteeDetailView: View {
         }
     }
 
-    private var chatLink: some View {
-        NavigationLink {
-            CommitteeChatView(committee: committee, members: [])
-        } label: {
-            Label("Open committee chat", systemImage: "bubble.left.and.bubble.right.fill")
-                .primaryButton()
+    /// Every committee-level action, as grid tiles, in priority order. Chat and
+    /// Leads chat are `NavigationLink`s; the rest fire sheet/composer state.
+    /// Each self-hides exactly as its old full-width bar did.
+    @ViewBuilder
+    private var actionGrid: some View {
+        ActionTileGrid(count: actionTileCount) {
+            if isMember {
+                NavigationLink {
+                    CommitteeChatView(committee: committee, members: [])
+                } label: {
+                    ActionTileLabel(systemImage: "bubble.left.and.bubble.right.fill",
+                                    title: "Committee chat", tone: .primary)
+                }
+                .buttonStyle(.pressable)
+                .actionTileEntrance(index: 0)
+            }
+            if iAmLead && !committee.isArchived {
+                NavigationLink {
+                    CommitteeChatView(committee: committee, members: [], area: "Leads",
+                                      channelTitle: "Leads", assumeMember: true)
+                } label: {
+                    ActionTileLabel(systemImage: "key.fill", title: "Leads chat", tone: .primary)
+                }
+                .buttonStyle(.pressable)
+                .actionTileEntrance(index: 1)
+            }
+            if canOrganizeMeeting && !committee.isArchived {
+                Button { showMeetingComposer = true } label: {
+                    ActionTileLabel(systemImage: "calendar.badge.plus", title: "Schedule a meeting")
+                }
+                .buttonStyle(.pressable)
+                .actionTileEntrance(index: 2)
+            }
+            if env.isSignedIn && !allEmails.isEmpty {
+                Button { showEmail = true } label: {
+                    ActionTileLabel(systemImage: "envelope.fill", title: "Email these members")
+                }
+                .buttonStyle(.pressable)
+                .actionTileEntrance(index: 3)
+            }
+            if canManage {
+                Button { addingNew = true } label: {
+                    ActionTileLabel(systemImage: "person.badge.plus", title: "Add a member")
+                }
+                .buttonStyle(.pressable)
+                .actionTileEntrance(index: 4)
+            }
         }
-        .buttonStyle(.pressable)
+    }
+
+    private var actionTileCount: Int {
+        var n = 0
+        if isMember { n += 1 }
+        if iAmLead && !committee.isArchived { n += 1 }
+        if canOrganizeMeeting && !committee.isArchived { n += 1 }
+        if env.isSignedIn && !allEmails.isEmpty { n += 1 }
+        if canManage { n += 1 }
+        return n
     }
 
     // MARK: - Join requests
@@ -536,7 +557,7 @@ struct CommitteeDetailView: View {
                 .foregroundStyle(Color.mlrTextMuted)
         } else if roleBased {
             VStack(alignment: .leading, spacing: 14) {
-                SectionLabel(text: "Roles & who's on them")
+                rosterHeader(title: "Roles & who's on them")
                 ForEach(areas, id: \.self) { area in
                     let inArea = roster
                         .filter { $0.roles.contains(area) || $0.roles.contains("\(area) · Lead") }
@@ -555,7 +576,32 @@ struct CommitteeDetailView: View {
                 }
             }
         } else {
-            plainCard(title: "Members (\(roster.count))", entries: roster)
+            VStack(alignment: .leading, spacing: 8) {
+                rosterHeader(title: "Members (\(roster.count))")
+                membersCard(entries: roster)
+            }
+        }
+    }
+
+    /// A section heading with an inline "+ Add" pill for managers — sits next
+    /// to the heading rather than as its own full-width dashed bar (which cost
+    /// a whole row of vertical space for an occasional admin action).
+    @ViewBuilder
+    private func rosterHeader(title: String) -> some View {
+        HStack {
+            SectionLabel(text: title)
+            Spacer()
+            if canManage {
+                Button { addingNew = true } label: {
+                    Text("＋ Add")
+                        .font(.mlrScaled(12, weight: .semibold))
+                        .foregroundStyle(Color.mlrPrimary)
+                        .padding(.horizontal, 10).padding(.vertical, 4)
+                        .background(Color.mlrPrimary.opacity(0.1))
+                        .clipShape(Capsule())
+                }
+                .buttonStyle(.pressable)
+            }
         }
     }
 
@@ -585,15 +631,19 @@ struct CommitteeDetailView: View {
     private func plainCard(title: String, entries: [CommitteeRosterEntry]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             SectionLabel(text: title)
-            VStack(spacing: 0) {
-                ForEach(entries) { entry in
-                    rosterRow(entry, showLead: entry.isLead)
-                    if entry.id != entries.last?.id { Divider().padding(.leading, 52) }
-                }
-            }
-            .background(Color.mlrCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
+            membersCard(entries: entries)
         }
+    }
+
+    private func membersCard(entries: [CommitteeRosterEntry]) -> some View {
+        VStack(spacing: 0) {
+            ForEach(entries) { entry in
+                rosterRow(entry, showLead: entry.isLead)
+                if entry.id != entries.last?.id { Divider().padding(.leading, 52) }
+            }
+        }
+        .background(Color.mlrCard)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
     }
 
     @ViewBuilder
