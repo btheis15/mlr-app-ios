@@ -384,9 +384,26 @@ attach→change-your-mind reversible in-session too.)
 > PR #49 (draft) in `btheis15/mlr-app-ios`.
 
 ### 9.1 Committee page → action-tile grid (implemented, needs verification)
+> **Update:** after this landed, web moved twice more (PR #500, then #501) —
+> wrapping the tiles in a collapsed-by-default "Reach the group"
+> `CollapsibleSection` with a subtitle, unifying the former chat-tiles + small
+> secondary-pills split into one grid of identical tiles, and fixing the tiles
+> not actually being uniform size. All of that is now ported too (see the
+> commit after this one on the branch) — this note describes the CURRENT
+> state, not the original #490-only port.
 - New: `MLRApp/Shared/Design/ActionTile.swift` — `ActionTileLabel` (2-tone tile
   content view: `.primary`/`.neutral`/`.danger`) + `ActionTileGrid` (2-column
-  `LazyVGrid` wrapper, renders nothing when its `count` is 0).
+  `LazyVGrid` wrapper, renders nothing when its `count` is 0). Also owns a
+  measure-then-equalize height mechanism (a `PreferenceKey` feeding back
+  through an `EnvironmentKey`) so every tile locks to the tallest one needed
+  across the WHOLE grid, not just within its own `LazyVGrid` row — mirrors the
+  defect class web's PR #501 fixed for its CSS grid, but without a hardcoded
+  pixel height (which could clip a label at a large Dynamic Type size).
+- New: `MLRApp/Shared/Components/CollapsibleSection.swift` — promoted out of
+  `HomeView.swift`'s formerly-private `CollapsibleHomeSection` so it's a real
+  shared component (matches web, where `CollapsibleSection` is reused across
+  Profile/CommitteeEmailMembers/CommitteeDetail). `HomeView`'s "App & Help"
+  section now uses this shared type instead of its own private copy.
 - Changed: `MLRApp/Committees/CommitteeDetailView.swift` — the old column of
   full-width bars (chat / leads chat / schedule meeting / email members / add
   member) is now `actionGrid`, a 2-across tile grid with `.cardEntrance(index:)`
