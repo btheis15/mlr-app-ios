@@ -264,13 +264,20 @@ private struct FestDinnerEditor: View {
     }
 }
 
-private struct DinnerEditSheet: View {
+/// Not `private` — the full day/title/chef/houses/crew editor for
+/// `can_edit_fest()` viewers, reused outside the Planner on the Weekly Menu
+/// tab and dinner detail page (see FestDinnersView/FestDinnersDetailView).
+struct DinnerEditSheet: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State var draft: FestDinnerDraft
     @State private var housesText = ""
     @State private var saving = false
     @State private var showMemberPicker = false
+
+    // A stored `private var` forces the synthesized memberwise init to be
+    // file-private — add an explicit one for the cross-file call sites above.
+    init(draft: FestDinnerDraft) { self.draft = draft }
 
     var body: some View {
         NavigationStack {
