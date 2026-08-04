@@ -54,6 +54,11 @@ final class HelpService {
 
     // MARK: - Request help
 
+    /// - Parameter targetEventId: When set, this request is scoped to a specific
+    ///   UPCOMING event the requester is going to (rather than "right now") —
+    ///   `eligible = [targetEventId]`, `strict = []` so it reaches anyone going
+    ///   to that event on ANY day, not just today. The requester still passes
+    ///   the presence gate server-side by being one of that event's attendees.
     func requestHelp(
         category: HelpCategory,
         what: String,
@@ -65,9 +70,13 @@ final class HelpService {
         notifyAll: Bool,
         items: [String] = [],
         workItemId: UUID? = nil,
-        followupAt: Date? = nil
+        followupAt: Date? = nil,
+        targetEventId: String? = nil
     ) async throws {
-        let targeting = helpTargeting()
+        let base = helpTargeting()
+        let targeting: (eligible: [String], strict: [String], today: String) = targetEventId.map {
+            (eligible: [$0], strict: [], today: base.today)
+        } ?? base
 
         struct RequestParams: Encodable {
             let p_description: String

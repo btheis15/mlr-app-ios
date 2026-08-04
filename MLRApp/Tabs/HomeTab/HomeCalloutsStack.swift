@@ -52,13 +52,23 @@ struct HomeCalloutsStack: View {
     }
 
     // Live callouts from FestContentService, filtered to what's active today,
-    // not yet dismissed this session, and not permanently marked done (migration 0098).
+    // not yet dismissed this session, not permanently marked done (migration 0098),
+    // and not hidden by event targeting (migration 0096 — see isHiddenForEvent).
     private var visibleCallouts: [HomeCallout] {
         let completed = env.festContentService.completedCalloutIds
         return env.festContentService.callouts
             .filter { $0.isLive(today: today)
                 && !dismissed.contains($0.dismissId)
-                && !completed.contains($0.id) }
+                && !completed.contains($0.id)
+                && !isHiddenForEvent($0) }
+    }
+
+    /// Mirrors web's `isHiddenForEventTarget()` — deliberately narrow: hides
+    /// ONLY from someone who explicitly RSVP'd "Can't make it" to the linked
+    /// event. A no-response (or Going/Maybe) member still sees it.
+    private func isHiddenForEvent(_ callout: HomeCallout) -> Bool {
+        guard callout.excludeNotAttending, let eventId = callout.eventId else { return false }
+        return env.eventsService.attendances[eventId]?.effectiveStatus() == .notGoing
     }
 
     var body: some View {
@@ -205,6 +215,7 @@ struct HomeCalloutCard: View {
     @Environment(AppEnvironment.self) private var env
     @State private var imageLoadFailed = false
     @State private var signupItem: ScheduleItem?
+    @State private var dropBoxTarget: DropBoxTarget?
 
     /// The linked Fest activity (migration 0137). The Sign up button shows only
     /// when the activity actually takes sign-ups (#407).
@@ -218,6 +229,7 @@ struct HomeCalloutCard: View {
             || callout.body?.nilIfEmpty != nil
             || !callout.links.isEmpty
             || callout.endsOn != nil
+            || callout.dropBoxId != nil
     }
 
     private var hasImage: Bool {
@@ -313,6 +325,24 @@ struct HomeCalloutCard: View {
                         .buttonStyle(.pressable)
                     }
 
+                    // Linked Drop Box folder (migration 0172) — deep-links
+                    // straight into that shared album.
+                    if let dropBoxId = callout.dropBoxId, let uuid = UUID(uuidString: dropBoxId) {
+                        Button {
+                            if env.isSignedIn { dropBoxTarget = DropBoxTarget(id: uuid) }
+                            else { env.authService.promptSignIn() }
+                        } label: {
+                            Text("📸 Add & see photos")
+                                .font(.mlrScaled(13, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 9)
+                                .background(Color.mlrAccent)
+                                .clipShape(RoundedRectangle(cornerRadius: 10))
+                        }
+                        .buttonStyle(.pressable)
+                    }
+
                     if let ends = callout.endsOn {
                         Text("Due \(formattedDate(ends))")
                             .font(.mlrScaled(11))
@@ -346,6 +376,9 @@ struct HomeCalloutCard: View {
         .cardStyle()
         .sheet(item: $signupItem) { item in
             NavigationStack { FestScheduleDetailView(item: item) }
+        }
+        .sheet(item: $dropBoxTarget) { target in
+            NavigationStack { DropBoxDetailView(boxId: target.id) }
         }
     }
 
@@ -407,4 +440,9 @@ private extension String {
         let t = trimmingCharacters(in: .whitespacesAndNewlines)
         return t.isEmpty ? nil : t
     }
+}
+
+/// UUID isn't Identifiable on its own — this wraps a Drop Box id for `.sheet(item:)`.
+private struct DropBoxTarget: Identifiable {
+    let id: UUID
 }

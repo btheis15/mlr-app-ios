@@ -36,6 +36,8 @@
 		D31B538A3013A0CC00C8D189 /* Metrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53893013A0CC00C8D189 /* Metrics.swift */; };
 		D31B538C3013A0E800C8D189 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538B3013A0E800C8D189 /* Motion.swift */; };
 		D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538D3013A0F900C8D189 /* Feedback.swift */; };
+		D3A0000000000000000000C3 /* ActionTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000C2 /* ActionTile.swift */; };
+		D3A0000000000000000000C5 /* CollapsibleSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000C4 /* CollapsibleSection.swift */; };
 		D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */; };
 		D31B53923013A61A00C8D189 /* BracketDiagram.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53913013A61A00C8D189 /* BracketDiagram.swift */; };
 		D31B53943016506100C8D189 /* HomeHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53933016506100C8D189 /* HomeHero.swift */; };
@@ -69,6 +71,7 @@
 		D33F9E762FEC086700603CE7 /* MLRSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E232FEC086700603CE7 /* MLRSheet.swift */; };
 		D33F9E772FEC086700603CE7 /* SkeletonView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E242FEC086700603CE7 /* SkeletonView.swift */; };
 		D33F9E782FEC086700603CE7 /* InstallPrompt.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E212FEC086700603CE7 /* InstallPrompt.swift */; };
+		D3A0000000000000000000BE /* QRCodeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AE /* QRCodeView.swift */; };
 		D33F9E7A2FEC086700603CE7 /* FestDinnersDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E342FEC086700603CE7 /* FestDinnersDetailView.swift */; };
 		D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E3B2FEC086700603CE7 /* FestStatus.swift */; };
 		D33F9E7C2FEC086700603CE7 /* LightboxView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E3F2FEC086700603CE7 /* LightboxView.swift */; };
@@ -93,6 +96,7 @@
 		D33F9E902FEC086700603CE7 /* Committee.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E002FEC086700603CE7 /* Committee.swift */; };
 		D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DED2FEC086700603CE7 /* CommitteeDetailView.swift */; };
 		D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E0B2FEC086700603CE7 /* MapsHelper.swift */; };
+		D3A0000000000000000000BF /* OneShotLocationFetcher.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AF /* OneShotLocationFetcher.swift */; };
 		D33F9E932FEC086700603CE7 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE12FEC086700603CE7 /* AppEnvironment.swift */; };
 		D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DF32FEC086700603CE7 /* EventsView.swift */; };
 		D33F9E952FEC086700603CE7 /* FestScheduleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E3A2FEC086700603CE7 /* FestScheduleView.swift */; };
@@ -101,6 +105,7 @@
 		D33F9E982FEC086700603CE7 /* FamilyFestSpotlight.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E452FEC086700603CE7 /* FamilyFestSpotlight.swift */; };
 		D33F9E992FEC086700603CE7 /* HomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E472FEC086700603CE7 /* HomeView.swift */; };
 		D33F9E9A2FEC086700603CE7 /* Formatters.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E2D2FEC086700603CE7 /* Formatters.swift */; };
+		D3A0000000000000000000BD /* Owner.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AD /* Owner.swift */; };
 		D33F9E9B2FEC086700603CE7 /* FestPayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E372FEC086700603CE7 /* FestPayView.swift */; };
 		D33F9E9C2FEC086700603CE7 /* SeedData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E062FEC086700603CE7 /* SeedData.swift */; };
 		D33F9E9D2FEC086700603CE7 /* NextEventIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DFB2FEC086700603CE7 /* NextEventIntent.swift */; };
@@ -196,6 +201,12 @@
 		D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A3 /* HouseCalendarSheets.swift */; };
 		D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A4 /* HouseStayComposer.swift */; };
 		D3A0000000000000000000B5 /* HouseHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A5 /* HouseHubView.swift */; };
+		D3A0000000000000000000B6 /* HouseList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A6 /* HouseList.swift */; };
+		D3A0000000000000000000B7 /* HouseListsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A7 /* HouseListsService.swift */; };
+		D3A0000000000000000000B8 /* HouseListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A8 /* HouseListsView.swift */; };
+		D3A0000000000000000000B9 /* DropBox.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A9 /* DropBox.swift */; };
+		D3A0000000000000000000BA /* DropBoxesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AA /* DropBoxesService.swift */; };
+		D3A0000000000000000000BB /* DropBoxesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AB /* DropBoxesView.swift */; };
 		D3E4FD3D2FFFE7340008DA06 /* FestDuesCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */; };
 		D3EA3D94301144AF0092AE8E /* Meeting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D93301144AF0092AE8E /* Meeting.swift */; };
 		D3EA3D96301145120092AE8E /* MeetingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D95301145120092AE8E /* MeetingsService.swift */; };
@@ -217,6 +228,7 @@
 		D3F9D87D300934F0006874DA /* AdminCabinDetails.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */; };
 		D3F9D87F30093C6C006874DA /* ScheduleSendPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */; };
 		D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */; };
+		D3A0000000000000000000BC /* NotificationTestView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000AC /* NotificationTestView.swift */; };
 		D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */; };
 		D3F9D88530093D9E006874DA /* OnThisDayCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88430093D9E006874DA /* OnThisDayCard.swift */; };
 		D3F9D88730093EE7006874DA /* MyCommitteeAreasSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */; };
@@ -225,7 +237,6 @@
 		D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88C30094A70006874DA /* ReminderScheduler.swift */; };
 		D3F9D88F30094C07006874DA /* AdminEditMemberSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */; };
 		D3F9D89130094CD9006874DA /* EventTargetPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D89030094CD9006874DA /* EventTargetPicker.swift */; };
-		D3F9D8933009816D006874DA /* FestActivityEditSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */; };
 		D3F9D8973009822D006874DA /* Cinzel-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */; };
 		D3F9D8983009822D006874DA /* Yellowtail-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */; };
 		D3F9D8993009822D006874DA /* Cinzel-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */; };
@@ -281,6 +292,8 @@
 		D31B53893013A0CC00C8D189 /* Metrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Metrics.swift; sourceTree = "<group>"; };
 		D31B538B3013A0E800C8D189 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
 		D31B538D3013A0F900C8D189 /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000C2 /* ActionTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionTile.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000C4 /* CollapsibleSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollapsibleSection.swift; sourceTree = "<group>"; };
 		D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshHeroBackground.swift; sourceTree = "<group>"; };
 		D31B53913013A61A00C8D189 /* BracketDiagram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BracketDiagram.swift; sourceTree = "<group>"; };
 		D31B53933016506100C8D189 /* HomeHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHero.swift; sourceTree = "<group>"; };
@@ -320,6 +333,7 @@
 		D33F9E092FEC086700603CE7 /* ContactsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContactsService.swift; sourceTree = "<group>"; };
 		D33F9E0A2FEC086700603CE7 /* HapticsAndShare.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HapticsAndShare.swift; sourceTree = "<group>"; };
 		D33F9E0B2FEC086700603CE7 /* MapsHelper.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MapsHelper.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AF /* OneShotLocationFetcher.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OneShotLocationFetcher.swift; sourceTree = "<group>"; };
 		D33F9E0C2FEC086700603CE7 /* MessageComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MessageComposer.swift; sourceTree = "<group>"; };
 		D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationActions.swift; sourceTree = "<group>"; };
 		D3E1A0012FEC086700603CE7 /* NotificationDeepLink.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationDeepLink.swift; sourceTree = "<group>"; };
@@ -339,6 +353,7 @@
 		D33F9E1F2FEC086700603CE7 /* AvatarView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AvatarView.swift; sourceTree = "<group>"; };
 		D33F9E202FEC086700603CE7 /* GuardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GuardView.swift; sourceTree = "<group>"; };
 		D33F9E212FEC086700603CE7 /* InstallPrompt.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InstallPrompt.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AE /* QRCodeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QRCodeView.swift; sourceTree = "<group>"; };
 		D33F9E222FEC086700603CE7 /* MentionText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MentionText.swift; sourceTree = "<group>"; };
 		D33F9E232FEC086700603CE7 /* MLRSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRSheet.swift; sourceTree = "<group>"; };
 		D33F9E242FEC086700603CE7 /* SkeletonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkeletonView.swift; sourceTree = "<group>"; };
@@ -349,6 +364,7 @@
 		D33F9E2A2FEC086700603CE7 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		D33F9E2C2FEC086700603CE7 /* FestSeason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestSeason.swift; sourceTree = "<group>"; };
 		D33F9E2D2FEC086700603CE7 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AD /* Owner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Owner.swift; sourceTree = "<group>"; };
 		D33F9E302FEC086700603CE7 /* NotificationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationRow.swift; sourceTree = "<group>"; };
 		D33F9E312FEC086700603CE7 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
 		D33F9E332FEC086700603CE7 /* FestCrewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestCrewView.swift; sourceTree = "<group>"; };
@@ -436,6 +452,12 @@
 		D3A0000000000000000000A3 /* HouseCalendarSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarSheets.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A4 /* HouseStayComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStayComposer.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A5 /* HouseHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseHubView.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000A6 /* HouseList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseList.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000A7 /* HouseListsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseListsService.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000A8 /* HouseListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseListsView.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000A9 /* DropBox.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropBox.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AA /* DropBoxesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropBoxesService.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AB /* DropBoxesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DropBoxesView.swift; sourceTree = "<group>"; };
 		D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDuesCalculator.swift; sourceTree = "<group>"; };
 		D3EA3D93301144AF0092AE8E /* Meeting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Meeting.swift; sourceTree = "<group>"; };
 		D3EA3D95301145120092AE8E /* MeetingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingsService.swift; sourceTree = "<group>"; };
@@ -458,6 +480,7 @@
 		D3F9D87C300934F0006874DA /* AdminCabinDetails.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminCabinDetails.swift; sourceTree = "<group>"; };
 		D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduleSendPicker.swift; sourceTree = "<group>"; };
 		D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminScheduledBroadcasts.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000AC /* NotificationTestView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationTestView.swift; sourceTree = "<group>"; };
 		D3F9D88230093CE8006874DA /* ScheduledBroadcast.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScheduledBroadcast.swift; sourceTree = "<group>"; };
 		D3F9D88430093D9E006874DA /* OnThisDayCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = OnThisDayCard.swift; sourceTree = "<group>"; };
 		D3F9D88630093EE7006874DA /* MyCommitteeAreasSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MyCommitteeAreasSheet.swift; sourceTree = "<group>"; };
@@ -466,7 +489,6 @@
 		D3F9D88C30094A70006874DA /* ReminderScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReminderScheduler.swift; sourceTree = "<group>"; };
 		D3F9D88E30094C07006874DA /* AdminEditMemberSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminEditMemberSheet.swift; sourceTree = "<group>"; };
 		D3F9D89030094CD9006874DA /* EventTargetPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventTargetPicker.swift; sourceTree = "<group>"; };
-		D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestActivityEditSheet.swift; sourceTree = "<group>"; };
 		D3F9D8943009822D006874DA /* Cinzel-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cinzel-Bold.ttf"; sourceTree = "<group>"; };
 		D3F9D8953009822D006874DA /* Cinzel-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Cinzel-Regular.ttf"; sourceTree = "<group>"; };
 		D3F9D8963009822D006874DA /* Yellowtail-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "Yellowtail-Regular.ttf"; sourceTree = "<group>"; };
@@ -660,6 +682,8 @@
 				D31B53733012A82E00C8D189 /* EventSignups.swift */,
 				D31B53773012B54500C8D189 /* PrivateActivity.swift */,
 				D31B537D3012B69400C8D189 /* Tournament.swift */,
+				D3A0000000000000000000A6 /* HouseList.swift */,
+				D3A0000000000000000000A9 /* DropBox.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -671,6 +695,7 @@
 				D33F9E092FEC086700603CE7 /* ContactsService.swift */,
 				D33F9E0A2FEC086700603CE7 /* HapticsAndShare.swift */,
 				D33F9E0B2FEC086700603CE7 /* MapsHelper.swift */,
+				D3A0000000000000000000AF /* OneShotLocationFetcher.swift */,
 				D33F9E0C2FEC086700603CE7 /* MessageComposer.swift */,
 				D33F9E0D2FEC086700603CE7 /* NotificationActions.swift */,
 				D3E1A0012FEC086700603CE7 /* NotificationDeepLink.swift */,
@@ -715,6 +740,7 @@
 				D31B536E3012A46900C8D189 /* ChatPollsService.swift */,
 				D31B53793012B56400C8D189 /* PrivateActivitiesService.swift */,
 				D31B537F3012B6C600C8D189 /* TournamentsService.swift */,
+				D3A0000000000000000000AA /* DropBoxesService.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -730,7 +756,9 @@
 				D33F9E222FEC086700603CE7 /* MentionText.swift */,
 				D33F9E232FEC086700603CE7 /* MLRSheet.swift */,
 				D33F9E242FEC086700603CE7 /* SkeletonView.swift */,
+				D3A0000000000000000000C4 /* CollapsibleSection.swift */,
 				D33F9E252FEC086700603CE7 /* WelcomeCard.swift */,
+				D3A0000000000000000000AE /* QRCodeView.swift */,
 				D3F9D87E30093C6C006874DA /* ScheduleSendPicker.swift */,
 				D3F9D88C30094A70006874DA /* ReminderScheduler.swift */,
 				D3F9D89030094CD9006874DA /* EventTargetPicker.swift */,
@@ -751,6 +779,7 @@
 				D31B53893013A0CC00C8D189 /* Metrics.swift */,
 				D31B538B3013A0E800C8D189 /* Motion.swift */,
 				D31B538D3013A0F900C8D189 /* Feedback.swift */,
+				D3A0000000000000000000C2 /* ActionTile.swift */,
 			);
 			path = Design;
 			sourceTree = "<group>";
@@ -760,6 +789,7 @@
 			children = (
 				D33F9E2C2FEC086700603CE7 /* FestSeason.swift */,
 				D33F9E2D2FEC086700603CE7 /* Formatters.swift */,
+				D3A0000000000000000000AD /* Owner.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -800,7 +830,6 @@
 				D3F9D86C3006E599006874DA /* FestDinnerEditSheet.swift */,
 				D3F9D8773007189A006874DA /* FestInlineEditSheets.swift */,
 				D3F9D87A30091A65006874DA /* FestDecor.swift */,
-				D3F9D8923009816D006874DA /* FestActivityEditSheet.swift */,
 				D31B53753012A89400C8D189 /* EventSignupSection.swift */,
 			);
 			path = FamilyFestTab;
@@ -854,6 +883,7 @@
 				D3F9D8663006C288006874DA /* AdminHelpContactView.swift */,
 				D3F9D86A3006CC02006874DA /* AdminCalloutsView.swift */,
 				D3F9D88030093CBA006874DA /* AdminScheduledBroadcasts.swift */,
+				D3A0000000000000000000AC /* NotificationTestView.swift */,
 				D3F9D88A300948A5006874DA /* PreviewAsView.swift */,
 				D3F9D89A3009870A006874DA /* AdminMembersView.swift */,
 				D31B53663011694F00C8D189 /* AdminBroadcastComposer.swift */,
@@ -922,6 +952,7 @@
 				D3F9D874300710BC006874DA /* Polls */,
 				D3EA3D97301145680092AE8E /* Meetings */,
 				D31B53703012A51F00C8D189 /* Chat */,
+				D3A0000000000000000000C1 /* DropBoxes */,
 			);
 			path = MLRApp;
 			sourceTree = "<group>";
@@ -974,6 +1005,8 @@
 				D3A0000000000000000000A4 /* HouseStayComposer.swift */,
 				D3A0000000000000000000A5 /* HouseHubView.swift */,
 				D3512BE330057B41008BBC44 /* MjtHouseDuesView.swift */,
+				D3A0000000000000000000A7 /* HouseListsService.swift */,
+				D3A0000000000000000000A8 /* HouseListsView.swift */,
 			);
 			path = Houses;
 			sourceTree = "<group>";
@@ -984,6 +1017,14 @@
 				D363476C2FFEA947001D52C8 /* GlobalSearchView.swift */,
 			);
 			path = Search;
+			sourceTree = "<group>";
+		};
+		D3A0000000000000000000C1 /* DropBoxes */ = {
+			isa = PBXGroup;
+			children = (
+				D3A0000000000000000000AB /* DropBoxesView.swift */,
+			);
+			path = DropBoxes;
 			sourceTree = "<group>";
 		};
 		D3EA3D97301145680092AE8E /* Meetings */ = {
@@ -1150,6 +1191,7 @@
 				D33F9E772FEC086700603CE7 /* SkeletonView.swift in Sources */,
 				D363475E2FFDE689001D52C8 /* PersonalIntents.swift in Sources */,
 				D33F9E782FEC086700603CE7 /* InstallPrompt.swift in Sources */,
+				D3A0000000000000000000BE /* QRCodeView.swift in Sources */,
 				D33F9E7A2FEC086700603CE7 /* FestDinnersDetailView.swift in Sources */,
 				D3EA3D94301144AF0092AE8E /* Meeting.swift in Sources */,
 				D33F9E7B2FEC086700603CE7 /* FestStatus.swift in Sources */,
@@ -1200,6 +1242,7 @@
 				D33F9E902FEC086700603CE7 /* Committee.swift in Sources */,
 				D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */,
 				D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */,
+				D3A0000000000000000000BF /* OneShotLocationFetcher.swift in Sources */,
 				D3F9D88B300948A5006874DA /* PreviewAsView.swift in Sources */,
 				D31B53673011694F00C8D189 /* AdminBroadcastComposer.swift in Sources */,
 				D3F9D876300710BC006874DA /* PollsView.swift in Sources */,
@@ -1221,7 +1264,7 @@
 				D33F9E982FEC086700603CE7 /* FamilyFestSpotlight.swift in Sources */,
 				D33F9E992FEC086700603CE7 /* HomeView.swift in Sources */,
 				D33F9E9A2FEC086700603CE7 /* Formatters.swift in Sources */,
-				D3F9D8933009816D006874DA /* FestActivityEditSheet.swift in Sources */,
+				D3A0000000000000000000BD /* Owner.swift in Sources */,
 				D3F9D88330093CE8006874DA /* ScheduledBroadcast.swift in Sources */,
 				D33F9E9B2FEC086700603CE7 /* FestPayView.swift in Sources */,
 				D33F9E9C2FEC086700603CE7 /* SeedData.swift in Sources */,
@@ -1248,12 +1291,15 @@
 				D31B5361301168CC00C8D189 /* EmailMembersView.swift in Sources */,
 				D33F9EA62FEC086700603CE7 /* EventComposer.swift in Sources */,
 				D3F9D88130093CBA006874DA /* AdminScheduledBroadcasts.swift in Sources */,
+				D3A0000000000000000000BC /* NotificationTestView.swift in Sources */,
 				D31B53743012A82E00C8D189 /* EventSignups.swift in Sources */,
 				D33F9EA72FEC086700603CE7 /* HomeNavigationStubs.swift in Sources */,
 				D33F9EA82FEC086700603CE7 /* MentionText.swift in Sources */,
 				D3512BE630057B63008BBC44 /* HomeWeatherCard.swift in Sources */,
 				D33F9EA92FEC086700603CE7 /* Payments.swift in Sources */,
 				D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */,
+				D3A0000000000000000000C3 /* ActionTile.swift in Sources */,
+				D3A0000000000000000000C5 /* CollapsibleSection.swift in Sources */,
 				D33F9EAA2FEC086700603CE7 /* ActivitiesView.swift in Sources */,
 				D33F9EAB2FEC086700603CE7 /* WeatherService.swift in Sources */,
 				D33F9EAC2FEC086700603CE7 /* AskForHelpIntent.swift in Sources */,
@@ -1299,6 +1345,12 @@
 				D31B34B5300AC9CA00A0D653 /* CommitteeTaxonomy.swift in Sources */,
 				D363476A2FFDF098001D52C8 /* IntentDonations.swift in Sources */,
 				D36347562FFDDFA5001D52C8 /* ContentIndexer.swift in Sources */,
+				D3A0000000000000000000B6 /* HouseList.swift in Sources */,
+				D3A0000000000000000000B7 /* HouseListsService.swift in Sources */,
+				D3A0000000000000000000B8 /* HouseListsView.swift in Sources */,
+				D3A0000000000000000000B9 /* DropBox.swift in Sources */,
+				D3A0000000000000000000BA /* DropBoxesService.swift in Sources */,
+				D3A0000000000000000000BB /* DropBoxesView.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */

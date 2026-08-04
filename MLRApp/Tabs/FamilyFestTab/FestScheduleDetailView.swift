@@ -7,6 +7,17 @@ struct FestScheduleDetailView: View {
     let item: ScheduleItem
     @Environment(AppEnvironment.self) private var env
 
+    /// Same predicate as ExpandableScheduleRow's canEditItem / EventSignupSection's
+    /// canManage — admin/fest-editor OR this item's own lead/crew.
+    private var canManage: Bool {
+        guard env.isSignedIn else { return false }
+        let me = env.currentProfile?.id
+        return env.isAdmin
+            || env.festContentService.userCanEditFest
+            || (item.leadUserId != nil && item.leadUserId == me)
+            || (me != nil && item.crewUserIds.contains(me!))
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -84,7 +95,30 @@ struct FestScheduleDetailView: View {
                     Divider().background(Color.mlrFest.opacity(0.15))
                 }
 
-                // Leads
+                // Links (migration 0142) — e.g. a sign-up form + a separate info doc.
+                // Ordered ahead of Leads to match web's FestScheduleDetail (links →
+                // signup → tournament → lead/contact last).
+                if !item.links.isEmpty {
+                    DetailSection(icon: "link", title: "Links") {
+                        ScheduleLinkButtons(links: item.links)
+                    }
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                }
+
+                // Sign-ups (migrations 0135/0136/0143) — self-hides when disabled.
+                if item.signupEnabled {
+                    EventSignupSection(item: item)
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                }
+
+                // Tournament (migrations 0144–0154) — self-hides when disabled.
+                if item.tournamentEnabled {
+                    TournamentEntryCard(item: item, canManage: canManage)
+                        .padding(.horizontal, 20).padding(.vertical, 16)
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                }
+
+                // Leads — last, matching web's "In charge" contact card position.
                 if !item.leads.isEmpty {
                     DetailSection(icon: "person.fill", title: "Leads") {
                         if env.isSignedIn {
@@ -97,20 +131,6 @@ struct FestScheduleDetailView: View {
                             ProtectedField(message: "Sign in to see leads & contacts")
                         }
                     }
-                }
-
-                // Links (migration 0142) — e.g. a sign-up form + a separate info doc.
-                if !item.links.isEmpty {
-                    Divider().background(Color.mlrFest.opacity(0.15))
-                    DetailSection(icon: "link", title: "Links") {
-                        ScheduleLinkButtons(links: item.links)
-                    }
-                }
-
-                // Sign-ups (migrations 0135/0136/0143) — self-hides when disabled.
-                if item.signupEnabled {
-                    Divider().background(Color.mlrFest.opacity(0.15))
-                    EventSignupSection(item: item)
                 }
 
                 Spacer(minLength: 32)
@@ -373,16 +393,6 @@ struct ExpandableScheduleRow: View {
                 }
             }
 
-            if let bring = item.bring, !bring.isEmpty {
-                Divider().background(Color.mlrFest.opacity(0.12))
-                DetailSection(icon: "bag.fill", title: "What to bring") {
-                    Text(bring)
-                        .font(.mlrScaled(15))
-                        .foregroundStyle(Color.mlrText)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
             if let description = item.description, !description.isEmpty {
                 Divider().background(Color.mlrFest.opacity(0.12))
                 DetailSection(icon: "text.alignleft", title: "About") {
@@ -393,6 +403,37 @@ struct ExpandableScheduleRow: View {
                 }
             }
 
+            if let bring = item.bring, !bring.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "bag.fill", title: "What to bring") {
+                    Text(bring)
+                        .font(.mlrScaled(15))
+                        .foregroundStyle(Color.mlrText)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            // Links → signup → tournament → leads, matching web's
+            // FestScheduleDetail/FestWeek ordering (lead/contact renders last).
+            if !item.links.isEmpty {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                DetailSection(icon: "link", title: "Links") {
+                    ScheduleLinkButtons(links: item.links)
+                }
+            }
+
+            if item.signupEnabled {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                EventSignupSection(item: item)
+            }
+
+            if item.tournamentEnabled {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                TournamentEntryCard(item: item, canManage: canEditItem)
+                    .padding(.horizontal, 20).padding(.vertical, 16)
+            }
+
+            // Leads — last, matching web's "In charge" contact card position.
             if !item.leads.isEmpty {
                 Divider().background(Color.mlrFest.opacity(0.12))
                 DetailSection(icon: "person.fill", title: "Leads") {
@@ -406,18 +447,6 @@ struct ExpandableScheduleRow: View {
                         ProtectedField(message: "Sign in to see leads & contacts")
                     }
                 }
-            }
-
-            if !item.links.isEmpty {
-                Divider().background(Color.mlrFest.opacity(0.12))
-                DetailSection(icon: "link", title: "Links") {
-                    ScheduleLinkButtons(links: item.links)
-                }
-            }
-
-            if item.signupEnabled {
-                Divider().background(Color.mlrFest.opacity(0.12))
-                EventSignupSection(item: item)
             }
 
             if canEditItem {

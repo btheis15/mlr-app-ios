@@ -266,14 +266,14 @@ struct NotificationsView: View {
 
         // Navigate based on targetType
         guard let targetType = notification.targetType else { return }
-        NotificationCenter.default.post(
-            name: .notificationTapped,
-            object: nil,
-            userInfo: [
-                "target_type": targetType,
-                "target_id": notification.targetId ?? ""
-            ]
-        )
+        var userInfo: [String: Any] = [
+            "target_type": targetType,
+            "target_id": notification.targetId ?? ""
+        ]
+        // Carries anything targetType/targetId can't express alone — e.g. a
+        // post_comment/reply/mention's `&comment=<id>` (migration 0164).
+        if let url = notification.url { userInfo["url"] = url }
+        NotificationCenter.default.post(name: .notificationTapped, object: nil, userInfo: userInfo)
     }
 }
 

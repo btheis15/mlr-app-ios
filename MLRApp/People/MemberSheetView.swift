@@ -175,6 +175,10 @@ struct MemberSheetView: View {
         let value: String
         let icon: String
         let url: String?
+        /// Venmo only — the exact `venmo.com/<handle>?txn=pay` deep link the
+        /// row's own tap-through opens, encoded as a QR so anyone's camera
+        /// (not just an iOS Venmo-app-scheme tap) can scan it.
+        var qrValue: String? = nil
         var id: String { key }
     }
 
@@ -183,7 +187,8 @@ struct MemberSheetView: View {
         var list: [PayMethod] = []
         if let venmo = member.venmoHandle, !venmo.isEmpty {
             let h = venmo.replacingOccurrences(of: "@", with: "")
-            list.append(.init(key: "Venmo", label: "Venmo", value: "@\(h)", icon: "dollarsign.circle.fill", url: "venmo://users/\(h)"))
+            list.append(.init(key: "Venmo", label: "Venmo", value: "@\(h)", icon: "dollarsign.circle.fill",
+                              url: "venmo://users/\(h)", qrValue: "https://venmo.com/\(h)?txn=pay"))
         }
         if let zelle = member.zelleHandle, !zelle.isEmpty {
             list.append(.init(key: "Zelle", label: "Zelle", value: zelle, icon: "z.circle.fill", url: nil))
@@ -207,9 +212,14 @@ struct MemberSheetView: View {
                 Protected {
                     VStack(spacing: 10) {
                         ForEach(payMethods) { m in
-                            contactRow(m.label, m.value, m.icon, url: m.url,
-                                       preferred: m.key.lowercased() == pref,
-                                       tint: payTint(m.key))
+                            VStack(spacing: 0) {
+                                contactRow(m.label, m.value, m.icon, url: m.url,
+                                           preferred: m.key.lowercased() == pref,
+                                           tint: payTint(m.key))
+                                if let qrValue = m.qrValue {
+                                    VenmoQRDisclosure(name: member.name, handle: m.value, urlString: qrValue)
+                                }
+                            }
                         }
                     }
                 }

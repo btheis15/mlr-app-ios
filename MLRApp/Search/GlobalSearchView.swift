@@ -26,6 +26,10 @@ struct GlobalSearchView: View {
     // Semantic conversation search hits (posts/comments/chats by meaning) —
     // separate from the entity results in `groups` (#365).
     @State private var conversationHits: [ConversationSearchHit] = []
+    // Distinct from "no matching messages" — set only when the mini/search
+    // pipeline itself failed (unreachable, not yet deployed, etc.), never for
+    // a genuine empty result set.
+    @State private var conversationSearchError: String? = nil
     @State private var isSearching = false
     @State private var searchTask: Task<Void, Never>?
 
@@ -42,9 +46,9 @@ struct GlobalSearchView: View {
                         .font(.mlrScaled(15))
                         .foregroundStyle(.secondary)
                 }
-            } else if groups.isEmpty && conversationHits.isEmpty && !trimmedQuery.isEmpty {
+            } else if groups.isEmpty && conversationHits.isEmpty && conversationSearchError == nil && !trimmedQuery.isEmpty {
                 ContentUnavailableView.search(text: trimmedQuery)
-            } else if groups.isEmpty && conversationHits.isEmpty {
+            } else if groups.isEmpty && conversationHits.isEmpty && conversationSearchError == nil {
                 ContentUnavailableView(
                     "Search Up North",
                     systemImage: "magnifyingglass",
@@ -66,6 +70,12 @@ struct GlobalSearchView: View {
                             Button { openConversation(hit) } label: { conversationRow(hit) }
                                 .buttonStyle(.pressable)
                         }
+                    }
+                } else if let conversationSearchError {
+                    Section("In conversations") {
+                        Text(conversationSearchError)
+                            .font(.mlrScaled(13))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }
@@ -132,19 +142,29 @@ struct GlobalSearchView: View {
         guard !term.isEmpty else {
             groups = []
             conversationHits = []
+            conversationSearchError = nil
             isSearching = false
             return
         }
         isSearching = true
-        // Entity search is instant/local; conversation search hits the mini and
-        // may be unreachable (off Tailscale) — it returns [] gracefully.
+        // Entity search is instant/local and can't fail. Conversation search
+        // hits the mini and can genuinely fail (unreachable, not yet
+        // deployed) — caught separately so a real failure shows a distinct
+        // "Search is unavailable" message instead of a false empty result.
         async let entities = ResortSearch.run(term: term)
-        async let conversations = env.mediaService.searchConversations(query: term)
+        async let conversations: (hits: [ConversationSearchHit], error: String?) = {
+            do {
+                return (try await env.mediaService.searchConversations(query: term), nil)
+            } catch {
+                return ([], "Search is unavailable right now.")
+            }
+        }()
         let (result, convos) = await (entities, conversations)
         // Drop stale results if the query moved on while we were fetching.
         guard term == trimmedQuery else { return }
         groups = result
-        conversationHits = convos
+        conversationHits = convos.hits
+        conversationSearchError = convos.error
         isSearching = false
     }
 

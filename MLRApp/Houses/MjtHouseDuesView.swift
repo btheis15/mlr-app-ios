@@ -19,10 +19,15 @@ struct MjtHouseDuesCard: View {
     private var festYear: Int { FamilyFestConfig.year }
     private var isPaid: Bool { env.currentProfile?.mjtDuesPaidYear == festYear }
 
+    /// Mirrors web's `!season || season.daysSinceEnd > TAIL_DAYS` guard —
+    /// deliberately no lower bound (daysSinceEnd is clamped to 0 until the fest
+    /// actually ends, so this shows the whole lead-up too, not just the
+    /// planning/live/wrap "takeover" window). An extra `isTakeover` check here
+    /// used to hide the card during genuine off-season lead time, well before
+    /// anyone's even thinking about the fest yet — a real divergence from web.
     private var shouldShow: Bool {
         guard house.slug == "mjt-house" else { return false }
-        let season = FestSeason.current()
-        return season.isTakeover && season.daysSinceEnd <= MJT_DUES_TAIL_DAYS
+        return FestSeason.current().daysSinceEnd <= MJT_DUES_TAIL_DAYS
     }
 
     var body: some View {

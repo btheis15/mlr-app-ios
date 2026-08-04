@@ -88,7 +88,7 @@ final class CommitteeService {
         try await supabase
             .from("committee_roster")
             .select("""
-                id, name, email, phone, roles, position, linked_user_id,
+                id, name, email, phone, roles, position, linked_user_id, is_lead,
                 profiles:linked_user_id(display_name, avatar_url, phone, contact_email)
             """)
             .eq("committee_slug", value: slug)
@@ -116,7 +116,8 @@ final class CommitteeService {
     /// Create or update a roster entry (admin-gated by RLS).
     func saveRosterEntry(
         id: UUID?, committeeSlug: String, name: String,
-        email: String?, phone: String?, roles: [String], linkedUserId: UUID?
+        email: String?, phone: String?, roles: [String], linkedUserId: UUID?,
+        isCommitteeLead: Bool = false
     ) async throws {
         let uid = try? await supabase.auth.session.user.id
         var row: [String: AnyJSON] = [
@@ -126,6 +127,7 @@ final class CommitteeService {
             "phone": phone.map { AnyJSON.string($0) } ?? .null,
             "roles": .array(roles.map { AnyJSON.string($0) }),
             "linked_user_id": linkedUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
+            "is_lead": .bool(isCommitteeLead),
             "updated_at": .string(ISO8601DateFormatter().string(from: Date())),
         ]
         row["updated_by"] = uid.map { AnyJSON.string($0.uuidString) } ?? .null
@@ -552,11 +554,25 @@ final class CommitteeService {
             let roster = (try? await fetchRoster(slug: committee.slug)) ?? []
             let myAreas = Self.areas(forUser: userId, in: roster)
             let committeeArchived = committee.isArchived
+            // Fetched once per committee so the "real 'Leads' area" guard below
+            // and the archived-area flagging can share it.
+            let allAreas = await fetchCommitteeAreas(slug: committee.slug, includeArchived: true)
             // Areas archived out from under a member still show (read-only) so
             // history stays reachable — flag them for the "Archived chats" group.
             let archivedAreas: Set<String> = committeeArchived ? Set(myAreas)
-                : Set(await fetchCommitteeAreas(slug: committee.slug, includeArchived: true)
-                        .filter { $0.isArchived }.map(\.area))
+                : Set(allAreas.filter { $0.isArchived }.map(\.area))
+            // A private "Leads" chat (migrations 0172/0177) — anyone holding an
+            // area " · Lead" role OR the committee-level is_lead flag. Backs off
+            // if an admin ever names a real role literally "Leads" (mirrors the
+            // SQL guard in can_access_committee_area), so the sentinel can't
+            // hijack a real role.
+            let hasRealLeadsArea = allAreas.contains { $0.area.lowercased() == "leads" }
+            let iAmLead = roster.contains { $0.linkedUserId == userId && $0.isLead }
+            if iAmLead && !hasRealLeadsArea {
+                channels.append(ChatChannel(committee: committee, area: "Leads",
+                                            title: "Leads", subtitle: committee.name,
+                                            isArchived: committeeArchived))
+            }
             if myAreas.isEmpty {
                 channels.append(ChatChannel(committee: committee, area: nil,
                                             title: committee.name, subtitle: nil,

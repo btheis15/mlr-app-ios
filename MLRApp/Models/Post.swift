@@ -56,6 +56,10 @@ struct PostComment: Codable, Identifiable, Equatable {
     var text: String
     var status: ContentStatus
     var createdAt: Date
+    /// Attached photos/videos (migration 0162), in position order — mirrors
+    /// Post's own parallel-array shape rather than a richer Media struct.
+    var mediaUrls: [String] = []
+    var mediaIsVideo: [Bool] = []
 
     enum CodingKeys: String, CodingKey {
         case id

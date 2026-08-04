@@ -163,11 +163,11 @@ final class EventsService {
 
     // MARK: - Who is going
 
-    func fetchWhoIsGoing(eventId: String) async throws -> [Profile] {
+    func fetchWhoIsGoing(eventId: String) async throws -> [EventAttendee] {
         let rows: [AttendanceWithProfile] = try await supabase
             .from("event_attendance")
             .select("""
-                status,
+                status, confirmed,
                 profiles!user_id(id, display_name, contact_email, avatar_url, phone, is_admin,
                                  beta_tester, willing_to_help, intro_seen,
                                  email_alerts, push_level, push_types,
@@ -177,7 +177,9 @@ final class EventsService {
             .in("status", values: ["going", "maybe"])
             .execute()
             .value
-        return rows.compactMap(\.profile)
+        return rows.compactMap { row in
+            row.profile.map { EventAttendee(profile: $0, confirmed: row.confirmed ?? true) }
+        }
     }
 
     /// Attendees (going/maybe) of an event, each with their per-day RSVP — used
@@ -356,12 +358,24 @@ final class EventsService {
 
 private struct AttendanceWithProfile: Decodable {
     let status: AttendanceStatus
+    let confirmed: Bool?
     let profile: Profile?
 
     enum CodingKeys: String, CodingKey {
         case status
+        case confirmed
         case profile = "profiles"
     }
+}
+
+/// One event's attendee, tagged with whether they've confirmed their own RSVP
+/// (migration 0122) — false for a family-poll-carried-over row nobody has
+/// re-tapped their Going/Maybe/Can't-make control on yet.
+struct EventAttendee: Identifiable {
+    let profile: Profile
+    let confirmed: Bool
+    var id: UUID { profile.id }
+    var name: String { profile.name }
 }
 
 private struct AttendeeWithDaysRow: Decodable {

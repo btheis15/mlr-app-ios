@@ -15,6 +15,8 @@ struct EventsView: View {
     @State private var hasLoaded = false
     // Private activities + games (#397) — visible only to the viewer.
     @State private var activities: [PrivateActivity] = []
+    @State private var archivedActivities: [PrivateActivity] = []
+    @State private var showArchivedActivities = false
     @State private var showActivityComposer = false
     @State private var selectedActivity: PrivateActivity?
 
@@ -213,15 +215,36 @@ struct EventsView: View {
 
     @ViewBuilder
     private var activitiesSection: some View {
-        if !activities.isEmpty {
+        if !activities.isEmpty || !archivedActivities.isEmpty {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Games & activities")
-                    .font(.mlrScaled(13, weight: .bold))
-                    .foregroundStyle(Color.mlrTextMuted)
-                ForEach(activities) { activity in
-                    Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
-                        .buttonStyle(.pressable)
-                        .scrollEntrance()
+                if !activities.isEmpty {
+                    Text("Games & activities")
+                        .font(.mlrScaled(13, weight: .bold))
+                        .foregroundStyle(Color.mlrTextMuted)
+                    ForEach(activities) { activity in
+                        Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
+                            .buttonStyle(.pressable)
+                            .scrollEntrance()
+                    }
+                }
+
+                // A finished/archived game stays reachable (restore or delete
+                // from its own sheet) under a quiet collapsed disclosure —
+                // mirrors the Feed tab's "Archived chats" line.
+                if !archivedActivities.isEmpty {
+                    DisclosureGroup(isExpanded: $showArchivedActivities) {
+                        VStack(alignment: .leading, spacing: 8) {
+                            ForEach(archivedActivities) { activity in
+                                Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
+                                    .buttonStyle(.pressable)
+                            }
+                        }
+                        .padding(.top, 8)
+                    } label: {
+                        Text("🗄️ Finished & archived (\(archivedActivities.count))")
+                            .font(.mlrScaled(13, weight: .semibold))
+                            .foregroundStyle(Color.mlrTextMuted)
+                    }
                 }
             }
             .padding(.horizontal, 16)
@@ -229,7 +252,9 @@ struct EventsView: View {
     }
 
     private func loadActivities() async {
-        activities = await env.privateActivitiesService.fetchActivities().filter { !$0.isArchived }
+        let all = await env.privateActivitiesService.fetchActivities()
+        activities = all.filter { !$0.isArchived }
+        archivedActivities = all.filter(\.isArchived)
     }
 
     // MARK: - Empty

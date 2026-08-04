@@ -413,6 +413,11 @@ struct RoomPickRow: View {
                     Text("\(room.beds) bed\(room.beds == 1 ? "" : "s")")
                         .font(.mlrScaled(12))
                         .foregroundStyle(Color.mlrTextMuted)
+                    if let description = room.description?.trimmingCharacters(in: .whitespacesAndNewlines), !description.isEmpty {
+                        Text(description)
+                            .font(.mlrScaled(11))
+                            .foregroundStyle(Color.mlrTextSubtle)
+                    }
                 }
 
                 Spacer()

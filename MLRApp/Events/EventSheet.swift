@@ -27,7 +27,7 @@ struct EventSheet: View {
     @State private var myStatus: AttendanceStatus?
     @State private var dayStatuses: [String: AttendanceStatus] = [:]
     @State private var isSaving = false
-    @State private var attendees: [Profile] = []
+    @State private var attendees: [EventAttendee] = []
     @State private var dayAttendees: [FestAttendee] = []   // per-day roster (day_rsvp events)
     @State private var loadingAttendees = true
     @State private var showEditor = false
@@ -373,7 +373,7 @@ struct EventSheet: View {
                 // Avatar stack
                 HStack(spacing: -10) {
                     ForEach(attendees.prefix(8)) { person in
-                        AvatarView(profile: person, size: .small)
+                        AvatarView(profile: person.profile, size: .small)
                             .overlay(Circle().stroke(Color.mlrSurface, lineWidth: 2))
                     }
                     if attendees.count > 8 {
@@ -386,8 +386,10 @@ struct EventSheet: View {
                             .overlay(Circle().stroke(Color.mlrSurface, lineWidth: 2))
                     }
                 }
-                // Names
-                Text(attendees.map(\.name).joined(separator: ", "))
+                // Names — an RSVP carried over from a family meeting poll
+                // (migration 0122) and never re-confirmed gets a quiet tag,
+                // visible to whoever's planning; invisible clutter for everyone else.
+                Text(attendees.map { $0.confirmed ? $0.name : "\($0.name) (hasn't confirmed)" }.joined(separator: ", "))
                     .font(.mlrCaption)
                     .foregroundStyle(Color.mlrTextMuted)
             }

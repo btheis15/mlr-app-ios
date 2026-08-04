@@ -9,6 +9,7 @@ import SwiftUI
 // (#381); everyone else gets a clear error.
 
 struct AdminSystemView: View {
+    @Environment(AppEnvironment.self) private var env
     @State private var status: ServerStatus?
     @State private var loading = true
     @State private var loadError: String?
@@ -32,6 +33,23 @@ struct AdminSystemView: View {
     }
 
     var body: some View {
+        if isOwner(env.currentProfile?.email) {
+            content
+        } else {
+            List {
+                Section {
+                    Text("Not available.")
+                        .font(.mlrScaled(14))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
+            }
+            .navigationTitle("System")
+            .navigationBarTitleDisplayMode(.inline)
+        }
+    }
+
+    private var content: some View {
         List {
             Section("Media server (Mac mini)") {
                 if loading {

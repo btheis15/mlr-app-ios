@@ -96,6 +96,11 @@ struct EventAttendance: Codable, Identifiable, Equatable {
     var status: AttendanceStatus
     var days: [String: AttendanceStatus]?
     var updatedAt: Date?
+    /// Migration 0122 — an RSVP carried over from a family-wide meeting poll's
+    /// winning slot starts `false` ("hasn't confirmed") until the member taps
+    /// their own Going/Maybe/Can't-make control again (set_event_attendance
+    /// stamps this true on any self-write). Defaults true for a normal RSVP.
+    var confirmed: Bool = true
 
     // event_attendance has a composite PK (event_id, user_id) — no id column.
     var id: String { "\(eventId)-\(userId.uuidString)" }
@@ -106,6 +111,7 @@ struct EventAttendance: Codable, Identifiable, Equatable {
         case status
         case days
         case updatedAt = "updated_at"
+        case confirmed
     }
 
     func effectiveStatus() -> AttendanceStatus {

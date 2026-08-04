@@ -65,16 +65,23 @@ struct HomeView: View {
 
                             // ── 2. Weather — "what's it like Up North right now" ──
                             // Self-hides on load failure — never leaves an empty gap.
+                            // Every card below gets `.scrollEntrance()` — a gentle
+                            // fade/scale/rise as it crosses into view, so the whole
+                            // feed feels alive while scrolling, not just on first
+                            // load (Reduce Motion turns this into a no-op).
                             HomeWeatherCard()
+                                .scrollEntrance()
 
                             // ── 3. Announcement banner ────────────────────
                             AnnouncementBannerStack()
+                                .scrollEntrance()
 
                             // ── 4. Callout cards + fest spotlight ─────────
                             // Admin-managed swipeable callout cards (home_callouts,
                             // migration 0083) stack above the permanent FamilyFestSpotlight
                             // base — same shape as the web's HomeSpotlight/CalloutStack.
                             HomeCalloutsStack(season: festSeason, previewDate: previewDateString)
+                                .scrollEntrance()
 
                             // ── 5. Upcoming event ─────────────────────────
                             if let event = spotlightEvent {
@@ -86,22 +93,27 @@ struct HomeView: View {
                                         await updateAttendance(event: event, status: status)
                                     }
                                 )
+                                .scrollEntrance()
                             }
 
                             // ── 5. Your house — hub for calendar, chat & to-do ──
                             // Self-hides for guests and anyone not in a house.
                             // Promoted above checklist to match web layout (Jul 2026).
                             HouseHubHomeCard()
+                                .scrollEntrance()
 
                             // ── 5b. Admin dashboard shortcut (admins only) ──
                             // Self-hides for non-admins and during "View as" preview.
                             HomeAdminDashboardCard()
+                                .scrollEntrance()
 
                             // ── 6. Work Checklist (standalone collapsible card) ──
                             WorkChecklistCard()
+                                .scrollEntrance()
 
                             // ── 6b. Polls — self-hides when no open poll ──────────
                             PollHomeCard()
+                                .scrollEntrance()
 
                             // ── 7. Quick actions — every destination, always visible ──
                             // Replaces the two collapsed accordions (Communication /
@@ -110,11 +122,15 @@ struct HomeView: View {
 
                             // ── 8. Delight cards — birthdays, who's up north, memory ─
                             UpcomingBirthdaysCard()
+                                .scrollEntrance()
                             WhosUpNorthCard()
+                                .scrollEntrance()
                             OnThisDayCard()
+                                .scrollEntrance()
 
                             // ── 9. App & Help ────────────────────────────
                             appHelpSection
+                                .scrollEntrance()
 
                             // ── 8. Heritage footer ────────────────────────
                             heritageFooter
@@ -199,65 +215,51 @@ struct HomeView: View {
 
     // MARK: - Subviews
 
-    // 2-column grid of the six primary destinations — always visible, no tap
-    // to expand. Row order matches web HomeQuickActions (Brian's ordering):
-    // Events · Committees / People · Ask for Help / Local Places · Cabin Stay.
+    // 2-column grid of the primary destinations — always visible, no tap
+    // to expand. Every tile is the same plain square HomeTile (Events used to
+    // be promoted to a full-width hero card; flattened back to match the rest
+    // per feedback). Row order matches web HomeQuickActions (Brian's
+    // ordering): Events · Committees / People · Ask for Help / Local Places ·
+    // Cabin Stay, plus Drop Box (migration 0171 — not yet on web's own
+    // quick-actions grid either; web reaches it from a dedicated tile there).
     private var quickActionsGrid: some View {
         let cols = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-        return VStack(spacing: 12) {
-        // Events promoted to a full-width hero tile with a mini mesh wash.
-        NavigationLink(destination: EventsView()) {
-            HStack(spacing: 14) {
-                Image(systemName: "calendar")
-                    .font(.mlrScaled(24, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 48, height: 48)
-                    .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 12))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Events")
-                        .font(.mlrScaled(18, weight: .bold, design: .rounded))
-                    Text("RSVP — gatherings & work weekends.")
-                        .font(.mlrScaled(12))
-                        .opacity(0.9)
-                }
-                Spacer()
-                Image(systemName: "chevron.right").font(.mlrScaled(13, weight: .bold))
+        return LazyVGrid(columns: cols, spacing: 12) {
+            NavigationLink(destination: EventsView()) {
+                HomeTile(icon: "calendar", title: "Events",
+                         subtitle: "RSVP — gatherings & work weekends.", tint: Color.mlrPrimary)
             }
-            .foregroundStyle(.white)
-            .padding(16)
-            .background(
-                ZStack {
-                    LinearGradient(colors: [.mlrPrimary, .mlrPrimaryDark],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                    LinearGradient(colors: [Color.mlrSun.opacity(0.25), .clear],
-                                   startPoint: .topTrailing, endPoint: .center)
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: MLRRadius.card))
-            .shadow(.medium)
-        }
-        LazyVGrid(columns: cols, spacing: 12) {
+            .cardEntrance(index: 0)
             NavigationLink(destination: CommitteesView()) {
                 HomeTile(icon: "person.3.fill", title: "Committees",
                          subtitle: "Join a crew — there's a spot for you.", tint: Color.mlrAccent)
             }
+            .cardEntrance(index: 1)
             NavigationLink(destination: PeopleDirectoryView()) {
                 HomeTile(icon: "person.2.fill", title: "People",
                          subtitle: "Find & contact everyone.", tint: Color.mlrInfo)
             }
+            .cardEntrance(index: 2)
             NavigationLink(destination: HelpRequestsView()) {
                 HomeTile(icon: "hand.raised.fill", title: "Ask for Help",
                          subtitle: "Request a hand at the resort.", tint: Color.mlrPrimary)
             }
+            .cardEntrance(index: 3)
             NavigationLink(destination: LocalPlacesView()) {
                 HomeTile(icon: "mappin.and.ellipse", title: "Local Places",
                          subtitle: "Tee times, food & favorites.", tint: Color.mlrInfo)
             }
+            .cardEntrance(index: 4)
             NavigationLink(destination: CabinBookingsView()) {
                 HomeTile(icon: "house.lodge.fill", title: "Cabin Stay",
                          subtitle: "Reserve a room for any week.", tint: Color.mlrPrimary)
             }
-        }
+            .cardEntrance(index: 5)
+            NavigationLink(destination: DropBoxesView()) {
+                HomeTile(icon: "photo.stack.fill", title: "Drop Box",
+                         subtitle: "Dump & browse shared photos.", tint: Color.mlrAccent)
+            }
+            .cardEntrance(index: 6)
         }
         .buttonStyle(.pressable)
     }
@@ -334,7 +336,7 @@ struct HomeView: View {
 
     // "App & Help" — guided tour, share the app, help & how-to
     private var appHelpSection: some View {
-        CollapsibleHomeSection(
+        CollapsibleSection(
             title: "App & Help",
             emoji: "📲",
             subtitle: "Take the tour · Share · Help"
@@ -462,62 +464,6 @@ struct HomeTile: View {
         .padding(14)
         .frame(maxWidth: .infinity, minHeight: minHeight ?? 88, maxHeight: .infinity, alignment: .leading)
         .cardStyle()
-    }
-}
-
-// MARK: - CollapsibleHomeSection
-// A tappable header card (emoji + title + subtitle + rotating chevron) that
-// reveals its content when open. Mirrors the web app's CollapsibleSection —
-// both Home groups start collapsed.
-
-private struct CollapsibleHomeSection<Content: View>: View {
-    let title: String
-    let emoji: String
-    let subtitle: String
-    let content: Content
-
-    @State private var isOpen = false
-
-    init(title: String, emoji: String, subtitle: String, @ViewBuilder content: () -> Content) {
-        self.title = title
-        self.emoji = emoji
-        self.subtitle = subtitle
-        self.content = content()
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.2)) { isOpen.toggle() }
-            } label: {
-                HStack(spacing: 12) {
-                    Text(emoji).font(.mlrScaled(20))
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(title)
-                            .font(.mlrScaled(16, weight: .semibold))
-                            .foregroundStyle(Color.mlrText)
-                        Text(subtitle)
-                            .font(.caption)
-                            .foregroundStyle(Color.mlrTextMuted)
-                            .lineLimit(1)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.mlrScaled(14, weight: .semibold))
-                        .foregroundStyle(Color.mlrTextSubtle)
-                        .rotationEffect(.degrees(isOpen ? 90 : 0))
-                }
-                .padding(14)
-                .frame(maxWidth: .infinity)
-                .cardStyle()
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.pressable)
-
-            if isOpen {
-                content
-            }
-        }
     }
 }
 

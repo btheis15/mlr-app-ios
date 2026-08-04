@@ -41,7 +41,7 @@ struct EditCabinBookingSheet: View {
         rooms.map { r in
             heldRoomIds.contains(r.id)
                 ? CabinRoomAvailability(roomId: r.roomId, name: r.name, beds: r.beds,
-                                        active: r.active, available: true)
+                                        description: r.description, active: r.active, available: true)
                 : r
         }
     }

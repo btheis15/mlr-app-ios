@@ -8,11 +8,21 @@ struct FestDinnersDetailView: View {
 
     @State private var currentUserId: UUID? = nil
     @State private var showEditSheet = false
+    @State private var canEditFest = false
+    @State private var fullEditDraft: FestDinnerDraft?
 
     /// True when the signed-in user is this dinner's chef or an assigned crew member.
     private var canEdit: Bool {
         guard env.isSignedIn, let uid = currentUserId else { return false }
         return dinner.chefUserId == uid || dinner.crewUserIds.contains(uid)
+    }
+
+    /// Full editing needs the `FestDinnerDraft` shape (carries `position`,
+    /// which the display `FestDinner` doesn't) — fetched on open, matching
+    /// how the Planner itself resolves a draft for its own editor.
+    private func openFullEdit() async {
+        let drafts = await env.festContentService.editableDinners()
+        fullEditDraft = drafts.first { $0.id?.uuidString == dinner.id }
     }
 
     var body: some View {
@@ -27,7 +37,20 @@ struct FestDinnersDetailView: View {
                             .foregroundStyle(Color.mlrFest)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer()
-                        if canEdit {
+                        if canEditFest {
+                            // Full admin/committee editor — day, title, chef,
+                            // houses, crew, everything — right here.
+                            Button { Task { await openFullEdit() } } label: {
+                                Text("✏️ Edit")
+                                    .font(.mlrScaled(12, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 6)
+                                    .background(Color.mlrFest)
+                                    .clipShape(Capsule())
+                            }
+                            .buttonStyle(.pressable)
+                        } else if canEdit {
                             Button { showEditSheet = true } label: {
                                 Text("✏️ Edit")
                                     .font(.mlrScaled(12, weight: .semibold))
@@ -154,7 +177,10 @@ struct FestDinnersDetailView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
         .task {
-            if env.isSignedIn { currentUserId = await env.authService.userId }
+            if env.isSignedIn {
+                currentUserId = await env.authService.userId
+                canEditFest = await env.festContentService.canEditFest()
+            }
         }
         .sheet(isPresented: $showEditSheet) {
             NavigationStack {
@@ -163,6 +189,9 @@ struct FestDinnersDetailView: View {
                     await env.festContentService.reload()
                 }
             }
+        }
+        .sheet(item: $fullEditDraft, onDismiss: { Task { await env.festContentService.reload() } }) { draft in
+            DinnerEditSheet(draft: draft)
         }
     }
 }

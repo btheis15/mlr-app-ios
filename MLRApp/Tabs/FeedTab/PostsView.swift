@@ -331,6 +331,10 @@ struct MainFeedView: View {
             .padding(.vertical, 8)
             Divider().padding(.horizontal, 16)
         }
+        // Fade/scale/rise as each post crosses into view — the Feed was the one
+        // major list with zero motion; matches the same treatment Events/Family
+        // Fest already had. No-op under Reduce Motion.
+        .scrollEntrance()
     }
 
     private var loadingState: some View {

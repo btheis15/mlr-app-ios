@@ -27,7 +27,10 @@ import Foundation
 
 enum NotificationDeepLink: Equatable {
     /// A Main Feed post — new post, comment, reply, @mention, tag, or reaction.
-    case post(id: UUID)
+    /// `commentId` is set for a post_comment/post_reply/post_mention notification
+    /// (migration 0164's `&comment=<id>`) so the viewer can scroll to + flash
+    /// that specific comment instead of just landing atop the thread.
+    case post(id: UUID, commentId: UUID?)
     /// The Feed tab itself (no specific post/message resolved).
     case feed
     /// A committee/role-channel chat message; the room comes from the message row.
@@ -54,7 +57,7 @@ enum NotificationDeepLink: Equatable {
 
         switch userInfo["target_type"] as? String {
         case "post":
-            if let id = targetId ?? link.uuid("post") { self = .post(id: id) } else { self = .feed }
+            if let id = targetId ?? link.uuid("post") { self = .post(id: id, commentId: link.uuid("comment")) } else { self = .feed }
         case "committee_message":
             if let id = targetId ?? link.uuid("m") { self = .committeeMessage(id: id) } else { self = .feed }
         case "house_message":
@@ -93,7 +96,7 @@ enum NotificationDeepLink: Equatable {
         } else if path.hasPrefix("/family-fest") {
             self = .familyFest
         } else if path.hasPrefix("/posts") {
-            if let id = link.uuid("post") { self = .post(id: id) }
+            if let id = link.uuid("post") { self = .post(id: id, commentId: link.uuid("comment")) }
             else if let id = link.uuid("m") {
                 self = link.query["house"] != nil ? .houseMessage(id: id) : .committeeMessage(id: id)
             } else { self = .feed }

@@ -48,7 +48,7 @@ struct HomeAdminDashboardCard: View {
                 .buttonStyle(.pressable)
             }
             .padding(14)
-            .background(Color.mlrPrimaryDark)
+            .background(Color.mlrAccent)
             .clipShape(RoundedRectangle(cornerRadius: 16))
         }
     }

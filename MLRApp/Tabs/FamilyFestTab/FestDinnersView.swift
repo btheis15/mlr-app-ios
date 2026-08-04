@@ -12,12 +12,13 @@ import SwiftUI
 struct FestDinnersView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var currentUserId: UUID? = nil
+    @State private var canEditFest = false
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
                 ForEach(env.festContentService.dinners) { dinner in
-                    DinnerMenuCard(dinner: dinner, currentUserId: currentUserId)
+                    DinnerMenuCard(dinner: dinner, currentUserId: currentUserId, canEditFest: canEditFest)
                 }
             }
             .padding(.horizontal, 16)
@@ -28,7 +29,10 @@ struct FestDinnersView: View {
         .navigationTitle("Weekly Menu")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            if env.isSignedIn { currentUserId = await env.authService.userId }
+            if env.isSignedIn {
+                currentUserId = await env.authService.userId
+                canEditFest = await env.festContentService.canEditFest()
+            }
         }
     }
 }
@@ -39,9 +43,12 @@ private struct DinnerMenuCard: View {
     @Environment(AppEnvironment.self) private var env
     let dinner: FestDinner
     let currentUserId: UUID?
+    let canEditFest: Bool
     @State private var showEditSheet = false
+    @State private var fullEditDraft: FestDinnerDraft?
 
-    /// Chef or an assigned crew member may edit (migration 0099).
+    /// Chef or an assigned crew member may edit their own operational details
+    /// (migration 0099) — separate from full admin/committee editing below.
     private var canEdit: Bool {
         guard env.isSignedIn, let uid = currentUserId else { return false }
         return dinner.chefUserId == uid || dinner.crewUserIds.contains(uid)
@@ -64,7 +71,19 @@ private struct DinnerMenuCard: View {
                     .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                 }
                 Spacer()
-                if canEdit {
+                if canEditFest {
+                    // Full admin/committee editor — day, title, chef, houses,
+                    // crew, everything — right here, no trip to the Planner.
+                    Button { Task { await openFullEdit() } } label: {
+                        Text("✏️ Edit")
+                            .font(.mlrScaled(11, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 10).padding(.vertical, 5)
+                            .background(Color.mlrFest)
+                            .clipShape(Capsule())
+                    }
+                    .buttonStyle(.pressable)
+                } else if canEdit {
                     Button { showEditSheet = true } label: {
                         Text("✏️ Edit")
                             .font(.mlrScaled(11, weight: .semibold))
@@ -119,5 +138,16 @@ private struct DinnerMenuCard: View {
                 }
             }
         }
+        .sheet(item: $fullEditDraft, onDismiss: { Task { await env.festContentService.reload() } }) { draft in
+            DinnerEditSheet(draft: draft)
+        }
+    }
+
+    /// Full editing needs the `FestDinnerDraft` shape (carries `position`,
+    /// which the display `FestDinner` doesn't) — fetched on open, matching
+    /// how the Planner itself resolves a draft for its own editor.
+    private func openFullEdit() async {
+        let drafts = await env.festContentService.editableDinners()
+        fullEditDraft = drafts.first { $0.id?.uuidString == dinner.id }
     }
 }
