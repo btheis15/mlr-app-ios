@@ -200,45 +200,19 @@ struct HomeView: View {
     // MARK: - Subviews
 
     // 2-column grid of the primary destinations — always visible, no tap
-    // to expand. Row order matches web HomeQuickActions (Brian's ordering):
-    // Events · Committees / People · Ask for Help / Local Places · Cabin Stay,
-    // plus Drop Box (migration 0171 — not yet on web's own quick-actions grid
-    // either; web reaches it from a dedicated tile there).
+    // to expand. Every tile is the same plain square HomeTile (Events used to
+    // be promoted to a full-width hero card; flattened back to match the rest
+    // per feedback). Row order matches web HomeQuickActions (Brian's
+    // ordering): Events · Committees / People · Ask for Help / Local Places ·
+    // Cabin Stay, plus Drop Box (migration 0171 — not yet on web's own
+    // quick-actions grid either; web reaches it from a dedicated tile there).
     private var quickActionsGrid: some View {
         let cols = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
-        return VStack(spacing: 12) {
-        // Events promoted to a full-width hero tile with a mini mesh wash.
-        NavigationLink(destination: EventsView()) {
-            HStack(spacing: 14) {
-                Image(systemName: "calendar")
-                    .font(.mlrScaled(24, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 48, height: 48)
-                    .background(.white.opacity(0.18), in: RoundedRectangle(cornerRadius: 12))
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Events")
-                        .font(.mlrScaled(18, weight: .bold, design: .rounded))
-                    Text("RSVP — gatherings & work weekends.")
-                        .font(.mlrScaled(12))
-                        .opacity(0.9)
-                }
-                Spacer()
-                Image(systemName: "chevron.right").font(.mlrScaled(13, weight: .bold))
+        return LazyVGrid(columns: cols, spacing: 12) {
+            NavigationLink(destination: EventsView()) {
+                HomeTile(icon: "calendar", title: "Events",
+                         subtitle: "RSVP — gatherings & work weekends.", tint: Color.mlrPrimary)
             }
-            .foregroundStyle(.white)
-            .padding(16)
-            .background(
-                ZStack {
-                    LinearGradient(colors: [.mlrPrimary, .mlrPrimaryDark],
-                                   startPoint: .topLeading, endPoint: .bottomTrailing)
-                    LinearGradient(colors: [Color.mlrSun.opacity(0.25), .clear],
-                                   startPoint: .topTrailing, endPoint: .center)
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: MLRRadius.card))
-            .shadow(.medium)
-        }
-        LazyVGrid(columns: cols, spacing: 12) {
             NavigationLink(destination: CommitteesView()) {
                 HomeTile(icon: "person.3.fill", title: "Committees",
                          subtitle: "Join a crew — there's a spot for you.", tint: Color.mlrAccent)
@@ -263,7 +237,6 @@ struct HomeView: View {
                 HomeTile(icon: "photo.stack.fill", title: "Drop Box",
                          subtitle: "Dump & browse shared photos.", tint: Color.mlrAccent)
             }
-        }
         }
         .buttonStyle(.pressable)
     }
