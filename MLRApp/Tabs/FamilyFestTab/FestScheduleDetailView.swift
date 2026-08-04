@@ -7,6 +7,17 @@ struct FestScheduleDetailView: View {
     let item: ScheduleItem
     @Environment(AppEnvironment.self) private var env
 
+    /// Same predicate as ExpandableScheduleRow's canEditItem / EventSignupSection's
+    /// canManage — admin/fest-editor OR this item's own lead/crew.
+    private var canManage: Bool {
+        guard env.isSignedIn else { return false }
+        let me = env.currentProfile?.id
+        return env.isAdmin
+            || env.festContentService.userCanEditFest
+            || (item.leadUserId != nil && item.leadUserId == me)
+            || (me != nil && item.crewUserIds.contains(me!))
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
@@ -111,6 +122,13 @@ struct FestScheduleDetailView: View {
                 if item.signupEnabled {
                     Divider().background(Color.mlrFest.opacity(0.15))
                     EventSignupSection(item: item)
+                }
+
+                // Tournament (migrations 0144–0154) — self-hides when disabled.
+                if item.tournamentEnabled {
+                    Divider().background(Color.mlrFest.opacity(0.15))
+                    TournamentEntryCard(item: item, canManage: canManage)
+                        .padding(.horizontal, 20).padding(.vertical, 16)
                 }
 
                 Spacer(minLength: 32)
@@ -418,6 +436,12 @@ struct ExpandableScheduleRow: View {
             if item.signupEnabled {
                 Divider().background(Color.mlrFest.opacity(0.12))
                 EventSignupSection(item: item)
+            }
+
+            if item.tournamentEnabled {
+                Divider().background(Color.mlrFest.opacity(0.12))
+                TournamentEntryCard(item: item, canManage: canEditItem)
+                    .padding(.horizontal, 20).padding(.vertical, 16)
             }
 
             if canEditItem {

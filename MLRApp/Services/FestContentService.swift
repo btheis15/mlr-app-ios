@@ -584,7 +584,8 @@ final class FestContentService {
                 signupInstructions: r.signupInstructions,
                 signupTeamSize: r.signupTeamSize,
                 signupFields: r.signupFields ?? [],
-                signupHideNames: r.signupHideNames ?? false
+                signupHideNames: r.signupHideNames ?? false,
+                tournamentEnabled: r.tournamentEnabled ?? false
             )
         }
     }
@@ -700,6 +701,7 @@ private struct ScheduleRow: Decodable {
     let signupTeamSize: Int?
     let signupFields: [SignupField]?
     let signupHideNames: Bool?   // migration 0167
+    let tournamentEnabled: Bool? // migration 0147
     enum CodingKeys: String, CodingKey {
         case id, day, title, emoji, location, description, anytime, links, bring
         case imageUrl    = "image_url"
@@ -718,6 +720,7 @@ private struct ScheduleRow: Decodable {
         case signupTeamSize     = "signup_team_size"
         case signupFields       = "signup_fields"
         case signupHideNames    = "signup_hide_names"
+        case tournamentEnabled  = "tournament_enabled"
     }
 }
 

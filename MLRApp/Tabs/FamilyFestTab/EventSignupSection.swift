@@ -408,6 +408,50 @@ private struct TeamSignupSheet: View {
     }
 }
 
+// MARK: - Tournament entry card (migrations 0144–0154)
+//
+// A "🏆 Tournament" CTA for a fest schedule activity with `tournamentEnabled`
+// (migration 0147) — mirrors web's TournamentSection mount on
+// FestScheduleDetail/FestWeek's EventRow/FestStatus's TodayEvent. Tapping it
+// pushes the shared TournamentContainerView with `.schedule(id:)` as the host
+// (the same tournament backend private activities already use on iOS).
+
+struct TournamentEntryCard: View {
+    let item: ScheduleItem
+    let canManage: Bool
+
+    var body: some View {
+        if item.tournamentEnabled, let uuid = UUID(uuidString: item.id) {
+            NavigationLink {
+                TournamentContainerView(host: .schedule(id: uuid), canManage: canManage)
+            } label: {
+                HStack(spacing: 12) {
+                    Image(systemName: "trophy.fill")
+                        .font(.mlrScaled(22, weight: .bold))
+                        .foregroundStyle(Color.mlrFest)
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Tournament")
+                            .font(.mlrScaled(15, weight: .bold))
+                            .foregroundStyle(Color.mlrFest)
+                        Text("Bracket, standings, and live scores")
+                            .font(.mlrScaled(12))
+                            .foregroundStyle(Color.mlrFestInk.opacity(0.65))
+                    }
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.mlrScaled(12, weight: .semibold))
+                        .foregroundStyle(Color.mlrFest.opacity(0.5))
+                }
+                .padding(12)
+                .background(Color.mlrFest.opacity(0.08))
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1))
+            }
+            .buttonStyle(.pressable)
+        }
+    }
+}
+
 // MARK: - Custom fields sheet
 
 private struct SignupFieldsSheet: View {
