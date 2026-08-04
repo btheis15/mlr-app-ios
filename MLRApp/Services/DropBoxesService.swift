@@ -22,25 +22,28 @@ final class DropBoxesService {
     func fetchBoxes() async {
         isLoading = true
         defer { isLoading = false }
-        do {
-            let rows: [DropBoxRow] = try await supabase
-                .from("drop_boxes")
-                .select("""
-                    id, title, emoji, created_by, archived_at, created_at,
-                    author:created_by(display_name),
-                    drop_box_media(id, box_id, storage_path, thumbnail_url, media_type, status, uploaded_by, created_at,
-                                    captured_at, credit_user_id,
-                                    uploader:uploaded_by(display_name),
-                                    credit:credit_user_id(display_name))
-                """)
-                .order("created_at", ascending: false)
-                .execute()
-                .value
+        // Try the extended query first (includes captured_at/credit from migrations
+        // 0174/0180). If those columns don't exist in this environment yet, fall
+        // back to the base columns so the list still loads.
+        if let rows = try? await fetchBoxRows(extended: true) {
             boxes = rows.map(\.toBox)
-        } catch {
-            print("[DropBoxesService] fetchBoxes error: \(error)")
-            boxes = []
+        } else if let rows = try? await fetchBoxRows(extended: false) {
+            boxes = rows.map(\.toBox)
+        } else {
+            print("[DropBoxesService] fetchBoxes: both queries failed")
         }
+    }
+
+    private func fetchBoxRows(extended: Bool) async throws -> [DropBoxRow] {
+        let media = extended
+            ? "id, box_id, storage_path, thumbnail_url, media_type, status, uploaded_by, created_at, captured_at, credit_user_id, uploader:uploaded_by(display_name), credit:credit_user_id(display_name)"
+            : "id, box_id, storage_path, thumbnail_url, media_type, status, uploaded_by, created_at, uploader:uploaded_by(display_name)"
+        return try await supabase
+            .from("drop_boxes")
+            .select("id, title, emoji, created_by, archived_at, created_at, author:created_by(display_name), drop_box_media(\(media))")
+            .order("created_at", ascending: false)
+            .execute()
+            .value
     }
 
     // MARK: Box CRUD
