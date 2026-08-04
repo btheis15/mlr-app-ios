@@ -23,6 +23,10 @@ final class HousesService {
 
     private var messageChannels: [UUID: RealtimeChannelV2] = [:]
     private var stayChannels: [UUID: RealtimeChannelV2] = [:]
+    // Not private: House Lists (0169) is a separate extension file
+    // (Houses/HouseListsService.swift), mirroring CommitteeTaxonomy.swift's
+    // pattern of extending a Services/*.swift class from elsewhere.
+    var listChannels: [UUID: RealtimeChannelV2] = [:]
 
     // MARK: - Houses
 

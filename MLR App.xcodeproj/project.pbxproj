@@ -196,6 +196,9 @@
 		D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A3 /* HouseCalendarSheets.swift */; };
 		D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A4 /* HouseStayComposer.swift */; };
 		D3A0000000000000000000B5 /* HouseHubView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A5 /* HouseHubView.swift */; };
+		D3A0000000000000000000B6 /* HouseList.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A6 /* HouseList.swift */; };
+		D3A0000000000000000000B7 /* HouseListsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A7 /* HouseListsService.swift */; };
+		D3A0000000000000000000B8 /* HouseListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000A8 /* HouseListsView.swift */; };
 		D3E4FD3D2FFFE7340008DA06 /* FestDuesCalculator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */; };
 		D3EA3D94301144AF0092AE8E /* Meeting.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D93301144AF0092AE8E /* Meeting.swift */; };
 		D3EA3D96301145120092AE8E /* MeetingsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3EA3D95301145120092AE8E /* MeetingsService.swift */; };
@@ -436,6 +439,9 @@
 		D3A0000000000000000000A3 /* HouseCalendarSheets.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseCalendarSheets.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A4 /* HouseStayComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseStayComposer.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000A5 /* HouseHubView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseHubView.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000A6 /* HouseList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseList.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000A7 /* HouseListsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseListsService.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000A8 /* HouseListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseListsView.swift; sourceTree = "<group>"; };
 		D3E4FD3C2FFFE7340008DA06 /* FestDuesCalculator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDuesCalculator.swift; sourceTree = "<group>"; };
 		D3EA3D93301144AF0092AE8E /* Meeting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Meeting.swift; sourceTree = "<group>"; };
 		D3EA3D95301145120092AE8E /* MeetingsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeetingsService.swift; sourceTree = "<group>"; };
@@ -660,6 +666,7 @@
 				D31B53733012A82E00C8D189 /* EventSignups.swift */,
 				D31B53773012B54500C8D189 /* PrivateActivity.swift */,
 				D31B537D3012B69400C8D189 /* Tournament.swift */,
+				D3A0000000000000000000A6 /* HouseList.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -974,6 +981,8 @@
 				D3A0000000000000000000A4 /* HouseStayComposer.swift */,
 				D3A0000000000000000000A5 /* HouseHubView.swift */,
 				D3512BE330057B41008BBC44 /* MjtHouseDuesView.swift */,
+				D3A0000000000000000000A7 /* HouseListsService.swift */,
+				D3A0000000000000000000A8 /* HouseListsView.swift */,
 			);
 			path = Houses;
 			sourceTree = "<group>";
@@ -1299,6 +1308,9 @@
 				D31B34B5300AC9CA00A0D653 /* CommitteeTaxonomy.swift in Sources */,
 				D363476A2FFDF098001D52C8 /* IntentDonations.swift in Sources */,
 				D36347562FFDDFA5001D52C8 /* ContentIndexer.swift in Sources */,
+				D3A0000000000000000000B6 /* HouseList.swift in Sources */,
+				D3A0000000000000000000B7 /* HouseListsService.swift in Sources */,
+				D3A0000000000000000000B8 /* HouseListsView.swift in Sources */,
 			);
 		};
 /* End PBXSourcesBuildPhase section */
