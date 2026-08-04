@@ -29,7 +29,9 @@ final class DropBoxesService {
                     id, title, emoji, created_by, archived_at, created_at,
                     author:created_by(display_name),
                     drop_box_media(id, box_id, storage_path, thumbnail_url, media_type, status, uploaded_by, created_at,
-                                    uploader:uploaded_by(display_name))
+                                    captured_at, credit_user_id,
+                                    uploader:uploaded_by(display_name),
+                                    credit:credit_user_id(display_name))
                 """)
                 .order("created_at", ascending: false)
                 .execute()
@@ -76,10 +78,18 @@ final class DropBoxesService {
     /// Attach an already-uploaded file (mini url) to a box. The DB's
     /// BEFORE INSERT trigger holds it automatically if the mini flagged it.
     @discardableResult
-    func addMedia(boxId: UUID, url: String, thumbnailUrl: String?, type: String) async throws -> UUID {
-        struct P: Encodable { let p_box: String; let p_url: String; let p_type: String; let p_thumbnail_url: String? }
+    func addMedia(boxId: UUID, url: String, thumbnailUrl: String?, type: String,
+                  capturedAt: Date? = nil, creditUserId: UUID? = nil) async throws -> UUID {
+        struct P: Encodable {
+            let p_box: String; let p_url: String; let p_type: String; let p_thumbnail_url: String?
+            let p_captured_at: String?; let p_credit_user_id: String?
+        }
+        let iso = capturedAt.map { ISO8601DateFormatter().string(from: $0) }
         let id: UUID = try await supabase
-            .rpc("add_drop_box_media", params: P(p_box: boxId.uuidString, p_url: url, p_type: type, p_thumbnail_url: thumbnailUrl))
+            .rpc("add_drop_box_media", params: P(p_box: boxId.uuidString, p_url: url, p_type: type,
+                                                  p_thumbnail_url: thumbnailUrl,
+                                                  p_captured_at: iso,
+                                                  p_credit_user_id: creditUserId?.uuidString))
             .execute().value
         return id
     }
@@ -87,6 +97,14 @@ final class DropBoxesService {
     func removeMedia(id: UUID) async throws {
         struct P: Encodable { let p_media: String }
         try await supabase.rpc("remove_drop_box_media", params: P(p_media: id.uuidString)).execute()
+    }
+
+    /// Bulk-remove multiple media items (used by selection-mode delete).
+    func removeMediaBatch(ids: [UUID]) async throws {
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for id in ids { group.addTask { try await self.removeMedia(id: id) } }
+            try await group.waitForAll()
+        }
     }
 
     /// Admin-only: release a false-positive hold, or hide an item.
@@ -160,23 +178,30 @@ private struct DropBoxMediaRow: Decodable {
     let status: DropBoxMediaStatus
     let uploadedBy: UUID
     let createdAt: Date
+    let capturedAt: Date?
+    let creditUserId: UUID?
     let uploader: NameEmbed?
+    let credit: NameEmbed?
 
     enum CodingKeys: String, CodingKey {
-        case id, status, uploader
+        case id, status, uploader, credit
         case boxId = "box_id"
         case storagePath = "storage_path"
         case thumbnailUrl = "thumbnail_url"
         case mediaType = "media_type"
         case uploadedBy = "uploaded_by"
         case createdAt = "created_at"
+        case capturedAt = "captured_at"
+        case creditUserId = "credit_user_id"
     }
 
     var toMedia: DropBoxMedia {
         DropBoxMedia(
             id: id, boxId: boxId, url: storagePath, thumbnailUrl: thumbnailUrl,
             mediaType: mediaType, status: status, uploadedBy: uploadedBy,
-            uploadedByName: uploader?.displayName ?? "Member", createdAt: createdAt
+            uploadedByName: uploader?.displayName ?? "Member",
+            capturedAt: capturedAt, creditUserId: creditUserId,
+            creditUserName: credit?.displayName, createdAt: createdAt
         )
     }
 }

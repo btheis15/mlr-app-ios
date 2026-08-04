@@ -125,6 +125,10 @@ struct DropBoxDetailView: View {
     @State private var lightbox: LightboxData?
     @State private var editing = false
     @State private var confirmDelete = false
+    @State private var selectMode = false
+    @State private var selectedIds: Set<UUID> = []
+    @State private var confirmBulkDelete = false
+    @State private var bulkDeleting = false
     @State private var error: String?
 
     private let columns = [GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2), GridItem(.flexible(), spacing: 2)]
@@ -186,16 +190,39 @@ struct DropBoxDetailView: View {
                 .navigationBarTitleDisplayMode(.inline)
                 .toolbar {
                     ToolbarItem(placement: .topBarTrailing) {
-                        Menu {
-                            Button { editing = true } label: { Label("Rename", systemImage: "pencil") }
-                            Button { Task { await toggleArchive(box) } } label: {
-                                Label(box.isArchived ? "Unarchive" : "Archive", systemImage: "archivebox")
+                        if selectMode {
+                            HStack(spacing: 16) {
+                                if !selectedIds.isEmpty {
+                                    Button(role: .destructive) { confirmBulkDelete = true } label: {
+                                        Text(bulkDeleting ? "Deleting…" : "Delete \(selectedIds.count)")
+                                            .font(.mlrScaled(14, weight: .semibold))
+                                    }
+                                    .disabled(bulkDeleting)
+                                }
+                                Button("Done") {
+                                    selectMode = false
+                                    selectedIds = []
+                                }
+                                .font(.mlrScaled(14, weight: .semibold))
                             }
-                            Button(role: .destructive) { confirmDelete = true } label: {
-                                Label("Delete folder", systemImage: "trash")
+                        } else {
+                            HStack(spacing: 16) {
+                                if !box.items.isEmpty {
+                                    Button("Select") { selectMode = true }
+                                        .font(.mlrScaled(14))
+                                }
+                                Menu {
+                                    Button { editing = true } label: { Label("Rename", systemImage: "pencil") }
+                                    Button { Task { await toggleArchive(box) } } label: {
+                                        Label(box.isArchived ? "Unarchive" : "Archive", systemImage: "archivebox")
+                                    }
+                                    Button(role: .destructive) { confirmDelete = true } label: {
+                                        Label("Delete folder", systemImage: "trash")
+                                    }
+                                } label: {
+                                    Image(systemName: "ellipsis.circle")
+                                }
                             }
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
                         }
                     }
                 }
@@ -210,6 +237,12 @@ struct DropBoxDetailView: View {
                     Button("Cancel", role: .cancel) {}
                 } message: {
                     Text("Every photo and video in \"\(box.title)\" is removed for everyone — no undo.")
+                }
+                .alert("Delete \(selectedIds.count) item\(selectedIds.count == 1 ? "" : "s")?", isPresented: $confirmBulkDelete) {
+                    Button("Delete", role: .destructive) { Task { await removeBatch() } }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("These photos and videos are removed for everyone — no undo.")
                 }
             } else {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -229,15 +262,20 @@ struct DropBoxDetailView: View {
     private func thumb(_ item: DropBoxMedia, in box: DropBox) -> some View {
         let canManage = box.canManage(isAdmin: env.isAdmin, viewerId: myId) || item.uploadedBy == myId
         let held = item.status == .pending
+        let isSelected = selectedIds.contains(item.id)
         Button {
-            openLightbox(item, in: box)
+            if selectMode {
+                if isSelected { selectedIds.remove(item.id) } else { selectedIds.insert(item.id) }
+            } else {
+                openLightbox(item, in: box)
+            }
         } label: {
             ZStack(alignment: .bottomLeading) {
                 MediaThumb(url: item.displayUrl)
                     .scaledToFill()
                     .frame(minWidth: 0, maxWidth: .infinity, minHeight: 0, maxHeight: .infinity)
                     .clipped()
-                if item.isVideo {
+                if item.isVideo && !selectMode {
                     Image(systemName: "play.circle.fill")
                         .font(.mlrScaled(18))
                         .foregroundStyle(.white)
@@ -252,18 +290,36 @@ struct DropBoxDetailView: View {
                         .clipShape(Capsule())
                         .padding(4)
                 }
+                if selectMode {
+                    ZStack {
+                        if isSelected {
+                            Color.black.opacity(0.3)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+                }
+                if selectMode {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.mlrScaled(20))
+                        .foregroundStyle(isSelected ? Color.mlrPrimary : .white)
+                        .shadow(radius: 1)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
+                        .padding(6)
+                }
             }
             .aspectRatio(1, contentMode: .fit)
             .clipped()
         }
         .buttonStyle(.plain)
         .contextMenu {
-            if held && env.isAdmin {
-                Button { Task { await setStatus(item, .visible) } } label: { Label("Approve", systemImage: "checkmark.circle") }
-                Button(role: .destructive) { Task { await setStatus(item, .hidden) } } label: { Label("Hide", systemImage: "eye.slash") }
-            }
-            if canManage {
-                Button(role: .destructive) { Task { await remove(item) } } label: { Label("Remove", systemImage: "trash") }
+            if !selectMode {
+                if held && env.isAdmin {
+                    Button { Task { await setStatus(item, .visible) } } label: { Label("Approve", systemImage: "checkmark.circle") }
+                    Button(role: .destructive) { Task { await setStatus(item, .hidden) } } label: { Label("Hide", systemImage: "eye.slash") }
+                }
+                if canManage {
+                    Button(role: .destructive) { Task { await remove(item) } } label: { Label("Remove", systemImage: "trash") }
+                }
             }
         }
     }
@@ -306,6 +362,20 @@ struct DropBoxDetailView: View {
     private func remove(_ item: DropBoxMedia) async {
         do { try await env.dropBoxesService.removeMedia(id: item.id); await reload() }
         catch { self.error = "Couldn't remove that item." }
+    }
+
+    private func removeBatch() async {
+        let ids = Array(selectedIds)
+        bulkDeleting = true
+        defer { bulkDeleting = false }
+        do {
+            try await env.dropBoxesService.removeMediaBatch(ids: ids)
+            selectedIds = []
+            selectMode = false
+            await reload()
+        } catch {
+            self.error = "Couldn't delete all selected items."
+        }
     }
 
     private func setStatus(_ item: DropBoxMedia, _ status: DropBoxMediaStatus) async {

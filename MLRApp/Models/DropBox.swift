@@ -24,9 +24,15 @@ struct DropBox: Identifiable, Equatable {
     var items: [DropBoxMedia]
 
     var isArchived: Bool { archivedAt != nil }
-    /// Newest-first (falls back to upload time — captured-at EXIF sorting is
-    /// a web-only refinement, migration 0174, not mirrored here).
-    var sortedItems: [DropBoxMedia] { items.sorted { $0.createdAt > $1.createdAt } }
+    /// capturedAt-first sort (EXIF timestamp from migration 0174) falling back
+    /// to upload time, newest first — mirrors web's dropBoxes.ts sort logic.
+    var sortedItems: [DropBoxMedia] {
+        items.sorted { a, b in
+            let ta = a.capturedAt ?? a.createdAt
+            let tb = b.capturedAt ?? b.createdAt
+            return ta > tb
+        }
+    }
     var count: Int { items.count }
 
     func canManage(isAdmin: Bool, viewerId: UUID?) -> Bool {
@@ -43,9 +49,16 @@ struct DropBoxMedia: Identifiable, Equatable {
     var status: DropBoxMediaStatus
     let uploadedBy: UUID
     var uploadedByName: String
+    /// EXIF capture time (migration 0174) — nil on older rows. Used for sort + display.
+    var capturedAt: Date?
+    /// User the photo is credited to (migration 0180) — may differ from uploader.
+    var creditUserId: UUID?
+    var creditUserName: String?
     let createdAt: Date
 
     var isVideo: Bool { mediaType == "video" }
     /// The url the grid should render — the small preview when we have one.
     var displayUrl: String { thumbnailUrl ?? url }
+    /// Display name for attribution: credited user if set, otherwise uploader.
+    var attributionName: String { creditUserName ?? uploadedByName }
 }
