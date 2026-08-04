@@ -32,6 +32,7 @@ struct FestScheduleEditSheet: View {
     @State private var signupStart = FestScheduleEditSheet.defaultTime(18, 0)
     @State private var signupEnd = FestScheduleEditSheet.defaultTime(20, 0)
     @State private var signupSlotMinutes = 15
+    @State private var signupHideNames = false
 
     // Edit-and-notify (#393) — admin-only, default OFF; sends on save when on.
     @State private var notifyOnSave = false
@@ -140,6 +141,7 @@ struct FestScheduleEditSheet: View {
                                 .keyboardType(.numberPad).multilineTextAlignment(.trailing)
                         }
                         Stepper("Team size: \(signupTeamSize)", value: $signupTeamSize, in: 1...8)
+                        Toggle("🙈 Hide who's signed up", isOn: $signupHideNames)
                         TextField("Instructions (optional)", text: $signupInstructions, axis: .vertical).lineLimit(1...3)
                         if signupMode == "interval" {
                             DatePicker("First slot", selection: $signupStart, displayedComponents: .hourAndMinute)
@@ -214,6 +216,7 @@ struct FestScheduleEditSheet: View {
         signupMode         = item.signupMode ?? "interval"
         signupCapacity     = item.signupCapacity.map(String.init) ?? ""
         signupTeamSize     = item.signupTeamSize ?? 1
+        signupHideNames    = item.signupHideNames
         signupInstructions = item.signupInstructions ?? ""
         signupSlotMinutes  = item.signupSlotMinutes ?? 15
         if let s = Self.timeFromHHMM(item.signupStartTime) { signupStart = s }
@@ -252,7 +255,8 @@ struct FestScheduleEditSheet: View {
                 startTime: signupMode == "interval" ? Self.hhmm(signupStart) : nil,
                 endTime: signupMode == "interval" ? Self.hhmm(signupEnd) : nil,
                 instructions: signupInstructions.trimBlank,
-                teamSize: signupTeamSize > 1 ? signupTeamSize : nil)
+                teamSize: signupTeamSize > 1 ? signupTeamSize : nil,
+                hideNames: signupHideNames)
             : nil
         do {
             try await env.festContentService.updateScheduleItem(

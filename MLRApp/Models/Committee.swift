@@ -31,6 +31,7 @@ struct Committee: Codable, Identifiable, Equatable {
 struct CommitteeArea: Codable, Identifiable, Equatable {
     var committeeSlug: String
     var area: String
+    var description: String?  // migration 0179 — "what is this subcommittee for?"
     var archivedAt: Date?
 
     var id: String { "\(committeeSlug)·\(area)" }
@@ -39,6 +40,7 @@ struct CommitteeArea: Codable, Identifiable, Equatable {
     enum CodingKeys: String, CodingKey {
         case committeeSlug = "committee_slug"
         case area
+        case description
         case archivedAt = "archived_at"
     }
 }

@@ -488,6 +488,7 @@ final class FestContentService {
             payload["signup_end_time"]     = signup.endTime.map { AnyJSON.string($0) } ?? .null
             payload["signup_instructions"] = signup.instructions.map { AnyJSON.string($0) } ?? .null
             payload["signup_team_size"]    = signup.teamSize.map { AnyJSON.double(Double($0)) } ?? .null
+            payload["signup_hide_names"]   = .bool(signup.hideNames)
         }
         if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
         try await supabase.from("fest_schedule_items").update(payload).eq("id", value: itemId.uuidString).execute()
@@ -503,6 +504,7 @@ final class FestContentService {
         var endTime: String?
         var instructions: String?
         var teamSize: Int?
+        var hideNames: Bool = false   // migration 0167 — schedule events only
     }
 
     /// Updates only the crew_user_ids on a dinner (admin / canEditFest / chef only).
@@ -565,7 +567,8 @@ final class FestContentService {
                 signupEndTime: r.signupEndTime,
                 signupInstructions: r.signupInstructions,
                 signupTeamSize: r.signupTeamSize,
-                signupFields: r.signupFields ?? []
+                signupFields: r.signupFields ?? [],
+                signupHideNames: r.signupHideNames ?? false
             )
         }
     }
@@ -725,6 +728,7 @@ private struct ScheduleRow: Decodable {
     let signupInstructions: String?
     let signupTeamSize: Int?
     let signupFields: [SignupField]?
+    let signupHideNames: Bool?   // migration 0167
     enum CodingKeys: String, CodingKey {
         case id, day, title, emoji, location, description, anytime, links, bring
         case imageUrl    = "image_url"
@@ -742,6 +746,7 @@ private struct ScheduleRow: Decodable {
         case signupInstructions = "signup_instructions"
         case signupTeamSize     = "signup_team_size"
         case signupFields       = "signup_fields"
+        case signupHideNames    = "signup_hide_names"
     }
 }
 

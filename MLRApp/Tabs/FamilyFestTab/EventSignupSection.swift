@@ -1,13 +1,15 @@
 import SwiftUI
 
-// MARK: - EventSignupSection (migrations 0135/0136/0143)
+// MARK: - EventSignupSection (migrations 0135/0136/0143/0167/0158)
 //
 // Member-facing sign-ups for a schedule event. Renders nothing unless the event
 // is taking sign-ups. Supports the three modes — headcount (one running list),
 // interval (auto-generated time slots), and slots (admin-defined list) — with
-// per-slot capacity, custom columns, and a roster of who's in. Individual
-// sign-up only for now; team sign-ups (signupTeamSize > 1) and admin authoring
-// of the sign-up config remain a follow-up (both are web-side today).
+// per-slot capacity, custom columns, and a roster of who's in. A manager
+// (admin/fest-editor, or the item's own lead/crew) can also hide the roster
+// from everyone else (0167) and send an on-demand "starts soon" nudge to one
+// slot (0158). Individual sign-up only for now; team sign-ups (signupTeamSize
+// > 1) remain a follow-up.
 
 struct EventSignupSection: View {
     let item: ScheduleItem
@@ -15,20 +17,47 @@ struct EventSignupSection: View {
 
     @State private var signups: [ScheduleSignup] = []
     @State private var slots: [ScheduleSlot] = []
+    @State private var counts: [String: Int] = [:]
     @State private var loading = true
     @State private var busy = false
     @State private var fieldPrompt: FieldPrompt?
     @State private var teamPrompt: FieldPrompt?
     @State private var errorText: String?
+    // Names-hidden reveal (migration 0167) — per-mount only, never persisted,
+    // so re-opening this card starts hidden again on purpose.
+    @State private var revealed = false
 
     private var itemUUID: UUID? { UUID(uuidString: item.id) }
     private var myId: UUID? { env.currentProfile?.id }
     private var mode: String { item.signupMode ?? "interval" }
 
+    /// Same predicate as ExpandableScheduleRow's canEditItem — admin/fest-editor
+    /// OR this item's own lead/crew.
+    private var canManage: Bool {
+        guard env.isSignedIn else { return false }
+        let me = env.currentProfile?.id
+        return env.isAdmin
+            || env.festContentService.userCanEditFest
+            || (item.leadUserId != nil && item.leadUserId == me)
+            || (me != nil && item.crewUserIds.contains(me!))
+    }
+    /// Hidden from THIS viewer entirely — RLS already limits their fetch to
+    /// just their own row, so the header count needs the counts RPC instead.
+    private var namesHidden: Bool { item.signupHideNames && !canManage }
+    /// A manager can reveal — but defaults to hiding it from themselves too,
+    /// so running a "surprise" event doesn't spoil it until they choose to look.
+    private var canRevealNames: Bool { item.signupHideNames && canManage }
+    private var managerHiding: Bool { canRevealNames && !revealed }
+
     var body: some View {
         if item.signupEnabled {
             DetailSection(icon: "person.crop.circle.badge.checkmark", title: "Sign up") {
                 VStack(alignment: .leading, spacing: 12) {
+                    if canRevealNames {
+                        Button(revealed ? "🙈 Hide again" : "👀 Show participants") { revealed.toggle() }
+                            .font(.mlrScaled(12, weight: .semibold))
+                            .foregroundStyle(Color.mlrFest)
+                    }
                     if let instr = item.signupInstructions?.blankToNil {
                         Text(instr)
                             .font(.mlrScaled(13))
@@ -36,6 +65,15 @@ struct EventSignupSection: View {
                     }
                     if let ts = item.signupTeamSize, ts > 1 {
                         Text("Signs up in teams of \(ts).")
+                            .font(.mlrScaled(12))
+                            .foregroundStyle(Color.mlrFest.opacity(0.7))
+                    }
+                    if namesHidden {
+                        Text("🙈 Who's signed up is a surprise — you'll see the headcount and your own spot, not everyone's name.")
+                            .font(.mlrScaled(12))
+                            .foregroundStyle(Color.mlrFest.opacity(0.7))
+                    } else if managerHiding {
+                        Text("🙈 You're keeping this one a surprise for yourself too — tap \"Show participants\" above when you're ready.")
                             .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrFest.opacity(0.7))
                     }
@@ -115,9 +153,20 @@ struct EventSignupSection: View {
 
     @ViewBuilder
     private func slotRow(title: String, key: SlotKey, capacity: Int?) -> some View {
-        let rows = signups.filter { key.matches($0) }
-        let mine = rows.first { $0.userId == myId }
-        let full = capacity.map { rows.count >= $0 } ?? false
+        // A manager hiding names from themselves still sees THEIR own linked
+        // entry, or anyone they personally typed in (addedBy) — same guarantee
+        // a regular member gets automatically from RLS. Only rows someone else
+        // added stay behind "Show participants."
+        let allRows = signups.filter { key.matches($0) }
+        let visibleRows = managerHiding
+            ? allRows.filter { $0.userId == myId || $0.addedBy == myId }
+            : allRows
+        let hiddenCount = managerHiding ? allRows.count - visibleRows.count : 0
+        // The real headcount when hidden from THIS viewer entirely (RLS limits
+        // `allRows` to just our own row in that case) — from the counts RPC.
+        let count = namesHidden ? (counts[key.countKey] ?? 0) : allRows.count
+        let mine = allRows.first { $0.userId == myId }
+        let full = capacity.map { count >= $0 } ?? false
 
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 8) {
@@ -125,7 +174,7 @@ struct EventSignupSection: View {
                     .font(.mlrScaled(14, weight: .semibold))
                     .foregroundStyle(Color.mlrFest)
                 Spacer()
-                Text(capacity.map { "\(rows.count)/\($0)" } ?? "\(rows.count)")
+                Text(capacity.map { "\(count)/\($0)" } ?? "\(count)")
                     .font(.mlrScaled(12, weight: .medium))
                     .foregroundStyle(Color.mlrFest.opacity(0.7))
                     .contentTransition(.numericText())
@@ -141,13 +190,27 @@ struct EventSignupSection: View {
                         .disabled(busy || full)
                 }
             }
-            if !rows.isEmpty {
-                Text(rows.map(\.name).joined(separator: ", "))
+            if canManage && count > 0 {
+                NotifySlotButton { minutes, email in
+                    guard let itemUUID else { return 0 }
+                    return try await env.signupsService.sendSlotReminderNow(
+                        itemId: itemUUID, slotStart: key.slotStart, slotId: key.slotId,
+                        minutes: minutes, email: email)
+                }
+            }
+            if !visibleRows.isEmpty {
+                Text(visibleRows.map(\.name).joined(separator: ", "))
                     .font(.mlrScaled(12))
                     .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                     .fixedSize(horizontal: false, vertical: true)
             } else if full {
                 Text("Full").font(.mlrScaled(12)).foregroundStyle(Color.mlrDanger)
+            }
+            if hiddenCount > 0 {
+                Text("+ \(hiddenCount) more hidden until you tap \"Show participants.\"")
+                    .font(.mlrScaled(11))
+                    .italic()
+                    .foregroundStyle(Color.mlrFest.opacity(0.5))
             }
         }
         .padding(10)
@@ -213,8 +276,10 @@ struct EventSignupSection: View {
         loading = true
         async let s = env.signupsService.fetchSignups(itemId: itemUUID)
         async let sl = mode == "slots" ? env.signupsService.fetchSlots(itemId: itemUUID) : []
+        async let c = namesHidden ? env.signupsService.fetchSignupCounts(itemId: itemUUID) : [:]
         signups = await s
         slots = await sl
+        counts = await c
         loading = false
     }
 
@@ -223,6 +288,8 @@ struct EventSignupSection: View {
     private struct SlotKey {
         let slotStart: String?
         let slotId: UUID?
+        /// Matches web's counts-RPC key: slot id, "HH:MM" start, or "headcount".
+        var countKey: String { slotId?.uuidString ?? slotStart ?? "headcount" }
         func matches(_ s: ScheduleSignup) -> Bool {
             if let slotId { return s.slotId == slotId }
             if let slotStart { return s.slotStart == slotStart }
@@ -234,6 +301,60 @@ struct EventSignupSection: View {
         let id = UUID()
         let slotStart: String?
         let slotId: UUID?
+    }
+}
+
+// MARK: - NotifySlotButton (migrations 0158/0165/0166)
+//
+// A manager's on-demand "your time is soon" nudge for one slot — no lead-time
+// picker (a manual send always states the slot's real day/time, resolved
+// server-side; see the web 0165 incident note), just Send + an optional email.
+
+private struct NotifySlotButton: View {
+    let send: (Int?, Bool) async throws -> Int
+
+    @State private var open = false
+    @State private var busy = false
+    @State private var email = false
+    @State private var result: String?
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !open {
+                Button("🔔 Notify this slot") { open = true; result = nil }
+                    .font(.mlrScaled(11, weight: .semibold))
+                    .foregroundStyle(Color.mlrAccent)
+            } else {
+                HStack(spacing: 8) {
+                    Button(busy ? "Sending…" : "Send reminder") {
+                        Task {
+                            busy = true
+                            defer { busy = false }
+                            do {
+                                let n = try await send(nil, email)
+                                result = "✓ Sent to \(n) \(n == 1 ? "person" : "people")"
+                                try? await Task.sleep(nanoseconds: 1_500_000_000)
+                                open = false
+                            } catch {
+                                result = "Couldn't send. Try again."
+                            }
+                        }
+                    }
+                    .font(.mlrScaled(11, weight: .semibold))
+                    .foregroundStyle(Color.mlrAccent)
+                    .disabled(busy)
+                    Button("Cancel") { open = false }
+                        .font(.mlrScaled(11))
+                        .foregroundStyle(Color.mlrFest.opacity(0.5))
+                }
+                Toggle("Also email anyone signed up with an account", isOn: $email)
+                    .font(.mlrScaled(11))
+                    .toggleStyle(.switch)
+            }
+            if let result {
+                Text(result).font(.mlrScaled(11, weight: .semibold)).foregroundStyle(Color.mlrAccent)
+            }
+        }
     }
 }
 

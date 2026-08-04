@@ -13,6 +13,7 @@ struct AdminCommitteesView: View {
     @State private var creating = false
     @State private var editing: Committee?
     @State private var committeeToArchive: Committee?
+    @State private var committeeToDelete: Committee?
     @State private var error: String?
 
     private var live: [Committee] { env.committeeService.liveCommittees }
@@ -60,7 +61,7 @@ struct AdminCommitteesView: View {
                     }
 
                     if !archived.isEmpty {
-                        Section("Archived") {
+                        Section {
                             ForEach(archived) { committee in
                                 HStack(spacing: 12) {
                                     Text(committee.emoji ?? "👥").font(.mlrScaled(20)).opacity(0.6)
@@ -71,8 +72,16 @@ struct AdminCommitteesView: View {
                                     Button("Restore") { Task { await restore(committee) } }
                                         .font(.mlrScaled(13, weight: .semibold))
                                         .buttonStyle(.borderless)
+                                    Button("Delete forever") { committeeToDelete = committee }
+                                        .font(.mlrScaled(13, weight: .semibold))
+                                        .buttonStyle(.borderless)
+                                        .tint(Color.mlrDanger)
                                 }
                             }
+                        } header: {
+                            Text("Archived")
+                        } footer: {
+                            Text("Restore brings a committee fully back, roster and all. Delete forever erases it — and all its chat history — permanently; there's no undo.")
                         }
                     }
                 }
@@ -101,6 +110,12 @@ struct AdminCommitteesView: View {
             Button("Cancel", role: .cancel) { committeeToArchive = nil }
         } message: { c in
             Text("Archives \(c.name) — it's hidden from the app and its chats go read-only, but the roster is kept and you can Restore it anytime.")
+        }
+        .alert("Delete forever?", isPresented: .constant(committeeToDelete != nil), presenting: committeeToDelete) { c in
+            Button("Delete \(c.name) forever", role: .destructive) { Task { await delete(c) } }
+            Button("Cancel", role: .cancel) { committeeToDelete = nil }
+        } message: { c in
+            Text("Permanently deletes \(c.name) and ALL its chat history, roster, and roles. This can't be undone — use Restore instead if you just want it back.")
         }
     }
 
@@ -136,6 +151,12 @@ struct AdminCommitteesView: View {
         do { try await env.committeeService.restoreCommittee(id: c.id); await env.committeeService.fetchCommittees() }
         catch { self.error = "Couldn't restore \(c.name)." }
     }
+
+    private func delete(_ c: Committee) async {
+        committeeToDelete = nil
+        do { try await env.committeeService.deleteCommittee(id: c.id); await env.committeeService.fetchCommittees() }
+        catch { self.error = "Couldn't delete \(c.name)." }
+    }
 }
 
 // MARK: - CommitteeEditor (create + edit details + manage roles)
@@ -156,8 +177,8 @@ private struct CommitteeEditor: View {
     @State private var areas: [CommitteeArea] = []
     @State private var newArea = ""
     @State private var areaError: String?
-    @State private var renameTarget: String?
-    @State private var renameText = ""
+    @State private var editingArea: CommitteeArea?
+    @State private var areaToDelete: CommitteeArea?
 
     init(committee: Committee?) {
         self.committee = committee
@@ -201,12 +222,16 @@ private struct CommitteeEditor: View {
                 }
             }
             .task { if editing { await loadAreas() } }
-            .alert("Rename role", isPresented: .constant(renameTarget != nil), presenting: renameTarget) { _ in
-                TextField("New name", text: $renameText)
-                Button("Rename") { Task { await commitRename() } }
-                Button("Cancel", role: .cancel) { renameTarget = nil }
-            } message: { _ in
-                Text("Renames the role and its entire chat history.")
+            .sheet(item: $editingArea) { area in
+                if let committee {
+                    RoleEditSheet(committee: committee, area: area) { await loadAreas() }
+                }
+            }
+            .alert("Delete role forever?", isPresented: .constant(areaToDelete != nil), presenting: areaToDelete) { a in
+                Button("Delete \(a.area) forever", role: .destructive) { Task { await deleteArea(a.area) } }
+                Button("Cancel", role: .cancel) { areaToDelete = nil }
+            } message: { a in
+                Text("Permanently erases the \"\(a.area)\" role and its chat history for everyone. This can't be undone — use Restore instead if you just want it back.")
             }
         }
     }
@@ -217,15 +242,20 @@ private struct CommitteeEditor: View {
     private var rolesSection: some View {
         Section {
             ForEach(liveAreas) { area in
-                HStack {
-                    Text(area.area).font(.mlrScaled(15))
+                HStack(alignment: .top) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(area.area).font(.mlrScaled(15))
+                        if let d = area.description, !d.isEmpty {
+                            Text(d).font(.mlrCaption).foregroundStyle(Color.mlrTextMuted)
+                        }
+                    }
                     Spacer()
                     Menu {
-                        Button { renameTarget = area.area; renameText = area.area } label: {
-                            Label("Rename", systemImage: "pencil")
+                        Button { editingArea = area } label: {
+                            Label("Edit (rename / describe)", systemImage: "pencil")
                         }
                         Button(role: .destructive) { Task { await archiveArea(area.area) } } label: {
-                            Label("Delete role", systemImage: "archivebox")
+                            Label("Delete role (archive)", systemImage: "archivebox")
                         }
                     } label: {
                         Image(systemName: "ellipsis.circle").foregroundStyle(Color.mlrTextSubtle)
@@ -254,6 +284,10 @@ private struct CommitteeEditor: View {
                         Spacer()
                         Button("Restore") { Task { await restoreArea(area.area) } }
                             .font(.mlrScaled(13, weight: .semibold)).buttonStyle(.borderless)
+                        Button("Delete forever") { areaToDelete = area }
+                            .font(.mlrScaled(13, weight: .semibold))
+                            .buttonStyle(.borderless)
+                            .tint(Color.mlrDanger)
                     }
                 }
             }
@@ -299,18 +333,11 @@ private struct CommitteeEditor: View {
         }
     }
 
-    private func commitRename() async {
-        guard let committee, let old = renameTarget else { return }
-        let new = renameText.trimmingCharacters(in: .whitespacesAndNewlines)
-        renameTarget = nil
-        areaError = nil
-        guard !new.isEmpty, new != old else { return }
-        do {
-            try await env.committeeService.renameCommitteeArea(committeeId: committee.id, old: old, new: new)
-            await loadAreas()
-        } catch {
-            areaError = friendly(error)
-        }
+    private func deleteArea(_ area: String) async {
+        guard let committee else { return }
+        areaToDelete = nil
+        do { try await env.committeeService.deleteCommitteeArea(committeeId: committee.id, area: area); await loadAreas() }
+        catch { areaError = friendly(error) }
     }
 
     private func archiveArea(_ area: String) async {
@@ -329,5 +356,75 @@ private struct CommitteeEditor: View {
     private func friendly(_ error: Error) -> String {
         let m = (error as NSError).localizedDescription
         return m.isEmpty ? "That role name isn't allowed." : m
+    }
+}
+
+// MARK: - RoleEditSheet (rename + description, migrations 0073/0112 rename + 0179 description)
+
+private struct RoleEditSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+
+    let committee: Committee
+    let area: CommitteeArea
+    let onSaved: () async -> Void
+
+    @State private var name: String
+    @State private var description: String
+    @State private var saving = false
+    @State private var error: String?
+
+    init(committee: Committee, area: CommitteeArea, onSaved: @escaping () async -> Void) {
+        self.committee = committee
+        self.area = area
+        self.onSaved = onSaved
+        _name = State(initialValue: area.area)
+        _description = State(initialValue: area.description ?? "")
+    }
+
+    private var canSave: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !saving }
+
+    var body: some View {
+        NavigationStack {
+            Form {
+                Section("Role name") { TextField("e.g. Meals", text: $name) }
+                Section("Description (optional)") {
+                    TextField("What's this role for?", text: $description, axis: .vertical)
+                        .lineLimit(2...4)
+                }
+                if let error {
+                    Text(error).font(.caption).foregroundStyle(Color.mlrDanger)
+                }
+            }
+            .navigationTitle("Edit role")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("Cancel") { dismiss() }.disabled(saving)
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("Save") { Task { await save() } }.disabled(!canSave)
+                }
+            }
+        }
+    }
+
+    private func save() async {
+        saving = true; error = nil
+        defer { saving = false }
+        let newName = name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
+        do {
+            if newName != area.area {
+                try await env.committeeService.renameCommitteeArea(committeeId: committee.id, old: area.area, new: newName)
+            }
+            // Description is written against the (possibly new) name, mirroring web.
+            try await env.committeeService.setCommitteeAreaDescription(committeeId: committee.id, area: newName, description: newDescription)
+            await onSaved()
+            dismiss()
+        } catch {
+            let m = (error as NSError).localizedDescription
+            self.error = m.isEmpty ? "Couldn't save the role." : m
+        }
     }
 }

@@ -32,6 +32,7 @@ struct ScheduleItem: Identifiable {
     var signupInstructions: String? = nil
     var signupTeamSize: Int? = nil         // nil/1 = individual; >1 = sign up in fixed teams
     var signupFields: [SignupField] = []   // admin-defined custom columns
+    var signupHideNames: Bool = false      // migration 0167 — roster is a surprise to non-managers
 }
 
 /// One labeled link button on a schedule event (migration 0142 `links` jsonb —
