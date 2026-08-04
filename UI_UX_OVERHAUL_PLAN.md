@@ -374,6 +374,103 @@ a "None" option so an admin can unlink the activity without discarding the whole
 callout. (The composer already resets on open for new callouts; this makes
 attach→change-your-mind reversible in-session too.)
 
+## Phase 9 — Session addendum: premium-polish pass (build/sim verification needed)
+
+> Added by Claude Code working in a Linux container with **no Xcode/simulator
+> access** — everything in 9.1–9.3 was implemented and reviewed statically
+> (brace/paren balance, type-checked by hand against the surrounding code) but
+> **never built or visually verified.** Do that first, on real Xcode +
+> simulator, before trusting any of it. Branch `claude/ios-web-app-sync-1txrhs`,
+> PR #49 (draft) in `btheis15/mlr-app-ios`.
+
+### 9.1 Committee page → action-tile grid (implemented, needs verification)
+- New: `MLRApp/Shared/Design/ActionTile.swift` — `ActionTileLabel` (2-tone tile
+  content view: `.primary`/`.neutral`/`.danger`) + `ActionTileGrid` (2-column
+  `LazyVGrid` wrapper, renders nothing when its `count` is 0).
+- Changed: `MLRApp/Committees/CommitteeDetailView.swift` — the old column of
+  full-width bars (chat / leads chat / schedule meeting / email members / add
+  member) is now `actionGrid`, a 2-across tile grid with `.cardEntrance(index:)`
+  stagger (mirrors web PR #490's compact reorg, done natively rather than
+  ported literally). The `MyCommitteeCard`-equivalent self-service block (edit
+  areas / leave) now sits behind a `manageOpen` "⋯ Manage" toggle — area chips
+  and the Lead badge stay always visible. The roster section heading grew an
+  inline "＋ Add" pill (`rosterHeader(title:)`), replacing the old dashed
+  full-width "Add a member" bar.
+- **Verify:** build clean; open a committee as a plain member, as a lead, and
+  as admin — confirm every tile self-hides exactly like its old bar did (chat
+  only if a member, leads-chat only if a lead of a non-archived committee,
+  schedule-meeting only if an organizer, email only if signed in with
+  resolvable emails, add-member only if `canManage`); confirm the grid never
+  leaves a single oddly-sized tile on its own row; confirm "⋯ Manage" expands/
+  collapses cleanly with no clipping/jump; confirm the roster "＋ Add" pill
+  opens the same `RosterEditSheet` the old full-width bar did.
+
+### 9.2 Launch splash — richer entrance (implemented, needs verification)
+- Changed: `MLRApp/App/RootView.swift`, `SplashView` — replaced the bare
+  scale+fade with: a radial `mlrPrimary`-tinted glow bloom, the logo springing
+  in with a touch of overshoot (`response: 0.6, dampingFraction: 0.62`), the
+  script wordmark ("Muskellunge Lake Resort", `Font.script(26)`) rising in
+  ~0.28s later, a `Haptics.tap()` at ~0.45s (approximate a "landing" haptic —
+  tune the delay on-device against how the spring actually looks), then a
+  lift+fade exit instead of a flat opacity cut. `ImmediateSplashModifier` /
+  Reduce-Motion skip path is untouched.
+- **Verify:** total timing feels right on a real device (not sluggish, not
+  rushed — the hold is currently ~1.05s before lift-out); the glow doesn't
+  read muddy in dark mode; Reduce Motion still jumps straight to Home with no
+  flash of the new elements.
+- **NOT implemented — deliberately deferred, flagged for follow-up.** Web's
+  `SplashIntro.tsx` flies the logo into the *header's* actual position (a
+  measured FLIP transition) so the mark reads as landing in place, not fading
+  out separately from the real header logo fading in. I did not attempt this
+  because it's genuinely fragile without a way to check it: either a
+  `matchedGeometryEffect` across the `SplashView` → `MainTabView` → `HomeView`
+  → `HomeHero` boundary (risk: `TabView`'s lazy tab management + `HomeHero`'s
+  `SiteImage` being async-loaded could make the destination anchor's geometry
+  unstable at match time), or the safer `.anchorPreference`/
+  `.overlayPreferenceValue` measured-fly approach (tag `HomeHero`'s logo image
+  with an anchor preference, read it from `RootView`, animate a splash-owned
+  copy of the logo to that measured frame, then reveal the real header the
+  instant it lands). The second approach is what web effectively does and is
+  the one to build — but needs a simulator to get the coordinate-space/timing
+  right rather than guessing.
+
+### 9.3 Home tab, Feed, Committees list, People directory — scroll-entrance motion (implemented, needs verification)
+- Changed: `MLRApp/Tabs/HomeTab/HomeView.swift` — `.scrollEntrance()` added to
+  every card in the section stack (weather, announcements, callout stack,
+  upcoming-event card, house hub, admin-dashboard shortcut, work checklist,
+  polls, birthdays, who's-up-north, on-this-day, app&help section);
+  `quickActionsGrid`'s 7 tiles each get `.cardEntrance(index: 0...6)` for a
+  staggered spring-in on first load (previously all 7 popped in at once).
+- Changed: `MainTabView` (same file) — `Haptics.select()` fires on every
+  bottom-tab switch (guarded so it doesn't fire on first appearance).
+- Changed: `MLRApp/Tabs/FeedTab/PostsView.swift` (`postRow`/`feedList`),
+  `MLRApp/Committees/CommitteesView.swift` (`section`),
+  `MLRApp/People/PeopleDirectoryView.swift` (`memberList`) — `.scrollEntrance()`
+  added to each row. `EventsView`/`FestOverviewView` already had this from an
+  earlier pass and were left untouched.
+- **Verify:** scroll performance stays smooth on a genuinely long Feed and
+  People list (the modifier's cost was only proven at Home/Events' smaller
+  scale before this pass); confirm `.refreshable` reloading the list doesn't
+  cause every row to visibly "reset and replay" its entrance oddly; confirm
+  Reduce Motion is a true no-op everywhere it was added.
+
+### 9.4 NOT implemented — chat bubble insertion animation
+`CommitteeChatView.swift` / `HouseChatView.swift` message bubbles (and
+`ChatPollCard`) still appear with zero transition — CLAUDE.md (web) describes
+web's chat as "spring-in bubbles," but that's scoped to genuinely-new sends,
+not the initial history load. I deliberately left this alone: a naive
+`.animation(_:value: timeline.count)` on the message list would also animate
+the *entire opening history* sliding in when a room is first opened, which
+would look worse than the current static render, not better. Doing this right
+needs either (a) an "isNew" flag set only on the client's own optimistic send
++ realtime inserts arriving *after* the initial history load (never on the
+initial batch), with `.transition()` applied conditionally on that flag, or
+(b) tracking the previous render's set of message ids and only transitioning
+ids not present in it. Either way this needs a simulator to confirm it reads
+as intentional rather than janky before shipping.
+
+---
+
 ## Reused existing helpers (do not reinvent)
 - Colors: `Color.mlr*`, `Color(hex:)`, `Color(light:dark:)` (`Colors.swift`).
 - Type/recipes: `.mlrScaled()`, `Font.script`, `Font.festSerif`, `LinearGradient.northwoodsSunset`/`.festHeraldic`, `SectionLabel`, `festCardStyle`.
@@ -400,3 +497,4 @@ attach→change-your-mind reversible in-session too.)
 8. Phase 8: in the broadcast composer, attach an activity (fields autofill), then pick "Start fresh (clear all)" → every field returns to blank/defaults; the confirmation appears only when there was content. Same in the notification + alert composers. In the callout composer, link a Fest activity then reset → `signupItemId` clears and the "📝 Sign up" button disappears; the picker's "None" unlinks without clearing the rest.
 8b. New screens polished: `TeeTimesView` chips are pressable and the Daily Deals/call blocks are elevated; Feed post moderation banners match the `AnnouncementBanner` warning style; chat reply-to quotes render as a tinted quote strip.
 9. Performance: long lists scroll smoothly (stagger capped at index 8); the bracket diagram scrolls smoothly for a 16+ entrant draw; no mesh behind scrolling content.
+10. Phase 9 (session addendum, never built/sim-verified before landing on `main` — see per-item detail above): committee page action-tile grid self-hides correctly per role and the "⋯ Manage" disclosure animates cleanly; splash's new glow/spring/wordmark entrance times well and Reduce Motion still skips it; Home/Feed/Committees/People scroll-entrance motion doesn't hurt scroll performance on long lists and is inert under Reduce Motion. Two items are explicitly NOT built yet and need real design/implementation work once someone can iterate in a simulator: the web-style "logo flies into the header" splash transition, and a correctly-scoped spring-in animation for newly-arrived (not initial-load) chat bubbles.
