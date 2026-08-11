@@ -119,7 +119,7 @@ struct CommentsView: View {
                 }
             }
             Spacer()
-            if let imageUrl = post.imageUrl, let url = URL(string: imageUrl) {
+            if let imageUrl = post.imageUrl, let url = env.mediaTokenService.url(imageUrl) {
                 KFImage(url)
                     .placeholder { Color.mlrCard }
                     .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 132, height: 132)))

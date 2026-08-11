@@ -42,6 +42,10 @@ struct MLRApp: App {
                     await env.authService.restoreSession()
                     if env.authService.isSignedIn {
                         await env.loadProfile()
+                        // Always a live fetch, even if a cached token looks fine —
+                        // see MediaTokenService.refresh(). Every photo/video URL in
+                        // the app renders through it.
+                        await env.mediaTokenService.refresh()
                         // Re-register on launch when already authorized so the token
                         // is refreshed/issued; the AppDelegate callback saves it.
                         await env.pushService.registerIfAuthorized()
@@ -58,6 +62,7 @@ struct MLRApp: App {
                     if signedIn {
                         Task {
                             await env.loadProfile()
+                            await env.mediaTokenService.refresh()
                             await env.pushService.registerIfAuthorized()
                             await env.pushService.reconcileToken()
                             await env.startNotificationsRealtime()
@@ -79,6 +84,13 @@ struct MLRApp: App {
                 // unread (a push-delivered badge otherwise lingers after reading).
                 .onChange(of: scenePhase) { _, phase in
                     guard phase == .active else { return }
+                    if env.authService.isSignedIn {
+                        // A cached token is only a guess about what the server
+                        // still accepts — re-fetch on every foreground so a
+                        // signing-key change heals on the next open instead of
+                        // 403ing every photo for up to 24h. See MediaTokenService.
+                        Task { await env.mediaTokenService.refresh() }
+                    }
                     if env.authService.isSignedIn, let userId = env.currentProfile?.id {
                         Task { await env.notificationsService.fetchUnreadCount(userId: userId) }
                     } else {

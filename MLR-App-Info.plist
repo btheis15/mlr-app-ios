@@ -8,9 +8,5 @@
 		<string>Cinzel-Bold.ttf</string>
 		<string>Yellowtail-Regular.ttf</string>
 	</array>
-	<key>ITSAppUsesNonExemptEncryption</key>
-	<false/>
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Used only when you tap "Add my GPS pin" on an Ask for Help request, so helpers can navigate straight to you.</string>
 </dict>
 </plist>

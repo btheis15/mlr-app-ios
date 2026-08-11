@@ -503,8 +503,10 @@ struct WorkItemComposer: View {
 struct MediaThumb: View {
     let url: String
 
+    @Environment(AppEnvironment.self) private var env
+
     var body: some View {
-        if let u = URL(string: url) {
+        if let u = env.mediaTokenService.url(url) {
             KFImage(u)
                 .fade(duration: 0.2)
                 .resizable()

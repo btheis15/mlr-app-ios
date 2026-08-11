@@ -30,6 +30,7 @@ final class AppEnvironment {
     var privateActivitiesService: PrivateActivitiesService
     var tournamentsService: TournamentsService
     var dropBoxesService: DropBoxesService
+    var mediaTokenService: MediaTokenService
 
     // Resolved once per session
     var currentProfile: Profile?
@@ -161,6 +162,7 @@ final class AppEnvironment {
         privateActivitiesService = PrivateActivitiesService()
         tournamentsService   = TournamentsService()
         dropBoxesService     = DropBoxesService()
+        mediaTokenService    = MediaTokenService()
 
         AppEnvironment.activeEventsService    = eventsService
         AppEnvironment.activeHelpService      = helpService

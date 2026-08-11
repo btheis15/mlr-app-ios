@@ -17,9 +17,13 @@ struct LightboxView: View {
     let urls: [String]
     let isVideo: [Bool]
 
+    @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
     @State private var selection: Int
     @State private var shareItem: IdentifiableURL?
+    @State private var dragDown: CGFloat = 0
+
+    private let dismissThreshold: CGFloat = 120
 
     init(urls: [String], isVideo: [Bool] = [], startIndex: Int = 0) {
         self.urls = urls
@@ -45,10 +49,10 @@ struct LightboxView: View {
             TabView(selection: $selection) {
                 ForEach(Array(urls.enumerated()), id: \.offset) { idx, url in
                     Group {
-                        if isVideoItem(idx, url), let u = URL(string: url) {
+                        if isVideoItem(idx, url), let u = env.mediaTokenService.url(url) {
                             VideoPage(url: u)
-                        } else if let u = URL(string: url) {
-                            ZoomableImage(url: u) { dismiss() }
+                        } else if let u = env.mediaTokenService.url(url) {
+                            ZoomableImage(url: u)
                         } else {
                             Image(systemName: "photo.slash")
                                 .font(.mlrScaled(44))
@@ -59,13 +63,34 @@ struct LightboxView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: urls.count > 1 ? .automatic : .never))
+            .offset(y: dragDown)
 
             controls
         }
         .statusBarHidden()
+        // Swipe-down-to-dismiss on the outer ZStack using simultaneousGesture so
+        // TabView's horizontal page swipe is never blocked.
+        .simultaneousGesture(swipeDownToDismiss)
         .sheet(item: $shareItem) { item in
             ShareSheet(items: [item.url])
         }
+    }
+
+    /// Fires only on clear downward drags; horizontal swipes pass through to TabView.
+    private var swipeDownToDismiss: some Gesture {
+        DragGesture(minimumDistance: 20)
+            .onChanged { value in
+                guard value.translation.height > 0,
+                      value.translation.height > abs(value.translation.width) * 1.5 else { return }
+                dragDown = value.translation.height
+            }
+            .onEnded { value in
+                if dragDown > dismissThreshold || value.predictedEndTranslation.height > dismissThreshold * 1.5 {
+                    dismiss()
+                } else {
+                    withAnimation(.spring(response: 0.3)) { dragDown = 0 }
+                }
+            }
     }
 
     private var controls: some View {
@@ -78,7 +103,7 @@ struct LightboxView: View {
                         .padding(16)
                 }
                 Spacer()
-                if selection < urls.count, let u = URL(string: urls[selection]) {
+                if selection < urls.count, let u = env.mediaTokenService.url(urls[selection]) {
                     Button { shareItem = IdentifiableURL(url: u) } label: {
                         Image(systemName: "square.and.arrow.up")
                             .font(.mlrScaled(22))
@@ -96,16 +121,13 @@ struct LightboxView: View {
 
 private struct ZoomableImage: View {
     let url: URL
-    var onDismiss: () -> Void
 
     @State private var scale: CGFloat = 1
     @State private var lastScale: CGFloat = 1
     @State private var offset: CGSize = .zero
     @State private var lastOffset: CGSize = .zero
-    @State private var dragDown: CGFloat = 0
 
     private let maxScale: CGFloat = 5
-    private let dismissThreshold: CGFloat = 120
 
     var body: some View {
         GeometryReader { geo in
@@ -115,13 +137,14 @@ private struct ZoomableImage: View {
                 .scaledToFit()
                 .frame(width: geo.size.width, height: geo.size.height)
                 .scaleEffect(scale)
-                .offset(x: offset.width, y: offset.height + dragDown)
+                .offset(x: offset.width, y: offset.height)
                 .highPriorityGesture(magnification(geo))
-                .gesture(panOrDismiss(geo))
+                // simultaneousGesture: TabView keeps receiving horizontal swipes at
+                // scale=1; onChanged guards on scale>1 so nothing moves unless zoomed.
+                .simultaneousGesture(panGesture(geo))
                 .onTapGesture(count: 2) { toggleZoom() }
                 .animation(.interactiveSpring(response: 0.3), value: scale)
                 .animation(.interactiveSpring(response: 0.3), value: offset)
-                .animation(.interactiveSpring(response: 0.3), value: dragDown)
         }
     }
 
@@ -136,30 +159,17 @@ private struct ZoomableImage: View {
             }
     }
 
-    private func panOrDismiss(_ geo: GeometryProxy) -> some Gesture {
+    private func panGesture(_ geo: GeometryProxy) -> some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
-                if scale <= 1 {
-                    // Only claim vertical-dominant drags — horizontal ones are
-                    // TabView's page swipe and must not be consumed here.
-                    let isVertical = abs(value.translation.height) > abs(value.translation.width)
-                    if isVertical { dragDown = max(0, value.translation.height) }
-                } else {
-                    offset = CGSize(width: lastOffset.width + value.translation.width,
-                                    height: lastOffset.height + value.translation.height)
-                }
+                guard scale > 1 else { return }
+                offset = CGSize(width: lastOffset.width + value.translation.width,
+                                height: lastOffset.height + value.translation.height)
             }
-            .onEnded { value in
-                if scale <= 1 {
-                    if dragDown > dismissThreshold || value.predictedEndTranslation.height > dismissThreshold * 1.5 {
-                        onDismiss()
-                    } else {
-                        dragDown = 0
-                    }
-                } else {
-                    clamp(geo)
-                    lastOffset = offset
-                }
+            .onEnded { _ in
+                guard scale > 1 else { return }
+                clamp(geo)
+                lastOffset = offset
             }
     }
 

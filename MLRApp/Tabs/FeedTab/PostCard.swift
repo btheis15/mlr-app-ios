@@ -63,13 +63,18 @@ struct PostCard: View {
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrDanger.opacity(0.35), lineWidth: 1))
             }
             mediaContent
-                .onLongPressGesture(minimumDuration: 0.4) {
-                    guard env.isSignedIn else { return }
-                    Haptics.tap()
-                    withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                        showEmojiPicker = true
-                    }
-                }
+                // simultaneousGesture: TabView's horizontal page swipe fires alongside
+                // this long press rather than being blocked by it.
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.4)
+                        .onEnded { _ in
+                            guard env.isSignedIn else { return }
+                            Haptics.tap()
+                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                showEmojiPicker = true
+                            }
+                        }
+                )
             if let text = post.text, !text.isEmpty {
                 MentionText(text)
                     .font(.body)
@@ -393,6 +398,7 @@ private struct PostMediaTile: View {
     let isVideo: Bool
     let onTap: () -> Void
 
+    @Environment(AppEnvironment.self) private var env
     @Environment(\.openURL) private var openURL
     @State private var failed = false
 
@@ -413,7 +419,7 @@ private struct PostMediaTile: View {
                         .shadow(radius: 4)
                 } else if failed {
                     failureView
-                } else if let imageURL = URL(string: url) {
+                } else if let imageURL = env.mediaTokenService.url(url) {
                     KFImage(imageURL)
                         .placeholder { ProgressView() }
                         .setProcessor(DownsamplingImageProcessor(size: CGSize(width: 1200, height: 1200)))
@@ -433,7 +439,7 @@ private struct PostMediaTile: View {
             .onTapGesture {
                 // A failed image can't open in the (same-loader) lightbox, so send
                 // the user to the original in the browser instead of a dead tap.
-                if failed, let u = URL(string: url) { openURL(u) } else { onTap() }
+                if failed, let u = env.mediaTokenService.url(url) { openURL(u) } else { onTap() }
             }
     }
 
