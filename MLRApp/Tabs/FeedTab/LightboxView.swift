@@ -8,10 +8,13 @@ import Kingfisher
 // Features:
 //   • Multi-item carousel (swipe between a post's photos/videos)
 //   • Photos: pinch-to-zoom (1×–5×) with pan clamped to bounds, double-tap to
-//     toggle zoom, swipe-down to dismiss (only at 1×)
+//     toggle zoom
 //   • Videos: native AVKit VideoPlayer with transport controls
 //   • Kingfisher-cached images (no redundant re-download)
-//   • Close (top-left) + Share current item (top-right)
+//   • Close (top-left, via the ✕ button — TabView(.page) breaks its own
+//     horizontal paging the instant ANY DragGesture is attached to a page's
+//     content, so there is deliberately no swipe-to-dismiss gesture here)
+//     + Share current item (top-right)
 
 struct LightboxView: View {
     let urls: [String]
@@ -21,9 +24,6 @@ struct LightboxView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var selection: Int
     @State private var shareItem: IdentifiableURL?
-    @State private var dragDown: CGFloat = 0
-
-    private let dismissThreshold: CGFloat = 120
 
     init(urls: [String], isVideo: [Bool] = [], startIndex: Int = 0) {
         self.urls = urls
@@ -63,34 +63,13 @@ struct LightboxView: View {
                 }
             }
             .tabViewStyle(.page(indexDisplayMode: urls.count > 1 ? .automatic : .never))
-            .offset(y: dragDown)
 
             controls
         }
         .statusBarHidden()
-        // Swipe-down-to-dismiss on the outer ZStack using simultaneousGesture so
-        // TabView's horizontal page swipe is never blocked.
-        .simultaneousGesture(swipeDownToDismiss)
         .sheet(item: $shareItem) { item in
             ShareSheet(items: [item.url])
         }
-    }
-
-    /// Fires only on clear downward drags; horizontal swipes pass through to TabView.
-    private var swipeDownToDismiss: some Gesture {
-        DragGesture(minimumDistance: 20)
-            .onChanged { value in
-                guard value.translation.height > 0,
-                      value.translation.height > abs(value.translation.width) * 1.5 else { return }
-                dragDown = value.translation.height
-            }
-            .onEnded { value in
-                if dragDown > dismissThreshold || value.predictedEndTranslation.height > dismissThreshold * 1.5 {
-                    dismiss()
-                } else {
-                    withAnimation(.spring(response: 0.3)) { dragDown = 0 }
-                }
-            }
     }
 
     private var controls: some View {
@@ -131,21 +110,38 @@ private struct ZoomableImage: View {
 
     var body: some View {
         GeometryReader { geo in
-            KFImage(url)
-                .fade(duration: 0.2)
-                .resizable()
-                .scaledToFit()
-                .frame(width: geo.size.width, height: geo.size.height)
-                .scaleEffect(scale)
-                .offset(x: offset.width, y: offset.height)
-                .highPriorityGesture(magnification(geo))
-                // simultaneousGesture: TabView keeps receiving horizontal swipes at
-                // scale=1; onChanged guards on scale>1 so nothing moves unless zoomed.
-                .simultaneousGesture(panGesture(geo))
-                .onTapGesture(count: 2) { toggleZoom() }
-                .animation(.interactiveSpring(response: 0.3), value: scale)
-                .animation(.interactiveSpring(response: 0.3), value: offset)
+            Group {
+                // The pan gesture is only ATTACHED (not just gated inside its
+                // handlers) while zoomed in. TabView(.page) breaks its own
+                // horizontal paging the instant ANY DragGesture is attached to
+                // a page's content, via .gesture/.simultaneousGesture/
+                // .highPriorityGesture alike, regardless of what the gesture's
+                // handlers do — confirmed on-device with a totally inert
+                // no-op gesture. So paging only works at rest (scale == 1)
+                // if nothing is attached at all; this also means paging is
+                // correctly "locked" while zoomed, instead of fighting pan.
+                if scale > 1 {
+                    imageContent(geo)
+                        .simultaneousGesture(panGesture(geo))
+                } else {
+                    imageContent(geo)
+                }
+            }
+            .highPriorityGesture(magnification(geo))
+            .onTapGesture(count: 2) { toggleZoom() }
         }
+    }
+
+    private func imageContent(_ geo: GeometryProxy) -> some View {
+        KFImage(url)
+            .fade(duration: 0.2)
+            .resizable()
+            .scaledToFit()
+            .frame(width: geo.size.width, height: geo.size.height)
+            .scaleEffect(scale)
+            .offset(x: offset.width, y: offset.height)
+            .animation(.interactiveSpring(response: 0.3), value: scale)
+            .animation(.interactiveSpring(response: 0.3), value: offset)
     }
 
     private func magnification(_ geo: GeometryProxy) -> some Gesture {
@@ -159,15 +155,14 @@ private struct ZoomableImage: View {
             }
     }
 
+    /// Only attached while zoomed in — see the note in `body`.
     private func panGesture(_ geo: GeometryProxy) -> some Gesture {
         DragGesture(minimumDistance: 8)
             .onChanged { value in
-                guard scale > 1 else { return }
                 offset = CGSize(width: lastOffset.width + value.translation.width,
                                 height: lastOffset.height + value.translation.height)
             }
             .onEnded { _ in
-                guard scale > 1 else { return }
                 clamp(geo)
                 lastOffset = offset
             }

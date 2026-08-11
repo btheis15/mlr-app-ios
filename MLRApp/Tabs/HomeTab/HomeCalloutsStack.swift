@@ -149,6 +149,13 @@ private struct SwipeableCalloutCard: View {
 
     @State private var dragX: CGFloat = 0
     @State private var flying = false
+    // Plays once per card so the swipe gesture reads as more discoverable than
+    // the one-time-ever CalloutSwipeTip alone (which won't resurface after a
+    // user has seen it a single time on any card, ever). Resets automatically
+    // whenever a *new* callout becomes the front card (fresh SwiftUI identity
+    // via ForEach's `id: \.id`), so each new card gets its own nudge.
+    @State private var hasWiggled = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HomeCalloutCard(callout: callout, isMarkingDone: isMarkingDone,
@@ -182,6 +189,24 @@ private struct SwipeableCalloutCard: View {
                     }
             )
             .animation(.interactiveSpring(), value: dragX)
+            .onAppear { wiggleHint() }
+    }
+
+    /// A brief, self-playing "rock left, rock right, settle" nudge — a visual
+    /// hint that the card is draggable, independent of the one-time TipKit
+    /// popover. Skipped when the user has Reduce Motion on.
+    private func wiggleHint() {
+        guard !hasWiggled, !reduceMotion else { return }
+        hasWiggled = true
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
+            withAnimation(.easeInOut(duration: 0.32)) { dragX = -14 }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
+                withAnimation(.easeInOut(duration: 0.28)) { dragX = 8 }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) { dragX = 0 }
+                }
+            }
+        }
     }
 
     private func dismiss() {
