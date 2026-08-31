@@ -4,7 +4,7 @@ import SwiftUI
 // MARK: - Family Fest Countdown Intent
 //
 // "Hey Siri, how many days until Family Fest?" — computes the phase locally from
-// FamilyFestConfig, no network needed.
+// the fest window the app cached in the App Group, no network needed.
 
 struct FestCountdownIntent: AppIntent {
     static var title: LocalizedStringResource = "Family Fest Countdown"
@@ -24,12 +24,17 @@ struct FestCountdownIntent: AppIntent {
         case .wrap:
             spoken = "Family Fest just wrapped. Don't forget to post your photos!"
             headline = "Just wrapped 📸"
+        case .concluded:
+            // ⚠️ This branch must come BEFORE anything that reads
+            // `daysUntilStart`. That value clamps to zero, and the countdown
+            // branch below reads zero as "it's starting today" — so for three
+            // weeks after the fest ended, Siri cheerfully answered "Family Fest
+            // starts today!". A finished fest has to say it finished.
+            spoken = "Family Fest \(FamilyFestConfig.year) is over. Thanks for a great one — see you next year!"
+            headline = "See you next year"
         case .planning, .offSeason:
             let days = season.daysUntilStart
-            if days == 0 {
-                spoken = "Family Fest starts today!"
-                headline = "Today!"
-            } else if days == 1 {
+            if days == 1 {
                 spoken = "Family Fest starts tomorrow!"
                 headline = "Tomorrow"
             } else {

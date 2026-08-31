@@ -35,8 +35,17 @@ struct RootView: View {
 
     var body: some View {
         ZStack {
-            MainTabView(selectedTab: $selectedTab)
-                .opacity(mainVisible ? 1 : 0)
+            // A signed-in but unverified account gets the waiting screen instead
+            // of the member layout. RLS returns fewer rows rather than an error,
+            // so without this they'd see every list empty with no explanation —
+            // and since 0213, every button would fail too.
+            if env.isAwaitingVerification {
+                AwaitingVerificationView()
+                    .opacity(mainVisible ? 1 : 0)
+            } else {
+                MainTabView(selectedTab: $selectedTab)
+                    .opacity(mainVisible ? 1 : 0)
+            }
 
             if showSplash {
                 SplashView(

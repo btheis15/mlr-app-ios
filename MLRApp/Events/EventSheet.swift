@@ -32,6 +32,8 @@ struct EventSheet: View {
     @State private var loadingAttendees = true
     @State private var showEditor = false
     @State private var showDeleteConfirm = false
+    @State private var showEmailComposer = false
+    @State private var showAddAttendee = false
     @State private var actionError: String?
     @State private var shareState: ShareState?
     @State private var calendarAdded = false
@@ -67,12 +69,19 @@ struct EventSheet: View {
 
                     nativeActions
 
+                    hostsSection
+
                     rsvpSection
                     whoIsGoingSection
 
                     EventWorkItemsSection(event: event)
 
-                    if env.isAdmin {
+                    // Migration 0209 widened who may run an event beyond admins:
+                    // its hosts, and its creator, can edit it too. Ask the
+                    // server rather than re-deriving the rule here — it needs
+                    // the viewer's committee memberships, which of those they
+                    // lead, and whether each committee has any leads at all.
+                    if env.isAdmin || eventPermissions.canManage {
                         adminActions
                     }
 
@@ -100,6 +109,12 @@ struct EventSheet: View {
         .presentationDragIndicator(.hidden)
         .sheet(isPresented: $showEditor) {
             EventComposer(existing: event)
+        }
+        .sheet(isPresented: $showEmailComposer) {
+            EventEmailComposer(event: event)
+        }
+        .sheet(isPresented: $showAddAttendee) {
+            AddEventAttendeeSheet(event: event) { Task { await load() } }
         }
         .shareSheet($shareState)
         .confirmationDialog("Delete this event?",
@@ -263,11 +278,44 @@ struct EventSheet: View {
 
     // MARK: - RSVP
 
+    /// Who's running this event (migration 0209).
+    ///
+    /// ⚠️ A synthesized event (`family-fest-2026`) has no `events` row and is
+    /// permanently hostless, so the editor isn't offered there. The id carries
+    /// its own marker: real events are uuids.
+    private var eventPermissions: EventPermissions {
+        env.eventHostsService.permissions(for: event.id)
+    }
+
+    private var hostsSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            SectionLabel(text: "Who's running this")
+            EventHostsPanel(eventId: event.id,
+                            isSynthesized: UUID(uuidString: event.id) == nil)
+        }
+    }
+
     private var rsvpSection: some View {
         VStack(alignment: .leading, spacing: 12) {
             SectionLabel(text: event.dayRsvp ? "Which days are you coming?" : "Are you going?")
 
-            if event.dayRsvp {
+            // ⚠️ A signed-out visitor gets a sign-in prompt instead of RSVP
+            // buttons that cannot work. Rendering them disabled reads as "the
+            // app is broken"; rendering them live and failing on tap is worse.
+            if !env.isSignedIn {
+                Button {
+                    env.authService.promptSignIn()
+                } label: {
+                    Label("Sign in to RSVP", systemImage: "person.crop.circle.badge.plus")
+                        .font(.mlrScaled(15, weight: .semibold))
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                        .background(Color.mlrPrimary)
+                        .foregroundStyle(.white)
+                        .clipShape(RoundedRectangle(cornerRadius: 12))
+                }
+                .buttonStyle(.pressable)
+            } else if event.dayRsvp {
                 VStack(spacing: 8) {
                     ForEach(festDays, id: \.self) { day in
                         dayCheckbox(day)
@@ -359,7 +407,19 @@ struct EventSheet: View {
 
     private var whoIsGoingSection: some View {
         VStack(alignment: .leading, spacing: 12) {
-            SectionLabel(text: "Who's going")
+            HStack {
+                SectionLabel(text: "Who's going")
+                Spacer()
+                if env.isAdmin || eventPermissions.canManage {
+                    Button {
+                        showAddAttendee = true
+                    } label: {
+                        Label("Add someone", systemImage: "person.badge.plus")
+                            .font(.mlrScaled(12, weight: .semibold))
+                    }
+                    .buttonStyle(.borderless)
+                }
+            }
             if let s = attendanceSummary, s.total > 0 {
                 rsvpChart(s)
             }
@@ -441,8 +501,18 @@ struct EventSheet: View {
                 Label("Edit", systemImage: "pencil")
                     .secondaryButton()
             }
+            Button {
+                showEmailComposer = true
+            } label: {
+                Label("Email", systemImage: "envelope")
+                    .secondaryButton()
+            }
             // Family Fest is synthesized and can't be deleted.
-            if !event.isFamilyFest {
+            //
+            // ⚠️ Gated on `canDelete`, NOT `canManage`. The delete rule is the
+            // same one minus the "any member" fallback, because deleting an
+            // event takes every RSVP with it.
+            if !event.isFamilyFest, env.isAdmin || eventPermissions.canDelete {
                 Button(role: .destructive) {
                     showDeleteConfirm = true
                 } label: {

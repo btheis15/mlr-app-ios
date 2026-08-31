@@ -152,11 +152,15 @@ struct FestCountdownEntryView: View {
             .lineLimit(1)
     }
 
+    // ⚠️ `isConcluded` is checked BEFORE anything that reads `daysUntilStart`.
+    // That value clamps to zero, and a zero here used to render "Today! / See
+    // you there" — so for the three weeks after the fest ended, the home screen
+    // said it was starting today. A finished fest has to say it finished.
     private var headlineText: String {
         let s = entry.season
         if s.isLive, let d = s.dayNumber { return "Day \(d)/\(s.totalDays)" }
         if s.isWrap { return "Thanks!" }
-        if s.daysUntilStart == 0 { return "Today!" }
+        if s.isConcluded { return "🌲" }
         return "\(s.daysUntilStart)"
     }
 
@@ -164,8 +168,8 @@ struct FestCountdownEntryView: View {
         let s = entry.season
         if s.isLive { return "Happening now" }
         if s.isWrap { return "Post your photos 📸" }
+        if s.isConcluded { return "See you next year" }
         if s.daysUntilStart == 1 { return "day to go · tomorrow" }
-        if s.daysUntilStart <= 0 { return "See you there" }
         return "days to go"
     }
 }

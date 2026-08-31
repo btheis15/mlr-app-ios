@@ -64,6 +64,12 @@ struct HouseHubView: View {
                                  fullWidth: false, minHeight: hubCardMinHeight)
                     }
                     .buttonStyle(.pressable)
+                    NavigationLink(destination: HouseRequestsView(house: house)) {
+                        HomeTile(icon: "tray.full.fill", title: "Requests",
+                                 subtitle: requestsSubtitle, tint: Color.mlrSuccess,
+                                 fullWidth: false, minHeight: hubCardMinHeight)
+                    }
+                    .buttonStyle(.pressable)
                 }
                 if !loading {
                     Text(calSubtitle).font(.mlrCaption).foregroundStyle(Color.mlrTextMuted).padding(.horizontal, 4)
@@ -148,6 +154,17 @@ struct HouseHubView: View {
         if loading { return "Groceries, packing, checklists" }
         guard let top = lists.first else { return "No lists yet" }
         return "\(top.title) — \(top.summary)"
+    }
+
+    /// Surfaces the count that actually needs someone — waiting on a decision
+    /// plus approved-but-not-done. "Approved and nobody bought it" is the
+    /// failure this board exists to make visible, so it belongs in the tile.
+    private var requestsSubtitle: String {
+        let open = env.houseRequestsService.requests.filter {
+            $0.group == .waiting || $0.group == .toDo
+        }.count
+        if open == 0 { return "Ideas, purchases, money back" }
+        return "\(open) need\(open == 1 ? "s" : "") someone"
     }
 }
 

@@ -26,6 +26,8 @@ struct FestStatus: View {
             LiveCard(season: season, previewDate: previewDate)
         case .wrap:
             WrapCard(season: season)
+        case .concluded:
+            ConcludedCard()
         }
     }
 }
@@ -69,7 +71,9 @@ private struct OffSeasonCard: View {
                 .foregroundStyle(Color.mlrFestGold)
 
             VStack(alignment: .leading, spacing: 2) {
-                Text("Family Fest 2026")
+                // Year comes from the resolved fest window, not a literal — a
+                // hardcoded 2026 here outlives the fest it names.
+                Text("Family Fest \(String(FamilyFestConfig.year))")
                     .festHeadingStyle(size: 15)
                 Text("\(FamilyFestConfig.dateRangeLabel) · Tomahawk, WI")
                     .font(.mlrScaled(12))
@@ -208,6 +212,58 @@ private struct WrapCard: View {
             .contentShape(Rectangle())
         }
         .buttonStyle(.pressable)
+        .festStatusCard(accent: true)
+    }
+}
+
+// MARK: - Concluded
+
+/// The fest is history: more than the 14-day photo tail past its end date.
+///
+/// This card is the reason `concluded` exists as its own phase. While it shared
+/// `offSeason`, a finished fest rendered as a countdown — and a countdown to a
+/// date in the past clamps to zero, which reads as "it's starting today". So the
+/// app advertised a fest that had already happened, indefinitely.
+private struct ConcludedCard: View {
+    @Environment(AppEnvironment.self) private var env
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: "crown.fill")
+                    .font(.mlrScaled(18))
+                    .foregroundStyle(Color.mlrFestGold)
+                Text("That's a wrap on \(String(FamilyFestConfig.year))")
+                    .font(.festSerif(19, weight: .bold))
+                    .foregroundStyle(Color.mlrFest)
+                Spacer()
+            }
+
+            Text("Thank you for a great Family Fest. See you next year!")
+                .font(.mlrScaled(13))
+                .foregroundStyle(Color.mlrFestInk.opacity(0.8))
+                .fixedSize(horizontal: false, vertical: true)
+
+            GoldOrnamentDivider().padding(.vertical, 2)
+
+            NavigationLink(destination: DropBoxesView()) {
+                Label("The photo album", systemImage: "photo.on.rectangle.angled")
+                    .font(.mlrScaled(13, weight: .semibold))
+                    .foregroundStyle(Color.mlrAccent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.pressable)
+
+            NavigationLink(destination: FestPastYearsView()) {
+                Label("Past years", systemImage: "clock.arrow.circlepath")
+                    .font(.mlrScaled(13, weight: .semibold))
+                    .foregroundStyle(Color.mlrAccent)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.pressable)
+        }
         .festStatusCard(accent: true)
     }
 }

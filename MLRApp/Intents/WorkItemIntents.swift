@@ -11,16 +11,23 @@ import AppIntents
 
 // MARK: - Urgency enum (Shortcuts picker)
 
+/// ⚠️ AppEnum raw values are persisted BY STRING in saved Shortcuts — never
+/// rename or reorder a case. `nextYear` is appended, which is safe; `custom` is
+/// deliberately absent, since it needs a label and a colour that a voice request
+/// has no way to supply.
 enum WorkUrgencyAppEnum: String, AppEnum {
     case asap
     case thisYear
+    case nextYear
     case niceToHave
 
     static var typeDisplayRepresentation: TypeDisplayRepresentation { "Urgency" }
+    /// Every case needs an entry here or it's a runtime fatalError.
     static var caseDisplayRepresentations: [WorkUrgencyAppEnum: DisplayRepresentation] {
         [
             .asap:       "ASAP",
             .thisYear:   "This year",
+            .nextYear:   "Next year",
             .niceToHave: "Nice to have",
         ]
     }
@@ -29,6 +36,7 @@ enum WorkUrgencyAppEnum: String, AppEnum {
         switch self {
         case .asap:       return .asap
         case .thisYear:   return .thisYear
+        case .nextYear:   return .nextYear
         case .niceToHave: return .niceToHave
         }
     }

@@ -31,6 +31,11 @@ final class AppEnvironment {
     var tournamentsService: TournamentsService
     var dropBoxesService: DropBoxesService
     var mediaTokenService: MediaTokenService
+    var houseRequestsService: HouseRequestsService
+    var eventHostsService: EventHostsService
+    var eventMessageService: EventMessageService
+    var feedMuteService: FeedMuteService
+    var eventChatService: EventChatService
 
     // Resolved once per session
     var currentProfile: Profile?
@@ -71,6 +76,24 @@ final class AppEnvironment {
 
     /// Effective sign-in — false while previewing as a guest so guest gating shows.
     var isSignedIn: Bool { previewMode == .guest ? false : authService.isSignedIn }
+
+    /// Has an admin confirmed this is really a family member? (migrations
+    /// 0181–0184, 0213.)
+    ///
+    /// ⚠️ TRUE when unknown. Defaulting to "unverified" on a read error or a
+    /// missing profile locks real members out of their own app — the web client
+    /// defaults this true in three places (initial state, read error, column
+    /// absent) for exactly that reason. Do the same.
+    var isVerifiedMember: Bool { currentProfile?.approved ?? true }
+
+    /// Signed in, but an admin hasn't verified them yet. Treat as a GUEST for
+    /// reading, and show the explicit waiting screen — otherwise they get a
+    /// member layout full of empty lists with no explanation of why.
+    ///
+    /// ⚠️ Since 0213 this also matters for WRITES: every write RPC now refuses
+    /// an unverified caller, so without this state their taps fail with an
+    /// unhelpful database error instead of a reason.
+    var isAwaitingVerification: Bool { isSignedIn && !isVerifiedMember }
 
     /// Switch the generic preview. Entering (member/guest) is admin-only; exiting
     /// is free. Clears any specific-person preview.
@@ -163,6 +186,11 @@ final class AppEnvironment {
         tournamentsService   = TournamentsService()
         dropBoxesService     = DropBoxesService()
         mediaTokenService    = MediaTokenService()
+        houseRequestsService = HouseRequestsService()
+        eventHostsService    = EventHostsService()
+        eventMessageService  = EventMessageService()
+        feedMuteService      = FeedMuteService()
+        eventChatService     = EventChatService()
 
         AppEnvironment.activeEventsService    = eventsService
         AppEnvironment.activeHelpService      = helpService

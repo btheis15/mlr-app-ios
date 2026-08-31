@@ -165,6 +165,10 @@ struct NotificationRow: View {
         case .tournamentMatchReady: return "target"
         case .tournamentChampion:   return "medal.fill"
         case .adminTest:            return "testtube.2"
+        case .houseRequestSubmitted: return "tray.and.arrow.down.fill"
+        case .houseRequestDecision:  return "checkmark.seal.fill"
+        case .houseRequestHandled:   return "shippingbox.fill"
+        case .houseRequestReminder:  return "bell.badge.fill"
         }
     }
 
@@ -216,6 +220,12 @@ struct NotificationRow: View {
         case .tournamentMatchReady: return "Match"
         case .tournamentChampion:   return "Champion"
         case .adminTest:            return "Test"
+        // Named for the house board, not the paperwork — "Request" alone reads
+        // as a cabin request, which is a different feature entirely.
+        case .houseRequestSubmitted: return "House Board"
+        case .houseRequestDecision:  return "Decision"
+        case .houseRequestHandled:   return "House Board"
+        case .houseRequestReminder:  return "Reminder"
         }
     }
 }

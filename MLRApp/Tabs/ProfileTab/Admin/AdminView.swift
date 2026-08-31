@@ -10,6 +10,17 @@ struct AdminView: View {
     var body: some View {
         List {
             Section("Members & Access") {
+                // Until an admin verifies a new signup they see only what a
+                // signed-out visitor sees (0183) and can write nothing (0213) —
+                // so this is the row that actually lets someone into the app.
+                adminLink(
+                    destination: AdminVerifyMembersView(),
+                    icon: "checkmark.seal.fill",
+                    iconColor: Color.mlrSuccess,
+                    title: "Verify members",
+                    description: "Confirm a new signup is really family, so the app opens up for them"
+                )
+
                 // Per-member actions (make admin, assign house) live on individual profile
                 // sheets in the People tab; this row is the directory + overview.
                 adminLink(

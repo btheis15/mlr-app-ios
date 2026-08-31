@@ -87,6 +87,12 @@ struct HouseDaySheet: View {
 
     let day: String
     let stays: [HouseStay]
+    /// ⚠️ Everyone here on this day — real stays AND people derived from event
+    /// RSVPs, from the one shared `HousePresence.occupants`. This sheet used to
+    /// count `stays` alone and say "STAYING (0) · Nobody's marked a stay for
+    /// this day yet" while the agenda on the screen behind it listed five people
+    /// for the same date.
+    let occupants: [DayOccupant]
     let events: [ResortEvent]
     let onOpenStay: (HouseStay) -> Void
     let onOpenEvent: (ResortEvent) -> Void
@@ -98,6 +104,26 @@ struct HouseDaySheet: View {
         f.dateFormat = "EEEE, MMMM d"
         f.timeZone = TimeZone(identifier: "America/Chicago")
         return f.string(from: d)
+    }
+
+    /// Says HOW someone is here, which is different for each of the four cases —
+    /// a real stay, a member RSVP'd to an event, an account-less housemate a
+    /// host added, and someone's guest.
+    private func subtitle(for person: DayOccupant, stay: HouseStay?) -> String {
+        if let stay {
+            return stay.headCount > 1
+                ? "\(stay.authorName) · \(stay.headCount) people"
+                : stay.authorName
+        }
+        let reason = person.eventTitle.map { "for \($0)" } ?? "coming up"
+        switch person.via {
+        case .guest:
+            return person.sponsorName.map { "Guest of \($0) · \(reason)" } ?? "Guest · \(reason)"
+        case .roster:
+            return "Not on the app · \(reason)"
+        default:
+            return reason.prefix(1).uppercased() + reason.dropFirst()
+        }
     }
 
     var body: some View {
@@ -123,18 +149,28 @@ struct HouseDaySheet: View {
                     }
 
                     VStack(alignment: .leading, spacing: 8) {
-                        Text("STAYING (\(stays.count))").font(.mlrScaled(11, weight: .bold)).foregroundStyle(Color.mlrTextSubtle)
-                        if stays.isEmpty {
+                        Text("STAYING (\(occupants.count))").font(.mlrScaled(11, weight: .bold)).foregroundStyle(Color.mlrTextSubtle)
+                        if occupants.isEmpty {
                             Text("Nobody's marked a stay for this day yet.")
                                 .font(.mlrBody).foregroundStyle(Color.mlrTextMuted)
                         } else {
-                            ForEach(stays) { s in
-                                Button { onOpenStay(s) } label: {
+                            ForEach(occupants) { person in
+                                let stay = person.isImplied
+                                    ? nil
+                                    : stays.first { "stay:\($0.id.uuidString)" == person.id }
+                                Button {
+                                    // A derived row has no `house_stays` row to
+                                    // open — it isn't editable or deletable, so
+                                    // it deliberately isn't tappable either.
+                                    if let stay { onOpenStay(stay) }
+                                } label: {
                                     HStack(spacing: 10) {
-                                        AvatarView(url: s.authorAvatarUrl, size: .small)
+                                        AvatarView(url: person.avatarUrl, size: .small)
                                         VStack(alignment: .leading, spacing: 1) {
-                                            Text(s.label).font(.mlrScaled(15, weight: .medium)).foregroundStyle(Color.mlrText)
-                                            Text(s.headCount > 1 ? "\(s.authorName) · \(s.headCount) people" : s.authorName)
+                                            Text(stay?.label ?? person.name)
+                                                .font(.mlrScaled(15, weight: .medium))
+                                                .foregroundStyle(Color.mlrText)
+                                            Text(subtitle(for: person, stay: stay))
                                                 .font(.mlrCaption).foregroundStyle(Color.mlrTextSubtle)
                                         }
                                         Spacer()
@@ -142,6 +178,7 @@ struct HouseDaySheet: View {
                                     .padding(12).cardStyle()
                                 }
                                 .buttonStyle(.pressable)
+                                .disabled(stay == nil)
                             }
                         }
                     }
