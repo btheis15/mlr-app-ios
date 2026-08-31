@@ -3,18 +3,38 @@ import AVKit
 import Kingfisher
 
 // MARK: - LightboxView
-// Full-screen media viewer presented over the feed.
+// Full-screen media viewer presented over the feed, comments, drop-box albums,
+// work items and fest photos — the one canonical viewer, so a fix here reaches
+// every surface.
 //
 // Features:
-//   • Multi-item carousel (swipe between a post's photos/videos)
-//   • Photos: pinch-to-zoom (1×–5×) with pan clamped to bounds, double-tap to
-//     toggle zoom
+//   • Multi-item carousel — swipe anywhere ON THE PHOTO to go to the next one,
+//     the way Apple Photos and every other photo app behaves
+//   • Photos: pinch-to-zoom (1×–5×), pan while zoomed, double-tap to toggle
 //   • Videos: native AVKit VideoPlayer with transport controls
 //   • Kingfisher-cached images (no redundant re-download)
-//   • Close (top-left, via the ✕ button — TabView(.page) breaks its own
-//     horizontal paging the instant ANY DragGesture is attached to a page's
-//     content, so there is deliberately no swipe-to-dismiss gesture here)
-//     + Share current item (top-right)
+//   • Close (top-left) + Share current item (top-right)
+//
+// ⚠️⚠️ WHY THE ZOOM IS A UIScrollView AND NOT SwiftUI GESTURES.
+//
+// This started as a SwiftUI `MagnificationGesture` + `DragGesture` pair on the
+// page content, and it broke paging: swiping the photo itself did nothing, and
+// only the page-indicator dots (which sit OUTSIDE the page content) would move
+// between photos. A SwiftUI gesture attached to a `TabView(.page)` page claims
+// the touch sequence before the TabView's own scroll view can begin its pan —
+// via .gesture / .simultaneousGesture / .highPriorityGesture alike. Attaching
+// the pan only while zoomed worked around half of it; the magnification gesture
+// still swallowed swipes at rest.
+//
+// A UIScrollView doesn't have that problem, because UIKit recognizers actually
+// negotiate: when the content fits (zoomScale == 1) the inner pan FAILS and the
+// parent pager gets the swipe, and once zoomed the inner pan wins until you hit
+// a content edge. That's exactly the nesting Photos itself uses.
+//
+// ⚠️ `alwaysBounceHorizontal/Vertical` MUST stay false. With bouncing on, the
+// inner scroll view's pan recognizer claims the gesture even when there's
+// nothing to scroll — which reintroduces the original bug in a subtler form
+// (the photo jiggles and the page never turns).
 
 struct LightboxView: View {
     let urls: [String]
@@ -52,7 +72,10 @@ struct LightboxView: View {
                         if isVideoItem(idx, url), let u = env.mediaTokenService.url(url) {
                             VideoPage(url: u)
                         } else if let u = env.mediaTokenService.url(url) {
-                            ZoomableImage(url: u)
+                            // `isCurrent` resets the zoom on a page you've
+                            // swiped away from, so coming back to it doesn't
+                            // land you still zoomed into a corner.
+                            ZoomableImage(url: u, isCurrent: selection == idx)
                         } else {
                             Image(systemName: "photo.slash")
                                 .font(.mlrScaled(44))
@@ -82,6 +105,13 @@ struct LightboxView: View {
                         .padding(16)
                 }
                 Spacer()
+                if urls.count > 1 {
+                    Text("\(min(selection + 1, urls.count)) of \(urls.count)")
+                        .font(.mlrScaled(13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.75))
+                        .accessibilityLabel("Photo \(selection + 1) of \(urls.count)")
+                }
+                Spacer()
                 if selection < urls.count, let u = env.mediaTokenService.url(urls[selection]) {
                     Button { shareItem = IdentifiableURL(url: u) } label: {
                         Image(systemName: "square.and.arrow.up")
@@ -89,6 +119,9 @@ struct LightboxView: View {
                             .foregroundStyle(.white.opacity(0.85))
                             .padding(16)
                     }
+                } else {
+                    // Balances the ✕ so the counter stays centred.
+                    Color.clear.frame(width: 54, height: 1)
                 }
             }
             Spacer()
@@ -96,93 +129,121 @@ struct LightboxView: View {
     }
 }
 
-// MARK: - Zoomable image page
+// MARK: - Zoomable image page (UIScrollView-backed)
 
-private struct ZoomableImage: View {
+private struct ZoomableImage: UIViewRepresentable {
     let url: URL
+    /// False for a page that's been swiped away from — see the reset below.
+    let isCurrent: Bool
 
-    @State private var scale: CGFloat = 1
-    @State private var lastScale: CGFloat = 1
-    @State private var offset: CGSize = .zero
-    @State private var lastOffset: CGSize = .zero
+    func makeUIView(context: Context) -> ZoomableImageScrollView {
+        let view = ZoomableImageScrollView()
+        view.load(url)
+        return view
+    }
 
-    private let maxScale: CGFloat = 5
+    func updateUIView(_ view: ZoomableImageScrollView, context: Context) {
+        view.load(url)
+        if !isCurrent { view.resetZoom(animated: false) }
+    }
+}
 
-    var body: some View {
-        GeometryReader { geo in
-            Group {
-                // The pan gesture is only ATTACHED (not just gated inside its
-                // handlers) while zoomed in. TabView(.page) breaks its own
-                // horizontal paging the instant ANY DragGesture is attached to
-                // a page's content, via .gesture/.simultaneousGesture/
-                // .highPriorityGesture alike, regardless of what the gesture's
-                // handlers do — confirmed on-device with a totally inert
-                // no-op gesture. So paging only works at rest (scale == 1)
-                // if nothing is attached at all; this also means paging is
-                // correctly "locked" while zoomed, instead of fighting pan.
-                if scale > 1 {
-                    imageContent(geo)
-                        .simultaneousGesture(panGesture(geo))
-                } else {
-                    imageContent(geo)
-                }
-            }
-            .highPriorityGesture(magnification(geo))
-            .onTapGesture(count: 2) { toggleZoom() }
+/// A UIScrollView that zooms a single image and centres it.
+///
+/// Deliberately a UIScrollView subclass rather than a coordinator juggling
+/// frames: laying the image out in `layoutSubviews` is the only place that
+/// reliably knows the final bounds, and getting that wrong is what makes a
+/// zoomable image drift off-centre after a rotation.
+final class ZoomableImageScrollView: UIScrollView, UIScrollViewDelegate {
+
+    private let imageView = UIImageView()
+    private var loadedURL: URL?
+    private var lastSize: CGSize = .zero
+
+    override init(frame: CGRect) {
+        super.init(frame: frame)
+
+        delegate = self
+        minimumZoomScale = 1
+        maximumZoomScale = 5
+        showsHorizontalScrollIndicator = false
+        showsVerticalScrollIndicator = false
+        backgroundColor = .clear
+        contentInsetAdjustmentBehavior = .never
+        // ⚠️ Both false — see the warning at the top of the file. With bouncing
+        // on, this scroll view's pan claims swipes it has no way to act on and
+        // the parent pager never turns the page.
+        alwaysBounceHorizontal = false
+        alwaysBounceVertical = false
+
+        imageView.contentMode = .scaleAspectFit
+        imageView.isUserInteractionEnabled = true
+        addSubview(imageView)
+
+        let doubleTap = UITapGestureRecognizer(target: self, action: #selector(handleDoubleTap(_:)))
+        doubleTap.numberOfTapsRequired = 2
+        addGestureRecognizer(doubleTap)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+
+    func load(_ url: URL) {
+        guard loadedURL != url else { return }
+        loadedURL = url
+        resetZoom(animated: false)
+        imageView.kf.setImage(with: url, options: [.transition(.fade(0.2))])
+    }
+
+    func resetZoom(animated: Bool) {
+        guard zoomScale != minimumZoomScale else { return }
+        setZoomScale(minimumZoomScale, animated: animated)
+    }
+
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        // Only re-lay the image when the bounds actually change. Doing it on
+        // every pass would stomp the transform UIScrollView applies while
+        // zooming, snapping the photo back to 1× mid-pinch.
+        if bounds.size != lastSize {
+            lastSize = bounds.size
+            zoomScale = minimumZoomScale
+            imageView.frame = CGRect(origin: .zero, size: bounds.size)
+            contentSize = bounds.size
+        }
+        centerImage()
+    }
+
+    /// Keep the image centred when it's smaller than the viewport — otherwise a
+    /// zoomed-out photo sits in the top-left corner.
+    private func centerImage() {
+        var frame = imageView.frame
+        frame.origin.x = frame.width  < bounds.width
+            ? (bounds.width  - frame.width)  / 2 : 0
+        frame.origin.y = frame.height < bounds.height
+            ? (bounds.height - frame.height) / 2 : 0
+        imageView.frame = frame
+    }
+
+    @objc private func handleDoubleTap(_ gesture: UITapGestureRecognizer) {
+        if zoomScale > minimumZoomScale {
+            setZoomScale(minimumZoomScale, animated: true)
+        } else {
+            // Zoom toward the tapped point rather than the centre, so
+            // double-tapping a face brings that face in.
+            let point = gesture.location(in: imageView)
+            let scale: CGFloat = 2.5
+            let size = CGSize(width: bounds.width / scale, height: bounds.height / scale)
+            let origin = CGPoint(x: point.x - size.width / 2, y: point.y - size.height / 2)
+            zoom(to: CGRect(origin: origin, size: size), animated: true)
         }
     }
 
-    private func imageContent(_ geo: GeometryProxy) -> some View {
-        KFImage(url)
-            .fade(duration: 0.2)
-            .resizable()
-            .scaledToFit()
-            .frame(width: geo.size.width, height: geo.size.height)
-            .scaleEffect(scale)
-            .offset(x: offset.width, y: offset.height)
-            .animation(.interactiveSpring(response: 0.3), value: scale)
-            .animation(.interactiveSpring(response: 0.3), value: offset)
-    }
+    // MARK: UIScrollViewDelegate
 
-    private func magnification(_ geo: GeometryProxy) -> some Gesture {
-        MagnificationGesture()
-            .onChanged { value in
-                scale = min(maxScale, max(1, lastScale * value))
-            }
-            .onEnded { _ in
-                lastScale = scale
-                if scale <= 1 { resetZoom() } else { clamp(geo) }
-            }
-    }
+    func viewForZooming(in scrollView: UIScrollView) -> UIView? { imageView }
 
-    /// Only attached while zoomed in — see the note in `body`.
-    private func panGesture(_ geo: GeometryProxy) -> some Gesture {
-        DragGesture(minimumDistance: 8)
-            .onChanged { value in
-                offset = CGSize(width: lastOffset.width + value.translation.width,
-                                height: lastOffset.height + value.translation.height)
-            }
-            .onEnded { _ in
-                clamp(geo)
-                lastOffset = offset
-            }
-    }
-
-    private func toggleZoom() {
-        if scale > 1 { resetZoom() } else { scale = 2.5; lastScale = 2.5 }
-    }
-
-    private func resetZoom() {
-        scale = 1; lastScale = 1; offset = .zero; lastOffset = .zero
-    }
-
-    /// Keep the panned image within its scaled bounds so it can't fly off-screen.
-    private func clamp(_ geo: GeometryProxy) {
-        let maxX = max(0, geo.size.width  * (scale - 1) / 2)
-        let maxY = max(0, geo.size.height * (scale - 1) / 2)
-        offset = CGSize(width: min(maxX, max(-maxX, offset.width)),
-                        height: min(maxY, max(-maxY, offset.height)))
-    }
+    func scrollViewDidZoom(_ scrollView: UIScrollView) { centerImage() }
 }
 
 // MARK: - Video page
