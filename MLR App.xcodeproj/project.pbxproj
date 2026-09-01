@@ -1586,7 +1586,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 3.1;
+				MARKETING_VERSION = 3.2;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";
@@ -1644,7 +1644,7 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = "@executable_path/Frameworks";
 				"LD_RUNPATH_SEARCH_PATHS[sdk=macosx*]" = "@executable_path/../Frameworks";
-				MARKETING_VERSION = 3.1;
+				MARKETING_VERSION = 3.2;
 				NEW_SETTING = "";
 				NEW_SETTING1 = "";
 				New_setting_2 = "";

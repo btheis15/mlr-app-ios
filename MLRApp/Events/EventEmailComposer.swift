@@ -247,7 +247,11 @@ struct EventEmailComposer: View {
         defer { loading = false }
         do {
             preview = try await service.preview(
-                eventId: event.id, title: event.title, when: event.startDate,
+                // ⚠️ `p_event_when` is a display string that goes straight into
+                // the email body, not a date the server parses. Passing the raw
+                // ISO would mail the family "2026-09-06".
+                eventId: event.id, title: event.title,
+                when: MLRFormat.dateRange(start: event.startDate, end: event.endDate),
                 includeWorkItems: includeWorkItems,
                 excludeNotAttending: excludeNotAttending,
                 includeRoster: includeRoster

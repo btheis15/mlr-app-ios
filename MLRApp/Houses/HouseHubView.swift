@@ -130,8 +130,13 @@ struct HouseHubView: View {
         .task {
             async let s = env.housesService.fetchStays(houseId: house.id)
             async let l = env.housesService.fetchLists(houseId: house.id)
+            // The Requests tile counts what still needs somebody, so the board
+            // has to be loaded here too — reading the service without loading it
+            // showed every house "0 open" until you'd opened Requests once.
+            async let r: Void = env.houseRequestsService.load(houseId: house.id, force: true)
             stays = await s
             lists = await l
+            await r
             loading = false
         }
         .sheet(isPresented: $showRulesEditor) {

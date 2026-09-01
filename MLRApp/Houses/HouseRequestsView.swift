@@ -94,8 +94,12 @@ struct HouseRequestsView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { composing = true } label: { Image(systemName: "plus") }
-                    .accessibilityLabel("New request")
+                // Filing a request while previewing would file it as the real
+                // admin under someone else's name on screen.
+                if !env.isPreviewing {
+                    Button { composing = true } label: { Image(systemName: "plus") }
+                        .accessibilityLabel("New request")
+                }
             }
         }
         .sheet(isPresented: $composing) {
@@ -467,7 +471,15 @@ struct HouseRequestDetailView: View {
     @State private var paidAmount = ""
 
     private var service: HouseRequestsService { env.houseRequestsService }
+    /// "Is this mine?" resolves through the EFFECTIVE user id, so an admin
+    /// previewing as someone else sees that person's view of the request.
     private var isMine: Bool { env.effectiveUserId == request.createdBy }
+
+    /// ⚠️ Every write no-ops while previewing. The write would land as the REAL
+    /// admin, but the screen is pretending to be someone else — so approving a
+    /// purchase "as Cass" would actually approve it, for real, from an admin who
+    /// thought they were only looking.
+    private var canAct: Bool { !env.isPreviewing }
 
     var body: some View {
         List {
@@ -548,7 +560,7 @@ struct HouseRequestDetailView: View {
     /// `canReview` comes from `profiles.house_admin` for THIS house.
     @ViewBuilder
     private var decisionSection: some View {
-        if service.canReview, request.status == .pending {
+        if service.canReview, canAct, request.status == .pending {
             Section("Your decision") {
                 TextField("Add a note (optional)", text: $note, axis: .vertical)
                     .lineLimit(1...4)
@@ -570,7 +582,7 @@ struct HouseRequestDetailView: View {
     /// one invents a chore nobody owes.
     @ViewBuilder
     private var progressSection: some View {
-        if service.canReview, request.status == .approved, request.kind != .idea {
+        if service.canReview, canAct, request.status == .approved, request.kind != .idea {
             Section("Next step") {
                 if request.kind == .purchase {
                     Button("Mark it ordered") {
@@ -592,7 +604,7 @@ struct HouseRequestDetailView: View {
         // ⚠️ Converting a purchase into a reimbursement is REQUESTER-ONLY. A
         // reimbursement pays `created_by`, so anyone else converting would route
         // the money to whoever ASKED rather than whoever PAID.
-        if isMine, request.kind == .purchase,
+        if isMine, canAct, request.kind == .purchase,
            request.status == .pending || request.status == .approved {
             Section("I bought it myself") {
                 if converting {
@@ -611,7 +623,7 @@ struct HouseRequestDetailView: View {
             }
         }
 
-        if isMine, request.status == .pending {
+        if isMine, canAct, request.status == .pending {
             Section {
                 Button("Withdraw this request", role: .destructive) {
                     Task { await run { try await service.withdraw(id: request.id) } }
@@ -619,7 +631,7 @@ struct HouseRequestDetailView: View {
             }
         }
 
-        if service.canReview {
+        if service.canReview, canAct {
             Section {
                 Button("Remove from the board", role: .destructive) {
                     Task { await run { try await service.delete(id: request.id) } }

@@ -63,8 +63,15 @@ struct HouseCalendarView: View {
     /// this — they used to derive separately, and the day sheet (which knew only
     /// about real stays) said "Staying (0)" while the agenda three inches lower
     /// listed five people for the same dates.
-    private var implied: [ImpliedStay] {
-        HousePresence.impliedStays(
+    ///
+    /// ⚠️ Held in state, NOT computed in `body`. The derivation walks every
+    /// event × every attendance row; as a computed property it re-ran on every
+    /// body pass and again for each day sheet, which is tens of thousands of
+    /// iterations per render on a real calendar.
+    @State private var implied: [ImpliedStay] = []
+
+    private func recomputeImplied() {
+        implied = HousePresence.impliedStays(
             events: env.eventsService.events,
             attendance: attendance,
             members: houseMembers,
@@ -99,6 +106,10 @@ struct HouseCalendarView: View {
             await reload()
             env.housesService.subscribeToStays(houseId: house.id) { Task { await reload() } }
         }
+        // Events arrive from realtime after the first load, and a new RSVP can
+        // put somebody in the house — so the derivation has to re-run, not just
+        // be computed once at load.
+        .onChange(of: env.eventsService.events) { _, _ in recomputeImplied() }
         .onDisappear { env.housesService.unsubscribeFromStays(houseId: house.id) }
         .sheet(isPresented: $showComposer) {
             HouseStayComposer(houseId: house.id, houseName: house.name) { Task { await reload() } }
@@ -152,6 +163,7 @@ struct HouseCalendarView: View {
         async let r = env.housesService.fetchHouseRosterRefs(houseId: house.id)
         async let a = env.housesService.fetchPresenceAttendance()
         (stays, houseMembers, rosterMembers, attendance) = await (s, m, r, a)
+        recomputeImplied()
         loading = false
     }
 

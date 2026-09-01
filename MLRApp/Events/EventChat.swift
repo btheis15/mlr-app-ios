@@ -339,6 +339,14 @@ struct EventChatView: View {
                 .foregroundStyle(Color.mlrTextMuted)
                 .frame(maxWidth: .infinity)
                 .padding(14)
+        } else if env.isPreviewing {
+            // The message would post as the REAL account while the screen is
+            // pretending to be someone else.
+            Text("You're previewing as someone else — posting is off.")
+                .font(.mlrScaled(12))
+                .foregroundStyle(Color.mlrTextMuted)
+                .frame(maxWidth: .infinity)
+                .padding(14)
         } else if !chat.canPost {
             // ⚠️ A Maybe can read but not post (0217). Say why, and what to do
             // about it — "you can't type here" with no reason is the version

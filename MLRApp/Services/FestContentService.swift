@@ -288,7 +288,8 @@ final class FestContentService {
         allYears = rows.map(\.config)
         guard let current = allYears.first else { return }
         year = current.year
-        SharedStore.shared.festWindow = FestWindowSnapshot(
+
+        let snapshot = FestWindowSnapshot(
             year: current.year,
             startDate: current.startDate,
             endDate: current.endDate,
@@ -297,6 +298,19 @@ final class FestContentService {
             theme: current.theme,
             coverUrl: current.coverUrl
         )
+        // Only write and kick the widgets when something actually CHANGED.
+        // `load()` runs on most fest screens, and reloading every timeline on
+        // each one burns the widget refresh budget for a value that changes
+        // about once a year.
+        let previous = SharedStore.shared.festWindow
+        guard previous?.year != snapshot.year
+                || previous?.startDate != snapshot.startDate
+                || previous?.endDate != snapshot.endDate
+                || previous?.theme != snapshot.theme
+                || previous?.coverUrl != snapshot.coverUrl
+        else { return }
+
+        SharedStore.shared.festWindow = snapshot
         SharedStore.shared.reloadWidgets()
     }
 
