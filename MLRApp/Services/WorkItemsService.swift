@@ -12,11 +12,25 @@ import Supabase
 @MainActor
 final class WorkItemsService {
     var items: [WorkItem] = []
+    /// Per-house item counts for the event sheet currently open, keyed by event.
+    var eventHouseCounts: [String: [EventHouseItemCount]] = [:]
     var isLoading: Bool = false
     var error: String? = nil
 
-    var openItems: [WorkItem] { items.filter { $0.status == .open } }
+    /// ⚠️ Filters out rows whose `surface_on` is in the FUTURE (migration 0186).
+    /// `mark_work_item_done()` auto-creates a recurring item's next cycle
+    /// immediately — so the recurrence can never be lost — stamped with Jan 1 of
+    /// the year it's next due. Those rows are real and already in the table, but
+    /// showing them puts a chore three years out on today's checklist.
+    var openItems: [WorkItem] { items.filter { $0.status == .open && $0.isSurfaced } }
     var doneItems: [WorkItem] { items.filter { $0.status == .done } }
+
+    /// Recurring items already queued for a future year — shown only where
+    /// someone is deliberately looking at what's scheduled ahead.
+    var upcomingRecurring: [WorkItem] {
+        items.filter { $0.status == .open && !$0.isSurfaced }
+            .sorted { ($0.surfaceOn ?? .distantFuture) < ($1.surfaceOn ?? .distantFuture) }
+    }
 
     private var realtimeChannel: RealtimeChannelV2? = nil
 
@@ -109,7 +123,9 @@ final class WorkItemsService {
     @discardableResult
     func createItem(
         title: String, notes: String?, category: String?, peopleNeeded: Int?,
-        houseId: UUID? = nil, urgency: WorkUrgency? = nil
+        houseId: UUID? = nil, urgency: WorkUrgency? = nil,
+        customLabel: String? = nil, customColor: WorkUrgencyColor? = nil,
+        recurEveryYears: Int? = nil
     ) async throws -> UUID {
         struct CreateParams: Encodable {
             let p_title: String
@@ -118,11 +134,20 @@ final class WorkItemsService {
             let p_people_needed: Int?
             let p_house_id: String?
             let p_urgency: String?
+            let p_custom_label: String?
+            let p_custom_color: String?
+            let p_recur_every_years: Int?
         }
         let id: UUID = try await supabase
             .rpc("create_work_item", params: CreateParams(
                 p_title: title, p_notes: notes, p_category: category, p_people_needed: peopleNeeded,
-                p_house_id: houseId?.uuidString, p_urgency: urgency?.rawValue
+                p_house_id: houseId?.uuidString, p_urgency: urgency?.rawValue,
+                // The server rejects a custom tier with no label, and nulls both
+                // out for any other tier — mirror that so a switched-away label
+                // can't linger.
+                p_custom_label: urgency == .custom ? customLabel : nil,
+                p_custom_color: urgency == .custom ? customColor?.rawValue : nil,
+                p_recur_every_years: recurEveryYears
             ))
             .execute()
             .value
@@ -142,7 +167,9 @@ final class WorkItemsService {
     /// between MLR and a house, and set/clear urgency. (migrations 0066/0069)
     func updateItem(
         id: UUID, title: String, notes: String?, category: String?, status: WorkItemStatus,
-        peopleNeeded: Int?, houseId: UUID? = nil, urgency: WorkUrgency? = nil
+        peopleNeeded: Int?, houseId: UUID? = nil, urgency: WorkUrgency? = nil,
+        customLabel: String? = nil, customColor: WorkUrgencyColor? = nil,
+        recurEveryYears: Int? = nil
     ) async throws {
         struct UpdateParams: Encodable {
             let p_id: String
@@ -153,12 +180,18 @@ final class WorkItemsService {
             let p_people_needed: Int?
             let p_house_id: String?
             let p_urgency: String?
+            let p_custom_label: String?
+            let p_custom_color: String?
+            let p_recur_every_years: Int?
         }
         try await supabase
             .rpc("update_work_item", params: UpdateParams(
                 p_id: id.uuidString, p_title: title, p_notes: notes,
                 p_category: category, p_status: status.rawValue, p_people_needed: peopleNeeded,
-                p_house_id: houseId?.uuidString, p_urgency: urgency?.rawValue
+                p_house_id: houseId?.uuidString, p_urgency: urgency?.rawValue,
+                p_custom_label: urgency == .custom ? customLabel : nil,
+                p_custom_color: urgency == .custom ? customColor?.rawValue : nil,
+                p_recur_every_years: recurEveryYears
             ))
             .execute()
         await fetchItems()
@@ -268,6 +301,25 @@ final class WorkItemsService {
             .delete()
             .eq("id", value: id.uuidString)
             .execute()
+    }
+
+    /// How many work items each house has on an event (migration 0186's
+    /// companion `event_work_item_house_counts`).
+    ///
+    /// ⚠️ This exists because a house you're NOT in has its items hidden by RLS,
+    /// so the section would silently vanish and the event would look like it had
+    /// no plan. The count comes from a SECURITY DEFINER function, letting the UI
+    /// say "🔒 MJT House · 2 items planned — details only visible to that house"
+    /// instead of nothing at all.
+    func fetchEventHouseCounts(eventId: String) async -> [EventHouseItemCount] {
+        struct P: Encodable { let p_event_id: String }
+        do {
+            return try await supabase
+                .rpc("event_work_item_house_counts", params: P(p_event_id: eventId))
+                .execute().value
+        } catch {
+            return []
+        }
     }
 
     /// Link a single item to an event (any signed-in member; additive).

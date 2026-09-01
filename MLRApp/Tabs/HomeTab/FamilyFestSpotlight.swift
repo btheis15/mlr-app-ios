@@ -32,6 +32,7 @@ struct FamilyFestSpotlight: View {
         case .planning:  return "calendar.badge.clock"
         case .live:      return "star.fill"
         case .wrap:      return "photo.fill"
+        case .concluded: return "crown.fill"
         }
     }
 
@@ -48,6 +49,11 @@ struct FamilyFestSpotlight: View {
             return "Live now"
         case .wrap:
             return "That's a wrap · add your photos"
+        case .concluded:
+            // Never a countdown. `daysUntilStart` clamps to zero for a date in
+            // the past, and a zero here read as "starting today" — which is how
+            // a finished fest advertised itself as live for three weeks.
+            return "Thank you for a great Family Fest · See you next year"
         }
     }
 

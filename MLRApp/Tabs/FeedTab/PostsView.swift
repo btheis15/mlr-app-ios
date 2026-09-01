@@ -78,6 +78,29 @@ private struct ConversationsList: View {
                 }
             }
 
+            // Event chats — one per event you're going to (migration 0216).
+            // Their own section, because they're transient in a way committee
+            // rooms aren't: each one archives itself 7 days after its event.
+            let eventChats = env.eventChatService.liveChats
+            if !eventChats.isEmpty {
+                Section("Events you're going to") {
+                    ForEach(eventChats) { chat in
+                        NavigationLink {
+                            EventChatView(chat: chat)
+                        } label: {
+                            ConversationRow(
+                                emoji: chat.emoji ?? "📅",
+                                title: chat.title ?? "Event",
+                                subtitle: chat.canPost
+                                    ? "Just the people going"
+                                    : "Reading along — RSVP to join in",
+                                summary: nil
+                            )
+                        }
+                    }
+                }
+            }
+
             let live = channels.filter { !$0.isArchived }
             let archived = channels.filter { $0.isArchived }
 
@@ -104,10 +127,26 @@ private struct ConversationsList: View {
 
             // Archived committee/role chats stay reachable (read-only) under a
             // quiet disclosure at the foot of the list (migration 0112).
-            if !archived.isEmpty {
+            let archivedEventChats = env.eventChatService.archivedChats
+            if !archived.isEmpty || !archivedEventChats.isEmpty {
                 Section {
                     DisclosureGroup("Archived chats") {
                         ForEach(archived) { channelLink($0) }
+                        // A finished event's room is kept as a read-only record
+                        // rather than deleted — the 7-day tail exists so
+                        // last-minute details can still land after the weekend.
+                        ForEach(archivedEventChats) { chat in
+                            NavigationLink {
+                                EventChatView(chat: chat)
+                            } label: {
+                                ConversationRow(
+                                    emoji: chat.emoji ?? "📅",
+                                    title: chat.title ?? "Event",
+                                    subtitle: "Finished",
+                                    summary: nil
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -115,8 +154,14 @@ private struct ConversationsList: View {
         .listStyle(.insetGrouped)
         .navigationTitle("Chats")
         .navigationBarTitleDisplayMode(.inline)
-        .task { await loadSummaries() }
-        .refreshable { await loadSummaries() }
+        .task {
+            await loadSummaries()
+            await env.eventChatService.loadChats()
+        }
+        .refreshable {
+            await loadSummaries()
+            await env.eventChatService.loadChats()
+        }
     }
 
     @ViewBuilder
@@ -299,6 +344,8 @@ struct MainFeedView: View {
                     Button("Sign in") { showSignIn = true }
                         .font(.mlrScaled(15, weight: .medium))
                         .foregroundStyle(Color.mlrPrimary)
+                } else {
+                    feedMuteBell
                 }
             }
         }
@@ -314,10 +361,50 @@ struct MainFeedView: View {
             await env.postsService.fetchPosts(userId: env.currentProfile?.id)
             await fetchReactions(for: env.postsService.posts)
             env.postsService.subscribeToRealtime()
+            await env.feedMuteService.load()
         }
         .onChange(of: env.postsService.posts) { _, newPosts in
             Task { await fetchReactions(for: newPosts) }
         }
+    }
+
+    // MARK: - Feed mute (migration 0214)
+    //
+    // The Family Feed is the noisiest surface in the app and was the only one
+    // with no bell of its own. Durations write ONLY `muted_until`, so the timer
+    // expires by going stale — see FeedMuteService for why writing both columns
+    // muted people permanently for months.
+
+    private var feedMuteBell: some View {
+        Menu {
+            if env.feedMuteService.isMuted {
+                if let label = env.feedMuteService.muteLabel {
+                    Text(label)
+                }
+                Button("Unmute the feed") {
+                    Task { await env.feedMuteService.setMuted(false) }
+                }
+            } else {
+                Button("Mute for 1 hour") { mute(hours: 1) }
+                Button("Mute for 8 hours") { mute(hours: 8) }
+                Button("Mute for 1 day") { mute(hours: 24) }
+                Button("Mute for a week") { mute(hours: 24 * 7) }
+                Divider()
+                Button("Mute until I turn it back on") {
+                    Task { await env.feedMuteService.setMuted(true) }
+                }
+            }
+        } label: {
+            Image(systemName: env.feedMuteService.isMuted ? "bell.slash.fill" : "bell")
+                .font(.mlrScaled(15))
+                .foregroundStyle(env.feedMuteService.isMuted ? Color.mlrPrimary : Color.mlrTextMuted)
+        }
+        .accessibilityLabel(env.feedMuteService.isMuted ? "Feed muted" : "Mute the feed")
+    }
+
+    private func mute(hours: Int) {
+        let until = Calendar.current.date(byAdding: .hour, value: hours, to: .now)
+        Task { await env.feedMuteService.setMuted(true, until: until) }
     }
 
     // MARK: - Content

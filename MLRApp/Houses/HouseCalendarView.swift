@@ -15,6 +15,12 @@ struct HouseCalendarView: View {
     @State private var loading = true
     @State private var monthAnchor: Date = .now
 
+    // Presence: who's derived to be here from event RSVPs. See HousePresence —
+    // three kinds of person count, not just members with accounts.
+    @State private var houseMembers: [HouseMemberRef] = []
+    @State private var rosterMembers: [HouseRosterRef] = []
+    @State private var attendance: [PresenceAttendanceRow] = []
+
     @State private var showComposer = false
     @State private var editingStay: HouseStay?
     @State private var selectedStay: HouseStay?
@@ -53,6 +59,34 @@ struct HouseCalendarView: View {
     private var upcomingStays: [HouseStay] { stays.filter { !$0.isPast(today) } }
     private var pastStays: [HouseStay] { Array(stays.filter { $0.isPast(today) }.reversed()) }
 
+    /// ⚠️ THE ONE derivation. The day sheet and the agenda below it both read
+    /// this — they used to derive separately, and the day sheet (which knew only
+    /// about real stays) said "Staying (0)" while the agenda three inches lower
+    /// listed five people for the same dates.
+    ///
+    /// ⚠️ Held in state, NOT computed in `body`. The derivation walks every
+    /// event × every attendance row; as a computed property it re-ran on every
+    /// body pass and again for each day sheet, which is tens of thousands of
+    /// iterations per render on a real calendar.
+    @State private var implied: [ImpliedStay] = []
+
+    private func recomputeImplied() {
+        implied = HousePresence.impliedStays(
+            events: env.eventsService.events,
+            attendance: attendance,
+            members: houseMembers,
+            rosterMembers: rosterMembers,
+            stays: stays,
+            today: today
+        )
+    }
+
+    /// People, not rows — a stay's extra `guest_names` count, and nobody is
+    /// counted twice.
+    private var stayingCount: Int {
+        HousePresence.stayingCount(stays: upcomingStays, implied: implied)
+    }
+
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 20) {
@@ -72,6 +106,10 @@ struct HouseCalendarView: View {
             await reload()
             env.housesService.subscribeToStays(houseId: house.id) { Task { await reload() } }
         }
+        // Events arrive from realtime after the first load, and a new RSVP can
+        // put somebody in the house — so the derivation has to re-run, not just
+        // be computed once at load.
+        .onChange(of: env.eventsService.events) { _, _ in recomputeImplied() }
         .onDisappear { env.housesService.unsubscribeFromStays(houseId: house.id) }
         .sheet(isPresented: $showComposer) {
             HouseStayComposer(houseId: house.id, houseName: house.name) { Task { await reload() } }
@@ -97,6 +135,10 @@ struct HouseCalendarView: View {
             HouseDaySheet(
                 day: day.value,
                 stays: staysByDay[day.value] ?? [],
+                // Both surfaces call the same function — see `implied`.
+                occupants: HousePresence.occupants(on: day.value,
+                                                   stays: stays,
+                                                   implied: implied),
                 events: eventsByDay[day.value] ?? [],
                 onOpenStay: { selectedDay = nil; selectedStay = $0 },
                 onOpenEvent: { selectedDay = nil; selectedEvent = $0 },
@@ -116,7 +158,12 @@ struct HouseCalendarView: View {
     }
 
     private func reload() async {
-        stays = await env.housesService.fetchStays(houseId: house.id)
+        async let s = env.housesService.fetchStays(houseId: house.id)
+        async let m = env.housesService.fetchHouseMemberRefs(houseId: house.id)
+        async let r = env.housesService.fetchHouseRosterRefs(houseId: house.id)
+        async let a = env.housesService.fetchPresenceAttendance()
+        (stays, houseMembers, rosterMembers, attendance) = await (s, m, r, a)
+        recomputeImplied()
         loading = false
     }
 
@@ -253,10 +300,13 @@ struct HouseCalendarView: View {
 
     private var agenda: some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text("🏡 Who's staying").font(.mlrScaled(15, weight: .bold))
+            // Counts PEOPLE, not rows — a stay's extra guests are extra people
+            // sleeping there, and nobody is double-counted.
+            Text(stayingCount > 0 ? "🏡 Who's staying (\(stayingCount))" : "🏡 Who's staying")
+                .font(.mlrScaled(15, weight: .bold))
             if loading {
                 ForEach(0..<3, id: \.self) { _ in SkeletonCard(height: 64) }
-            } else if upcomingStays.isEmpty {
+            } else if upcomingStays.isEmpty && implied.isEmpty {
                 VStack(spacing: 4) {
                     Text("No stays on the calendar yet.").font(.mlrBody).foregroundStyle(Color.mlrTextMuted)
                     Text("Add yours so the rest of \(house.name) knows when you'll be up.")
@@ -266,6 +316,13 @@ struct HouseCalendarView: View {
             } else {
                 ForEach(upcomingStays) { stay in
                     StayRow(stay: stay, today: today) { selectedStay = stay }
+                }
+                // Derived rows tap through to the EVENT — the thing that
+                // actually created them — not to a stay that doesn't exist.
+                ForEach(implied) { person in
+                    ImpliedStayRow(person: person) {
+                        selectedEvent = env.eventsService.events.first { $0.id == person.eventId }
+                    }
                 }
             }
 
@@ -314,6 +371,70 @@ private struct StayRow: View {
                     }
                     Text(stay.dateRangeLabel).font(.mlrCaption).foregroundStyle(Color.mlrTextMuted)
                     Text(stay.headCount > 1 ? "\(stay.authorName) · \(stay.headCount) people" : stay.authorName)
+                        .font(.mlrCaption).foregroundStyle(Color.mlrTextSubtle).lineLimit(1)
+                }
+                Spacer()
+                Image(systemName: "chevron.right").font(.mlrScaled(13)).foregroundStyle(Color.mlrTextSubtle)
+            }
+            .padding(12)
+            .cardStyle()
+        }
+        .buttonStyle(.pressable)
+    }
+}
+
+// MARK: - Implied stay row
+//
+// Somebody who'll be at the house because they RSVP'd to a resort event, not
+// because they typed a stay. Rendered as its own kind of row deliberately: it
+// has no `house_stays` row, so it can't be edited, deleted or opened like one,
+// and giving it the same affordances would invite exactly those actions.
+
+private struct ImpliedStayRow: View {
+    let person: ImpliedStay
+    let onTap: () -> Void
+
+    /// Names how they're attached to the house — three different situations
+    /// that all mean "they'll be here", and flattening them would make the list
+    /// unreadable.
+    private var attribution: String {
+        switch person.via {
+        case .guest:  return person.sponsorName.map { "Guest of \($0)" } ?? "Guest"
+        case .roster: return "Not on the app yet"
+        case .member: return "Coming to an event"
+        }
+    }
+
+    private var dateRangeLabel: String {
+        let fmt = DateFormatter()
+        fmt.dateFormat = "MMM d"
+        fmt.timeZone = TimeZone(identifier: "America/Chicago")
+        guard let s = HouseStay.iso.date(from: person.startDate) else { return person.startDate }
+        let start = fmt.string(from: s)
+        if person.endDate == person.startDate { return start }
+        guard let e = HouseStay.iso.date(from: person.endDate) else { return start }
+        return "\(start) – \(fmt.string(from: e))"
+    }
+
+    var body: some View {
+        Button(action: onTap) {
+            HStack(spacing: 10) {
+                AvatarView(url: person.avatarUrl, size: .small)
+                VStack(alignment: .leading, spacing: 1) {
+                    HStack(spacing: 6) {
+                        Text(person.name)
+                            .font(.mlrScaled(15, weight: .medium))
+                            .foregroundStyle(Color.mlrText)
+                        Text("for \(person.eventTitle)")
+                            .font(.mlrScaled(10, weight: .semibold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(Color.mlrInfo.opacity(0.15))
+                            .foregroundStyle(Color.mlrInfo)
+                            .clipShape(Capsule())
+                            .lineLimit(1)
+                    }
+                    Text(dateRangeLabel).font(.mlrCaption).foregroundStyle(Color.mlrTextMuted)
+                    Text(attribution)
                         .font(.mlrCaption).foregroundStyle(Color.mlrTextSubtle).lineLimit(1)
                 }
                 Spacer()

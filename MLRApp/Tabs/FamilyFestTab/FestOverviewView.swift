@@ -85,25 +85,31 @@ struct FestOverviewView: View {
 
                         GoldOrnamentDivider()
 
-                        // The week, day by day — activities + that night's dinner.
-                        ForEach(dayGroups, id: \.day) { group in
-                            FestDaySection(
-                                day: group.day,
-                                isoDate: group.isoDate,
-                                items: group.items,
-                                dinner: dinner(for: group.day)
-                            )
-                            .scrollTransition { content, phase in
-                                content
-                                    .opacity(phase.isIdentity ? 1 : 0.3)
-                                    .scaleEffect(phase.isIdentity ? 1 : 0.96)
+                        // Once the fest is concluded the week itself moves to
+                        // Past Years and the hub drops to Overview + Past Years.
+                        // Leaving the accordion up would keep a finished week
+                        // looking like a plan people can still act on.
+                        if !festSeason.isConcluded {
+                            // The week, day by day — activities + that night's dinner.
+                            ForEach(dayGroups, id: \.day) { group in
+                                FestDaySection(
+                                    day: group.day,
+                                    isoDate: group.isoDate,
+                                    items: group.items,
+                                    dinner: dinner(for: group.day)
+                                )
+                                .scrollTransition { content, phase in
+                                    content
+                                        .opacity(phase.isIdentity ? 1 : 0.3)
+                                        .scaleEffect(phase.isIdentity ? 1 : 0.96)
+                                }
                             }
+
+                            // All-week, no-set-time activities (scavenger hunt, etc.)
+                            FestAnytimeCard()
+
+                            GoldOrnamentDivider()
                         }
-
-                        // All-week, no-set-time activities (scavenger hunt, etc.)
-                        FestAnytimeCard()
-
-                        GoldOrnamentDivider()
 
                         // Secondary sections.
                         moreSection
@@ -218,9 +224,15 @@ struct FestOverviewView: View {
                 .padding(.horizontal, 4)
                 .padding(.top, 4)
 
-            FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
-            FestUtilityLink(label: "Weekly dinner menu", icon: "fork.knife") { FestDinnersView() }
-            FestUtilityLink(label: "Dues & payments", icon: "dollarsign.circle.fill") { FestPayView() }
+            // A concluded fest drops to Overview + Past Years. "Who's coming"
+            // and "Dues & payments" are about a week that already happened —
+            // they'd read as things still to do.
+            if !festSeason.isConcluded {
+                FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
+                FestUtilityLink(label: "Weekly dinner menu", icon: "fork.knife") { FestDinnersView() }
+                FestUtilityLink(label: "Dues & payments", icon: "dollarsign.circle.fill") { FestPayView() }
+            }
+            FestUtilityLink(label: "Past years", icon: "clock.arrow.circlepath") { FestPastYearsView() }
             // Photos live on the Main Feed now — no separate Fest photo gallery.
         }
     }

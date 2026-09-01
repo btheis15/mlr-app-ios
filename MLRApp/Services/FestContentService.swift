@@ -3,11 +3,31 @@ import Supabase
 
 // MARK: - Fest content models (DB-backed)
 
-struct FestConfig: Equatable {
+struct FestConfig: Equatable, Identifiable {
+    var year: Int
     var name: String
     var tagline: String?
     var startDate: String   // yyyy-MM-dd
     var endDate: String     // yyyy-MM-dd
+    /// This year's theme line, e.g. "Ye Olde Family Feste" (migration 0219).
+    /// Nil means "use the built-in look" — never backfilled with the 2026 values.
+    var theme: String?
+    var coverUrl: String?
+
+    var id: Int { year }
+
+    var season: FestSeason { FestSeason.compute(startISO: startDate, endISO: endDate) }
+    var dateRangeLabel: String { FamilyFestConfig.rangeLabel(start: startDate, end: endDate) }
+}
+
+/// A refusal the "start next year" sheet shows verbatim. These are answers to
+/// the person, not diagnostics — "Family Fest 2027 already exists" tells them
+/// what to do next; "insert failed" doesn't.
+enum FestYearError: LocalizedError {
+    case message(String)
+    var errorDescription: String? {
+        switch self { case .message(let m): return m }
+    }
 }
 
 /// A dues tier (Adult / Kid / per-day / without-food / …). `amount` nil = TBD.
@@ -184,11 +204,25 @@ final class FestContentService {
               venmo: "Cathy-Hofer-1", zelle: nil, appleCash: nil, paypal: nil, amount: nil, note: nil)
     ]
 
-    private let year = FamilyFestConfig.year
+    /// The fest year every other table filters on.
+    ///
+    /// ⚠️ NOT a constant. `fest_config`'s primary key is `fest_year` and there can
+    /// be many rows; the current fest is the NEWEST one. A hardcoded 2026 here is
+    /// what would keep the app serving a finished fest's schedule, dues and
+    /// dinners after the family seeded the next year.
+    private(set) var year = FamilyFestConfig.year
+
+    /// Every fest year on record, newest first — the Past Years archive reads this.
+    var allYears: [FestConfig] = []
 
     func load(force: Bool = false) async {
         if loaded && !force { return }
         do {
+            // Resolve the year BEFORE anything that filters on it. This is one
+            // extra round-trip on a tiny table, and it's the difference between
+            // the whole hub showing the right fest and it showing last year's.
+            await resolveYear()
+
             async let cfg = fetchConfig()
             async let sched = fetchSchedule()
             async let dins = fetchDinners()
@@ -199,20 +233,35 @@ final class FestContentService {
             let (c, s, d, p, du, calloutRows) = try await (cfg, sched, dins, pays, duesTiers, co)
 
             if let c { config = c }
-            if !du.isEmpty { dues = du }
             // Migration 0141 merged the old fest_activities into fest_schedule_items
             // as anytime events, so the schedule is now the single source. iOS
             // dropped its own fest_activities read entirely (the dead
             // fetchActivities()/ActivityRow/FestActivityEditSheet trio this used
             // to feed were removed) rather than double-counting the copies.
             let combined = s
-            if !combined.isEmpty { schedule = combined }
-            if !d.isEmpty { dinners = d }
-            if !p.isEmpty { payees = p }
+
+            // ⚠️ The in-code seed is NOT generic filler — it IS the 2026 week,
+            // with 2026's dates, 2026's dues and 2026's payee. Backfilling any
+            // other year from it presents last year's plan as that year's own:
+            // Family Fest 2027 rendered "Gene Pool Concert" under day cards
+            // reading July 26–30 for a fest running August 1–7, and naming last
+            // year's collector as the person to send money to. Deleting them in
+            // the Planner didn't help, because they were never rows.
+            //
+            // So the seed only stands in for the ONE year it honestly describes.
+            // Every other year degrades to empty, and the empty states say "the
+            // week isn't planned yet" rather than inventing a week.
+            let seedApplies = year == FamilyFestConfig.fallbackYear
+
+            schedule = combined.isEmpty ? (seedApplies ? ScheduleItem.seed : []) : combined
+            dinners  = d.isEmpty        ? (seedApplies ? FestDinner.seed : []) : d
+            payees   = p.isEmpty        ? (seedApplies ? Self.seedPayees : []) : p
+            dues     = du.isEmpty       ? (seedApplies ? Self.seedDues : []) : du
+
             // calloutRows nil means the table doesn't exist yet → show seed fallback.
             // Empty array means "no callouts" — don't show the seed.
             callouts = calloutRows ?? [seedCallout]
-            usingSeedFallback = combined.isEmpty
+            usingSeedFallback = combined.isEmpty && seedApplies
             loaded = true
         } catch {
             usingSeedFallback = true
@@ -222,13 +271,93 @@ final class FestContentService {
 
     // MARK: - Fetches
 
+    /// Reads every `fest_config` row, newest first, and adopts the newest as the
+    /// current fest — then publishes its window into the App Group so the Siri
+    /// intents and widgets (separate processes that can't await a fetch) stop
+    /// working from the compiled-in fallback.
+    ///
+    /// Silently keeps the previous `year` on failure: an offline launch should
+    /// show last-known content, not collapse to a hardcoded year.
+    private func resolveYear() async {
+        let rows: [ConfigRow]? = try? await supabase
+            .from("fest_config").select("*")
+            .order("fest_year", ascending: false)
+            .execute().value
+        guard let rows, !rows.isEmpty else { return }
+
+        allYears = rows.map(\.config)
+        guard let current = allYears.first else { return }
+        year = current.year
+
+        let snapshot = FestWindowSnapshot(
+            year: current.year,
+            startDate: current.startDate,
+            endDate: current.endDate,
+            name: current.name,
+            tagline: current.tagline,
+            theme: current.theme,
+            coverUrl: current.coverUrl
+        )
+        // Only write and kick the widgets when something actually CHANGED.
+        // `load()` runs on most fest screens, and reloading every timeline on
+        // each one burns the widget refresh budget for a value that changes
+        // about once a year.
+        let previous = SharedStore.shared.festWindow
+        guard previous?.year != snapshot.year
+                || previous?.startDate != snapshot.startDate
+                || previous?.endDate != snapshot.endDate
+                || previous?.theme != snapshot.theme
+                || previous?.coverUrl != snapshot.coverUrl
+        else { return }
+
+        SharedStore.shared.festWindow = snapshot
+        SharedStore.shared.reloadWidgets()
+    }
+
     private func fetchConfig() async throws -> FestConfig? {
+        // `resolveYear()` already read every row this load; reuse it rather than
+        // asking again and risking the two disagreeing.
+        if let cached = allYears.first(where: { $0.year == year }) { return cached }
         let rows: [ConfigRow] = try await supabase
             .from("fest_config").select("*").eq("fest_year", value: year)
             .execute().value
-        return rows.first.map {
-            FestConfig(name: $0.name, tagline: $0.tagline, startDate: $0.startDate, endDate: $0.endDate)
-        }
+        return rows.first?.config
+    }
+
+    /// Finished fests, newest first — more than 14 days past their end date, the
+    /// same threshold as `FestPhase.concluded`, so the hub saying "that's a wrap"
+    /// and the year appearing in the archive flip on the same day.
+    ///
+    /// Derived from DATES, not an `is_archived` flag. A flag would be a second
+    /// source of truth someone has to remember to flip, and forgetting is exactly
+    /// how the app ended up advertising a finished fest as live.
+    var pastYears: [FestConfig] {
+        allYears.filter { FestSeason.isPast(endISO: $0.endDate) }
+    }
+
+    struct ArchivedYear {
+        var schedule: [ScheduleItem]
+        var dinners: [FestDinner]
+        var isEmpty: Bool { schedule.isEmpty && dinners.isEmpty }
+    }
+
+    /// One archived year's week, read-only.
+    ///
+    /// ⚠️ NO SEED FALLBACK. The live hub backfills an empty table with in-code
+    /// seed data so it's never blank — an archive doing that would FABRICATE
+    /// HISTORY, presenting the 2026 week as some other year's record. An archive
+    /// with nothing saved has to say nothing was saved.
+    func fetchArchivedYear(_ year: Int) async -> ArchivedYear {
+        async let sched = try? fetchSchedule(year: year)
+        async let dins = try? fetchDinners(year: year)
+        return await ArchivedYear(schedule: sched ?? [], dinners: dins ?? [])
+    }
+
+    /// The well-known Drop Box id for a fest year's photo album. The year is a
+    /// live segment of the uuid, so an unseeded year simply degrades to "folder
+    /// isn't available" — linking one early is harmless.
+    static func albumId(for year: Int) -> String {
+        "0000fe57-\(year)-4000-8000-000000000001"
     }
 
     private func fetchDues() async throws -> [FestDuesTier] {
@@ -468,6 +597,168 @@ final class FestContentService {
         ]
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await supabase.from("fest_config").upsert(p, onConflict: "fest_year").execute()
+        await resolveYear()
+    }
+
+    /// This year's theme line and cover photo (migration 0219).
+    /// Nil clears the override and falls back to the built-in look.
+    func saveYearLook(theme: String?, coverUrl: String?) async throws {
+        var p: [String: AnyJSON] = [
+            "fest_year": .integer(year), "theme": j(theme), "cover_url": j(coverUrl),
+        ]
+        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
+        try await supabase.from("fest_config").upsert(p, onConflict: "fest_year").execute()
+        await resolveYear()
+    }
+
+    // MARK: - Starting the next fest year
+
+    struct StartYearResult { var copied: Int; var warning: String? }
+
+    /// INSERTs a brand-new `fest_config` row.
+    ///
+    /// ⚠️ INSERT, never an update of the current row. Editing the live row's
+    /// dates drags the finished fest forward, so its archive describes a week
+    /// that never happened and the app counts down to it all over again.
+    ///
+    /// ⚠️ Dates are typed in BY HAND and start empty — the fest week is
+    /// different every year and the family picks it by poll. Nothing here
+    /// defaults or computes them (the web shipped a "+52 weeks" default and it
+    /// was wrong). The year is derived from `startDate` so the two can't disagree.
+    ///
+    /// ⚠️ The new year gets NO theme and NO cover. A null look renders the
+    /// built-in parchment, so the year is never ugly while it's being planned —
+    /// but the theme is the part of a fest that is *supposed* to change, so
+    /// inheriting last year's is the one thing that would be actively wrong.
+    @discardableResult
+    func startFestYear(
+        name: String,
+        tagline: String?,
+        startDate: String,
+        endDate: String,
+        copyFromYear: Int?
+    ) async throws -> StartYearResult {
+        guard let start = festISOFormatter.date(from: startDate),
+              let end = festISOFormatter.date(from: endDate) else {
+            throw FestYearError.message("Pick a start and an end date.")
+        }
+        guard end >= start else {
+            throw FestYearError.message("End date must be on or after the start.")
+        }
+        let newYear = Calendar.current.component(.year, from: start)
+
+        // Refuse to overwrite a year that already exists — this button's whole
+        // job is to ADD a fest, and an upsert here would silently rewrite a real
+        // one.
+        await resolveYear()
+        if allYears.contains(where: { $0.year == newYear }) {
+            throw FestYearError.message("Family Fest \(newYear) already exists.")
+        }
+
+        var p: [String: AnyJSON] = [
+            "fest_year": .integer(newYear), "name": .string(name), "tagline": j(tagline),
+            "start_date": .string(startDate), "end_date": .string(endDate),
+            "theme": .null, "cover_url": .null,
+        ]
+        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
+        try await supabase.from("fest_config").insert(p).execute()
+
+        // From here the year EXISTS — the important part succeeded. A copy
+        // failure is reported but never rolls the year back: an empty new fest
+        // is a fine place to start, and undoing the row would leave the editor
+        // with nothing.
+        await resolveYear()
+        await load(force: true)
+
+        guard let from = copyFromYear else { return StartYearResult(copied: 0, warning: nil) }
+        return await copyYear(from: from, to: newYear, newStart: startDate, newEnd: endDate)
+    }
+
+    /// Copies last year's plan forward, shifting every day by the gap between
+    /// the two START dates so a week moved to a different part of the summer
+    /// carries its shape with it.
+    private func copyYear(from: Int, to newYear: Int,
+                          newStart: String, newEnd: String) async -> StartYearResult {
+        let stampUid = await currentUid()
+        let sourceStart = allYears.first(where: { $0.year == from })?.startDate
+        let shift = sourceStart.flatMap { Self.daysBetween($0, newStart) } ?? 0
+
+        // ⚠️ Read errors are checked, not just writes. A failed select returns
+        // no rows, which is indistinguishable from "nothing to copy" — so a
+        // table that silently didn't copy would still report success, just with
+        // a smaller count. A copy that half-happened has to say so.
+        var copied = 0
+        var warnings: [String] = []
+
+        for spec in Self.copySpecs {
+            let rows: [[String: AnyJSON]]
+            do {
+                rows = try await supabase.from(spec.table).select(spec.columns)
+                    .eq("fest_year", value: from)
+                    .order("position", ascending: true)
+                    .execute().value
+            } catch {
+                warnings.append("\(spec.label) couldn't be read from \(from)")
+                continue
+            }
+            if rows.isEmpty { continue }
+
+            let payload: [[String: AnyJSON]] = rows.map { row in
+                var r = row
+                r["fest_year"] = .integer(newYear)
+                if spec.shiftsDay, case let .string(day)? = row["day"] {
+                    r["day"] = .string(Self.shiftDay(day, by: shift, clampingTo: newEnd))
+                }
+                if let stampUid { r["updated_by"] = .string(stampUid) }
+                return r
+            }
+            do {
+                try await supabase.from(spec.table).insert(payload).execute()
+                copied += payload.count
+            } catch {
+                warnings.append("copying \(spec.label) failed")
+            }
+        }
+
+        await load(force: true)
+        let warning = warnings.isEmpty
+            ? nil
+            : "Family Fest \(newYear) was created, but \(warnings.joined(separator: ", "))."
+        return StartYearResult(copied: copied, warning: warning)
+    }
+
+    private struct CopySpec {
+        let table: String, label: String, columns: String, shiftsDay: Bool
+    }
+
+    private static let copySpecs: [CopySpec] = [
+        CopySpec(table: "fest_schedule_items", label: "the schedule",
+                 columns: "day, start_time, end_time, title, emoji, location, description, bring, is_private, anytime, lead_user_id, lead_name, lead_phone, crew_user_ids, position",
+                 shiftsDay: true),
+        CopySpec(table: "fest_dinners", label: "the dinners",
+                 columns: "day, title, emoji, chef_user_id, chef_name, chef_phone, crew_user_ids, houses, menu, served_time, served_location, prep_time, prep_location, position",
+                 shiftsDay: true),
+        CopySpec(table: "fest_dues", label: "the dues",
+                 columns: "label, amount, note, per_day, position", shiftsDay: false),
+        CopySpec(table: "fest_payees", label: "the payees",
+                 columns: "name, role, venmo, zelle, applecash, paypal, note, position", shiftsDay: false),
+    ]
+
+    private static func daysBetween(_ a: String, _ b: String) -> Int? {
+        guard let d1 = festISOFormatter.date(from: a),
+              let d2 = festISOFormatter.date(from: b) else { return nil }
+        return Calendar.current.dateComponents([.day], from: d1, to: d2).day
+    }
+
+    /// Shifts a `yyyy-MM-dd` by `shift` days. Anything falling past the new end
+    /// (a shorter week) clamps onto the last day rather than landing outside the
+    /// fest, where no day card would render it.
+    private static func shiftDay(_ day: String, by shift: Int, clampingTo end: String) -> String {
+        guard let d = festISOFormatter.date(from: day),
+              let moved = Calendar.current.date(byAdding: .day, value: shift, to: d)
+        else { return day }
+        if let endDate = festISOFormatter.date(from: end), moved > endDate { return end }
+        return festISOFormatter.string(from: moved)
     }
 
     /// Updates a schedule item's location, description, and lead assignment inline
@@ -548,6 +839,10 @@ final class FestContentService {
     }
 
     private func fetchSchedule() async throws -> [ScheduleItem] {
+        try await fetchSchedule(year: year)
+    }
+
+    private func fetchSchedule(year: Int) async throws -> [ScheduleItem] {
         let rows: [ScheduleRow] = try await supabase
             .from("fest_schedule_items").select("*").eq("fest_year", value: year)
             .order("day", ascending: true).order("position", ascending: true)
@@ -593,6 +888,10 @@ final class FestContentService {
     }
 
     private func fetchDinners() async throws -> [FestDinner] {
+        try await fetchDinners(year: year)
+    }
+
+    private func fetchDinners(year: Int) async throws -> [FestDinner] {
         let rows: [DinnerRow] = try await supabase
             .from("fest_dinners").select("*").eq("fest_year", value: year)
             .order("day", ascending: true).order("position", ascending: true)
@@ -657,14 +956,26 @@ final class FestContentService {
 // MARK: - Row decoders
 
 private struct ConfigRow: Decodable {
+    let festYear: Int
     let name: String
     let tagline: String?
     let startDate: String
     let endDate: String
+    // Migration 0219. Nil means "use the built-in look".
+    let theme: String?
+    let coverUrl: String?
     enum CodingKeys: String, CodingKey {
-        case name, tagline
+        case name, tagline, theme
+        case festYear = "fest_year"
         case startDate = "start_date"
         case endDate = "end_date"
+        case coverUrl = "cover_url"
+    }
+
+    var config: FestConfig {
+        FestConfig(year: festYear, name: name, tagline: tagline,
+                   startDate: startDate, endDate: endDate,
+                   theme: theme, coverUrl: coverUrl)
     }
 }
 

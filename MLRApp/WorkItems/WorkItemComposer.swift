@@ -23,6 +23,9 @@ struct WorkItemComposer: View {
     @State private var peopleNeeded: Int
     @State private var status: WorkItemStatus
     @State private var urgency: WorkUrgency
+    @State private var customLabel: String
+    @State private var customColor: WorkUrgencyColor
+    @State private var recurEveryYears: Int?
     @State private var scopeHouseId: UUID?
     @State private var selectedEventId: String?
 
@@ -48,6 +51,9 @@ struct WorkItemComposer: View {
         _peopleNeeded = State(initialValue: item?.peopleNeeded ?? 0)
         _status       = State(initialValue: item?.status ?? .open)
         _urgency      = State(initialValue: item?.urgency ?? .thisYear)
+        _customLabel  = State(initialValue: item?.customLabel ?? "")
+        _customColor  = State(initialValue: item?.customColor ?? .gray)
+        _recurEveryYears = State(initialValue: item?.recurEveryYears)
         _scopeHouseId = State(initialValue: item?.houseId)
         _existingMedia = State(initialValue: item?.media ?? [])
         _selectedEventId = State(initialValue: preLinkedEventId)
@@ -78,6 +84,7 @@ struct WorkItemComposer: View {
                 VStack(alignment: .leading, spacing: 24) {
                     taskSection
                     urgencySection
+                    recurrenceSection
                     if !availableHouses.isEmpty { scopeSection }
                     peopleSection
                     photosSection
@@ -158,8 +165,10 @@ struct WorkItemComposer: View {
     private var urgencySection: some View {
         VStack(alignment: .leading, spacing: 10) {
             SectionLabel(text: "How urgent?")
-            HStack(spacing: 8) {
-                ForEach(WorkUrgency.allCases, id: \.self) { u in
+            // The four fixed tiers wrap onto two rows — four across is too
+            // narrow to read once "Nice to have" is in the set.
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 8) {
+                ForEach(WorkUrgency.fixedTiers, id: \.self) { u in
                     Button {
                         urgency = u
                     } label: {
@@ -173,6 +182,66 @@ struct WorkItemComposer: View {
                     }
                     .buttonStyle(.pressable)
                 }
+            }
+
+            // The fifth tier: the item names its own urgency (migration 0186).
+            Button {
+                urgency = .custom
+            } label: {
+                Text("\(customColor.emoji) Something else…")
+                    .font(.mlrScaled(13, weight: .semibold))
+                    .foregroundStyle(urgency == .custom ? .white : Color.mlrTextMuted)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+                    .background(urgency == .custom ? Color.mlrPrimary : Color.mlrCard)
+                    .clipShape(RoundedRectangle(cornerRadius: 12))
+            }
+            .buttonStyle(.pressable)
+
+            if urgency == .custom {
+                TextField("What to call it — \u{201C}Before the ice goes out\u{201D}", text: $customLabel)
+                    .textFieldStyle(.roundedBorder)
+                HStack(spacing: 8) {
+                    ForEach(WorkUrgencyColor.allCases) { c in
+                        Button {
+                            customColor = c
+                        } label: {
+                            Text(c.emoji)
+                                .font(.mlrScaled(20))
+                                .padding(6)
+                                .background(
+                                    Circle().fill(customColor == c
+                                                  ? Color.mlrPrimary.opacity(0.2)
+                                                  : Color.clear)
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                }
+            }
+        }
+    }
+
+    /// Recurring items (migration 0186).
+    ///
+    /// ⚠️ Marking one done auto-creates the next cycle, dated Jan 1 of the year
+    /// it's next due — and deliberately sends NO notification for that copy.
+    /// A yearly chore announcing itself every time somebody finishes it is noise.
+    private var recurrenceSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            SectionLabel(text: "Does it come back?")
+            Picker("Repeat", selection: $recurEveryYears) {
+                Text("One-off").tag(Int?.none)
+                ForEach(1...15, id: \.self) { y in
+                    Text(y == 1 ? "Every year" : "Every \(y) years").tag(Int?.some(y))
+                }
+            }
+            .pickerStyle(.menu)
+            if recurEveryYears != nil {
+                Text("When someone checks this off, the next one is created straight away so it can't be forgotten — but it stays hidden until the year it's due.")
+                    .font(.mlrScaled(11))
+                    .foregroundStyle(Color.mlrTextMuted)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }
@@ -438,7 +507,10 @@ struct WorkItemComposer: View {
                     status: status,
                     peopleNeeded: needed,
                     houseId: scopeHouseId,
-                    urgency: urgency
+                    urgency: urgency,
+                    customLabel: customLabel.trimmingCharacters(in: .whitespaces),
+                    customColor: customColor,
+                    recurEveryYears: recurEveryYears
                 )
                 itemId = item.id
             } else {
@@ -448,7 +520,10 @@ struct WorkItemComposer: View {
                     category: nil,
                     peopleNeeded: needed,
                     houseId: scopeHouseId,
-                    urgency: urgency
+                    urgency: urgency,
+                    customLabel: customLabel.trimmingCharacters(in: .whitespaces),
+                    customColor: customColor,
+                    recurEveryYears: recurEveryYears
                 )
                 if let eventId = selectedEventId {
                     try await env.workItemsService.addToEvent(eventId: eventId, itemId: itemId)

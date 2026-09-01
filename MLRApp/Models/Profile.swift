@@ -43,6 +43,12 @@ enum PushType: String, Codable, CaseIterable {
     case tournamentChampion = "tournament_champion"
     case privateActivityInvite = "private_activity_invite"
     case signupReminder = "signup_reminder"
+    // House requests (migrations 0194–0208). The fan-out targets that house's
+    // House Admins only — an app admin who isn't one gets nothing.
+    case houseRequestSubmitted = "house_request_submitted"
+    case houseRequestDecision = "house_request_decision"
+    case houseRequestHandled = "house_request_handled"
+    case houseRequestReminder = "house_request_reminder"
 }
 
 enum NotifType: String, Codable, CaseIterable {
@@ -79,6 +85,10 @@ enum NotifType: String, Codable, CaseIterable {
     // notification settings (mlr-app migration 0156) — bypasses notif_types
     // like broadcast, so it's not offered as a toggle in Notification prefs.
     case adminTest = "admin_test"
+    case houseRequestSubmitted = "house_request_submitted"
+    case houseRequestDecision = "house_request_decision"
+    case houseRequestHandled = "house_request_handled"
+    case houseRequestReminder = "house_request_reminder"
 }
 
 // MARK: - Profile
@@ -101,6 +111,24 @@ struct Profile: Codable, Identifiable, Equatable {
     var fullName: String? = nil
     var household: String? = nil
     var houseId: UUID? = nil        // the member's House (migration 0064); admin-assigned
+    /// Decides this house's requests (migration 0194).
+    ///
+    /// ⚠️ Distinct from `isAdmin` and NOT implied by it — an app admin has no
+    /// authority over a house's board unless they hold this flag for that house.
+    /// Changing someone's house clears it, server-side.
+    var houseAdmin: Bool = false
+    /// An admin has confirmed this is really a family member (migrations
+    /// 0181–0184, 0213).
+    ///
+    /// ⚠️ The DB column is `approved`; the UI says "Verified." Deliberate and
+    /// documented — Supabase's email OTP already owns the word "verified" for
+    /// the address. Don't unify them.
+    ///
+    /// ⚠️ DEFAULTS TO TRUE, and that is the REQUIRED failure mode, not
+    /// laziness. Defaulting to "unverified" on a read error or a missing column
+    /// locks real members out of their own app. Only an explicit `false` from
+    /// the server means unverified.
+    var approved: Bool = true
     var includeInDirectory: Bool = true
     var notifyNewMembers: Bool = true
     var emailAlerts: Bool
@@ -132,6 +160,8 @@ struct Profile: Codable, Identifiable, Equatable {
         case fullName = "full_name"
         case household
         case houseId = "house_id"
+        case houseAdmin = "house_admin"
+        case approved
         case includeInDirectory = "include_in_directory"
         case notifyNewMembers = "notify_new_members"
         case emailAlerts = "email_alerts"
@@ -201,6 +231,11 @@ extension Profile {
         fullName          = try? c.decodeIfPresent(String.self, forKey: .fullName)
         household         = try? c.decodeIfPresent(String.self, forKey: .household)
         houseId           = try? c.decodeIfPresent(UUID.self, forKey: .houseId)
+        houseAdmin        = (try? c.decode(Bool.self, forKey: .houseAdmin)) ?? false
+        // ⚠️ TRUE on a read error or a missing column — the required failure
+        // mode. Defaulting to "unverified" would lock real members out of their
+        // own app. Only an explicit `false` from the server means unverified.
+        approved          = (try? c.decode(Bool.self, forKey: .approved)) ?? true
         includeInDirectory = (try? c.decode(Bool.self, forKey: .includeInDirectory)) ?? true
         notifyNewMembers   = (try? c.decode(Bool.self, forKey: .notifyNewMembers)) ?? true
         emailAlerts     = (try? c.decode(Bool.self, forKey: .emailAlerts)) ?? true

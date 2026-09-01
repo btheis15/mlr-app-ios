@@ -31,7 +31,9 @@ struct WorkChecklistCard: View {
         open.sorted { a, b in
             let ra = sectionRank(a), rb = sectionRank(b)
             if ra != rb { return ra < rb }
-            let ua = a.urgency?.rank ?? 3, ub = b.urgency?.rank ?? 3
+            // Unrated sorts LAST — below "nice to have" (rank 3), not tied with
+            // it. A fifth tier arrived in 0186, so the sentinel moved with it.
+            let ua = a.urgency?.rank ?? 4, ub = b.urgency?.rank ?? 4
             if ua != ub { return ua < ub }
             return a.createdAt > b.createdAt
         }

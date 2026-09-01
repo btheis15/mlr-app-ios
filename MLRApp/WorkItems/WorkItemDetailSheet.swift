@@ -112,8 +112,10 @@ struct WorkItemDetailSheet: View {
                 .foregroundStyle(current.isDone ? Color.mlrTextMuted : Color.mlrText)
 
             HStack(spacing: 6) {
-                if let urgency = current.urgency {
-                    badge("\(urgency.emoji) \(urgency.label)", color: urgency.uiColor)
+                // Through the one resolver — a `custom` item has no entry in the
+                // fixed tier table and would render a blank badge otherwise.
+                if let urgency = WorkUrgencyDisplay(item: current) {
+                    badge("\(urgency.emoji) \(urgency.label)", color: urgency.color)
                 }
                 if let needed = current.peopleNeeded {
                     badge("👥 \(needed) needed", color: Color.mlrTextMuted)

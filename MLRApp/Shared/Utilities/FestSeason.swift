@@ -3,24 +3,62 @@ import Foundation
 // MARK: - Family Fest Config
 // Lives here (not SeedData) so it's lightweight to share with the widget/Live
 // Activity target without dragging in the whole model layer.
+//
+// ⚠️ The window is RESOLVED FROM `fest_config`, not compiled in. The static
+// values below are an offline fallback for a cold launch that has never reached
+// the network. They were once the source of truth and they went stale — they
+// said 2026-07-27 → 07-31 while the database said 2026-07-26 → 08-01, so during
+// the actual fest week the app said "Day n of 5" instead of "of 7", and on
+// Aug 1 — the real final day — it had already flipped to "wrap".
+//
+// `FestContentService` publishes the resolved window into the App Group on every
+// load; everything here reads that first.
 
 struct FamilyFestConfig {
-    static let startDate = "2026-07-27"
-    static let endDate   = "2026-07-31"
-    static let id        = "family-fest-2026"
-    static let year      = 2026
+    /// Offline fallback only — see the warning above. Never treat as truth.
+    static let fallbackStartDate = "2026-07-26"
+    static let fallbackEndDate   = "2026-08-01"
+    static let fallbackYear      = 2026
 
-    // "July 27 – 31" — auto-derived so the poster card never gets stale
+    /// The window the app last resolved from `fest_config`, if any.
+    static var resolved: FestWindowSnapshot? { SharedStore.shared.festWindow }
+
+    static var startDate: String { resolved?.startDate ?? fallbackStartDate }
+    static var endDate:   String { resolved?.endDate   ?? fallbackEndDate }
+    static var year:      Int    { resolved?.year      ?? fallbackYear }
+
+    /// The synthesized calendar event id for the current fest year.
+    /// ⚠️ Derived from `year`, not a literal — a hardcoded "family-fest-2026"
+    /// would keep pointing at last year's event once a new year is seeded.
+    static var id: String { "family-fest-\(year)" }
+
+    static var theme: String? { resolved?.theme }
+    static var coverUrl: String? { resolved?.coverUrl }
+
+    // "July 26 – August 1" — auto-derived so the poster card never gets stale.
     static var dateRangeLabel: String {
-        let iso = DateFormatter()
-        iso.dateFormat = "yyyy-MM-dd"
-        guard let s = iso.date(from: startDate),
-              let e = iso.date(from: endDate) else { return "\(startDate) – \(endDate)" }
+        Self.rangeLabel(start: startDate, end: endDate)
+    }
+
+    /// Shared so the Past Years archive can label a year that isn't the current one.
+    static func rangeLabel(start: String, end: String) -> String {
+        guard let s = festISOFormatter.date(from: start),
+              let e = festISOFormatter.date(from: end) else { return "\(start) – \(end)" }
         let monthFmt = DateFormatter()
         monthFmt.dateFormat = "MMMM"
+        monthFmt.locale = Locale(identifier: "en_US_POSIX")
         let dayFmt = DateFormatter()
         dayFmt.dateFormat = "d"
-        return "\(monthFmt.string(from: s)) \(dayFmt.string(from: s)) – \(dayFmt.string(from: e))"
+        dayFmt.locale = Locale(identifier: "en_US_POSIX")
+        let sMonth = monthFmt.string(from: s)
+        let eMonth = monthFmt.string(from: e)
+        // A window that crosses a month boundary needs both month names, or
+        // "July 26 – 1" reads as a range that runs backwards. The 2026 fest is
+        // exactly such a week (Jul 26 – Aug 1).
+        if sMonth == eMonth {
+            return "\(sMonth) \(dayFmt.string(from: s)) – \(dayFmt.string(from: e))"
+        }
+        return "\(sMonth) \(dayFmt.string(from: s)) – \(eMonth) \(dayFmt.string(from: e))"
     }
 }
 
@@ -32,6 +70,15 @@ enum FestPhase: String, Equatable {
     case planning
     case live
     case wrap
+    /// This year's fest is history: the window is behind us and the 14-day
+    /// photo-posting tail has closed.
+    ///
+    /// ⚠️ `offSeason` and `concluded` are both quiet but they are NOT the same
+    /// thing and must never be collapsed back together. `offSeason` means the
+    /// window is still AHEAD. Sharing one phase is the original bug — a finished
+    /// fest rendered as a countdown, which clamps to zero and reads as "starting
+    /// today", so it advertised itself as live indefinitely.
+    case concluded
 }
 
 struct FestSeason: Equatable {
@@ -39,6 +86,7 @@ struct FestSeason: Equatable {
     let isLive: Bool
     let isPlanning: Bool
     let isWrap: Bool
+    let isConcluded: Bool
     let isTakeover: Bool
     let daysUntilStart: Int
     let isSoon: Bool
@@ -52,64 +100,84 @@ struct FestSeason: Equatable {
     static let soonThresholdDays = 7
 
     static func compute(startISO: String, endISO: String, now: Date = .now) -> FestSeason {
-        let fmt = isoFormatter
+        // Empty/malformed dates degrade to the quiet, claim-nothing off-season.
+        // Callers render before their dates resolve, and now that the final
+        // branch means something specific ("concluded"), falling through to it
+        // would report a fest with no dates at all as finished.
         guard
-            let start = fmt.date(from: startISO),
-            let end   = fmt.date(from: endISO)
+            let start = festISOFormatter.date(from: startISO),
+            let end   = festISOFormatter.date(from: endISO)
         else {
-            return offSeason(startISO: startISO, endISO: endISO)
+            return offSeason()
         }
 
         let cal = Calendar.current
         let today = cal.startOfDay(for: now)
 
-        let daysUntilStart = cal.dateComponents([.day], from: today, to: start).day ?? 0
-        let daysSinceEnd   = cal.dateComponents([.day], from: end, to: today).day ?? 0
-        let totalDays      = (cal.dateComponents([.day], from: start, to: end).day ?? 0) + 1
-
-        let isLive     = today >= start && today <= end
-        let isWrap     = daysSinceEnd > 0 && daysSinceEnd <= wrapTailDays
-        let isPlanning = !isLive && !isWrap && daysUntilStart > 0 && daysUntilStart <= planningLeadDays
-        let isTakeover = isLive || isPlanning || isWrap
+        let daysToStart  = cal.dateComponents([.day], from: today, to: cal.startOfDay(for: start)).day ?? 0
+        let daysAfterEnd = cal.dateComponents([.day], from: cal.startOfDay(for: end), to: today).day ?? 0
+        let totalDays    = (cal.dateComponents([.day], from: cal.startOfDay(for: start),
+                                               to: cal.startOfDay(for: end)).day ?? 0) + 1
 
         let phase: FestPhase
-        if isLive            { phase = .live }
-        else if isWrap       { phase = .wrap }
-        else if isPlanning   { phase = .planning }
-        else                 { phase = .offSeason }
+        if daysToStart > 0 {
+            phase = daysToStart <= planningLeadDays ? .planning : .offSeason
+        } else if daysAfterEnd <= 0 {
+            phase = .live
+        } else {
+            phase = daysAfterEnd <= wrapTailDays ? .wrap : .concluded
+        }
 
-        let dayNumber: Int? = isLive
-            ? (cal.dateComponents([.day], from: start, to: today).day ?? 0) + 1
-            : nil
+        let isLive      = phase == .live
+        let isPlanning  = phase == .planning
+        let isWrap      = phase == .wrap
+        let isConcluded = phase == .concluded
 
-        let isSoon = daysUntilStart > 0 && daysUntilStart <= soonThresholdDays
+        let dayNumber: Int? = isLive ? max(0, -daysToStart) + 1 : nil
+        let daysUntilStart = max(0, daysToStart)
 
         return FestSeason(
             phase: phase,
             isLive: isLive,
             isPlanning: isPlanning,
             isWrap: isWrap,
-            isTakeover: isTakeover,
-            daysUntilStart: max(0, daysUntilStart),
-            isSoon: isSoon,
+            isConcluded: isConcluded,
+            // Spelled out as the three loud phases rather than `phase != .offSeason`:
+            // that negation would start counting a finished fest as a takeover.
+            isTakeover: isPlanning || isLive || isWrap,
+            daysUntilStart: daysUntilStart,
+            isSoon: isPlanning && daysUntilStart <= soonThresholdDays,
             dayNumber: dayNumber,
             totalDays: totalDays,
-            daysSinceEnd: max(0, daysSinceEnd),
-            wrapDaysLeft: max(0, wrapTailDays - daysSinceEnd)
+            daysSinceEnd: max(0, daysAfterEnd),
+            wrapDaysLeft: isWrap ? max(0, wrapTailDays - daysAfterEnd) : 0
         )
     }
 
-    private static func offSeason(startISO: String, endISO: String) -> FestSeason {
+    private static func offSeason() -> FestSeason {
         FestSeason(
             phase: .offSeason,
-            isLive: false, isPlanning: false, isWrap: false, isTakeover: false,
+            isLive: false, isPlanning: false, isWrap: false, isConcluded: false,
+            isTakeover: false,
             daysUntilStart: 0, isSoon: false, dayNumber: nil,
             totalDays: 0, daysSinceEnd: 0, wrapDaysLeft: 0
         )
     }
+
+    /// True when a fest year whose window has ended is old enough to belong in
+    /// the archive. Same threshold as `.concluded`, so the hub saying "that's a
+    /// wrap" and the year appearing in Past Years flip on the same day.
+    static func isPast(endISO: String, now: Date = .now) -> Bool {
+        guard let end = festISOFormatter.date(from: endISO) else { return false }
+        let cal = Calendar.current
+        let days = cal.dateComponents([.day],
+                                      from: cal.startOfDay(for: end),
+                                      to: cal.startOfDay(for: now)).day ?? 0
+        return days > wrapTailDays
+    }
 }
 
-// MARK: - Convenience for the app's fixed fest dates
+// MARK: - Convenience for the app's resolved fest dates
 
 extension FestSeason {
     static func current(now: Date = .now) -> FestSeason {
@@ -123,7 +191,9 @@ extension FestSeason {
 
 // MARK: - ISO date formatter
 
-private let isoFormatter: DateFormatter = {
+/// Shared, not private: the archive and the "start next year" editor parse the
+/// same `yyyy-MM-dd` strings in the same resort timezone.
+let festISOFormatter: DateFormatter = {
     let f = DateFormatter()
     f.dateFormat = "yyyy-MM-dd"
     f.timeZone = TimeZone(identifier: "America/Chicago")

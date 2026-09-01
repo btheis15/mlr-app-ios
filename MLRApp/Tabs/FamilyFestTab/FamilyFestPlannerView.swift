@@ -28,6 +28,19 @@ struct FamilyFestPlannerView: View {
                 Text("Changes show up for everyone on both the app and the website.")
             }
 
+            Section {
+                NavigationLink { FestYearLookEditor() } label: {
+                    Label("This year's theme & cover", systemImage: "paintpalette")
+                }
+                NavigationLink { StartNextFestYearView() } label: {
+                    Label("Start next year's fest", systemImage: "calendar.badge.plus")
+                }
+            } header: {
+                Text("Family Fest \(String(env.festContentService.year))")
+            } footer: {
+                Text("Starting a new year adds it alongside this one — this fest stays exactly as it was, in Past Years.")
+            }
+
             // Bulk editing is easier on a big screen — hand off to the web master
             // editor, carrying your session so there's no second sign-in.
             Section {

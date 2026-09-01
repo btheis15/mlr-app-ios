@@ -28,6 +28,25 @@ struct VisitSnapshot: Codable {
     let house: String?
 }
 
+/// The fest week resolved from `fest_config`, cached so the widget and the Siri
+/// intents — which run in separate processes and can't await a Supabase fetch —
+/// read the same window the app does.
+///
+/// ⚠️ The in-code constants in `FamilyFestConfig` are a FALLBACK ONLY. They were
+/// the source of truth once and they went stale: they said 2026-07-27 → 07-31
+/// while the database said 2026-07-26 → 08-01, so during the actual week the app
+/// showed "Day n of 5" instead of "of 7", and on the real final day it had
+/// already flipped to "wrap". Whatever writes this snapshot is the truth.
+struct FestWindowSnapshot: Codable {
+    let year: Int
+    let startDate: String   // ISO yyyy-MM-dd
+    let endDate: String     // ISO yyyy-MM-dd
+    let name: String?
+    let tagline: String?
+    let theme: String?
+    let coverUrl: String?
+}
+
 final class SharedStore {
     static let shared = SharedStore()
 
@@ -45,6 +64,23 @@ final class SharedStore {
         static let todo = "shared.todo"
         static let pendingRoute = "shared.pendingRoute"
         static let nextVisit = "shared.nextVisit"
+        static let festWindow = "shared.festWindow"
+    }
+
+    // MARK: Resolved fest week (app → widget / Siri intents)
+
+    var festWindow: FestWindowSnapshot? {
+        get {
+            guard let data = defaults.data(forKey: Key.festWindow) else { return nil }
+            return try? JSONDecoder().decode(FestWindowSnapshot.self, from: data)
+        }
+        set {
+            if let newValue, let data = try? JSONEncoder().encode(newValue) {
+                defaults.set(data, forKey: Key.festWindow)
+            } else {
+                defaults.removeObject(forKey: Key.festWindow)
+            }
+        }
     }
 
     // MARK: Next visit up north (for NextVisitWidget)

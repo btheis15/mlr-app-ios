@@ -73,11 +73,17 @@ struct WorkItemRow: View {
 
     @ViewBuilder
     private var badges: some View {
-        let showUrgency = item.urgency != nil && !item.isDone
-        if showUrgency || item.peopleNeeded != nil || item.commentCount > 0 {
+        // Resolved through the one helper that handles `custom` — indexing the
+        // fixed tier table directly renders a custom item's chip blank.
+        let urgency = item.isDone ? nil : WorkUrgencyDisplay(item: item)
+        if urgency != nil || item.peopleNeeded != nil || item.commentCount > 0 || item.isRecurring {
             HStack(spacing: 6) {
-                if let urgency = item.urgency, !item.isDone {
-                    chip(text: "\(urgency.emoji) \(urgency.label)", color: urgency.uiColor)
+                if let urgency {
+                    chip(text: "\(urgency.emoji) \(urgency.label)", color: urgency.color)
+                }
+                if let years = item.recurEveryYears {
+                    chip(text: years == 1 ? "🔁 Yearly" : "🔁 Every \(years)y",
+                         color: Color.mlrTextMuted)
                 }
                 if let needed = item.peopleNeeded {
                     chip(text: "👥 \(needed) needed", color: Color.mlrTextMuted)
@@ -117,11 +123,18 @@ struct WorkItemRow: View {
 // MARK: - Urgency colour (UI layer)
 
 extension WorkUrgency {
+    /// ⚠️ Fixed tiers only. A `custom` item's colour comes from its own
+    /// `customColor` — resolve through `WorkUrgencyDisplay`, which is the one
+    /// place that knows the difference.
     var uiColor: Color {
         switch self {
         case .asap:       return Color.mlrDanger
-        case .thisYear:   return Color.mlrWarning
+        // "This year" is ORANGE and "Next year" yellow (web #545) — the two
+        // used to share a colour and were indistinguishable on a card.
+        case .thisYear:   return .orange
+        case .nextYear:   return Color.mlrWarning
         case .niceToHave: return Color.mlrSuccess
+        case .custom:     return Color.mlrTextMuted
         }
     }
 }
@@ -142,7 +155,73 @@ struct EventWorkItemsSection: View {
     @State private var showAdd = false
     @State private var editing: WorkItem? = nil
 
+    @State private var houseCounts: [EventHouseItemCount] = []
+
     private var coveredCount: Int { items.filter(\.isDone).count }
+
+    /// Resort-wide items — `house_id` null.
+    private var resortItems: [WorkItem] { items.filter { $0.houseId == nil } }
+
+    /// Houses whose items this viewer can actually see, in the RPC's order.
+    private var visibleHouseGroups: [(String, [WorkItem])] {
+        houseCounts.compactMap { count in
+            let mine = items.filter { $0.houseId == count.houseId }
+            guard !mine.isEmpty else { return nil }
+            return ("\(count.houseEmoji ?? "🏠") \(count.houseName)", mine)
+        }
+    }
+
+    /// ⚠️ Houses with items this viewer CAN'T see. Their rows are RLS-invisible,
+    /// so without this the section would silently vanish and the event would
+    /// look like it had no plan for that house. The count comes from a DEFINER
+    /// function, so we can say a plan exists without leaking what's in it.
+    private var lockedHouses: [EventHouseItemCount] {
+        houseCounts.filter { count in
+            count.itemCount > 0 && !items.contains { $0.houseId == count.houseId }
+        }
+    }
+
+    @ViewBuilder
+    private func scopeGroup(title: String, items groupItems: [WorkItem]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.mlrScaled(12, weight: .semibold))
+                .foregroundStyle(Color.mlrTextMuted)
+            VStack(spacing: 0) {
+                ForEach(groupItems) { item in
+                    WorkItemRow(
+                        item: item,
+                        checking: checking == item.id,
+                        onCheck: { Task { await check(item: item) } },
+                        onEdit: env.isAdmin ? { editing = item } : nil
+                    )
+                    if item.id != groupItems.last?.id {
+                        Divider().padding(.leading, 14)
+                    }
+                }
+            }
+            .cardStyle()
+        }
+    }
+
+    private func lockedHouseRow(_ house: EventHouseItemCount) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: "lock.fill")
+                .font(.mlrScaled(12))
+                .foregroundStyle(Color.mlrTextMuted)
+            VStack(alignment: .leading, spacing: 1) {
+                Text("\(house.houseEmoji ?? "🏠") \(house.houseName) · \(house.itemCount) item\(house.itemCount == 1 ? "" : "s") planned")
+                    .font(.mlrScaled(13, weight: .medium))
+                Text("Details only visible to that house")
+                    .font(.mlrScaled(11))
+                    .foregroundStyle(Color.mlrTextMuted)
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(14)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .cardStyle()
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -168,29 +247,22 @@ struct EventWorkItemsSection: View {
                     .foregroundStyle(Color.mlrTextMuted)
                     .frame(maxWidth: .infinity, alignment: .leading)
             } else {
-                VStack(spacing: 0) {
-                    ForEach(items) { item in
-                        WorkItemRow(
-                            item: item,
-                            checking: checking == item.id,
-                            onCheck: { Task { await check(item: item) } },
-                            onEdit: env.isAdmin ? { editing = item } : nil
-                        )
-                        if item.id != items.last?.id {
-                            Divider().padding(.leading, 14)
-                        }
-                    }
-                    if !items.isEmpty {
-                        Divider().padding(.leading, 14)
-                        Text("\(coveredCount)/\(items.count) covered")
-                            .font(.caption)
-                            .foregroundStyle(Color.mlrTextMuted)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 8)
-                    }
+                // Grouped by SCOPE: "🌲 Around the Resort" first, then one group
+                // per house.
+                if !resortItems.isEmpty {
+                    scopeGroup(title: "🌲 Around the Resort", items: resortItems)
                 }
-                .cardStyle()
+                ForEach(visibleHouseGroups, id: \.0) { name, groupItems in
+                    scopeGroup(title: name, items: groupItems)
+                }
+                ForEach(lockedHouses) { house in
+                    lockedHouseRow(house)
+                }
+
+                Text("\(coveredCount)/\(items.count) covered")
+                    .font(.caption)
+                    .foregroundStyle(Color.mlrTextMuted)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
         }
         .task { await load() }
@@ -202,9 +274,15 @@ struct EventWorkItemsSection: View {
         }
     }
 
+    /// ⚠️ Refetches the COUNTS too, not just the items. After unlinking an item
+    /// the counts are what tell the locked-house rows whether they still belong,
+    /// so leaving them stale strands a "2 items planned" line for a house that
+    /// now has none.
     private func load() async {
         loading = true
-        items = await env.workItemsService.fetchEventItems(eventId: event.id)
+        async let fetched = env.workItemsService.fetchEventItems(eventId: event.id)
+        async let counts = env.workItemsService.fetchEventHouseCounts(eventId: event.id)
+        (items, houseCounts) = await (fetched, counts)
         loading = false
     }
 
