@@ -24,8 +24,8 @@ import Kingfisher
 //            Font.festDisplay(size, weight:) (theme heading font else serif); view.mlrScreenTitle()/.mlrSectionTitle()/.mlrCardTitle()/.mlrSecondaryText()
 // Colours    Color.mlrText/.mlrTextMuted/.mlrTextFaint, .mlrPrimary/.mlrPineText, .mlrLake/.mlrCampfire/.mlrSun/.mlrDusk,
 //            .mlrCard/.mlrBorder/.mlrSurface, fest: .mlrFest(.mlrFestWine) .mlrFestAzure .mlrFestInk .mlrFestCard .mlrFestBorder .mlrFestParchment
-// Edit mode  screen root: .mlrEditable(canEdit: Bool, isOn: $editing)  // adds toolbar pencil toggle + sets env; keep @State false
-//            EditPencil(...) (EditorKit) now shows only when env \.mlrEditMode is true. Read it: @Environment(\.mlrEditMode)
+// Edit mode  screen root: .mlrEditToggle(canEdit: Bool)  // adds toolbar pencil toggle for the shared store
+//            EditPencil(...) (EditorKit) shows only when MLREditModeStore.shared.isOn (app-wide)
 // Nav        tab roots already have the backdrop + transparent bars; remove any opaque .background(Color.mlrSurface) on your screen root.
 
 // MARK: - MLRCard
@@ -379,45 +379,41 @@ struct AvatarStack: View {
 
 // MARK: - Edit mode
 
-private struct MLREditModeKey: EnvironmentKey { static let defaultValue = false }
-
-extension EnvironmentValues {
-    /// True while the screen's Edit toggle is on. `EditPencil` shows only then.
-    var mlrEditMode: Bool {
-        get { self[MLREditModeKey.self] }
-        set { self[MLREditModeKey.self] = newValue }
-    }
+/// ONE app-wide Edit switch. Environment does not flow into pushed destinations,
+/// so the state lives in a shared store; each screen with `EditPencil`s adds
+/// `.mlrEditToggle(canEdit:)`. Reset on sign-out and when an admin previews as someone else.
+@Observable
+final class MLREditModeStore {
+    static let shared = MLREditModeStore()
+    var isOn = false
 }
 
-private struct MLREditableModifier: ViewModifier {
+private struct MLREditToggleModifier: ViewModifier {
     let canEdit: Bool
-    @Binding var isOn: Bool
+    private var store: MLREditModeStore { .shared }
 
     func body(content: Content) -> some View {
-        content
-            .environment(\.mlrEditMode, canEdit && isOn)
-            .toolbar {
-                if canEdit {
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button {
-                            Haptics.select()
-                            withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) { isOn.toggle() }
-                        } label: {
-                            Image(systemName: isOn ? "checkmark" : "pencil")
-                                .fontWeight(.semibold)
-                                .foregroundStyle(Color.mlrPineText)
+        content.toolbar {
+            if canEdit {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        Haptics.select()
+                        withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) { store.isOn.toggle() }
+                    } label: {
+                        if store.isOn {
+                            Text("Done").fontWeight(.semibold).foregroundStyle(Color.mlrPineText)
+                        } else {
+                            Image(systemName: "pencil").fontWeight(.semibold).foregroundStyle(Color.mlrPineText)
                         }
-                        .accessibilityLabel(isOn ? "Done editing" : "Edit")
                     }
+                    .accessibilityLabel(store.isOn ? "Finish editing" : "Edit this screen")
                 }
             }
+        }
     }
 }
 
 extension View {
-    /// One Edit toggle per screen for people with rights (toolbar `pencil`).
-    /// Off by default; when on, `EditPencil`s in the subtree appear. Keep @State false.
-    func mlrEditable(canEdit: Bool, isOn: Binding<Bool>) -> some View {
-        modifier(MLREditableModifier(canEdit: canEdit, isOn: isOn))
-    }
+    /// Toolbar Edit toggle for the app-wide edit switch; shown only when `canEdit`.
+    func mlrEditToggle(canEdit: Bool) -> some View { modifier(MLREditToggleModifier(canEdit: canEdit)) }
 }

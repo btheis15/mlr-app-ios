@@ -102,6 +102,7 @@ final class AppEnvironment {
         if mode != .off && !realIsAdmin { return }
         previewMode = mode
         previewMember = nil
+        if mode != .off { MLREditModeStore.shared.isOn = false }
         let defaults = UserDefaults.standard
         if mode == .off { defaults.removeObject(forKey: Self.previewKey) }
         else { defaults.set(mode.rawValue, forKey: Self.previewKey) }
@@ -113,6 +114,7 @@ final class AppEnvironment {
     func setPreviewMember(_ member: Profile?) {
         if member != nil && !realIsAdmin { return }
         previewMember = member
+        if member != nil { MLREditModeStore.shared.isOn = false }
         if member != nil { previewMode = .member }
         else if previewMode == .member { previewMode = .off }
         UserDefaults.standard.removeObject(forKey: Self.previewKey)   // specific person isn't persisted
@@ -321,6 +323,7 @@ final class AppEnvironment {
 
     @MainActor
     func signOut() async {
+        MLREditModeStore.shared.isOn = false
         notificationsService.unsubscribeFromRealtime()
         notificationsService.notifications = []
         notificationsService.unreadCount = 0

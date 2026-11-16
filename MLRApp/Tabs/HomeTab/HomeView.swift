@@ -17,6 +17,7 @@ struct HomeView: View {
     // Manual entry to the global search screen (the same screen Siri's
     // `.system.searchInApp` intent opens).
     @State private var showSearch = false
+    @State private var appImagesCanEdit = false
 
     // Admin date-preview: simulate what Home looks like on a given day.
     @State private var previewDate: Date? = nil
@@ -148,6 +149,11 @@ struct HomeView: View {
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
+            .mlrEditToggle(canEdit: (env.isAdmin || appImagesCanEdit) && !env.isPreviewing)
+            .task(id: env.currentProfile?.id) {
+                guard env.isSignedIn, !env.isAdmin else { return }
+                appImagesCanEdit = await env.appImagesService.canEdit()
+            }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     if env.isAdmin {

@@ -18,7 +18,6 @@ struct FestOverviewView: View {
     @State private var showLookEditor = false
     @State private var previewDate: Date? = nil      // admin "see as this day" preview
     @State private var showDatePicker = false
-    @State private var editing = false
 
     private var content: FestContentService { env.festContentService }
 
@@ -146,7 +145,7 @@ struct FestOverviewView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .mlrEditable(canEdit: showsEditToggle, isOn: $editing)
+            .mlrEditToggle(canEdit: showsEditToggle)
             .navigationTitle("Family Fest")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)

@@ -145,6 +145,7 @@ struct FestDinnersDetailView: View {
             }
         }
         .background(Color.mlrFestParchment.ignoresSafeArea())
+        .mlrEditToggle(canEdit: canEdit)
         .navigationTitle(dinner.day)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)

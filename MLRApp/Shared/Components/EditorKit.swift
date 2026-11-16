@@ -1054,8 +1054,8 @@ struct EditPencil: View {
     }
 
     /// Revamp: pencils are hidden unless the screen's Edit toggle is on
-    /// (`.mlrEditable(canEdit:isOn:)` in MLRComponents.swift).
-    @Environment(\.mlrEditMode) private var editMode
+    /// (`.mlrEditToggle(canEdit:)`, MLREditModeStore in MLRComponents.swift).
+    private var editMode: Bool { MLREditModeStore.shared.isOn }
 
     var body: some View {
         Group {

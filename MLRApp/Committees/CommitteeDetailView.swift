@@ -190,6 +190,7 @@ struct CommitteeDetailView: View {
             .padding(20)
         }
         .background(Color(.systemGroupedBackground))
+        .mlrEditToggle(canEdit: env.isAdmin)
         .navigationTitle(committee.name)
         .navigationBarTitleDisplayMode(.inline)
         .refreshable { await load(); await loadAreas() }

@@ -93,6 +93,7 @@ struct EventSheet: View {
             }
             .mlrBackdrop()
             .overlay(ConfettiView(trigger: confettiTrigger).allowsHitTesting(false))
+            .mlrEditToggle(canEdit: env.isAdmin || eventPermissions.canManage)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {

@@ -122,6 +122,7 @@ struct HouseHubView: View {
             .padding(16)
         }
         .background(Color.mlrSurface)
+        .mlrEditToggle(canEdit: !env.isPreviewing)
         .navigationTitle(house.name)
         .navigationBarTitleDisplayMode(.inline)
         .task {

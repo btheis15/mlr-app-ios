@@ -83,6 +83,7 @@ struct FestScheduleView: View {
             .padding(.top, 8)
         }
         .background(Color.mlrFestParchment)
+        .mlrEditToggle(canEdit: env.festContentService.schedule.contains { env.canEditFestEvent($0) })
         .task { if env.isSignedIn && !env.isPreviewing { _ = await env.festContentService.canEditFest() } }
     }
 }

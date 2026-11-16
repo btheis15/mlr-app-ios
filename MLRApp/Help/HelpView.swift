@@ -83,6 +83,7 @@ struct HelpView: View {
             .padding(16)
         }
         .mlrBackdrop()
+        .mlrEditToggle(canEdit: env.isAdmin)
         .navigationTitle("Help & how-to")
         .navigationBarTitleDisplayMode(.inline)
         .messageComposer($composeState)

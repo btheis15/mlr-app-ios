@@ -23,6 +23,7 @@ struct FestDinnersView: View {
             .padding(.bottom, 32)
         }
         .background(Color.mlrFestParchment)
+        .mlrEditToggle(canEdit: env.festContentService.dinners.contains { env.canEditFestDinner(chefUserId: $0.chefUserId, crewUserIds: $0.crewUserIds) })
         .navigationTitle("Weekly Menu")
         .navigationBarTitleDisplayMode(.inline)
         .task {

@@ -145,6 +145,7 @@ struct FestScheduleDetailView: View {
             }
         }
         .background(Color.mlrFestParchment.ignoresSafeArea())
+        .mlrEditToggle(canEdit: canManage)
         .navigationTitle(item.day)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
