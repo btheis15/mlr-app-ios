@@ -536,11 +536,17 @@ struct PrivateActivitySheet: View {
 
             if activity.tournamentEnabled {
                 Section {
-                    NavigationLink {
-                        TournamentContainerView(host: .activity(id: activityId), canManage: canManage)
-                    } label: {
-                        tournamentCTA
-                    }
+                    // The card fills the row; an invisible link overlay replaces the
+                    // List's own (grey) disclosure chevron so only the white one shows.
+                    tournamentCTA
+                        .frame(maxWidth: .infinity)
+                        .overlay {
+                            NavigationLink {
+                                TournamentContainerView(host: .activity(id: activityId), canManage: canManage)
+                            } label: { EmptyView() }
+                                .opacity(0)
+                        }
+                        .accessibilityAddTraits(.isButton)
                     .listRowInsets(EdgeInsets())
                     .listRowBackground(Color.clear)
                 }
