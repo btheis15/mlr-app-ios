@@ -206,15 +206,14 @@ extension View {
 
     /// Bubble fill with a small "tail" corner on the last bubble of a group.
     func chatBubbleBackground(isOwn: Bool, tail: Bool) -> some View {
-        let small: CGFloat = 4, big: CGFloat = 14
-        return background(
-            isOwn ? Color.mlrPrimary : Color.mlrCard,
-            in: UnevenRoundedRectangle(
+        let small: CGFloat = 4, big: CGFloat = 20
+        let shape = UnevenRoundedRectangle(
                 topLeadingRadius: big,
                 bottomLeadingRadius: (!isOwn && tail) ? small : big,
                 bottomTrailingRadius: (isOwn && tail) ? small : big,
-                topTrailingRadius: big)
-        )
+                topTrailingRadius: big, style: .continuous)
+        return background(isOwn ? Color.mlrPrimary : Color.mlrCard, in: shape)
+            .overlay { if !isOwn { shape.strokeBorder(Color.mlrBorder, lineWidth: 1) } }
     }
 }
 
@@ -251,11 +250,10 @@ struct ChatJumpPill: View {
 struct ChatDaySeparator: View {
     let label: String
     var body: some View {
-        Text(label)
-            .font(.mlrScaled(11, weight: .semibold))
-            .foregroundStyle(Color.mlrTextMuted)
-            .padding(.horizontal, 10).padding(.vertical, 4)
-            .background(Color.mlrCard.opacity(0.8), in: Capsule())
+        Eyebrow(label, color: .mlrTextMuted)
+            .padding(.horizontal, 12).padding(.vertical, 5)
+            .background(Color.mlrCard, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.mlrBorder, lineWidth: 1))
             .frame(maxWidth: .infinity)
             .padding(.top, 14).padding(.bottom, 4)
             .accessibilityAddTraits(.isHeader)

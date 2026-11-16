@@ -531,10 +531,12 @@ struct ChatComposer: View {
                 .frame(height: height)
                 .animation(MLRMotion.reduceMotion ? nil : .snappy(duration: 0.18), value: height)
                 .padding(.horizontal, 8)
-                .background(Color.mlrSurface)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.mlrBorder, lineWidth: 1))
+                .background(Color.mlrCard)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Color.mlrBorder, lineWidth: 1))
+                .shadow(color: .black.opacity(0.06), radius: 10, y: 2)
 
+                if canSend || sending {
                 Button {
                     Haptics.tap()
                     onSend(attachments)
@@ -546,11 +548,11 @@ struct ChatComposer: View {
                         if sending {
                             ProgressView().tint(Color.mlrPrimary)
                         } else {
-                            Image(systemName: sendSymbol)
-                                .font(.system(size: 34, weight: .regular))
-                                .foregroundStyle(canSend ? Color.mlrPrimary : Color.mlrTextSubtle)
-                                .contentTransition(.symbolEffect(.replace))
-                                .symbolEffect(.bounce, value: MLRMotion.reduceMotion ? false : canSend)
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 17, weight: .bold))
+                                .foregroundStyle(.white)
+                                .frame(width: 38, height: 38)
+                                .background(Circle().fill(Color.mlrPrimary))
                         }
                     }
                     .frame(width: 38, height: 38)
@@ -559,10 +561,12 @@ struct ChatComposer: View {
                 }
                 .buttonStyle(.pressable)
                 .disabled(!canSend)
+                .transition(MLRMotion.reduceMotion ? .opacity : .scale(scale: 0.3).combined(with: .opacity))
+                }
             }
+            .animation(MLRMotion.reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.65), value: canSend)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color.mlrSurface)
         }
         .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 5, matching: .any(of: [.images, .videos]))
         .onChange(of: photoItems) { _, items in

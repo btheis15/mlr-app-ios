@@ -54,8 +54,15 @@ private struct RowActions {
 private extension View {
     /// Leading "Mark read" / trailing "Mute" swipe actions plus the same pair in
     /// the long-press menu. No-op when `actions` is nil (archived rooms, preview).
-    @ViewBuilder
     func conversationActions(_ actions: RowActions?) -> some View {
+        conversationActionsInner(actions)
+            .listRowBackground(Color.clear)
+            .listRowSeparator(.hidden)
+            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+    }
+
+    @ViewBuilder
+    private func conversationActionsInner(_ actions: RowActions?) -> some View {
         if let actions {
             self
                 .swipeActions(edge: .leading, allowsFullSwipe: true) {
@@ -139,7 +146,7 @@ private struct ConversationsList: View {
                 toggleMute: toggleFeedMute, markRead: nil) : nil)
 
             if let house {
-                Section("Your house") {
+                Section(header: SectionHeader("Your house").textCase(nil)) {
                     NavigationLink {
                         HouseChatView(house: house, assumeMember: true)
                             .navigationTransition(.zoom(sourceID: houseKey(house.id), in: zoom))
@@ -161,7 +168,7 @@ private struct ConversationsList: View {
             // rooms aren't: each one archives itself 7 days after its event.
             let eventChats = env.eventChatService.liveChats
             if !eventChats.isEmpty {
-                Section("Events you're going to") {
+                Section(header: SectionHeader("Events you're going to").textCase(nil)) {
                     ForEach(eventChats) { chat in
                         NavigationLink {
                             EventChatView(chat: chat)
@@ -193,17 +200,17 @@ private struct ConversationsList: View {
             let roleChats    = byActivity(live.filter { let a = $0.area; return a != nil && a?.lowercased() != "leads" })
 
             if !leadChats.isEmpty {
-                Section("Lead chats") {
+                Section(header: SectionHeader("Lead chats").textCase(nil)) {
                     ForEach(leadChats) { channelLink($0) }
                 }
             }
             if !generalChats.isEmpty {
-                Section("Full helping crew") {
+                Section(header: SectionHeader("Full helping crew").textCase(nil)) {
                     ForEach(generalChats) { channelLink($0) }
                 }
             }
             if !roleChats.isEmpty {
-                Section("Roles & subcommittees") {
+                Section(header: SectionHeader("Roles & subcommittees").textCase(nil)) {
                     ForEach(roleChats) { channelLink($0) }
                 }
             }
@@ -236,8 +243,10 @@ private struct ConversationsList: View {
                 }
             }
         }
-        .listStyle(.insetGrouped)
+        .listStyle(.plain)
         .scrollContentBackground(.hidden)
+        .listRowSpacing(8)
+        .mlrBackdrop()
         // Rows glide to their new place when a message re-ranks a room.
         .animation(motion, value: summaries)
         .animation(motion, value: env.eventChatService.liveChats.map(\.eventId))
@@ -418,48 +427,49 @@ private struct ConversationRow: View {
     let summary: ChannelSummary?
 
     var body: some View {
-        HStack(spacing: 12) {
-            Text(emoji)
-                .font(.mlrScaled(24))
-                .frame(width: 46, height: 46)
-                .background(Color.mlrPrimary.opacity(0.1))
-                .clipShape(RoundedRectangle(cornerRadius: 12))
+        let unread = summary?.unread ?? 0
+        let hasUnread = unread > 0
+        MLRCard(.plain, padding: 14) {
+            HStack(spacing: 14) {
+                IconTile(emoji: emoji, accent: .mlrPrimary, size: 52)
 
-            VStack(alignment: .leading, spacing: 2) {
-                HStack(spacing: 6) {
-                    Text(title)
-                        .font(.mlrScaled(16, weight: .semibold))
-                        .foregroundStyle(Color.mlrText)
-                    if summary?.muted == true {
-                        Image(systemName: "bell.slash.fill")
-                            .font(.mlrScaled(10))
-                            .foregroundStyle(Color.mlrTextSubtle)
-                            .transition(.scale.combined(with: .opacity))
+                VStack(alignment: .leading, spacing: 3) {
+                    HStack(spacing: 6) {
+                        Text(title)
+                            .font(.system(size: 17, weight: hasUnread ? .bold : .semibold))
+                            .foregroundStyle(Color.mlrText)
+                            .lineLimit(1)
+                        if summary?.muted == true {
+                            Image(systemName: "bell.slash.fill")
+                                .font(.mlrScaled(12))
+                                .foregroundStyle(Color.mlrTextSubtle)
+                                .transition(.scale.combined(with: .opacity))
+                        }
+                        Spacer(minLength: 4)
+                        if let at = summary?.lastAt {
+                            Text(Self.relative(at))
+                                .font(.mlrCaption13)
+                                .foregroundStyle(hasUnread ? Color.mlrPrimary : Color.mlrTextMuted)
+                        }
                     }
-                    Spacer()
-                    if let at = summary?.lastAt {
-                        Text(Self.relative(at))
-                            .font(.mlrScaled(11))
-                            .foregroundStyle(Color.mlrTextMuted)
-                    }
-                }
-                HStack(spacing: 6) {
-                    Text(summary?.lastText ?? subtitle ?? "")
-                        .font(.mlrScaled(13))
-                        .foregroundStyle(Color.mlrTextMuted)
-                        .lineLimit(1)
-                    Spacer()
-                    if let unread = summary?.unread, unread > 0 {
-                        Text(unread > 99 ? "99+" : "\(unread)")
-                            .font(.mlrScaled(11, weight: .bold))
-                            .monospacedDigit()
-                            .numericTransition()
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 7)
-                            .padding(.vertical, 2)
-                            .background(summary?.muted == true ? Color.mlrTextSubtle : Color.mlrDanger)
-                            .clipShape(Capsule())
-                            .transition(.scale.combined(with: .opacity))
+                    HStack(spacing: 6) {
+                        Text(summary?.lastText ?? subtitle ?? "")
+                            .font(.mlrSecondary)
+                            .foregroundStyle(hasUnread ? Color.mlrText : Color.mlrTextMuted)
+                            .lineLimit(1)
+                        Spacer(minLength: 4)
+                        if hasUnread {
+                            Text(unread > 99 ? "99+" : "\(unread)")
+                                .font(.mlrScaled(13, weight: .bold))
+                                .monospacedDigit()
+                                .numericTransition()
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 2)
+                                .background(summary?.muted == true ? Color.mlrTextSubtle : Color.mlrPrimary)
+                                .clipShape(Capsule())
+                                .transition(.scale.combined(with: .opacity))
+                        }
                     }
                 }
             }
@@ -546,6 +556,7 @@ struct MainFeedView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .mlrBackdrop()
         .alert("Couldn't remove post", isPresented: Binding(
             get: { adminRemoveError != nil },
             set: { if !$0 { adminRemoveError = nil } }
@@ -686,8 +697,9 @@ struct MainFeedView: View {
         return ScrollViewReader { proxy in
             ScrollView(showsIndicators: false) {
                 Color.clear.frame(height: 0).id(Self.topAnchor)
-                LazyVStack(spacing: 1) {
+                LazyVStack(spacing: 0) {
                     ForEach(posts) { post in
+                        if isFirstOfDay(post, in: posts) { dayChip(post.timelineDate) }
                         postRow(for: post)
                             .onAppear {
                                 if nearEnd.contains(post.id) { Task { await env.postsService.loadMore() } }
@@ -727,6 +739,25 @@ struct MainFeedView: View {
                 await env.postsService.fetchPosts(userId: env.currentProfile?.id)
             }
         }
+    }
+
+    private func isFirstOfDay(_ post: Post, in posts: [Post]) -> Bool {
+        guard let i = posts.firstIndex(where: { $0.id == post.id }) else { return false }
+        if i == 0 { return true }
+        return !Calendar.current.isDate(posts[i - 1].timelineDate, inSameDayAs: post.timelineDate)
+    }
+
+    private func dayChip(_ date: Date) -> some View {
+        let cal = Calendar.current
+        let label = cal.isDateInToday(date) ? "Today"
+            : cal.isDateInYesterday(date) ? "Yesterday"
+            : date.formatted(.dateTime.weekday(.wide).month(.abbreviated).day())
+        return Eyebrow(label, color: .mlrTextMuted)
+            .padding(.horizontal, 12).padding(.vertical, 5)
+            .background(Color.mlrCard, in: Capsule())
+            .overlay(Capsule().strokeBorder(Color.mlrBorder, lineWidth: 1))
+            .frame(maxWidth: .infinity)
+            .padding(.top, 10)
     }
 
     private static let topAnchor = "main-feed-top"
@@ -785,9 +816,9 @@ struct MainFeedView: View {
                     ? ({ await adminRemove(post) } as (@MainActor () async -> Void))
                     : nil
             )
+            .mlrCard(.plain, padding: 0)
             .padding(.horizontal, 16)
             .padding(.vertical, 8)
-            Divider().padding(.horizontal, 16)
         }
         // Fade/scale/rise as each post crosses into view — the Feed was the one
         // major list with zero motion; matches the same treatment Events/Family
@@ -800,9 +831,10 @@ struct MainFeedView: View {
             LazyVStack(spacing: 1) {
                 ForEach(0..<5, id: \.self) { _ in
                     PostCardSkeleton()
+                        .padding(16)
+                        .mlrCard(.plain, padding: 0)
                         .padding(.horizontal, 16)
                         .padding(.vertical, 8)
-                    Divider().padding(.horizontal, 16)
                 }
             }
             .padding(.top, 8)
@@ -829,7 +861,7 @@ struct MainFeedView: View {
                 } label: {
                     Text("Write a post")
                 }
-                .buttonStyle(.glassPrimary)
+                .buttonStyle(.mlrPrimary)
                 .padding(.horizontal, 40)
             }
             Spacer()
@@ -840,9 +872,17 @@ struct MainFeedView: View {
         Button {
             showComposer = true
         } label: {
-            Image(systemName: "square.and.pencil")
+            HStack(spacing: 8) {
+                Image(systemName: "square.and.pencil").font(.system(size: 18, weight: .semibold))
+                if isAtTop { Text("New post").font(.system(size: 16, weight: .semibold)) }
+            }
+            .foregroundStyle(.white)
+            .padding(.horizontal, 18).frame(height: 52)
+            .background(Capsule().fill(Color.mlrPrimary))
+            .shadow(color: .black.opacity(0.25), radius: 10, y: 4)
         }
-        .buttonStyle(.glassCircle())
+        .buttonStyle(.pressable)
+        .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: isAtTop)
         .accessibilityLabel("New post")
         .padding(.trailing, 20)
         .padding(.bottom, 24)

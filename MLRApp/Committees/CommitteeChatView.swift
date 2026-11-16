@@ -312,7 +312,7 @@ struct CommitteeChatView: View {
                 )
             }
         }
-        .background(Color(.systemGroupedBackground))
+        .mlrBackdrop()
         .chatDraftPersistence(text: $draft, roomKey: roomKey,
                               userId: env.isPreviewing ? nil : env.currentProfile?.id,
                               paused: editingMessage != nil)
@@ -332,7 +332,7 @@ struct CommitteeChatView: View {
         .foregroundStyle(Color.mlrTextMuted)
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
-        .background(Color(.secondarySystemBackground))
+        .background(Color.mlrCard)
     }
 
     /// Timeline rows -> grouping input (polls never join a group).
