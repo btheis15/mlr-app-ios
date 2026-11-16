@@ -38,8 +38,10 @@
 		D31B538C3013A0E800C8D189 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538B3013A0E800C8D189 /* Motion.swift */; };
 		D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538D3013A0F900C8D189 /* Feedback.swift */; };
 		D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */; };
+		D3C69E6F4049B45F0854E406 /* EditorKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B69E6F4049B45F0854E406 /* EditorKit.swift */; };
 		D3A0000000000000000000F3 /* SeasonalLogoFX.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000F2 /* SeasonalLogoFX.swift */; };
 		D31B53923013A61A00C8D189 /* BracketDiagram.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53913013A61A00C8D189 /* BracketDiagram.swift */; };
+		D3C18F16F6843E4740F37AA6 /* TournamentExperience.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B18F16F6843E4740F37AA6 /* TournamentExperience.swift */; };
 		D31B53943016506100C8D189 /* HomeHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53933016506100C8D189 /* HomeHero.swift */; };
 		D31B53963016550800C8D189 /* DateMedallion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53953016550800C8D189 /* DateMedallion.swift */; };
 		D33F9E5C2FEC086700603CE7 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DE32FEC086700603CE7 /* RootView.swift */; };
@@ -311,8 +313,10 @@
 		D31B538B3013A0E800C8D189 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
 		D31B538D3013A0F900C8D189 /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
 		D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshHeroBackground.swift; sourceTree = "<group>"; };
+		D3B69E6F4049B45F0854E406 /* EditorKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorKit.swift; sourceTree = "<group>"; };
 		D3A0000000000000000000F2 /* SeasonalLogoFX.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonalLogoFX.swift; sourceTree = "<group>"; };
 		D31B53913013A61A00C8D189 /* BracketDiagram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BracketDiagram.swift; sourceTree = "<group>"; };
+		D3B18F16F6843E4740F37AA6 /* TournamentExperience.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TournamentExperience.swift; sourceTree = "<group>"; };
 		D31B53933016506100C8D189 /* HomeHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHero.swift; sourceTree = "<group>"; };
 		D31B53953016550800C8D189 /* DateMedallion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateMedallion.swift; sourceTree = "<group>"; };
 		D33F9DDF2FEC086700603CE7 /* ActivitiesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActivitiesView.swift; sourceTree = "<group>"; };
@@ -645,6 +649,7 @@
 				D31B53813012B72000C8D189 /* TournamentContainerView.swift */,
 				D31B53833012CA5000C8D189 /* TournamentManageViews.swift */,
 				D31B53913013A61A00C8D189 /* BracketDiagram.swift */,
+				D3B18F16F6843E4740F37AA6 /* TournamentExperience.swift */,
 				D31B53953016550800C8D189 /* DateMedallion.swift */,
 				D3E9F7CB30461C7200180C79 /* EventHosts.swift */,
 				D3E9F7CD30461D1000180C79 /* EventEmailComposer.swift */,
@@ -809,6 +814,7 @@
 				D31B5358301167A700C8D189 /* ChatTyping.swift */,
 				D31B536A301169D200C8D189 /* ConfettiView.swift */,
 				D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */,
+				D3B69E6F4049B45F0854E406 /* EditorKit.swift */,
 				D3A0000000000000000000F2 /* SeasonalLogoFX.swift */,
 			);
 			path = Components;
@@ -1297,6 +1303,7 @@
 				D33F9E8C2FEC086700603CE7 /* FestCrewView.swift in Sources */,
 				D33F9E8D2FEC086700603CE7 /* PostCard.swift in Sources */,
 				D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */,
+				D3C69E6F4049B45F0854E406 /* EditorKit.swift in Sources */,
 				D3A0000000000000000000F3 /* SeasonalLogoFX.swift in Sources */,
 				D33F9E8E2FEC086700603CE7 /* AskForHelpHomeCard.swift in Sources */,
 				D33F9E8F2FEC086700603CE7 /* PostsService.swift in Sources */,
@@ -1316,6 +1323,7 @@
 				D33F9E942FEC086700603CE7 /* EventsView.swift in Sources */,
 				D31B538A3013A0CC00C8D189 /* Metrics.swift in Sources */,
 				D31B53923013A61A00C8D189 /* BracketDiagram.swift in Sources */,
+				D3C18F16F6843E4740F37AA6 /* TournamentExperience.swift in Sources */,
 				D3E9F7CC30461C7200180C79 /* EventHosts.swift in Sources */,
 				D33F9ED92FF317A800603CE7 /* WorkChecklistCard.swift in Sources */,
 				D33F9E952FEC086700603CE7 /* FestScheduleView.swift in Sources */,
