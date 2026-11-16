@@ -96,7 +96,7 @@ struct FestCrewView: View {
                 .foregroundStyle(Color.mlrFest.opacity(0.7))
             Chart(counts, id: \.day) { item in
                 BarMark(x: .value("Day", item.day), y: .value("Coming", item.count))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                     .cornerRadius(4)
             }
             .chartYAxis { AxisMarks(position: .leading) }
@@ -142,19 +142,19 @@ private struct AttendeeCard: View {
                 if let profile = attendee.profile {
                     AvatarView(profile: profile, size: .small)
                     PrivateName(profile: profile, font: .festSerif(15, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                 } else {
                     // Roster person or outside guest: no profile, so no avatar photo.
                     Text(String(attendee.name.prefix(1)).uppercased())
                         .font(.mlrScaled(13, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .frame(width: 32, height: 32)
                         .background(Color.mlrFest.opacity(0.12))
                         .clipShape(Circle())
                     VStack(alignment: .leading, spacing: 1) {
                         Text(attendee.name)
                             .font(.festSerif(15, weight: .bold))
-                            .foregroundStyle(Color.mlrFest)
+                            .foregroundStyle(Color.mlrFestReadable)
                         if let note = attendee.note {
                             Text(note)
                                 .font(.mlrScaled(11))
@@ -166,7 +166,7 @@ private struct AttendeeCard: View {
                 if attendee.isWholeWeek {
                     Text("All week")
                         .font(.mlrScaled(11, weight: .semibold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Color.mlrFest.opacity(0.12))
                         .clipShape(Capsule())

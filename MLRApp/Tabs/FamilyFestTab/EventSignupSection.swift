@@ -56,7 +56,7 @@ struct EventSignupSection: View {
                     if canRevealNames {
                         Button(revealed ? "🙈 Hide again" : "👀 Show participants") { revealed.toggle() }
                             .font(.mlrScaled(12, weight: .semibold))
-                            .foregroundStyle(Color.mlrFest)
+                            .foregroundStyle(Color.mlrFestReadable)
                     }
                     if let instr = item.signupInstructions?.blankToNil {
                         Text(instr)
@@ -172,7 +172,7 @@ struct EventSignupSection: View {
             HStack(spacing: 8) {
                 Text(title)
                     .font(.mlrScaled(14, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                 Spacer()
                 Text(capacity.map { "\(count)/\($0)" } ?? "\(count)")
                     .font(.mlrScaled(12, weight: .medium))
@@ -472,11 +472,11 @@ struct TournamentEntryCard: View {
                 HStack(spacing: 12) {
                     Image(systemName: "trophy.fill")
                         .font(.mlrScaled(22, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                     VStack(alignment: .leading, spacing: 2) {
                         Text("Tournament")
                             .font(.mlrScaled(15, weight: .bold))
-                            .foregroundStyle(Color.mlrFest)
+                            .foregroundStyle(Color.mlrFestReadable)
                         Text("Bracket, standings, and live scores")
                             .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrTextMuted)

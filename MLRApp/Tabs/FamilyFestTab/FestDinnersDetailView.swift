@@ -29,7 +29,7 @@ struct FestDinnersDetailView: View {
                     HStack(alignment: .top) {
                         Text(dinner.title)
                             .font(.festSerif(26, weight: .bold))
-                            .foregroundStyle(Color.mlrFest)
+                            .foregroundStyle(Color.mlrFestReadable)
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer()
                         if canEdit {
@@ -61,11 +61,11 @@ struct FestDinnersDetailView: View {
                             .overlay(
                                 Text(String(dinner.chef.prefix(1)).uppercased())
                                     .font(.mlrScaled(16, weight: .bold))
-                                    .foregroundStyle(Color.mlrFest)
+                                    .foregroundStyle(Color.mlrFestReadable)
                             )
                         Text(dinner.chef)
                             .font(.mlrScaled(15, weight: .medium))
-                            .foregroundStyle(Color.mlrFest)
+                            .foregroundStyle(Color.mlrFestReadable)
                         Spacer()
                     }
                 }
@@ -126,11 +126,11 @@ struct FestDinnersDetailView: View {
                                             .overlay(
                                                 Text(String(member.prefix(1)).uppercased())
                                                     .font(.mlrScaled(13, weight: .semibold))
-                                                    .foregroundStyle(Color.mlrFest)
+                                                    .foregroundStyle(Color.mlrFestReadable)
                                             )
                                         Text(member)
                                             .font(.mlrScaled(14, weight: .medium))
-                                            .foregroundStyle(Color.mlrFest)
+                                            .foregroundStyle(Color.mlrFestReadable)
                                         Spacer()
                                     }
                                 }

@@ -44,7 +44,7 @@ struct FestScheduleDetailView: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text(item.title)
                         .font(.festSerif(26, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: 16) {
@@ -212,7 +212,7 @@ struct ScheduleLinkButtons: View {
                                 .lineLimit(1)
                             Spacer(minLength: 4)
                         }
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -239,12 +239,12 @@ struct LeadRow: View {
                 .overlay(
                     Text(String(name.prefix(1)).uppercased())
                         .font(.mlrScaled(15, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                 )
 
             Text(name)
                 .font(.mlrScaled(15, weight: .medium))
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(Color.mlrFestReadable)
 
             Spacer()
 
@@ -255,7 +255,7 @@ struct LeadRow: View {
                 } label: {
                     Image(systemName: "phone.fill")
                         .font(.mlrScaled(13))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .padding(8)
                         .background(Color.mlrFest.opacity(0.1))
                         .clipShape(Circle())
@@ -267,7 +267,7 @@ struct LeadRow: View {
                 } label: {
                     Image(systemName: "message.fill")
                         .font(.mlrScaled(13))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .padding(8)
                         .background(Color.mlrFest.opacity(0.1))
                         .clipShape(Circle())
@@ -354,7 +354,7 @@ struct ExpandableScheduleRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title)
                     .font(.festSerif(18, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                     .multilineTextAlignment(.leading)
 
                 if let location = item.location, !isExpanded {
@@ -468,7 +468,7 @@ struct ExpandableScheduleRow: View {
                 Button { showEditSheet = true } label: {
                     Label("Edit event", systemImage: "pencil")
                         .font(.mlrScaled(13, weight: .medium))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                 }
                 .buttonStyle(.pressable)
                 .padding(.horizontal, 14)
@@ -548,7 +548,7 @@ struct ExpandableDinnerRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Dinner")
                     .font(.festSerif(18, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                 // Head chef — what's on the menu.
                 Text(chefMenuLine)
                     .font(.mlrScaled(14))
@@ -576,7 +576,7 @@ struct ExpandableDinnerRow: View {
             DetailSection(icon: "person.fill", title: "Chef") {
                 Text(dinner.chef)
                     .font(.mlrScaled(15, weight: .medium))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
             }
 
             if !dinner.menuLines.isEmpty {
@@ -616,7 +616,7 @@ struct ExpandableDinnerRow: View {
                             ForEach(dinner.crew, id: \.self) { member in
                                 Text(member)
                                     .font(.mlrScaled(14, weight: .medium))
-                                    .foregroundStyle(Color.mlrFest)
+                                    .foregroundStyle(Color.mlrFestReadable)
                             }
                         }
                     } else {
@@ -631,7 +631,7 @@ struct ExpandableDinnerRow: View {
                     Button { showEditSheet = true } label: {
                         Label(env.isFullFestEditor ? "Edit dinner" : "Edit menu & details", systemImage: "pencil")
                             .font(.mlrScaled(13, weight: .medium))
-                            .foregroundStyle(Color.mlrFest)
+                            .foregroundStyle(Color.mlrFestReadable)
                     }
                     .buttonStyle(.pressable)
                     if canManageCrew {
@@ -639,7 +639,7 @@ struct ExpandableDinnerRow: View {
                         Button { showCrewSheet = true } label: {
                             Label("Manage crew", systemImage: "person.badge.plus")
                                 .font(.mlrScaled(13, weight: .medium))
-                                .foregroundStyle(Color.mlrFest)
+                                .foregroundStyle(Color.mlrFestReadable)
                         }
                         .buttonStyle(.pressable)
                     }
