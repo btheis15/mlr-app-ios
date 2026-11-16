@@ -50,8 +50,7 @@ struct RootView: View {
             if showSplash {
                 SplashView(
                     onBeginExit: {
-                        // Fade main content in while the logo flies to the header —
-                        // the overlap is what makes it read as "landing in place."
+                        // Fade main content in as the splash fades out.
                         withAnimation(.easeOut(duration: 0.45)) { mainVisible = true }
                     },
                     onComplete: {
@@ -533,9 +532,10 @@ struct SplashView: View {
     @State private var logoOpacity: Double = 0
     @State private var wordmarkOpacity: Double = 0
     @State private var wordmarkOffset: CGFloat = 8
-    // Exit states — logo flies toward the HomeHero header position.
-    @State private var logoExitOffset: CGFloat = 0
-    @State private var logoExitOpacity: Double = 1
+    // Exit: clean fade + slight scale-down hand-off (no fly-to-header).
+    @State private var exitOpacity: Double = 1
+    @State private var exitScale: CGFloat = 1
+    private let season = Season.current()
 
     var body: some View {
         ZStack {
@@ -554,11 +554,13 @@ struct SplashView: View {
                     .frame(width: 140)
                     .shadow(.medium)
                     .scaleEffect(logoScale)
-                    // logoExitOpacity multiplied so the logo fades as it flies up;
-                    // logoOpacity is the entrance fade-in (kept separate).
-                    .opacity(logoOpacity * logoExitOpacity)
-                    // Flies upward independently of the wordmark during exit.
-                    .offset(y: logoExitOffset)
+                    .opacity(logoOpacity)
+                    // Seasonal effect layered exactly over the artwork; ends still.
+                    .overlay {
+                        SeasonalLogoAnimatedFX(season: season, onSettle: { Haptics.tap() })
+                            .scaleEffect(logoScale)
+                            .opacity(logoOpacity)
+                    }
 
                 Text("Muskellunge Lake Resort")
                     .font(.script(26))
@@ -566,6 +568,8 @@ struct SplashView: View {
                     .opacity(wordmarkOpacity)
                     .offset(y: wordmarkOffset)
             }
+            .scaleEffect(exitScale)
+            .opacity(exitOpacity)
         }
         .onAppear { animateIn() }
         // Respect reduce motion — skip animation entirely.
@@ -586,32 +590,19 @@ struct SplashView: View {
             wordmarkOpacity = 1
             wordmarkOffset = 0
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            Haptics.tap()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.05) {
-            // Signal parent to fade the main content in — the cross-fade with
-            // the upward logo flight creates the "lands in header" impression.
+        // Effect runs ~0.25s + 2.4s and settles (haptic fires there); hold a
+        // beat on the still, then fade/scale out while main fades in.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             onBeginExit()
-
-            // Glow and wordmark fade out first.
             withAnimation(.easeOut(duration: 0.25)) {
                 glowOpacity = 0
                 wordmarkOpacity = 0
             }
-
-            // Logo springs upward toward the HomeHero header position and fades
-            // as it arrives. The exact distance is proportional to screen height
-            // so it clears the header on both compact and large devices.
-            let flyDistance = max(200, UIScreen.main.bounds.height * 0.27)
-            withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
-                logoExitOffset = -flyDistance
+            withAnimation(.easeInOut(duration: 0.4)) {
+                exitOpacity = 0
+                exitScale = 1.06
             }
-            withAnimation(.easeIn(duration: 0.42)) {
-                logoExitOpacity = 0
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.52) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                 onComplete()
             }
         }
