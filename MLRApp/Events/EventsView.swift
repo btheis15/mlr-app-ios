@@ -90,7 +90,8 @@ struct EventsView: View {
                     .pickerStyle(.segmented)
                     .frame(width: 200)
                 }
-                if env.isSignedIn {
+                // Unverified accounts can't write (0213) — hide the create entry points.
+                if env.isSignedIn, !env.isAwaitingVerification {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
                             // Anyone can start an invite-only activity / game (#397).

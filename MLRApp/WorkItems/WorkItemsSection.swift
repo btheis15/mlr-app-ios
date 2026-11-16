@@ -162,13 +162,28 @@ struct EventWorkItemsSection: View {
     /// Resort-wide items — `house_id` null.
     private var resortItems: [WorkItem] { items.filter { $0.houseId == nil } }
 
-    /// Houses whose items this viewer can actually see, in the RPC's order.
+    /// Houses whose items this viewer can actually see, derived from the items
+    /// themselves so a failed counts call can never hide a visible item. The
+    /// counts RPC only supplies a nicer name/emoji and the order when present.
     private var visibleHouseGroups: [(String, [WorkItem])] {
-        houseCounts.compactMap { count in
-            let mine = items.filter { $0.houseId == count.houseId }
-            guard !mine.isEmpty else { return nil }
-            return ("\(count.houseEmoji ?? "🏠") \(count.houseName)", mine)
+        let houseIds = Array(Set(items.compactMap(\.houseId)))
+        func label(_ id: UUID) -> (String, Int) {
+            if let c = houseCounts.firstIndex(where: { $0.houseId == id }) {
+                let h = houseCounts[c]
+                return ("\(h.houseEmoji ?? "🏠") \(h.houseName)", c)
+            }
+            if let h = env.housesService.houses.first(where: { $0.id == id }) {
+                return ("\(h.emoji) \(h.name)", Int.max)
+            }
+            return ("🏠 House", Int.max)
         }
+        return houseIds
+            .map { id -> (String, Int, [WorkItem]) in
+                let (name, order) = label(id)
+                return (name, order, items.filter { $0.houseId == id })
+            }
+            .sorted { ($0.1, $0.0) < ($1.1, $1.0) }
+            .map { ($0.0, $0.2) }
     }
 
     /// ⚠️ Houses with items this viewer CAN'T see. Their rows are RLS-invisible,
@@ -195,6 +210,15 @@ struct EventWorkItemsSection: View {
                         onCheck: { Task { await check(item: item) } },
                         onEdit: env.isAdmin ? { editing = item } : nil
                     )
+                    .contextMenu {
+                        if env.isAdmin {
+                            Button(role: .destructive) {
+                                Task { await unlink(item) }
+                            } label: {
+                                Label("Remove from this event", systemImage: "link.badge.minus")
+                            }
+                        }
+                    }
                     if item.id != groupItems.last?.id {
                         Divider().padding(.leading, 14)
                     }
@@ -284,6 +308,18 @@ struct EventWorkItemsSection: View {
         async let counts = env.workItemsService.fetchEventHouseCounts(eventId: event.id)
         (items, houseCounts) = await (fetched, counts)
         loading = false
+    }
+
+    /// Unlink (never deletes the item) via the same RPC the web uses, then refetch
+    /// items AND house counts.
+    private func unlink(_ item: WorkItem) async {
+        do {
+            try await env.workItemsService.removeFromEvent(eventId: event.id, itemId: item.id)
+            Haptics.success()
+        } catch {
+            print("[EventWorkItemsSection] unlink error: \(error)")
+        }
+        await load()
     }
 
     private func check(item: WorkItem) async {

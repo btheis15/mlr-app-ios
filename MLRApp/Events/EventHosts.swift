@@ -45,6 +45,11 @@ final class EventHostsService {
     private(set) var hostsByEvent: [String: [EventHost]] = [:]
     private(set) var permissionsByEvent: [String: EventPermissions] = [:]
 
+    /// Events whose host read SUCCEEDED. A failed read (or a signed-out one that
+    /// RLS answered with no rows) must not be rendered as "nobody's running it".
+    private(set) var hostsLoaded: Set<String> = []
+
+    func hostsKnown(for eventId: String) -> Bool { hostsLoaded.contains(eventId) }
     func hosts(for eventId: String) -> [EventHost] { hostsByEvent[eventId] ?? [] }
     func permissions(for eventId: String) -> EventPermissions {
         permissionsByEvent[eventId] ?? EventPermissions()
@@ -61,11 +66,16 @@ final class EventHostsService {
         // the calendar's other entries, and an event with no hosts has to end up
         // with an explicit empty array — otherwise "not loaded" and "no host"
         // are indistinguishable and the panel says "Nobody yet" forever.
-        for id in eventIds { hostsByEvent[id] = h[id] ?? [] }
+        if let h {
+            for id in eventIds { hostsByEvent[id] = h[id] ?? [] }
+            hostsLoaded.formUnion(eventIds)
+        } else {
+            hostsLoaded.subtract(eventIds)
+        }
         for id in eventIds { permissionsByEvent[id] = p[id] ?? EventPermissions() }
     }
 
-    private func fetchHosts(_ ids: [String]) async -> [String: [EventHost]] {
+    private func fetchHosts(_ ids: [String]) async -> [String: [EventHost]]? {
         struct P: Encodable { let p_event_ids: [String] }
         struct Row: Decodable {
             let id: UUID
@@ -97,10 +107,9 @@ final class EventHostsService {
             }
             return out
         } catch {
-            // ⚠️ Read RLS on `event_hosts` is members-only, so a guest gets an
-            // empty list. Render no host line at all rather than a partial one
-            // that implies the event has nobody running it.
-            return [:]
+            // nil = "couldn't read" (distinct from a real empty list); the panel
+            // renders no host line for it.
+            return nil
         }
     }
 
@@ -168,14 +177,24 @@ struct EventHostsPanel: View {
     @State private var working = false
     @State private var error: String?
     @State private var notice: String?
+    @State private var hostsBeforeAdd: [UUID] = []
 
     private var service: EventHostsService { env.eventHostsService }
     private var hosts: [EventHost] { service.hosts(for: eventId) }
+    /// Hosts are members-only under RLS, so only a signed-in, verified viewer
+    /// with a successful read gets an authoritative answer.
+    private var hostsReadable: Bool {
+        env.isSignedIn && !env.isAwaitingVerification && service.hostsKnown(for: eventId)
+    }
     private var canManage: Bool { service.permissions(for: eventId).canManage }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            if hosts.isEmpty {
+            if !hostsReadable {
+                // Signed out / unverified (RLS returns no rows) or the read
+                // failed: we don't KNOW the hosts, so say nothing.
+                EmptyView()
+            } else if hosts.isEmpty {
                 // ⚠️ "No host" is a COMPLETE ANSWER, not an unfinished form. A
                 // holiday weekend has nobody running it, and blank is the
                 // default for every event — so this describes how the event
@@ -211,6 +230,8 @@ struct EventHostsPanel: View {
 
             if canManage, !isSynthesized {
                 Button {
+                    notice = nil
+                    hostsBeforeAdd = hosts.map(\.id)
                     picking = true
                 } label: {
                     Label(hosts.isEmpty ? "Give this to someone" : "Add another host",
@@ -235,13 +256,20 @@ struct EventHostsPanel: View {
         }
         .disabled(working)
         .sheet(isPresented: $picking) {
-            EventHostPicker(eventId: eventId) { Task { await reload() } }
+            EventHostPicker(eventId: eventId) { noteAddResult(before: hostsBeforeAdd) }
         }
         .task { await reload() }
     }
 
     private func reload() async {
         await service.load(eventIds: [eventId])
+    }
+
+    /// Called after the picker adds a host: say so if nothing changed.
+    fileprivate func noteAddResult(before: [UUID]) {
+        if service.hosts(for: eventId).map(\.id) == before {
+            notice = "That didn't change anything — you may no longer be able to edit this event."
+        }
     }
 
     private func remove(_ host: EventHost) async {
