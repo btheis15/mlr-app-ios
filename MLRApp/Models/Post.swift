@@ -129,3 +129,18 @@ struct ContentReport: Codable, Identifiable {
         case createdAt = "created_at"
     }
 }
+
+// MARK: - Comment reactions (migration 0223)
+
+/// Palette for comment reactions (matches web + chat order).
+let commentReactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "🎉"]
+
+/// One row of `comment_reactions`; PK (comment_id, user_id) — one emoji per
+/// member per comment. `name` comes from the joined profile (may be nil).
+struct CommentReaction: Identifiable, Equatable {
+    let commentId: UUID
+    let userId: UUID
+    var emoji: String
+    var name: String?
+    var id: String { "\(commentId.uuidString)-\(userId.uuidString)" }
+}

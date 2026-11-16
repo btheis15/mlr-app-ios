@@ -499,4 +499,61 @@ private struct PostRow: Decodable {
             createdAt: createdAt
         )
     }
+
+    // MARK: - Comment reactions (migration 0223)
+
+    /// All reactions for a set of comments in ONE query, with reactor names.
+    func fetchCommentReactions(commentIds: [UUID]) async -> [CommentReaction] {
+        guard !commentIds.isEmpty else { return [] }
+        struct Row: Decodable {
+            let commentId: UUID
+            let userId: UUID
+            let emoji: String
+            let profiles: P?
+            struct P: Decodable {
+                let name: String?
+                enum CodingKeys: String, CodingKey { case name = "display_name" }
+            }
+            enum CodingKeys: String, CodingKey {
+                case commentId = "comment_id"
+                case userId = "user_id"
+                case emoji, profiles
+            }
+        }
+        do {
+            let rows: [Row] = try await supabase
+                .from("comment_reactions")
+                .select("comment_id, user_id, emoji, profiles!user_id(display_name)")
+                .in("comment_id", values: commentIds.map(\.uuidString))
+                .execute()
+                .value
+            return rows.map { CommentReaction(commentId: $0.commentId, userId: $0.userId, emoji: $0.emoji, name: $0.profiles?.name) }
+        } catch {
+            print("[PostsService] fetchCommentReactions error: \(error)")
+            return []
+        }
+    }
+
+    /// Set (or switch to) my emoji on a comment — one row per member per comment.
+    func setCommentReaction(commentId: UUID, emoji: String, userId: UUID) async throws {
+        let params: [String: AnyJSON] = [
+            "comment_id": .string(commentId.uuidString),
+            "user_id":    .string(userId.uuidString),
+            "emoji":      .string(emoji)
+        ]
+        try await supabase
+            .from("comment_reactions")
+            .upsert(params, onConflict: "comment_id,user_id")
+            .execute()
+    }
+
+    /// Remove my reaction (tapping the emoji I already have).
+    func removeCommentReaction(commentId: UUID, userId: UUID) async throws {
+        try await supabase
+            .from("comment_reactions")
+            .delete()
+            .eq("comment_id", value: commentId.uuidString)
+            .eq("user_id", value: userId.uuidString)
+            .execute()
+    }
 }
