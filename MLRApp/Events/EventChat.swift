@@ -561,7 +561,7 @@ struct EventChatView: View {
             TypingIndicator(names: typing.typers)
             composerArea
         }
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
         .navigationTitle(chat.title ?? "Event chat")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

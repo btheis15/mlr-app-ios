@@ -45,8 +45,8 @@ struct PostCard: View {
     private let reactionEmojis = postReactionEmojis
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            authorRow
+        VStack(alignment: .leading, spacing: 12) {
+            authorRow.padding(.horizontal, 16).padding(.top, 14)
             // Moderation banners — only the author + admins ever receive
             // non-visible rows (RLS), so this explains why it's held/hidden.
             if post.status == .pending {
@@ -59,6 +59,7 @@ struct PostCard: View {
                     .background(Color.mlrWarning.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrWarning.opacity(0.35), lineWidth: 1))
+                    .padding(.horizontal, 16)
             } else if post.status == .hidden {
                 Label("Removed by an admin — hidden from the feed.", systemImage: "nosign")
                     .font(.mlrScaled(12, weight: .medium))
@@ -68,8 +69,10 @@ struct PostCard: View {
                     .background(Color.mlrDanger.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrDanger.opacity(0.35), lineWidth: 1))
+                    .padding(.horizontal, 16)
             }
             mediaContent
+                .padding(.horizontal, post.mediaUrls.isEmpty ? 0 : 8)
                 // simultaneousGesture: TabView's horizontal page swipe fires alongside
                 // this long press rather than being blocked by it.
                 .simultaneousGesture(
@@ -84,8 +87,9 @@ struct PostCard: View {
                 )
             if let text = post.text, !text.isEmpty {
                 MentionText(text)
-                    .font(.body)
+                    .font(post.mediaUrls.isEmpty && text.count < 220 ? .system(size: 20) : .system(.body, design: .default))
                     .foregroundStyle(Color.mlrText)
+                    .padding(.horizontal, 16)
                     .onLongPressGesture(minimumDuration: 0.4) {
                         guard env.isSignedIn else { return }
                         Haptics.tap()
@@ -98,9 +102,11 @@ struct PostCard: View {
                 Label("With \(post.tags.map(\.name).joined(separator: ", "))", systemImage: "person.2.fill")
                     .font(.mlrScaled(12))
                     .foregroundStyle(Color.mlrTextMuted)
+                    .padding(.horizontal, 16)
             }
-            reactionRow
-            actionRow
+            reactionRow.padding(.horizontal, 16)
+            commentPreviews.padding(.horizontal, 16)
+            Color.clear.frame(height: 2)
         }
         .sheet(isPresented: $showComments) {
             CommentsView(post: post)
@@ -127,15 +133,15 @@ struct PostCard: View {
 
     private var authorRow: some View {
         HStack(alignment: .center, spacing: 10) {
-            AvatarView(url: post.authorAvatarUrl, size: .small)
+            MLRAvatar(name: post.authorName, url: post.authorAvatarUrl, size: 40, ring: false)
 
             VStack(alignment: .leading, spacing: 1) {
                 // PrivateName: guests see first name only
                 Text(displayName)
-                    .font(.mlrScaled(14, weight: .semibold))
+                    .font(.mlrScaled(16, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                 Text(MLRFormat.relativeTime(post.timelineDate))
-                    .font(.caption)
+                    .font(.mlrCaption13)
                     .foregroundStyle(Color.mlrTextMuted)
             }
 
@@ -211,7 +217,7 @@ struct PostCard: View {
             .scrollTargetBehavior(.paging)
             .scrollPosition(id: $carouselIndex)
             .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
+            .clipShape(RoundedRectangle(cornerRadius: 18))
             .overlay(alignment: .bottom) {
                 PageDots(count: urls.count, current: carouselIndex ?? 0)
                     .padding(.bottom, 8)
@@ -231,7 +237,7 @@ struct PostCard: View {
             onDoubleTap: { likeFromDoubleTap() }
         )
         .matchedTransitionSource(id: idx, in: zoomNS) { source in
-            source.clipShape(RoundedRectangle(cornerRadius: 12))
+            source.clipShape(RoundedRectangle(cornerRadius: 18))
         }
     }
 
@@ -269,20 +275,20 @@ struct PostCard: View {
                         Task { await onReactionToggle(emoji) }
                     } label: {
                         HStack(spacing: 3) {
-                            Text(emoji).font(.mlrScaled(15))
+                            Text(emoji).font(.mlrScaled(17))
                                 .modifier(EmojiBounce(trigger: isMineReaction(emoji: emoji)))
                             Text("\(count)")
-                                .font(.mlrScaled(12, weight: .semibold))
+                                .font(.mlrScaled(14, weight: .semibold))
                                 .monospacedDigit()
                                 .foregroundStyle(isMineReaction(emoji: emoji) ? Color.mlrPrimary : Color.mlrTextMuted)
                                 .contentTransition(.numericText())
                                 .animation(reduceMotion ? nil : MLRMotion.spring, value: count)
                         }
-                        .padding(.horizontal, 9).padding(.vertical, 5)
-                        .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.12) : Color.secondary.opacity(0.08))
+                        .padding(.horizontal, 12).frame(height: 36)
+                        .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.12) : Color.mlrCard)
                         .clipShape(Capsule())
                         .overlay(Capsule().strokeBorder(
-                            isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.35) : Color.secondary.opacity(0.18),
+                            isMineReaction(emoji: emoji) ? Color.mlrPrimary : Color.mlrBorder,
                             lineWidth: 1))
                     }
                     .buttonStyle(.pressable)
@@ -323,6 +329,8 @@ struct PostCard: View {
                 }
 
                 Spacer()
+
+                commentButton
 
                 // "Who reacted" — only when there are reactions
                 if !reactions.isEmpty {
@@ -401,22 +409,51 @@ struct PostCard: View {
         }
     }
 
-    // MARK: - Action row (comment count + open CommentsView)
+    // MARK: - Comment button + previews
 
-    private var actionRow: some View {
+    private var commentButton: some View {
         Button {
             showComments = true
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Image(systemName: comments.isEmpty ? "bubble.left" : "bubble.left.fill")
-                    .font(.mlrScaled(14))
+                    .font(.mlrScaled(15))
                     .foregroundStyle(comments.isEmpty ? Color.mlrTextMuted : Color.mlrPrimary)
-                Text(commentLabel)
-                    .font(.mlrScaled(14, weight: .medium))
-                    .foregroundStyle(Color.mlrTextMuted)
+                if !comments.isEmpty {
+                    Text("\(comments.count)")
+                        .font(.mlrScaled(14, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.mlrTextMuted)
+                }
             }
+            .padding(.horizontal, 6).frame(height: 36)
+            .contentShape(Rectangle())
         }
         .buttonStyle(.pressable)
+        .accessibilityLabel(commentLabel)
+    }
+
+    @ViewBuilder
+    private var commentPreviews: some View {
+        let visible = comments.filter { $0.status == .visible }
+        if !visible.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(visible.suffix(2)) { c in
+                    (Text(c.authorName + "  ").font(.mlrScaled(15, weight: .semibold))
+                        + Text(c.text).font(.mlrScaled(15)))
+                        .foregroundStyle(Color.mlrText)
+                        .lineLimit(2)
+                }
+                if comments.count > 2 {
+                    Button { showComments = true } label: {
+                        Text("View all \(comments.count) comments")
+                            .font(.mlrScaled(14))
+                            .foregroundStyle(Color.mlrTextMuted)
+                    }
+                    .buttonStyle(.pressable)
+                }
+            }
+        }
     }
 
     // MARK: - Helpers
@@ -490,7 +527,7 @@ private struct PostMediaTile: View {
     }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 12)
+        let shape = RoundedRectangle(cornerRadius: 18)
         // `Color.clear` is the size anchor: full width, forced to 1:1 — so the
         // tile is ALWAYS square regardless of the image's own aspect ratio.
         // (A ZStack sized by the image let portrait photos render tall/native

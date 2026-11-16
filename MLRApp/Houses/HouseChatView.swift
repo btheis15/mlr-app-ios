@@ -290,7 +290,7 @@ struct HouseChatView: View {
                 onCancelEdit: { cancelEdit() }
             )
         }
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
         .chatDraftPersistence(text: $draft, roomKey: roomKey,
                               userId: env.isPreviewing ? nil : env.currentProfile?.id,
                               paused: editingMessage != nil)

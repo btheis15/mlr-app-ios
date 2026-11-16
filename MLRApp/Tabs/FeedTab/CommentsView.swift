@@ -65,7 +65,7 @@ struct CommentsView: View {
 
                 commentList
             }
-            .background(Color.mlrSurface)
+            .mlrBackdrop()
             // Pinned above the keyboard (safe-area inset rides up with it) and
             // grows with the text.
             .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -77,7 +77,7 @@ struct CommentsView: View {
                         signInPrompt
                     }
                 }
-                .background(Color.mlrSurface)
+                .background(.bar)
             }
             .navigationTitle("Comments")
             .navigationBarTitleDisplayMode(.inline)
@@ -331,14 +331,17 @@ struct CommentsView: View {
                 .padding(.horizontal, 12)
                 .padding(.vertical, 9)
                 .background(Color.mlrCard)
-                .clipShape(RoundedRectangle(cornerRadius: 18))
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Color.mlrBorder, lineWidth: 1))
 
                 Button {
                     Task { await sendComment() }
                 } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.mlrScaled(30))
-                        .foregroundStyle(canSend ? Color.mlrPrimary : Color.mlrTextSubtle)
+                    Image(systemName: "arrow.up")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 36, height: 36)
+                        .background(Circle().fill(canSend ? Color.mlrPrimary : Color.mlrTextSubtle))
                 }
                 .disabled(!canSend || isSending)
                 .animation(reduceMotion ? nil : MLRMotion.spring, value: canSend)
@@ -354,7 +357,6 @@ struct CommentsView: View {
                     .padding(.bottom, 6)
             }
         }
-        .background(Color.mlrSurface)
         .animation(reduceMotion ? nil : MLRMotion.spring, value: commentText.isEmpty)
     }
 
@@ -407,7 +409,6 @@ struct CommentsView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
-        .background(Color.mlrSurface)
     }
 
     // MARK: - Helpers
