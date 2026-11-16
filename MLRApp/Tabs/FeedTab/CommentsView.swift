@@ -31,6 +31,8 @@ struct CommentsView: View {
     @State private var showSignIn = false
     @State private var mentionQuery: String? = nil
     @State private var allProfiles: [Profile] = []
+    @State private var commentReactions: [CommentReaction] = []
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     // Attachments (migration 0162) — same compress/upload pipeline as a post.
     @State private var selectedPhotos: [PhotosPickerItem] = []
@@ -163,6 +165,10 @@ struct CommentsView: View {
                             isSignedIn: env.isSignedIn,
                             canReport: env.isSignedIn && comment.authorId != env.currentProfile?.id,
                             canDelete: canDelete(comment),
+                            reactions: commentReactions.filter { $0.commentId == comment.id },
+                            myUserId: env.currentProfile?.id,
+                            canReact: env.isSignedIn && env.isVerifiedMember,
+                            onReact: { emoji in await toggleReaction(comment, emoji) },
                             onReport: {
                                 await reportComment(comment)
                             },
@@ -343,6 +349,44 @@ struct CommentsView: View {
         isLoading = true
         comments = (try? await env.postsService.fetchComments(postId: post.id)) ?? []
         isLoading = false
+        await loadCommentReactions()
+    }
+
+    // MARK: Comment reactions
+
+    @MainActor
+    private func loadCommentReactions() async {
+        guard env.isSignedIn else { return }
+        commentReactions = await env.postsService.fetchCommentReactions(commentIds: comments.map(\.id))
+    }
+
+    /// Optimistic toggle with rollback: same emoji removes, different emoji upserts.
+    @MainActor
+    private func toggleReaction(_ comment: PostComment, _ emoji: String) async {
+        guard env.isSignedIn else { showSignIn = true; return }
+        guard env.isVerifiedMember, let me = env.currentProfile else { return }
+        let snapshot = commentReactions
+        let mine = commentReactions.first { $0.commentId == comment.id && $0.userId == me.id }
+        let removing = mine?.emoji == emoji
+        let apply = {
+            commentReactions.removeAll { $0.commentId == comment.id && $0.userId == me.id }
+            if !removing {
+                commentReactions.append(CommentReaction(commentId: comment.id, userId: me.id, emoji: emoji, name: me.name))
+            }
+        }
+        if reduceMotion { apply() } else { withAnimation(MLRMotion.spring) { apply() } }
+        Haptics.tap()
+        do {
+            if removing {
+                try await env.postsService.removeCommentReaction(commentId: comment.id, userId: me.id)
+            } else {
+                try await env.postsService.setCommentReaction(commentId: comment.id, emoji: emoji, userId: me.id)
+            }
+        } catch {
+            print("[Comments] reaction error: \(error)")
+            if reduceMotion { commentReactions = snapshot } else { withAnimation(MLRMotion.spring) { commentReactions = snapshot } }
+            Haptics.error()
+        }
     }
 
     @MainActor
@@ -447,6 +491,13 @@ struct CommentRow: View {
     var canDelete: Bool = false
     let onReport: () async -> Void
     var onDelete: (() async -> Void)? = nil
+    var reactions: [CommentReaction] = []
+    var myUserId: UUID? = nil
+    var canReact: Bool = false
+    var onReact: ((String) async -> Void)? = nil
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var showPalette = false
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -461,6 +512,20 @@ struct CommentRow: View {
                         .font(.caption2)
                         .foregroundStyle(Color.mlrTextMuted)
                     Spacer()
+                    if canReact {
+                        Button {
+                            Haptics.tap()
+                            if reduceMotion { showPalette.toggle() } else { withAnimation(MLRMotion.spring) { showPalette.toggle() } }
+                        } label: {
+                            Image(systemName: "face.smiling")
+                                .font(.caption)
+                                .foregroundStyle(showPalette ? Color.mlrPrimary : Color.mlrTextMuted)
+                                .padding(6)
+                                .contentShape(Rectangle())
+                        }
+                        .buttonStyle(.pressable)
+                        .accessibilityLabel("React")
+                    }
                     if canReport || canDelete {
                         Menu {
                             if canDelete {
@@ -494,7 +559,82 @@ struct CommentRow: View {
                 if !comment.mediaUrls.isEmpty {
                     CommentMediaRow(comment: comment)
                 }
+                reactionChips
             }
+        }
+    }
+
+    // MARK: Reaction chips
+
+    private var myEmoji: String? { reactions.first { $0.userId == myUserId }?.emoji }
+
+    /// Emojis with counts, most used first (palette order breaks ties).
+    private var chipSummary: [(emoji: String, count: Int)] {
+        commentReactionEmojis.compactMap { e in
+            let n = reactions.filter { $0.emoji == e }.count
+            return n > 0 ? (e, n) : nil
+        }
+        .enumerated()
+        .sorted { $0.element.count != $1.element.count ? $0.element.count > $1.element.count : $0.offset < $1.offset }
+        .map(\.element)
+    }
+
+    @ViewBuilder
+    private var reactionChips: some View {
+        if !chipSummary.isEmpty || showPalette {
+            VStack(alignment: .leading, spacing: 6) {
+                FlowLayout(spacing: 6) {
+                    ForEach(chipSummary, id: \.emoji) { item in
+                        let mine = myEmoji == item.emoji
+                        Button {
+                            guard canReact else { return }
+                            Task { await onReact?(item.emoji) }
+                        } label: {
+                            HStack(spacing: 3) {
+                                Text(item.emoji).font(.mlrScaled(13))
+                                Text("\(item.count)")
+                                    .font(.mlrScaled(12, weight: .semibold))
+                                    .foregroundStyle(mine ? Color.mlrPrimary : Color.mlrTextMuted)
+                                    .contentTransition(.numericText())
+                            }
+                            .padding(.horizontal, 8).padding(.vertical, 4)
+                            .background(mine ? Color.mlrPrimary.opacity(0.12) : Color.secondary.opacity(0.08))
+                            .clipShape(Capsule())
+                            .overlay(Capsule().strokeBorder(mine ? Color.mlrPrimary.opacity(0.35) : Color.secondary.opacity(0.18), lineWidth: 1))
+                        }
+                        .buttonStyle(.pressable)
+                        .accessibilityLabel("\(item.emoji) \(item.count)\(mine ? ", you reacted" : "")")
+                        // Long-press: who reacted with this emoji.
+                        .contextMenu {
+                            ForEach(reactions.filter { $0.emoji == item.emoji }) { r in
+                                Text(r.userId == myUserId ? "You" : (r.name ?? "Member"))
+                            }
+                        }
+                    }
+                }
+                if showPalette && canReact {
+                    HStack(spacing: 2) {
+                        ForEach(commentReactionEmojis, id: \.self) { emoji in
+                            Button {
+                                Task { await onReact?(emoji) }
+                                if reduceMotion { showPalette = false } else { withAnimation(MLRMotion.spring) { showPalette = false } }
+                            } label: {
+                                Text(emoji)
+                                    .font(.system(size: 24))
+                                    .padding(5)
+                                    .background(myEmoji == emoji ? Color.mlrPrimary.opacity(0.12) : Color.clear)
+                                    .clipShape(Circle())
+                            }
+                            .buttonStyle(.pressable)
+                        }
+                    }
+                    .padding(.horizontal, 6).padding(.vertical, 4)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.8, anchor: .topLeading).combined(with: .opacity))
+                }
+            }
+            .padding(.top, 2)
         }
     }
 
