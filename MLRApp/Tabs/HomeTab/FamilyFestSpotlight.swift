@@ -298,7 +298,7 @@ struct FamilyFestSpotlight: View {
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
-                    Text("Family Fest 2026")
+                    Text(verbatim: "Family Fest \(FamilyFestConfig.year)")
                         .font(.festSerif(16, weight: .bold))
                         .foregroundStyle(Color.mlrFest)
                     Text(statusLine)
