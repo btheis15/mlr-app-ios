@@ -65,18 +65,12 @@ struct TournamentSetupSheet: View {
             newTitle = "Tournament"
             if let t = tournament { syncFrom(t) }
         }
+        .task { if let t = tournament, !t.pool.isEmpty { await refresh() } }
         .task { await loadSnapshots() }
         // Someone else started or changed the tournament while this sheet is open.
         .onChange(of: tournament?.status) { _, _ in Task { await refresh() } }
-        .confirmationDialog(
-            "Start the tournament?", isPresented: $confirmStart, titleVisibility: .visible
-        ) {
-            if let t = current {
-                Button("Start tournament") { Task { await doGenerate(t) } }
-            }
-            Button("Not yet", role: .cancel) {}
-        } message: {
-            Text("The bracket locks once it starts: the seeding and players can't be changed without erasing results. You can still start over from this screen, and a copy is saved first.")
+        .sheet(isPresented: $confirmStart) {
+            if let t = current { startSheet(t) }
         }
         .confirmationDialog(
             resetTitle, isPresented: $confirmReset, titleVisibility: .visible
@@ -104,6 +98,49 @@ struct TournamentSetupSheet: View {
             let now = current?.playedCount ?? 0
             Text("This puts the tournament back to how it was \(Self.relative(snap.takenAt)) (\(snap.playedMatches) game\(snap.playedMatches == 1 ? "" : "s") played). Right now it has \(now) recorded result\(now == 1 ? "" : "s"). Your current state is saved first, so you can undo this.")
         }
+    }
+
+    // MARK: Start (pre-start seeding preview)
+
+    /// Shows the first-round games the current seed order produces (byes included),
+    /// lets the organiser reshuffle, and starts with exactly the order shown:
+    /// `doGenerate` passes `order` as `p_seed_order`, which the server honours
+    /// whenever it covers every entrant (0144 generate_*; guarded by 0224).
+    private func startSheet(_ t: Tournament) -> some View {
+        NavigationStack {
+            List {
+                Section {
+                    TournamentSetupPreview(
+                        names: order.compactMap { id in t.entrants.first { $0.id == id }?.displayName },
+                        format: t.format, strategy: byeStrategy, poolCount: poolCount, advance: advance)
+                        .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: order)
+                } header: {
+                    Text("First round, as seeded")
+                } footer: {
+                    Text("Top seeds are listed first. The bracket locks once it starts: the seeding and players can't be changed without erasing results. You can still start over from this screen, and a copy is saved first.")
+                }
+                Section {
+                    Button {
+                        Haptics.select()
+                        withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) { order.shuffle() }
+                    } label: {
+                        Label("Shuffle", systemImage: "shuffle").frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .disabled(busy || order.count < 2)
+                    Button {
+                        confirmStart = false
+                        Task { await doGenerate(t) }
+                    } label: {
+                        Text("Start with this order").font(.mlrScaled(17, weight: .bold)).frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .disabled(busy || order.count < 2)
+                }
+            }
+            .navigationTitle("Start the tournament?")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Not yet") { confirmStart = false } } }
+        }
+        .presentationDetents([.large])
     }
 
     // MARK: Create
@@ -198,20 +235,26 @@ struct TournamentSetupSheet: View {
                 }
             }
         }
-        Section("Add someone by hand") {
-            addByHandRow(t)
-        }
+        // Entrants are fixed once a bracket exists (add_entrant/add_participant only
+        // seat people for the draw), so "Add someone by hand" is setup-only.
     }
 
     @ViewBuilder
     private func addByHandRow(_ t: Tournament) -> some View {
         HStack {
             TextField("Name (works for people not on the app)", text: $addName)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.words)
             Button("Add") {
                 let name = addName.trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty, !busy else { return }
                 addName = ""
-                run { _ = try await env.tournamentsService.addParticipant(id: t.id, forUser: nil, name: name) }
+                if t.entrantType == .individual {
+                    // A solo entrant, so the person joins the one reorderable seed list.
+                    run { _ = try await env.tournamentsService.addEntrant(tournamentId: t.id, teamName: nil, members: [(forUser: nil, name: name)]) }
+                } else {
+                    run { _ = try await env.tournamentsService.addParticipant(id: t.id, forUser: nil, name: name) }
+                }
             }.disabled(addName.trimmingCharacters(in: .whitespaces).isEmpty || busy)
         }
     }
@@ -435,7 +478,28 @@ struct TournamentSetupSheet: View {
             if errorText == nil { errorText = "Couldn't refresh. Pull the latest by closing and reopening this." }
             return
         }
-        if let t = list.first { current = t; syncFrom(t) }
+        if var t = list.first {
+            if await promotePool(t), let again = try? await env.tournamentsService.fetchChecked(host: host), let a = again.first { t = a }
+            current = t; syncFrom(t)
+        }
+    }
+
+    /// Individual tournaments: sign-ups sitting in the pool become solo entrants now,
+    /// so every player is in the one reorderable seed list (the server only honours
+    /// a seed order that covers every entrant). Returns true if anything moved.
+    private func promotePool(_ t: Tournament) async -> Bool {
+        guard t.status == .setup, t.entrantType == .individual, !t.pool.isEmpty else { return false }
+        var moved = false
+        for p in t.pool {
+            do {
+                try await env.tournamentsService.removeParticipant(participantId: p.id)
+                _ = try await env.tournamentsService.addEntrant(
+                    tournamentId: t.id, teamName: nil,
+                    members: [(forUser: p.userId, name: p.userId == nil ? p.name : nil)])
+                moved = true
+            } catch { break }
+        }
+        return moved
     }
 
     private func loadSnapshots() async {
@@ -445,7 +509,9 @@ struct TournamentSetupSheet: View {
     }
 
     private func syncFrom(_ t: Tournament) {
-        order = t.entrants.map(\.id)
+        // Keep the organiser's local order for players still here; new ones go last.
+        let ids = t.entrants.map(\.id)
+        order = order.filter(ids.contains) + ids.filter { !order.contains($0) }
         byeStrategy = t.byeStrategy
         poolCount = t.poolCount ?? 2
         advance = t.advancePerPool ?? 1
@@ -672,10 +738,11 @@ struct MatchResultSheet: View {
                     }
                 }
                 .padding(16)
+                .padding(.bottom, 24)   // keep the last chips clear of the Save bar
             }
             .scrollDismissesKeyboard(.interactively)
             .background(Color.mlrSurface)
-            .safeAreaInset(edge: .bottom) { saveBar }
+            .safeAreaInset(edge: .bottom, spacing: 0) { saveBar }
             .overlay(ConfettiView(trigger: confettiTrigger).allowsHitTesting(false))
             .navigationTitle(decided ? "Change the result" : "Who won?")
             .navigationBarTitleDisplayMode(.inline)

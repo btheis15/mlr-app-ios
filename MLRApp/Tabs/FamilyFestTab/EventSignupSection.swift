@@ -479,7 +479,7 @@ struct TournamentEntryCard: View {
                             .foregroundStyle(Color.mlrFest)
                         Text("Bracket, standings, and live scores")
                             .font(.mlrScaled(12))
-                            .foregroundStyle(Color.mlrFestInk.opacity(0.65))
+                            .foregroundStyle(Color.mlrTextMuted)
                     }
                     Spacer()
                     Image(systemName: "chevron.right")
