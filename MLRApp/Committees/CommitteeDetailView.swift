@@ -11,8 +11,19 @@ import AppIntents
 struct CommitteeDetailView: View {
     @Environment(AppEnvironment.self) private var env
 
-    let committee: Committee
+    /// The committee as navigated to; `committee` below prefers the freshly
+    /// loaded copy so an in-place edit (pencil) shows without re-navigating.
+    private let initialCommittee: Committee
+    private var committee: Committee {
+        env.committeeService.committees.first { $0.id == initialCommittee.id } ?? initialCommittee
+    }
 
+    init(committee: Committee) { self.initialCommittee = committee }
+
+    @State private var editingCommittee = false
+    @State private var editingRole: CommitteeArea?
+    /// Full area rows (descriptions included) for the role pencil + subtitles.
+    @State private var areaRows: [CommitteeArea] = []
     @State private var roster: [CommitteeRosterEntry] = []
     @State private var isLoading = true
     @State private var editing: CommitteeRosterEntry? = nil
@@ -209,6 +220,12 @@ struct CommitteeDetailView: View {
                 Task { await load() }
             }
         }
+        .sheet(isPresented: $editingCommittee) {
+            CommitteeEditor(committee: committee) {}
+        }
+        .sheet(item: $editingRole) { area in
+            RoleEditSheet(committee: committee, area: area) { await loadAreas() }
+        }
         .sheet(isPresented: $showEmail) {
             CommitteeEmailComposer(committee: committee, presetRecipients: emailRecipients)
         }
@@ -321,7 +338,9 @@ struct CommitteeDetailView: View {
 
     /// Load the committee's live roles from committee_areas (source of truth).
     private func loadAreas() async {
-        dbAreas = await env.committeeService.fetchCommitteeAreas(slug: committee.slug).map(\.area)
+        let rows = await env.committeeService.fetchCommitteeAreas(slug: committee.slug)
+        areaRows = rows
+        dbAreas = rows.map(\.area)
     }
 
     private func leave() async {
@@ -400,6 +419,12 @@ struct CommitteeDetailView: View {
                             .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrTextMuted)
                     }
+                }
+                Spacer(minLength: 0)
+                // Name / emoji / description are the admin taxonomy RPCs
+                // (admin only; leads keep just their roster rights).
+                if env.isAdmin {
+                    InPlaceEditPencil(thing: "committee") { editingCommittee = true }
                 }
             }
             if let desc = committee.description, !desc.isEmpty {
@@ -623,9 +648,18 @@ struct CommitteeDetailView: View {
 
     private func areaCard(area: String, entries: [CommitteeRosterEntry]) -> some View {
         VStack(alignment: .leading, spacing: 8) {
-            Text(area)
-                .font(.mlrScaled(15, weight: .semibold))
-                .foregroundStyle(Color.mlrText)
+            HStack {
+                Text(area)
+                    .font(.mlrScaled(15, weight: .semibold))
+                    .foregroundStyle(Color.mlrText)
+                Spacer(minLength: 0)
+                if env.isAdmin, let row = areaRows.first(where: { $0.area == area && !$0.isArchived }) {
+                    InPlaceEditPencil(thing: "role \(area)") { editingRole = row }
+                }
+            }
+            if let d = areaRows.first(where: { $0.area == area })?.description, !d.isEmpty {
+                Text(d).font(.mlrScaled(12)).foregroundStyle(Color.mlrTextMuted)
+            }
             if entries.isEmpty {
                 Text("Nobody on this one yet")
                     .font(.mlrScaled(13))
