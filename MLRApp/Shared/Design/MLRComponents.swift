@@ -5,7 +5,7 @@ import Kingfisher
 //
 // Backdrop   .mlrBackdrop(_ kind: MLRBackdrop.Kind = .standard)   // .fest for Family Fest; hides scroll bg + transparent nav bar.
 //            MLRBackdrop(.standard | .fest)                        // raw view (already applied per tab root; don't re-add on pushed screens)
-// Card       MLRCard(_ variant: MLRCardVariant = .plain, padding: CGFloat = 18) { content }
+// Card       MLRCard(_ variant: MLRCardVariant = .plain, padding: CGFloat = 14) { content }
 //            variants: .plain  .tinted(Color)  .hero  .fest   (fest = theme card fill + theme border)
 //            view.mlrCard(_ variant = .plain, padding: 18)         // same as a modifier
 //            view.cardStyle(...)                                   // legacy modifier; now renders the new look (radius 22)
@@ -37,8 +37,8 @@ enum MLRCardVariant {
     case fest
 
     var radius: CGFloat {
-        if case .hero = self { return 28 }
-        return 22
+        if case .hero = self { return 24 }
+        return 20
     }
 }
 
@@ -77,7 +77,7 @@ struct MLRCard<Content: View>: View {
     var padding: CGFloat
     let content: Content
 
-    init(_ variant: MLRCardVariant = .plain, padding: CGFloat = 18,
+    init(_ variant: MLRCardVariant = .plain, padding: CGFloat = 14,
          @ViewBuilder content: () -> Content) {
         self.variant = variant
         self.padding = padding
@@ -93,7 +93,7 @@ struct MLRCard<Content: View>: View {
 
 extension View {
     /// The MLR card look as a modifier (padding included; pass 0 for edge-to-edge media).
-    func mlrCard(_ variant: MLRCardVariant = .plain, padding: CGFloat = 18) -> some View {
+    func mlrCard(_ variant: MLRCardVariant = .plain, padding: CGFloat = 14) -> some View {
         modifier(MLRCardSurface(variant: variant, padding: padding))
     }
 }
@@ -106,23 +106,23 @@ struct IconTile: View {
     var accent: Color
     var size: CGFloat
 
-    init(symbol: String, accent: Color = .mlrPrimary, size: CGFloat = 52) {
+    init(symbol: String, accent: Color = .mlrPrimary, size: CGFloat = 44) {
         self.symbol = symbol; self.emoji = nil; self.accent = accent; self.size = size
     }
-    init(emoji: String, accent: Color = .mlrPrimary, size: CGFloat = 52) {
+    init(emoji: String, accent: Color = .mlrPrimary, size: CGFloat = 44) {
         self.symbol = nil; self.emoji = emoji; self.accent = accent; self.size = size
     }
 
     var body: some View {
-        let scale = size / 52
+        let scale = size / 44
         ZStack {
-            RoundedRectangle(cornerRadius: 14 * scale, style: .continuous)
+            RoundedRectangle(cornerRadius: 12 * scale, style: .continuous)
                 .fill(accent.opacity(0.12))
             if let emoji {
-                Text(emoji).font(.system(size: 28 * scale))
+                Text(emoji).font(.system(size: 24 * scale))
             } else if let symbol {
                 Image(systemName: symbol)
-                    .font(.system(size: 22 * scale, weight: .semibold))
+                    .font(.system(size: 19 * scale, weight: .semibold))
                     .foregroundStyle(accent)
             }
         }
@@ -182,11 +182,11 @@ struct MLRFilledButtonStyle: ButtonStyle {
             }
         }()
         configuration.label
-            .font(.system(.body, weight: .semibold))
+            .font(.mlrScaled(16, weight: .semibold))
             .foregroundStyle(fg)
-            .frame(maxWidth: .infinity, minHeight: 52)
+            .frame(maxWidth: .infinity, minHeight: 46)
             .padding(.horizontal, 16)
-            .background(bg, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+            .background(bg, in: RoundedRectangle(cornerRadius: 14, style: .continuous))
             .opacity(isEnabled ? 1 : 0.45)
             .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
             .animation(MLRMotion.spring, value: configuration.isPressed)
@@ -198,7 +198,7 @@ struct MLRQuietButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(.body, weight: .semibold))
+            .font(.mlrScaled(16, weight: .semibold))
             .foregroundStyle(Color.mlrPineText)
             .opacity(isEnabled ? (configuration.isPressed ? 0.6 : 1) : 0.45)
             .frame(minHeight: 44)
@@ -253,9 +253,9 @@ struct MLRPills<ID: Hashable>: View {
             withAnimation(reduceMotion ? nil : MLRMotion.spring) { selection = item }
         } label: {
             Text(title(item))
-                .font(.system(.subheadline, weight: .semibold))
+                .font(.mlrScaled(15, weight: .semibold, relativeTo: .subheadline))
                 .foregroundStyle(on ? Color.white : Color.mlrText)
-                .padding(.horizontal, 16).frame(minHeight: 40)
+                .padding(.horizontal, 16).frame(minHeight: 36)
                 .background {
                     if on {
                         Capsule().fill(accent).matchedGeometryEffect(id: "pill", in: ns)

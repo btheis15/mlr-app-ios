@@ -148,7 +148,7 @@ private struct AnnouncementBannerRow: View {
     var body: some View {
         MLRCard(.tinted(kindColor), padding: 14) {
             HStack(alignment: .top, spacing: 12) {
-                IconTile(symbol: kindSymbol, accent: kindColor, size: 40)
+                IconTile(symbol: kindSymbol, accent: kindColor, size: 36)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(announcement.title)

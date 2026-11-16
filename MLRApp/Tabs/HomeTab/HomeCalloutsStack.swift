@@ -232,7 +232,7 @@ struct HomeCalloutCard: View {
                     // Eyebrow row — only text-only cards get this branded label
                     if !hasImage {
                         HStack(spacing: 12) {
-                            IconTile(symbol: "megaphone.fill", accent: .mlrPrimary, size: 40)
+                            IconTile(symbol: "megaphone.fill", accent: .mlrPrimary, size: 36)
                             Eyebrow("Announcement", color: .mlrPrimary)
                         }
                         .padding(.bottom, 10)

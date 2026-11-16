@@ -36,25 +36,25 @@ extension Font {
     static let mlrHeadline = Font.system(.headline, design: .rounded, weight: .semibold)
     static let mlrBody     = Font.system(.body)
     static let mlrCaption  = Font.system(.caption)
-    static let mlrFootnote = Font.system(.footnote)
+    static let mlrFootnote = Font.mlrScaled(12, relativeTo: .footnote)
 
     // MARK: Revamp type scale (Northwoods lodge). Text styles, so Dynamic Type works.
     /// Destination screen title: New York serif bold, ~34pt.
-    static let mlrScreenTitle  = Font.system(.largeTitle, design: .serif, weight: .bold)
+    static let mlrScreenTitle  = Font.mlrScaled(28, weight: .bold, design: .serif, relativeTo: .largeTitle)
     /// Section header: serif semibold, ~22pt.
-    static let mlrSectionTitle = Font.system(.title2, design: .serif, weight: .semibold)
+    static let mlrSectionTitle = Font.mlrScaled(19, weight: .semibold, design: .serif, relativeTo: .title2)
     /// Hero card title: serif ~22pt semibold.
-    static let mlrHeroTitle    = Font.system(.title2, design: .serif, weight: .semibold)
+    static let mlrHeroTitle    = Font.mlrScaled(18, weight: .semibold, design: .serif, relativeTo: .title3)
     /// Card title: SF ~20pt semibold.
-    static let mlrCardTitle    = Font.system(.title3, weight: .semibold)
+    static let mlrCardTitle    = Font.mlrScaled(17, weight: .semibold, relativeTo: .title3)
     /// Row title: SF 17 semibold.
-    static let mlrRowTitle     = Font.system(.body, weight: .semibold)
+    static let mlrRowTitle     = Font.mlrScaled(16, weight: .semibold)
     /// Secondary text: SF 15.
-    static let mlrSecondary    = Font.system(.subheadline)
+    static let mlrSecondary    = Font.mlrScaled(14, relativeTo: .subheadline)
     /// Caption: SF 13.
-    static let mlrCaption13    = Font.system(.footnote)
+    static let mlrCaption13    = Font.mlrScaled(12, relativeTo: .footnote)
     /// Eyebrow: 12 semibold (apply with `.mlrEyebrow(color)` for case + tracking).
-    static let mlrEyebrow      = Font.system(.caption, weight: .semibold)
+    static let mlrEyebrow      = Font.mlrScaled(11, weight: .semibold, relativeTo: .caption1)
     /// Fest display: theme heading font when the theme sets one, else serif.
     static func festDisplay(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
         FestThemeStore.active.font == nil
@@ -154,7 +154,7 @@ extension View {
     /// Revamp: card-sized radii (>= 16) upgrade to the spec's 22 so every
     /// existing `cardStyle` card matches `MLRCard`; small radii (chips, thumbs) stay.
     static func mlrCardRadius(_ requested: CGFloat) -> CGFloat {
-        requested >= 16 && requested < 22 ? 22 : requested
+        requested >= 16 && requested < 20 ? 20 : requested
     }
 
     /// Accent-washed card: tinted hairline + a faint top-edge gradient wash of

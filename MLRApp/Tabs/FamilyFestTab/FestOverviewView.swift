@@ -297,7 +297,7 @@ struct FestOverviewView: View {
                 } label: {
                     VStack(alignment: .leading, spacing: 10) {
                         Text("Are you coming?")
-                            .font(.festDisplay(22))
+                            .font(.festDisplay(19))
                             .foregroundStyle(Color.mlrFestInkReadable)
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 8) {
@@ -450,7 +450,7 @@ private struct FestUtilityLink<Destination: View>: View {
                 .toolbarColorScheme(.light, for: .navigationBar)
         } label: {
             VStack(alignment: .leading, spacing: 10) {
-                IconTile(symbol: icon, accent: .mlrFest, size: 40)
+                IconTile(symbol: icon, accent: .mlrFest, size: 36)
                 Text(label)
                     .font(.system(.headline, weight: .semibold))
                     .foregroundStyle(Color.mlrFestInkReadable)
@@ -487,11 +487,11 @@ private struct FestCoverCaption: View {
     var body: some View {
         VStack(spacing: 10) {
             Text(title)
-                .font(.festDisplay(30))
+                .font(.festDisplay(24))
                 .foregroundStyle(Color.mlrFestInkReadable)
             GoldOrnamentDivider()
             Text(dates)
-                .font(.system(.title3, weight: .semibold))
+                .font(.mlrScaled(17, weight: .semibold, relativeTo: .title3))
                 .foregroundStyle(Color.mlrFestReadable)
             Text("Muskellunge Lake Resort \u{00B7} Tomahawk, WI")
                 .font(.system(.footnote))
@@ -530,11 +530,11 @@ private struct FestCountdownTiles: View {
     }
     private func tile(_ n: Int, _ label: String) -> some View {
         VStack(spacing: 2) {
-            Text("\(n)").font(.festDisplay(28)).foregroundStyle(Color.mlrFestReadable).monospacedDigit()
-            Text(label.uppercased()).font(.system(size: 12, weight: .semibold)).tracking(1.2)
+            Text("\(n)").font(.festDisplay(26)).foregroundStyle(Color.mlrFestReadable).monospacedDigit()
+            Text(label.uppercased()).font(.system(size: 11, weight: .semibold)).tracking(1.2)
                 .foregroundStyle(Color.mlrFestInkReadable.opacity(0.7))
         }
-        .frame(maxWidth: .infinity).padding(.vertical, 12)
+        .frame(maxWidth: .infinity, minHeight: 64)
         .festCardStyle(cornerRadius: 20)
     }
 }

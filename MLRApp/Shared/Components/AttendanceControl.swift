@@ -77,25 +77,26 @@ private struct AttendanceSegment: View {
         Button(action: action) {
             HStack(spacing: 5) {
                 Text(status.emoji)
-                    .font(.mlrScaled(15))
+                    .font(.mlrScaled(13))
                     .fixedSize()
                 // Web's segment reads "Can't make" (full "Can't make it" stays
                 // as the accessibility label). One line, never mid-word.
                 Text(status == .notGoing ? "Can't make" : status.label)
-                    .font(.mlrScaled(15, weight: .semibold))
+                    .font(.mlrScaled(14, weight: .semibold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.7)
                     .allowsTightening(true)
             }
             .foregroundStyle(isSelected ? .white : labelColor)
             .padding(.horizontal, 4)
-            .frame(maxWidth: .infinity, minHeight: 46)
+            .frame(maxWidth: .infinity, minHeight: 40)
             .background(backgroundColor)
             .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(borderColor, lineWidth: 1)
             )
+            .contentShape(Rectangle().inset(by: -2))
         }
         .buttonStyle(.pressable)
         .disabled(!isEnabled)

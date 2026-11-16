@@ -87,7 +87,7 @@ struct PostCard: View {
                 )
             if let text = post.text, !text.isEmpty {
                 MentionText(text)
-                    .font(post.mediaUrls.isEmpty && text.count < 220 ? .system(size: 20) : .system(.body, design: .default))
+                    .font(post.mediaUrls.isEmpty && text.count < 220 ? .system(size: 18) : .system(.body, design: .default))
                     .foregroundStyle(Color.mlrText)
                     .padding(.horizontal, 16)
                     .onLongPressGesture(minimumDuration: 0.4) {
@@ -133,12 +133,12 @@ struct PostCard: View {
 
     private var authorRow: some View {
         HStack(alignment: .center, spacing: 10) {
-            MLRAvatar(name: post.authorName, url: post.authorAvatarUrl, size: 40, ring: false)
+            MLRAvatar(name: post.authorName, url: post.authorAvatarUrl, size: 36, ring: false)
 
             VStack(alignment: .leading, spacing: 1) {
                 // PrivateName: guests see first name only
                 Text(displayName)
-                    .font(.mlrScaled(16, weight: .semibold))
+                    .font(.mlrScaled(15, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                 Text(MLRFormat.relativeTime(post.timelineDate))
                     .font(.mlrCaption13)
@@ -284,7 +284,8 @@ struct PostCard: View {
                                 .contentTransition(.numericText())
                                 .animation(reduceMotion ? nil : MLRMotion.spring, value: count)
                         }
-                        .padding(.horizontal, 12).frame(height: 36)
+                        .padding(.horizontal, 12).frame(height: 32)
+                        .contentShape(Rectangle().inset(by: -6))
                         .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.12) : Color.mlrCard)
                         .clipShape(Capsule())
                         .overlay(Capsule().strokeBorder(
@@ -426,8 +427,8 @@ struct PostCard: View {
                         .foregroundStyle(Color.mlrTextMuted)
                 }
             }
-            .padding(.horizontal, 6).frame(height: 36)
-            .contentShape(Rectangle())
+            .padding(.horizontal, 6).frame(height: 32)
+            .contentShape(Rectangle().inset(by: -6))
         }
         .buttonStyle(.pressable)
         .accessibilityLabel(commentLabel)

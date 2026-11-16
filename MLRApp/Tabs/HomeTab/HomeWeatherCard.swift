@@ -136,18 +136,18 @@ struct HomeWeatherCard: View {
             VStack(spacing: 0) {
                 Button { toggle(snap) } label: {
                     HStack(spacing: 12) {
-                        symbolView(snap, size: 26, width: 34)
+                        symbolView(snap, size: 22, width: 30)
                         Text("\(snap.temp)°")
-                            .font(.system(size: 30, weight: .semibold, design: .rounded))
+                            .font(.mlrScaled(26, weight: .semibold, design: .rounded, relativeTo: .title2))
                             .foregroundStyle(Color.mlrText)
                             .monospacedDigit()
                             .contentTransition(.numericText())
                         VStack(alignment: .leading, spacing: 1) {
                             Text("Up North")
-                                .font(.subheadline.weight(.semibold))
+                                .font(.mlrScaled(14, weight: .semibold, relativeTo: .subheadline))
                                 .foregroundStyle(Color.mlrText)
                             Text("H \(snap.hi)°  L \(snap.lo)°")
-                                .font(.footnote)
+                                .font(.mlrScaled(12, relativeTo: .footnote))
                                 .foregroundStyle(Color.mlrTextMuted)
                                 .monospacedDigit()
                                 .contentTransition(.numericText())
@@ -156,8 +156,8 @@ struct HomeWeatherCard: View {
                         if snap.fromWeatherKit { attributionLink.lineLimit(1) }
                         if !snap.forecast.isEmpty { chevron }
                     }
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 10)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 6)
                     .contentShape(Rectangle())
                 }
                 .buttonStyle(.pressable)

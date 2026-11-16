@@ -29,7 +29,7 @@ struct EventCard: View {
             MLRCard(event.isFamilyFest ? .tinted(accent) : .plain, padding: 16) {
                 VStack(alignment: .leading, spacing: 12) {
                     HStack(alignment: .top, spacing: 14) {
-                        IconTile(symbol: symbol, accent: accent, size: 52)
+                        IconTile(symbol: symbol, accent: accent, size: 44)
                         VStack(alignment: .leading, spacing: 4) {
                             Eyebrow(EventKindStyle.label(for: event.kind), color: accent)
                             Text(event.title)

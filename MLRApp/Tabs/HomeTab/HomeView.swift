@@ -55,7 +55,7 @@ struct HomeView: View {
                         // ── 2. Weather: one slim card (self-hides until a source answers).
                         HomeWeatherCard(style: .compact)
                             .padding(.horizontal, 16)
-                            .padding(.bottom, 20)
+                            .padding(.bottom, 18)
 
                         // Admin preview banner — shown when viewing Home as a future date.
                         if let pd = previewDate {
@@ -68,7 +68,7 @@ struct HomeView: View {
                         WelcomeCard()
                             .padding(.bottom, 4)
 
-                        VStack(alignment: .leading, spacing: 20) {
+                        VStack(alignment: .leading, spacing: 18) {
 
                             // Every card below gets `.scrollEntrance()` — a gentle
                             // fade/scale/rise as it crosses into view, so the whole
@@ -264,7 +264,7 @@ struct HomeView: View {
         NavigationLink(destination: dest) {
             MLRCard(.tinted(tint), padding: 14) {
                 HStack(spacing: 12) {
-                    IconTile(symbol: icon, accent: tint, size: 40)
+                    IconTile(symbol: icon, accent: tint, size: 36)
                     Text(title)
                         .font(.system(.body, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
@@ -306,12 +306,12 @@ struct HomeView: View {
 
     @ViewBuilder
     private func logoHero(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
                 .scaledToFit()
                 // The season's still scene (the splash's final frame), as on web.
                 .overlay { SeasonalLogoFX(season: .current(), progress: 1).allowsHitTesting(false) }
-                .frame(width: min(geometry.size.width * 0.4, 150))
+                .frame(width: min(geometry.size.width * 0.32, 120))
                 .background {
                     // Dark mode only: the dark-green mark nearly vanishes on the
                     // dark backdrop, so seat it on a soft light glow.
@@ -322,15 +322,15 @@ struct HomeView: View {
                             .frame(width: 200, height: 200)
                     }
                 }
-                .padding(.top, 8)
+                .padding(.top, 0)
                 .homeLogoEditPencil()
             Text(greeting)
-                .font(.system(.title, design: .serif, weight: .semibold))
+                .font(.mlrScaled(27, weight: .semibold, design: .serif, relativeTo: .title1))
                 .foregroundStyle(Color.mlrText)
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.bottom, 12)
+        .padding(.bottom, 8)
     }
 
     @ViewBuilder
