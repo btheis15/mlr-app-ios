@@ -12,6 +12,8 @@ import SwiftUI
 struct TournamentContainerView: View {
     let host: TournamentHost
     var canManage: Bool = false
+    /// Preview-as never writes (existing app rule), so previewing is read-only.
+    private var manage: Bool { canManage && !env.isPreviewing }
 
     @Environment(AppEnvironment.self) private var env
     @State private var tournament: Tournament?
@@ -22,10 +24,24 @@ struct TournamentContainerView: View {
     @State private var rearranging = false
     @State private var pickedUp: (matchId: UUID, slot: Int)?
     @State private var errorText: String?
+    // Fetch health: the empty/setup state is only legitimate after a fetch SUCCEEDED
+    // with zero rows. A failed fetch keeps whatever was last loaded.
+    @State private var fetchedOK = false
+    @State private var refreshFailed = false
+    @State private var busy = false
+    @State private var pendingSwap: PendingSwap?
+    @State private var subscribedId: UUID?
     // Celebration + bracket presentation (overhaul Phase 2).
     @State private var confettiTrigger = 0
     @State private var bracketMode: BracketMode = .diagram
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    struct PendingSwap: Identifiable {
+        let id = UUID()
+        let a: (matchId: UUID, slot: Int)
+        let b: (matchId: UUID, slot: Int)
+        let lost: Int
+    }
 
     enum BracketMode: String, CaseIterable { case diagram = "Diagram", byRound = "By round" }
 
@@ -37,7 +53,15 @@ struct TournamentContainerView: View {
                 ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
             } else if let t = tournament {
                 live(t)
-            } else if canManage {
+            } else if !fetchedOK {
+                ContentUnavailableView {
+                    Label("Couldn't load the tournament", systemImage: "wifi.exclamationmark")
+                } description: {
+                    Text("Check your connection and try again.")
+                } actions: {
+                    Button("Retry") { Task { await reload() } }.buttonStyle(.borderedProminent)
+                }
+            } else if manage {
                 ContentUnavailableView {
                     Label("No tournament yet", systemImage: "trophy")
                 } description: {
@@ -52,11 +76,11 @@ struct TournamentContainerView: View {
         .navigationTitle(tournament?.title ?? "Tournament")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
-            if let t = tournament, canManage {
+            if let t = tournament, manage {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
                         Button { showSetup = true } label: { Label(t.status == .setup ? "Set up" : "Manage", systemImage: "slider.horizontal.3") }
-                        if t.status != .setup && t.format != .round_robin {
+                        if t.status == .live && t.format != .round_robin {
                             Button { rearranging.toggle(); pickedUp = nil } label: {
                                 Label(rearranging ? "Done rearranging" : "Rearrange bracket", systemImage: "arrow.left.arrow.right")
                             }
@@ -71,10 +95,27 @@ struct TournamentContainerView: View {
             }
         }
         .sheet(item: $resultMatch) { m in
-            MatchResultSheet(tournament: tournament, match: m) { Task { await reload() } }
+            MatchResultSheet(tournament: tournament, match: m,
+                             latest: tournament?.matches.first { $0.id == m.id }) { Task { await reload() } }
         }
         .task { await reload() }
+        .onDisappear { if let id = subscribedId { env.tournamentsService.unsubscribe(tournamentId: id); subscribedId = nil } }
         .onChange(of: tournament?.format) { _, _ in tab = defaultTab }
+        .onChange(of: tournament?.status) { _, new in
+            if new != .live { rearranging = false; pickedUp = nil }
+        }
+        .confirmationDialog(
+            "Swap these players?", isPresented: Binding(get: { pendingSwap != nil }, set: { if !$0 { pendingSwap = nil } }),
+            titleVisibility: .visible, presenting: pendingSwap
+        ) { swap in
+            Button("Swap and erase \(swap.lost) result\(swap.lost == 1 ? "" : "s")", role: .destructive) {
+                run { try await env.tournamentsService.swapMatchEntrants(
+                    matchA: swap.a.matchId, slotA: swap.a.slot, matchB: swap.b.matchId, slotB: swap.b.slot, force: true) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: { swap in
+            Text("A game involved already has a result. Swapping erases that result and every game decided after it (\(swap.lost) recorded result\(swap.lost == 1 ? "" : "s") in all). A copy is saved first.")
+        }
     }
 
     // MARK: Live
@@ -83,6 +124,14 @@ struct TournamentContainerView: View {
     private func live(_ t: Tournament) -> some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
+                if refreshFailed {
+                    HStack(spacing: 8) {
+                        Image(systemName: "wifi.exclamationmark").foregroundStyle(Color.mlrTextMuted)
+                        Text("Couldn't refresh").font(.mlrScaled(12)).foregroundStyle(Color.mlrTextMuted)
+                        Spacer()
+                        Button("Retry") { Task { await reload() } }.font(.mlrScaled(12, weight: .semibold))
+                    }
+                }
                 if let champ = t.winnerEntrantId {
                     ChampionBanner(name: t.entrantName(champ))
                 }
@@ -125,7 +174,7 @@ struct TournamentContainerView: View {
         VStack(spacing: 10) {
             Text("\(t.entrants.count + t.pool.count) player\(t.entrants.count + t.pool.count == 1 ? "" : "s") ready.")
                 .font(.mlrScaled(14)).foregroundStyle(Color.mlrTextMuted)
-            if canManage {
+            if manage {
                 Button { showSetup = true } label: {
                     Label("Seed & generate the \(t.format.label.lowercased())", systemImage: "wand.and.stars")
                         .frame(maxWidth: .infinity)
@@ -176,14 +225,14 @@ struct TournamentContainerView: View {
             if useDiagram {
                 BracketDiagram(
                     tournament: t, stageFilter: stage,
-                    canManage: canManage, rearranging: rearranging, pickedUp: pickedUp,
+                    canManage: manage, rearranging: rearranging, pickedUp: pickedUp,
                     onOpen: { resultMatch = $0 }, onSlotTap: { m, s in handleSlotTap(t, m, s) })
                 .frame(height: 460)
                 .cardStyle(cornerRadius: MLRRadius.card, elevation: .low)
             } else {
                 TournamentBracketView(
                     tournament: t, stageFilter: stage,
-                    canManage: canManage, rearranging: rearranging, pickedUp: pickedUp,
+                    canManage: manage, rearranging: rearranging, pickedUp: pickedUp,
                     onOpen: { resultMatch = $0 }, onSlotTap: { m, s in handleSlotTap(t, m, s) })
             }
         }
@@ -202,7 +251,7 @@ struct TournamentContainerView: View {
             Text("Pool games").font(.mlrScaled(13, weight: .semibold)).foregroundStyle(Color.mlrTextMuted)
             matchList(t, poolGames)
         }
-        if t.poolStageComplete && !t.hasKnockoutBracket && canManage {
+        if t.poolStageComplete && !t.hasKnockoutBracket && manage {
             Button { run { try await env.tournamentsService.generateBracketFromPools(id: t.id) } } label: {
                 Label("Generate knockout bracket", systemImage: "wand.and.stars").frame(maxWidth: .infinity)
             }.buttonStyle(.borderedProminent)
@@ -216,8 +265,8 @@ struct TournamentContainerView: View {
 
     private func matchList(_ t: Tournament, _ matches: [TournamentMatch]) -> some View {
         VStack(spacing: 10) {
-            ForEach(matches.sorted { $0.round == $1.round ? $0.position < $1.position : $0.round < $1.round }) { m in
-                MatchCard(tournament: t, match: m, canManage: canManage, rearranging: rearranging,
+            ForEach(matches.sorted(by: TournamentMatch.inOrder)) { m in
+                MatchCard(tournament: t, match: m, canManage: manage, rearranging: rearranging,
                           pickedUp: pickedUp, onOpen: { resultMatch = m }, onSlotTap: { s in handleSlotTap(t, m, s) })
             }
         }
@@ -226,7 +275,7 @@ struct TournamentContainerView: View {
     // MARK: Rearrange (tap-to-swap)
 
     private func handleSlotTap(_ t: Tournament, _ match: TournamentMatch, _ slot: Int) {
-        guard rearranging, canManage else { return }
+        guard rearranging, manage else { return }
         let entrant = slot == 1 ? match.slot1EntrantId : match.slot2EntrantId
         guard let picked = pickedUp else {
             if entrant != nil { pickedUp = (match.id, slot) }   // pick up a filled slot
@@ -235,7 +284,16 @@ struct TournamentContainerView: View {
         if picked.matchId == match.id && picked.slot == slot { pickedUp = nil; return }  // tap same = cancel
         let a = picked
         pickedUp = nil
-        run { try await env.tournamentsService.swapMatchEntrants(matchA: a.matchId, slotA: a.slot, matchB: match.id, slotB: slot) }
+        guard !busy else { return }
+        // Before any game is played this is free. Once either game has a result,
+        // spell out what is lost and only then send force.
+        let other = t.matches.first { $0.id == a.matchId }
+        let destroys = t.slotChangeDestroys(match) || (other.map(t.slotChangeDestroys) ?? false)
+        if destroys {
+            pendingSwap = PendingSwap(a: a, b: (match.id, slot), lost: t.resultsLost(changing: [a.matchId, match.id]))
+        } else {
+            run { try await env.tournamentsService.swapMatchEntrants(matchA: a.matchId, slotA: a.slot, matchB: match.id, slotB: slot) }
+        }
     }
 
     // MARK: Tabs
@@ -258,17 +316,32 @@ struct TournamentContainerView: View {
     // MARK: Data
 
     private func reload() async {
-        let list = await env.tournamentsService.fetch(host: host)
-        tournament = list.first
-        if let t = tournament, !availableTabs(t).contains(tab) { tab = defaultTab }
+        do {
+            let list = try await env.tournamentsService.fetchChecked(host: host)
+            tournament = list.first
+            fetchedOK = true
+            refreshFailed = false
+            if let t = tournament, !availableTabs(t).contains(tab) { tab = defaultTab }
+            if let t = tournament, subscribedId != t.id {
+                if let old = subscribedId { env.tournamentsService.unsubscribe(tournamentId: old) }
+                subscribedId = t.id
+                env.tournamentsService.subscribe(tournamentId: t.id) { Task { await reload() } }
+            }
+        } catch {
+            // Keep the last loaded tournament on screen; never fall into the empty state.
+            refreshFailed = true
+        }
         loading = false
     }
 
     private func run(_ work: @escaping () async throws -> Void) {
+        guard !busy else { return }
+        busy = true
         errorText = nil
         Task {
-            do { try await work() } catch { errorText = "Something went wrong. Try again." }
+            do { try await work() } catch { errorText = TournamentsService.message(for: error) }
             await reload()
+            busy = false
         }
     }
 }
@@ -312,7 +385,7 @@ private struct TournamentBracketView: View {
                     .pickerStyle(.segmented)
                 }
                 VStack(spacing: 10) {
-                    ForEach(shown.filter { $0.round == activeRound }.sorted { $0.position < $1.position }) { m in
+                    ForEach(shown.filter { $0.round == activeRound }.sorted(by: TournamentMatch.inOrder)) { m in
                         MatchCard(tournament: tournament, match: m, canManage: canManage,
                                   rearranging: rearranging, pickedUp: pickedUp,
                                   onOpen: { onOpen(m) }, onSlotTap: { onSlotTap(m, $0) })

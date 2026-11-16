@@ -392,6 +392,11 @@ struct PrivateActivitySheet: View {
     @State private var showInvite = false
     @State private var showEdit = false
     @State private var confettiTrigger = 0
+    @State private var pendingDelete: DeleteInfo?
+    @State private var deleteError: String?
+
+    /// `played` is nil when we couldn't check for tournament results.
+    private struct DeleteInfo: Identifiable { let id = UUID(); let hasTournament: Bool; let played: Int? }
 
     private var me: UUID? { env.currentProfile?.id }
     private var canManage: Bool { activity?.canManage(viewerId: me, isAdmin: env.isAdmin) ?? false }
@@ -416,16 +421,18 @@ struct PrivateActivitySheet: View {
                         Menu {
                             Button { showEdit = true } label: { Label("Edit details", systemImage: "pencil") }
                             Button { showInvite = true } label: { Label("Invite people", systemImage: "person.badge.plus") }
-                            if activity.isArchived {
-                                Button { Task { await restore(activity) } } label: {
-                                    Label("Restore", systemImage: "arrow.uturn.backward")
-                                }
-                                Button(role: .destructive) { Task { await delete(activity) } } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            } else {
-                                Button(role: .destructive) { Task { await archive(activity) } } label: {
-                                    Label("Archive", systemImage: "archivebox")
+                            if !env.isPreviewing {
+                                if activity.isArchived {
+                                    Button { Task { await restore(activity) } } label: {
+                                        Label("Restore", systemImage: "arrow.uturn.backward")
+                                    }
+                                    Button(role: .destructive) { Task { await prepareDelete(activity) } } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
+                                } else {
+                                    Button(role: .destructive) { Task { await archive(activity) } } label: {
+                                        Label("Archive", systemImage: "archivebox")
+                                    }
                                 }
                             }
                         } label: { Image(systemName: "ellipsis.circle") }
@@ -437,6 +444,32 @@ struct PrivateActivitySheet: View {
                 if let activity { EditPrivateActivitySheet(activity: activity) { Task { await reload(); onChanged() } } }
             }
             .task { await reload() }
+            .confirmationDialog(
+                "Delete this activity?", isPresented: Binding(get: { pendingDelete != nil }, set: { if !$0 { pendingDelete = nil } }),
+                titleVisibility: .visible, presenting: pendingDelete
+            ) { info in
+                Button(info.played.map { $0 > 0 } ?? info.hasTournament ? "Delete activity and tournament" : "Delete activity", role: .destructive) {
+                    Task { await delete() }
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: { info in
+                Text(Self.deleteMessage(info))
+            }
+            .alert("Couldn't delete", isPresented: Binding(get: { deleteError != nil }, set: { if !$0 { deleteError = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: { Text(deleteError ?? "") }
+        }
+    }
+
+    private static func deleteMessage(_ info: DeleteInfo) -> String {
+        guard info.hasTournament else { return "This permanently removes the activity and its invitations." }
+        switch info.played {
+        case .some(let n) where n > 0:
+            return "This erases the tournament too: \(n) recorded result\(n == 1 ? "" : "s"), the bracket and the players. A copy is kept on the server, but it can't be restored from the app once the activity is gone."
+        case .some:
+            return "This removes the activity and its tournament (no results have been recorded yet)."
+        case .none:
+            return "This removes the activity and its tournament, including any recorded results. We couldn't check how many there are."
         }
     }
 
@@ -611,9 +644,28 @@ struct PrivateActivitySheet: View {
         try? await env.privateActivitiesService.setArchived(id: activityId, archived: false)
         await reload(); onChanged()
     }
-    private func delete(_ activity: PrivateActivity) async {
-        try? await env.privateActivitiesService.delete(id: activityId)
-        onChanged(); dismiss()
+    private func prepareDelete(_ activity: PrivateActivity) async {
+        guard !busy, !env.isPreviewing else { return }
+        busy = true; defer { busy = false }
+        var played: Int?
+        if activity.tournamentEnabled {
+            if let list = try? await env.tournamentsService.fetchChecked(host: .activity(id: activityId)) {
+                played = list.first?.playedCount ?? 0
+            }
+        } else {
+            played = 0
+        }
+        pendingDelete = DeleteInfo(hasTournament: activity.tournamentEnabled, played: played)
+    }
+    private func delete() async {
+        guard !busy, !env.isPreviewing else { return }
+        busy = true; defer { busy = false }
+        do {
+            try await env.privateActivitiesService.delete(id: activityId)
+            onChanged(); dismiss()
+        } catch {
+            deleteError = TournamentsService.message(for: error, fallback: "Try again.")
+        }
     }
 }
 
