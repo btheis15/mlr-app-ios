@@ -15,31 +15,24 @@ struct NotificationsView: View {
 
     // MARK: - Grouping
 
+    /// One section per calendar day, newest first ("Today", "Yesterday", then
+    /// "Monday, Nov 9"). The list is `.plain`, so section headers pin (stick).
     private var grouped: [(label: String, items: [AppNotification])] {
         let cal = Calendar.current
-        let now = Date.now
-        let startOfToday = cal.startOfDay(for: now)
-        let startOfWeek  = cal.date(byAdding: .day, value: -7, to: startOfToday)!
-
-        var today: [AppNotification]     = []
-        var thisWeek: [AppNotification]  = []
-        var earlier: [AppNotification]   = []
-
+        var order: [Date] = []
+        var map: [Date: [AppNotification]] = [:]
         for n in notifications {
-            if n.createdAt >= startOfToday {
-                today.append(n)
-            } else if n.createdAt >= startOfWeek {
-                thisWeek.append(n)
-            } else {
-                earlier.append(n)
-            }
+            let day = cal.startOfDay(for: n.createdAt)
+            if map[day] == nil { order.append(day) }
+            map[day, default: []].append(n)
         }
-
-        var groups: [(label: String, items: [AppNotification])] = []
-        if !today.isEmpty    { groups.append((label: "Today",     items: today)) }
-        if !thisWeek.isEmpty { groups.append((label: "This Week", items: thisWeek)) }
-        if !earlier.isEmpty  { groups.append((label: "Earlier",   items: earlier)) }
-        return groups
+        return order.sorted(by: >).map { day in
+            let label: String
+            if cal.isDateInToday(day) { label = "Today" }
+            else if cal.isDateInYesterday(day) { label = "Yesterday" }
+            else { label = day.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()) }
+            return (label, map[day] ?? [])
+        }
     }
 
     // MARK: - Body
@@ -75,6 +68,7 @@ struct NotificationsView: View {
     // MARK: - Feed list
 
     private var feedList: some View {
+        ScrollViewReader { proxy in
         List {
             if let error {
                 Section {
@@ -88,12 +82,25 @@ struct NotificationsView: View {
                 Section {
                     ForEach(group.items) { notif in
                         NotificationRow(notification: notif)
+                            .contentShape(Rectangle())
+                            .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: notif.isUnread)
                             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 0))
                             .listRowBackground(notif.isUnread
                                                ? Color.mlrPrimaryLight.opacity(0.35)
                                                : Color.mlrSurface)
                             .onTapGesture {
                                 Task { await handleTap(notif) }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                if notif.isUnread {
+                                    Button {
+                                        Haptics.tap()
+                                        Task { await markRead(notif) }
+                                    } label: {
+                                        Label("Mark read", systemImage: "envelope.open")
+                                    }
+                                    .tint(Color.mlrPrimary)
+                                }
                             }
                     }
                 } header: {
@@ -107,6 +114,15 @@ struct NotificationsView: View {
         .listStyle(.plain)
         .refreshable {
             await loadAndMarkSeen()
+        }
+        // Tapping the Activity tab again scrolls back to the newest row.
+        .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { note in
+            guard (note.object as? Tab) == .activity,
+                  let first = grouped.first?.items.first else { return }
+            withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) {
+                proxy.scrollTo(first.id, anchor: .top)
+            }
+        }
         }
     }
 
@@ -250,6 +266,15 @@ struct NotificationsView: View {
             await env.notificationsService.fetchUnreadCount(userId: userId)
         } catch {
             self.error = "Couldn't mark notifications as read."
+        }
+    }
+
+    @MainActor
+    private func markRead(_ notification: AppNotification) async {
+        // Own notifications only; nothing here writes as another member.
+        await env.notificationsService.markRead(notificationId: notification.id)
+        if let uid = env.currentProfile?.id {
+            await env.notificationsService.fetchUnreadCount(userId: uid)
         }
     }
 

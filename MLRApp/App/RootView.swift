@@ -21,6 +21,8 @@ struct RootView: View {
     @State private var pendingHouseHub: House?
     @State private var pendingCommitteeChat: PendingCommitteeChat?
     @State private var pendingPost: Post?
+    /// An event-chat push (`/posts?event=<id>`) → that event's room.
+    @State private var pendingEventChat: EventChatSummary?
     /// A specific comment to scroll to + flash within `pendingPost`'s thread
     /// (migration 0164) — set alongside pendingPost, read once by CommentsView.
     @State private var pendingCommentId: UUID?
@@ -122,6 +124,11 @@ struct RootView: View {
                 )
             }
         }
+        // An event-chat message push → the room, as a sheet like every other chat
+        // deep link here. Chats are admin-blind: an unknown id just stays on Feed.
+        .sheet(item: $pendingEventChat) { chat in
+            NavigationStack { EventChatView(chat: chat) }
+        }
         // Tapping a post notification (new post, comment, reply, @mention, tag,
         // reaction) opens that one post's thread — the same sheet the comment
         // button on a PostCard opens, which leads with a recap of the post itself.
@@ -210,6 +217,12 @@ struct RootView: View {
     private func handleNotificationTap(_ info: [AnyHashable: Any]?) {
         guard let info else { return }
         PendingNotificationTap.shared.clear()
+        // Event chats have no NotificationDeepLink case; route them first.
+        if let eventId = NotificationDeepLink.eventChatId(userInfo: info) {
+            selectedTab = .feed
+            resolveEventChat(eventId.uuidString)
+            return
+        }
         switch NotificationDeepLink(userInfo: info) {
         case .post(let id, let commentId):
             selectedTab = .feed
@@ -265,6 +278,18 @@ struct RootView: View {
         Task { @MainActor in
             pendingCommentId = commentId
             pendingPost = await env.postsService.fetchPost(id: id)
+        }
+    }
+
+    /// Find the member's event chat by id (loading the list if it isn't there
+    /// yet, e.g. a cold launch) and open it. Not in the list → stay on Feed.
+    private func resolveEventChat(_ eventId: String) {
+        Task { @MainActor in
+            func find() -> EventChatSummary? {
+                env.eventChatService.chats.first { $0.eventId.caseInsensitiveCompare(eventId) == .orderedSame }
+            }
+            if find() == nil { await env.eventChatService.loadChats() }
+            pendingEventChat = find()
         }
     }
 
@@ -409,6 +434,11 @@ enum Tab: String, CaseIterable {
     case home, feed, fest, activity, profile
 }
 
+extension Notification.Name {
+    /// Posted (object: the `Tab`) when the already-selected tab is tapped again.
+    static let tabReselected = Notification.Name("tabReselected")
+}
+
 // MARK: - Pending sheets (notification taps / Siri / Shortcuts opens)
 
 struct PendingCommitteeChat: Identifiable {
@@ -463,8 +493,22 @@ struct MainTabView: View {
         }.withRenderingMode(.alwaysOriginal)
     }()
 
+    /// Selection binding that also notices a tap on the already-selected tab, so
+    /// lists can scroll back to top (`.tabReselected`).
+    private var tabSelection: Binding<Tab> {
+        Binding(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == selectedTab {
+                    NotificationCenter.default.post(name: .tabReselected, object: newValue)
+                }
+                selectedTab = newValue
+            }
+        )
+    }
+
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
             HomeView()
                 .tabItem { Label("Home", systemImage: "house.fill") }
                 .tag(Tab.home)
@@ -498,6 +542,7 @@ struct MainTabView: View {
                 .tag(Tab.profile)
         }
         .tint(Color.mlrPrimary)
+        .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: unreadCount)
         // A light selection tick on every tab switch — the kind of small,
         // native-feeling touch that makes the bar feel considered rather than
         // stock. Skipped on the very first appearance (no real "switch" yet).

@@ -28,6 +28,7 @@ enum NotifAction: String {
     case rsvpMaybe   = "RSVP_MAYBE"
     case onMyWay     = "ON_MY_WAY"
     case reply       = "REPLY"
+    case markRead    = "MARK_READ"
     case birthdayText = "BIRTHDAY_TEXT"
     case birthdayGift = "BIRTHDAY_GIFT"
     case workDone     = "WORK_DONE"
@@ -57,9 +58,11 @@ extension UNUserNotificationCenter {
             identifier: NotifAction.reply.rawValue,
             title: "Reply", options: [],
             textInputButtonTitle: "Send", textInputPlaceholder: "Message")
+        let markRead = UNNotificationAction(identifier: NotifAction.markRead.rawValue,
+                                            title: "Mark as read", options: [])
         let chatMention = UNNotificationCategory(
             identifier: NotifCategory.chatMention.rawValue,
-            actions: [reply], intentIdentifiers: [], options: [])
+            actions: [reply, markRead], intentIdentifiers: [], options: [])
 
         let wishes = UNNotificationAction(identifier: NotifAction.birthdayText.rawValue,
                                           title: "🎂 Send wishes", options: [.foreground])
@@ -116,12 +119,31 @@ enum NotificationActionHandler {
         case .reply:
             // The typed text arrives as UNTextInputNotificationResponse.userText,
             // captured by the delegate and placed in userInfo["reply_text"].
-            if let text = userInfo["reply_text"] as? String,
-               let committeeId = userInfo["committee_id"] as? String,
-               let uuid = UUID(uuidString: committeeId), !text.isEmpty,
-               let authorId = supabase.auth.currentUser?.id {
-                try? await AppEnvironment.activeCommitteeService?.sendMessage(
-                    committeeId: uuid, text: text, authorId: authorId)
+            let text = ((userInfo["reply_text"] as? String) ?? "")
+                .trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !text.isEmpty, let authorId = supabase.auth.currentUser?.id,
+                  let room = await ChatRoomTarget.resolve(userInfo: userInfo) else { return }
+            switch room {
+            case .committee(let id, let area):
+                _ = try? await AppEnvironment.activeCommitteeService?.sendMessage(
+                    committeeId: id, area: area, text: text, authorId: authorId)
+            case .house(let id):
+                _ = try? await AppEnvironment.activeHousesService?.sendMessage(
+                    houseId: id, text: text, authorId: authorId)
+            case .event(let id):
+                try? await AppEnvironment.activeEventChatService?.send(
+                    eventId: id, text: text, replyToId: nil, mentionedIds: [],
+                    attachments: [], me: nil, mediaService: MediaService())
+            }
+        case .markRead:
+            guard let room = await ChatRoomTarget.resolve(userInfo: userInfo) else { return }
+            switch room {
+            case .committee(let id, let area):
+                await AppEnvironment.activeCommitteeService?.markAreaRead(committeeId: id, area: area)
+            case .house(let id):
+                await AppEnvironment.activeHousesService?.markRead(houseId: id)
+            case .event(let id):
+                await AppEnvironment.activeEventChatService?.markRead(eventId: id)
             }
         case .workDone:
             // "Yes, it's done" → check the linked Work Checklist task off.
@@ -154,6 +176,51 @@ enum NotificationActionHandler {
                 "target_id": (userInfo["request_id"] as? String) ?? "",
                 "committee_id": (userInfo["committee_id"] as? String) ?? ""
             ])
+        }
+    }
+}
+
+/// The chat room a chat push belongs to, resolved from the payload the sender
+/// already ships (target_type/target_id/url). A committee/house message resolves
+/// its room from the message row (the web url's `&area=` is unescaped free text).
+enum ChatRoomTarget {
+    case committee(UUID, area: String?)
+    case house(UUID)
+    case event(String)
+
+    static func resolve(userInfo: [AnyHashable: Any]) async -> ChatRoomTarget? {
+        if let eventId = NotificationDeepLink.eventChatId(userInfo: userInfo) {
+            return .event(eventId.uuidString.lowercased())
+        }
+        let messageId = userInfo["target_id"] as? String
+        switch userInfo["target_type"] as? String {
+        case "committee_message":
+            struct Row: Decodable {
+                let committeeId: UUID
+                let area: String?
+                enum CodingKeys: String, CodingKey { case committeeId = "committee_id"; case area }
+            }
+            guard let messageId,
+                  let row: Row = try? await supabase.from("committee_messages")
+                    .select("committee_id, area").eq("id", value: messageId)
+                    .single().execute().value else { return nil }
+            return .committee(row.committeeId, area: row.area)
+        case "house_message":
+            struct Row: Decodable {
+                let houseId: UUID
+                enum CodingKeys: String, CodingKey { case houseId = "house_id" }
+            }
+            guard let messageId,
+                  let row: Row = try? await supabase.from("house_messages")
+                    .select("house_id").eq("id", value: messageId)
+                    .single().execute().value else { return nil }
+            return .house(row.houseId)
+        default:
+            // Older shape: the sender forwarded committee_id directly.
+            if let cid = (userInfo["committee_id"] as? String).flatMap({ UUID(uuidString: $0) }) {
+                return .committee(cid, area: nil)
+            }
+            return nil
         }
     }
 }
