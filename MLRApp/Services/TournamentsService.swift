@@ -249,6 +249,20 @@ final class TournamentsService {
         try await supabase.rpc("update_tournament", params: params).execute()
     }
 
+    /// Target score / win-by through the same update_tournament RPC (nulls leave a
+    /// field unchanged server-side, so this can set but not clear).
+    func setScoring(id: UUID, targetScore: Int?, winBy: Int?) async throws {
+        let params: [String: AnyJSON] = [
+            "p_tournament":   .string(id.uuidString),
+            "p_title":        .null,
+            "p_bye_strategy": .null,
+            "p_allow_ties":   .null,
+            "p_target_score": targetScore.map { AnyJSON.double(Double($0)) } ?? .null,
+            "p_win_by":       winBy.map { AnyJSON.double(Double($0)) } ?? .null,
+        ]
+        try await supabase.rpc("update_tournament", params: params).execute()
+    }
+
     // MARK: Live bracket rearrange (tap-to-swap)
 
     func setMatchEntrant(matchId: UUID, slot: Int, entrantId: UUID?, force: Bool = false) async throws {

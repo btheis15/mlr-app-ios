@@ -28,11 +28,17 @@ struct TournamentSetupSheet: View {
     @State private var newFormat: TournamentFormat = .single_elim
     @State private var newEntrantType: EntrantType = .individual
     @State private var newTeamSize = 2
+    @State private var newTarget = 0        // 0 = no target score
+    @State private var newWinBy = 1
+    @State private var preset: GamePreset?
     // Manage-mode fields.
     @State private var poolCount = 2
     @State private var advance = 1
     @State private var byeStrategy: ByeStrategy = .byes
     @State private var addName = ""
+    @State private var targetEdit = 0
+    @State private var winByEdit = 1
+    @State private var confirmStart = false
     // Danger area (0224): saved copies + confirmations.
     @State private var snapshots: [TournamentSnapshot]?     // nil = feature not available
     @State private var confirmReset = false
@@ -62,6 +68,16 @@ struct TournamentSetupSheet: View {
         .task { await loadSnapshots() }
         // Someone else started or changed the tournament while this sheet is open.
         .onChange(of: tournament?.status) { _, _ in Task { await refresh() } }
+        .confirmationDialog(
+            "Start the tournament?", isPresented: $confirmStart, titleVisibility: .visible
+        ) {
+            if let t = current {
+                Button("Start tournament") { Task { await doGenerate(t) } }
+            }
+            Button("Not yet", role: .cancel) {}
+        } message: {
+            Text("The bracket locks once it starts: the seeding and players can't be changed without erasing results. You can still start over from this screen, and a copy is saved first.")
+        }
         .confirmationDialog(
             resetTitle, isPresented: $confirmReset, titleVisibility: .visible
         ) {
@@ -94,12 +110,25 @@ struct TournamentSetupSheet: View {
 
     private var create: some View {
         Form {
+            Section("Game") {
+                GamePresetRow(selection: $preset) { p in applyPreset(p) }
+            }
             Section("Name") { TextField("e.g. Cornhole tournament", text: $newTitle) }
+            Section {
+                Stepper(newTarget == 0 ? "Play to: no target" : "Play to: \(newTarget)", value: $newTarget, in: 0...100)
+                if newTarget > 0 {
+                    Stepper("Win by: \(newWinBy)", value: $newWinBy, in: 1...5)
+                }
+            } header: {
+                Text("Scoring")
+            } footer: {
+                Text("Starting points you can change. They drive the quick scores when you enter a result.")
+            }
             Section("Format") {
                 FormatCards(selection: $newFormat)
                 Text(formatBlurb(newFormat)).font(.mlrScaled(12)).foregroundStyle(.secondary)
             }
-            Section("Who competes") {
+            Section {
                 Picker("Entrants", selection: $newEntrantType) {
                     Text("Individuals").tag(EntrantType.individual)
                     Text("Teams").tag(EntrantType.team)
@@ -107,6 +136,10 @@ struct TournamentSetupSheet: View {
                 if newEntrantType == .team {
                     Stepper("People per team: \(newTeamSize)", value: $newTeamSize, in: 2...6)
                 }
+            } header: {
+                Text("Who competes")
+            } footer: {
+                Text("Players come from this activity's guest list. Next you can add anyone by hand, shuffle or drag the seeds, and preview the bracket.")
             }
             if let errorText { Section { Text(errorText).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) } }
             Section {
@@ -132,9 +165,12 @@ struct TournamentSetupSheet: View {
 
             if t.status == .setup {
                 Section {
-                    Button(generateLabel(t)) { Task { await doGenerate(t) } }
-                        .disabled(busy || readyCount(t) < 2)
-                        .frame(maxWidth: .infinity).fontWeight(.semibold)
+                    Button { confirmStart = true } label: {
+                        Text(generateLabel(t)).font(.mlrScaled(17, weight: .bold)).frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .disabled(busy || readyCount(t) < 2)
+                } footer: {
+                    Text("The bracket locks once the tournament starts.")
                 }
             }
 
@@ -192,6 +228,13 @@ struct TournamentSetupSheet: View {
             Button { run { _ = try await env.tournamentsService.importEntrants(host: host, tournamentId: t.id) } } label: {
                 Label(isActivityHost ? "Re-sync players from activity" : "Pull in everyone who signed up", systemImage: "arrow.down.circle")
             }.disabled(busy)
+            if order.count >= 2 {
+                Button {
+                    Haptics.select()
+                    withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) { order.shuffle() }
+                } label: { Label("Shuffle seeds", systemImage: "shuffle") }
+                    .disabled(busy)
+            }
             if t.entrantType == .team {
                 Button { run { _ = try await env.tournamentsService.generateTeams(id: t.id) } } label: {
                     Label("Auto-make teams", systemImage: "die.face.5")
@@ -221,7 +264,7 @@ struct TournamentSetupSheet: View {
             } header: {
                 Text("Seed order — top seeds first")
             } footer: {
-                Text("Tap Edit, then drag to set the seeding (byes go to the top). Swipe to remove.")
+                Text("Shuffle for a random draw, or tap Edit and drag players into the order you want (byes go to the top seeds). Swipe to remove. Seeding is only possible before the tournament starts.")
             }
         }
 
@@ -255,18 +298,26 @@ struct TournamentSetupSheet: View {
                     Text("Byes").tag(ByeStrategy.byes)
                     Text("Play-in").tag(ByeStrategy.play_in)
                 }.pickerStyle(.segmented)
-                Text(BracketMath.bracketSummary(order.count, byeStrategy)).font(.mlrScaled(12)).foregroundStyle(.secondary)
-                let preview = BracketMath.firstRoundPreview(order.compactMap { id in t.entrants.first { $0.id == id }?.displayName }, byeStrategy)
-                ForEach(Array(preview.enumerated()), id: \.offset) { _, m in
-                    HStack {
-                        Text(m.a ?? "Bye").foregroundStyle(m.a == nil ? Color.mlrTextSubtle : Color.mlrText)
-                        Spacer()
-                        Text(m.isBye ? "→" : "vs").foregroundStyle(Color.mlrTextSubtle)
-                        Spacer()
-                        Text(m.b ?? "Bye").foregroundStyle(m.b == nil ? Color.mlrTextSubtle : Color.mlrText)
-                    }.font(.mlrScaled(12))
-                }
             }
+        }
+
+        if order.count >= 2 {
+            Section {
+                TournamentSetupPreview(
+                    names: order.compactMap { id in t.entrants.first { $0.id == id }?.displayName },
+                    format: t.format, strategy: byeStrategy, poolCount: poolCount, advance: advance)
+            } header: {
+                Text("Preview: how it will play")
+            }
+        }
+
+        Section {
+            Stepper(targetEdit == 0 ? "Play to: no target" : "Play to: \(targetEdit)", value: $targetEdit, in: 0...100)
+            if targetEdit > 0 { Stepper("Win by: \(winByEdit)", value: $winByEdit, in: 1...5) }
+        } header: {
+            Text("Scoring")
+        } footer: {
+            Text("Drives the quick scores when entering results.")
         }
     }
 
@@ -335,6 +386,9 @@ struct TournamentSetupSheet: View {
                 host, title: newTitle.trimmingCharacters(in: .whitespaces), format: newFormat,
                 entrantType: newEntrantType, teamSize: newEntrantType == .team ? newTeamSize : nil)
             _ = try? await env.tournamentsService.importEntrants(host: host, tournamentId: id)
+            if newTarget > 0 {
+                try? await env.tournamentsService.setScoring(id: id, targetScore: newTarget, winBy: newWinBy)
+            }
             onChanged()
             await refresh()   // flip into manage mode on the fresh tournament
         } catch {
@@ -347,6 +401,10 @@ struct TournamentSetupSheet: View {
         busy = true; errorText = nil; defer { busy = false }
         let seed = order.count >= 2 ? order : nil
         do {
+            // Scoring rules ride along (set-only: the server keeps the old value for nulls).
+            if targetEdit > 0, targetEdit != (t.targetScore ?? 0) || winByEdit != (t.winBy ?? 1) {
+                try await env.tournamentsService.setScoring(id: t.id, targetScore: targetEdit, winBy: winByEdit)
+            }
             switch t.format {
             case .single_elim:   try await env.tournamentsService.generateBracket(id: t.id, seedOrder: seed)
             case .round_robin:   try await env.tournamentsService.generateRoundRobin(id: t.id, seedOrder: seed)
@@ -391,6 +449,17 @@ struct TournamentSetupSheet: View {
         byeStrategy = t.byeStrategy
         poolCount = t.poolCount ?? 2
         advance = t.advancePerPool ?? 1
+        // Keep a value the user is mid-way through editing; adopt the server's otherwise.
+        if t.targetScore != nil || targetEdit == 0 { targetEdit = t.targetScore ?? targetEdit }
+        winByEdit = t.winBy ?? winByEdit
+    }
+
+    private func applyPreset(_ p: GamePreset) {
+        let old = preset?.title
+        // Only retitle when the name is still a default, never over something typed.
+        if newTitle == "Tournament" || newTitle == old || newTitle.isEmpty { newTitle = p.title }
+        newTarget = p.target ?? 0
+        newWinBy = p.winBy ?? 1
     }
 
     // MARK: Helpers
@@ -405,9 +474,7 @@ struct TournamentSetupSheet: View {
     private func generateLabel(_ t: Tournament) -> String {
         if readyCount(t) < 2 { return "Add at least 2 players" }
         switch t.format {
-        case .single_elim:   return "Generate bracket"
-        case .round_robin:   return "Generate schedule"
-        case .pools_bracket: return "Generate pools"
+        case .single_elim, .round_robin, .pools_bracket: return "Start tournament"
         }
     }
     private func formatBlurb(_ f: TournamentFormat) -> String {
@@ -419,31 +486,87 @@ struct TournamentSetupSheet: View {
     }
 }
 
+// MARK: - Game presets (editable starting points only)
+
+struct GamePreset: Identifiable, Equatable {
+    let id: String
+    let emoji: String
+    let name: String
+    let target: Int?
+    let winBy: Int?
+    var title: String { name == "Other" ? "Tournament" : "\(name) tournament" }
+
+    static let all: [GamePreset] = [
+        GamePreset(id: "bags", emoji: "🎯", name: "Bags", target: 21, winBy: nil),
+        GamePreset(id: "pingpong", emoji: "🏓", name: "Ping-pong", target: 11, winBy: 2),
+        GamePreset(id: "other", emoji: "🎲", name: "Other", target: nil, winBy: nil),
+    ]
+}
+
+private struct GamePresetRow: View {
+    @Binding var selection: GamePreset?
+    let onPick: (GamePreset) -> Void
+
+    var body: some View {
+        HStack(spacing: 8) {
+            ForEach(GamePreset.all) { p in
+                let picked = selection == p
+                Button {
+                    onPick(p)
+                    selection = p
+                } label: {
+                    VStack(spacing: 4) {
+                        Text(p.emoji).font(.mlrScaled(26))
+                        Text(p.name).font(.mlrScaled(12, weight: .semibold)).lineLimit(1).minimumScaleFactor(0.8)
+                        if let t = p.target {
+                            Text("to \(t)\(p.winBy.map { ", by \($0)" } ?? "")")
+                                .font(.mlrScaled(10)).opacity(0.85)
+                        }
+                    }
+                    .foregroundStyle(picked ? .white : Color.mlrPrimary)
+                    .frame(maxWidth: .infinity, minHeight: 72)
+                    .background(picked ? Color.mlrPrimary : Color.mlrPrimaryLight)
+                    .clipShape(RoundedRectangle(cornerRadius: MLRRadius.button))
+                }
+                .buttonStyle(.pressable)
+                .accessibilityAddTraits(picked ? .isSelected : [])
+            }
+        }
+        .mlrFeedback(.selection, trigger: selection)
+    }
+}
+
 // MARK: - MatchResultSheet
 //
-// Record (or change) a result: the primary action is one tap on the winner —
-// scores are optional (an expander reveals +/- steppers). Reopening a decided
-// match warns if downstream matches will be reset. Also schedules the match +
-// pushes the two players. Mirrors MatchResultSheet.tsx.
+// Record (or change) a result in two taps: pick the winner (two big side-by-side
+// buttons, nothing pre-selected), then Save & advance. Scores are optional, with big
+// steppers, a number pad and quick presets from the tournament's target score.
+// Reopening a decided match warns if downstream matches will be reset. Also
+// schedules the match + pushes the two players. Mirrors MatchResultSheet.tsx.
 
 struct MatchResultSheet: View {
     let tournament: Tournament?
     let onChanged: () -> Void
+    /// Called once a result was actually saved (not for clears or reloads).
+    var onSaved: (() -> Void)? = nil
     /// The match as the container last fetched it (changes when realtime or a
     /// refetch brings in someone else's edit while this sheet is open).
     var latest: TournamentMatch?
     /// The match this sheet is currently editing; replaced when it changes underneath us.
     @State private var match: TournamentMatch
 
-    init(tournament: Tournament?, match: TournamentMatch, latest: TournamentMatch? = nil, onChanged: @escaping () -> Void) {
+    init(tournament: Tournament?, match: TournamentMatch, latest: TournamentMatch? = nil,
+         onSaved: (() -> Void)? = nil, onChanged: @escaping () -> Void) {
         self.tournament = tournament
         self.latest = latest
+        self.onSaved = onSaved
         self.onChanged = onChanged
         _match = State(initialValue: match)
     }
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var pickedWinner: UUID?
     @State private var showScores = false
@@ -456,12 +579,14 @@ struct MatchResultSheet: View {
     @State private var notice: String?
     @State private var errorText: String?
     @State private var confettiTrigger = 0
+    @FocusState private var scoreFocus: Int?
 
     private var e1: UUID? { match.slot1EntrantId }
     private var e2: UUID? { match.slot2EntrantId }
     private var decided: Bool { match.winnerEntrantId != nil }
     private var bothSet: Bool { e1 != nil && e2 != nil }
     private func name(_ id: UUID?) -> String { tournament?.entrantName(id) ?? "—" }
+    private var rules: ScoreRules { tournament?.scoreRules ?? ScoreRules(target: nil, winBy: nil) }
 
     /// Downstream matches (via next_match chain) that already hold a result and
     /// would be reset if the winner changes.
@@ -486,65 +611,79 @@ struct MatchResultSheet: View {
     }
     private var willReset: Bool { decided && winner != match.winnerEntrantId && !downstreamToReset.isEmpty }
 
+    /// Soft note when the entered scores don't fit the target / win-by rules.
+    private var rulesNote: String? {
+        guard showScores, bothSet, let w = winner, !scoresContradictPick else { return nil }
+        return rules.note(winnerScore: w == e1 ? s1 : s2, loserScore: w == e1 ? s2 : s1)
+    }
+
+    private var saveTitle: String { willReset ? "Change & reset" : (decided ? "Save" : "Save & advance") }
+
     var body: some View {
         NavigationStack {
-            Form {
-                Section("Tap the winner") {
-                    winnerButton(e1, score: $s1)
-                    Text("VS")
-                        .font(.mlrScaled(13, weight: .black, design: .rounded))
-                        .foregroundStyle(Color.mlrTextSubtle)
-                        .frame(maxWidth: .infinity)
-                        .listRowSeparator(.hidden)
-                    winnerButton(e2, score: $s2)
-                    Button(showScores ? "Hide scores" : "Add scores (optional)") { showScores.toggle() }
-                        .font(.mlrScaled(14, weight: .medium)).foregroundStyle(Color.mlrPrimary)
-                }
-
-                if bothSet && match.status != .complete {
-                    Section("Notify players") {
-                        Button("📣 Up next") { Task { await notify("is up next!") } }.disabled(busy)
-                        Button("📣 In ~15 minutes") { Task { await notify("is in about 15 minutes") } }.disabled(busy)
+            ScrollView {
+                VStack(spacing: 16) {
+                    if let t = tournament {
+                        Text(t.gameLabel(match))
+                            .font(.mlrScaled(13, weight: .bold)).foregroundStyle(Color.mlrTextMuted)
+                            .textCase(.uppercase).tracking(0.6)
                     }
-                    Section("Schedule (optional)") {
-                        Toggle("Set a time", isOn: $hasTime)
-                        if hasTime {
-                            DatePicker("When", selection: $matchTime)
-                            Toggle("Auto-remind 15 min before", isOn: $remind)
+
+                    HStack(alignment: .top, spacing: 12) {
+                        winnerButton(e1, score: $s1, tag: 1)
+                        winnerButton(e2, score: $s2, tag: 2)
+                    }
+
+                    quickScores
+
+                    Button { withAnimation(reduceMotion ? nil : MLRMotion.spring) { showScores.toggle() } } label: {
+                        Text(showScores ? "Hide scores" : "Add scores (optional)")
+                            .font(.mlrScaled(15, weight: .semibold)).foregroundStyle(Color.mlrPrimary)
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+
+                    if scoresContradictPick {
+                        warning("The scores favour \(name(s1 > s2 ? e1 : e2)), but you picked \(name(pickedWinner)).")
+                    }
+                    if let rulesNote { warning(rulesNote) }
+                    if willReset {
+                        VStack(alignment: .leading, spacing: 4) {
+                            Text("This changes a result that later games were built on.").font(.mlrScaled(13, weight: .bold))
+                            Text("Changing this resets \(downstreamToReset.count) later match\(downstreamToReset.count == 1 ? "" : "es") so they can be replayed.")
+                                .font(.mlrScaled(12))
                         }
-                        Button(hasTime ? "Save time" : "Clear time") { Task { await saveSchedule() } }.disabled(busy)
+                        .foregroundStyle(Color.mlrWarning)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(12)
+                        .background(Color.mlrWarning.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                        .accessibilityElement(children: .combine)
                     }
-                    if let notice { Section { Text(notice).foregroundStyle(Color.mlrPrimary).font(.mlrScaled(13)) } }
-                }
+                    if let errorText {
+                        Text(errorText).font(.mlrScaled(13)).foregroundStyle(Color.mlrDanger)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
 
-                if scoresContradictPick {
-                    Section {
-                        Label("The scores favour \(name(s1 > s2 ? e1 : e2)), but you picked \(name(pickedWinner)).", systemImage: "exclamationmark.triangle.fill")
-                            .font(.mlrScaled(12)).foregroundStyle(Color.mlrWarning)
-                    }
-                }
-                if willReset {
-                    Section {
-                        Label("Changing this resets \(downstreamToReset.count) later match\(downstreamToReset.count == 1 ? "" : "es") so they can be replayed.", systemImage: "exclamationmark.triangle.fill")
-                            .font(.mlrScaled(12)).foregroundStyle(Color.mlrWarning)
-                    }
-                }
-                if let errorText { Section { Text(errorText).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) } }
+                    if bothSet && match.status != .complete { notifyAndSchedule }
 
-                if decided {
-                    Section {
-                        Button("Clear this result", role: .destructive) { Task { await clear() } }.disabled(busy)
+                    if decided {
+                        Button("Clear this result", role: .destructive) { Task { await clear() } }
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                            .disabled(busy)
                     }
                 }
+                .padding(16)
             }
+            .scrollDismissesKeyboard(.interactively)
+            .background(Color.mlrSurface)
+            .safeAreaInset(edge: .bottom) { saveBar }
             .overlay(ConfettiView(trigger: confettiTrigger).allowsHitTesting(false))
             .navigationTitle(decided ? "Change the result" : "Who won?")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(willReset ? "Change & reset" : (decided ? "Save" : "Save & advance")) { Task { await save() } }
-                        .disabled(winner == nil || busy).fontWeight(.semibold)
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("Done") { scoreFocus = nil }
                 }
             }
             .onAppear {
@@ -558,38 +697,134 @@ struct MatchResultSheet: View {
         }
     }
 
+    // MARK: Pieces
+
+    private var saveBar: some View {
+        Button { Task { await save() } } label: {
+            HStack(spacing: 8) {
+                if busy { ProgressView().tint(.white) }
+                Text(saveTitle).font(.mlrScaled(18, weight: .bold))
+            }
+            .foregroundStyle(.white)
+            .frame(maxWidth: .infinity, minHeight: 58)
+            .background(winner == nil || busy ? Color.mlrTextSubtle : (willReset ? Color.mlrWarning : Color.mlrPrimary),
+                        in: RoundedRectangle(cornerRadius: MLRRadius.button))
+        }
+        .buttonStyle(.pressable)
+        .disabled(winner == nil || busy)
+        .padding(.horizontal, 16).padding(.top, 8).padding(.bottom, 8)
+        .background(.bar)
+        .accessibilityHint(winner == nil ? "Pick the winner first" : "")
+    }
+
+    private func warning(_ text: String) -> some View {
+        Label(text, systemImage: "exclamationmark.triangle.fill")
+            .font(.mlrScaled(13)).foregroundStyle(Color.mlrWarning)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(12)
+            .background(Color.mlrWarning.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+    }
+
+    /// Presets drawn from the target score (e.g. 21): tap "21 to 15" after picking a winner.
     @ViewBuilder
-    private func winnerButton(_ id: UUID?, score: Binding<Int>) -> some View {
-        let picked = winner != nil && winner == id
-        return VStack(spacing: 8) {
-            Button {
-                if let id { pickedWinner = id; Haptics.select() }
-            } label: {
-                HStack(spacing: 12) {
-                    // Entrant medallion (initial — entrants carry no avatar URLs).
-                    Text(String(name(id).prefix(1)).uppercased())
-                        .font(.mlrScaled(17, weight: .bold))
-                        .foregroundStyle(picked ? .white : Color.mlrPrimary)
-                        .frame(width: 40, height: 40)
-                        .background(picked ? Color.mlrPrimary : Color.mlrPrimaryLight)
-                        .clipShape(Circle())
-                    Text(name(id)).font(.mlrScaled(17, weight: .semibold)).foregroundStyle(Color.mlrText)
-                    Spacer()
-                    Image(systemName: picked ? "checkmark.circle.fill" : "circle")
-                        .font(.mlrScaled(22))
-                        .foregroundStyle(picked ? Color.mlrPrimary : Color.mlrTextSubtle)
-                        .symbolEffect(.bounce, value: picked)
+    private var quickScores: some View {
+        if let target = rules.target, bothSet, !rules.loserPresets.isEmpty {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(winner == nil ? "Pick the winner, then tap a quick score" : "Quick score")
+                    .font(.mlrScaled(12, weight: .semibold)).foregroundStyle(Color.mlrTextMuted)
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        ForEach(rules.loserPresets, id: \.self) { p in
+                            Button {
+                                guard let w = winner else { return }
+                                Haptics.select()
+                                withAnimation(reduceMotion ? nil : MLRMotion.spring) {
+                                    showScores = true
+                                    if w == e1 { s1 = target; s2 = p } else { s2 = target; s1 = p }
+                                }
+                            } label: {
+                                Text("\(target) to \(p)")
+                                    .font(.mlrScaled(16, weight: .bold)).monospacedDigit()
+                                    .foregroundStyle(winner == nil ? Color.mlrTextSubtle : Color.mlrPrimary)
+                                    .padding(.horizontal, 16).frame(minHeight: 44)
+                                    .background(Color.mlrPrimaryLight, in: Capsule())
+                            }
+                            .buttonStyle(.pressable)
+                            .disabled(winner == nil)
+                        }
+                    }
                 }
-                .padding(.vertical, 6)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+    }
+
+    private var notifyAndSchedule: some View {
+        DisclosureGroup {
+            VStack(alignment: .leading, spacing: 12) {
+                Button("📣 Up next") { Task { await notify("is up next!") } }.disabled(busy)
+                Button("📣 In ~15 minutes") { Task { await notify("is in about 15 minutes") } }.disabled(busy)
+                Divider()
+                Toggle("Set a time", isOn: $hasTime)
+                if hasTime {
+                    DatePicker("When", selection: $matchTime)
+                    Toggle("Auto-remind 15 min before", isOn: $remind)
+                }
+                Button(hasTime ? "Save time" : "Clear time") { Task { await saveSchedule() } }.disabled(busy)
+                if let notice { Text(notice).foregroundStyle(Color.mlrPrimary).font(.mlrScaled(13)) }
+            }
+            .padding(.top, 8)
+        } label: {
+            Text("Notify players & schedule").font(.mlrScaled(15, weight: .semibold)).foregroundStyle(Color.mlrText)
+                .frame(minHeight: 44, alignment: .leading)
+        }
+        .padding(.horizontal, 14).padding(.vertical, 4)
+        .cardStyle(cornerRadius: MLRRadius.button, elevation: .none)
+    }
+
+    @ViewBuilder
+    private func winnerButton(_ id: UUID?, score: Binding<Int>, tag: Int) -> some View {
+        let picked = winner != nil && winner == id
+        let other = winner != nil && !picked
+        VStack(spacing: 10) {
+            Button {
+                if let id { pickedWinner = id; scoreFocus = nil; Haptics.select() }
+            } label: {
+                VStack(spacing: 10) {
+                    Image(systemName: picked ? "checkmark.circle.fill" : "circle")
+                        .font(.mlrScaled(30))
+                        .symbolEffect(.bounce, value: picked)
+                    Text(name(id))
+                        .font(.mlrScaled(21, weight: .bold, design: .rounded))
+                        .multilineTextAlignment(.center)
+                        .lineLimit(3)
+                        .minimumScaleFactor(0.7)
+                        .truncationMode(.middle)
+                    Text(picked ? "Winner" : "Tap if they won")
+                        .font(.mlrScaled(12, weight: .semibold))
+                        .opacity(0.85)
+                }
+                .foregroundStyle(picked ? Color.white : Color.mlrText)
+                .padding(.horizontal, 10).padding(.vertical, 16)
+                .frame(maxWidth: .infinity, minHeight: 160)
+                .background(picked ? Color.mlrPrimary : Color.mlrCard)
+                .clipShape(RoundedRectangle(cornerRadius: MLRRadius.card))
+                .overlay(RoundedRectangle(cornerRadius: MLRRadius.card)
+                    .strokeBorder(picked ? Color.mlrPrimaryDark : Color.mlrText.opacity(0.3), lineWidth: picked ? 3 : 1.5))
+                .opacity(other ? 0.8 : 1)
                 .contentShape(Rectangle())
             }
             .buttonStyle(.pressable)
             .disabled(id == nil)
+            .accessibilityLabel("\(name(id)) won")
+            .accessibilityAddTraits(picked ? .isSelected : [])
+
             if showScores {
-                Stepper("Score: \(score.wrappedValue)", value: score, in: 0...199)
-                    .font(.mlrScaled(13))
+                ScoreStepper(value: score, name: name(id), focus: $scoreFocus, tag: tag)
+                    .transition(reduceMotion ? .opacity : .move(edge: .top).combined(with: .opacity))
             }
         }
+        .frame(maxWidth: .infinity)
     }
 
     // MARK: Actions
@@ -626,8 +861,9 @@ struct MatchResultSheet: View {
             try await env.tournamentsService.recordResult(matchId: match.id, winnerId: w, score1: showScores ? s1 : nil, score2: showScores ? s2 : nil)
             confettiTrigger += 1
             Haptics.success()
+            onSaved?()
             onChanged()
-            try? await Task.sleep(nanoseconds: 600_000_000)   // let the burst read
+            try? await Task.sleep(nanoseconds: 450_000_000)   // let the burst read
             dismiss()
         } catch { errorText = TournamentsService.message(for: error, fallback: "Couldn't save — try again.") }
     }
@@ -648,6 +884,47 @@ struct MatchResultSheet: View {
             try await env.tournamentsService.scheduleMatch(matchId: match.id, at: hasTime ? matchTime : nil, reminderMinutes: (hasTime && remind) ? [15] : [])
             notice = hasTime ? "Scheduled ✓" : "Cleared ✓"; onChanged()
         } catch { notice = "Couldn't save the time." }
+    }
+}
+
+/// Big minus / number-pad field / plus. 44pt targets, clamped to 0...199.
+private struct ScoreStepper: View {
+    @Binding var value: Int
+    let name: String
+    var focus: FocusState<Int?>.Binding
+    let tag: Int
+
+    var body: some View {
+        HStack(spacing: 4) {
+            button("minus", "Decrease") { value = max(0, value - 1) }
+            TextField("0", value: $value, format: .number)
+                .keyboardType(.numberPad)
+                .focused(focus, equals: tag)
+                .multilineTextAlignment(.center)
+                .font(.mlrScaled(30, weight: .bold, design: .rounded))
+                .monospacedDigit()
+                .minimumScaleFactor(0.6)
+                .frame(minWidth: 44, maxWidth: .infinity, minHeight: 52)
+                .accessibilityLabel("\(name) score")
+            button("plus", "Increase") { value = min(199, value + 1) }
+        }
+        .padding(4)
+        .background(Color.mlrCard, in: RoundedRectangle(cornerRadius: MLRRadius.button))
+        .overlay(RoundedRectangle(cornerRadius: MLRRadius.button).strokeBorder(Color.mlrText.opacity(0.25), lineWidth: 1.5))
+        .onChange(of: value) { _, v in
+            if v < 0 { value = 0 } else if v > 199 { value = 199 }
+        }
+        .mlrFeedback(.selection, trigger: value)
+    }
+
+    private func button(_ symbol: String, _ label: String, _ action: @escaping () -> Void) -> some View {
+        Button { focus.wrappedValue = nil; action() } label: {
+            Image(systemName: symbol).font(.mlrScaled(18, weight: .bold)).foregroundStyle(Color.mlrPrimary)
+                .frame(width: 44, height: 52)
+                .background(Color.mlrPrimaryLight, in: RoundedRectangle(cornerRadius: 10))
+        }
+        .buttonStyle(.pressable)
+        .accessibilityLabel("\(label) \(name) score")
     }
 }
 
