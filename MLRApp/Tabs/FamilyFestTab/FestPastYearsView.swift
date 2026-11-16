@@ -161,7 +161,7 @@ struct FestPastYearDetailView: View {
 
     private var heading: some View {
         VStack(spacing: 4) {
-            Text("⚜ In the archives ⚜")
+            Text("In the archives")
                 .font(.festSerif(11, weight: .semibold))
                 .tracking(1.5)
                 .foregroundStyle(Color.mlrFest)

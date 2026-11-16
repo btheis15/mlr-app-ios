@@ -11,22 +11,21 @@ import SwiftUI
 // Body text inside the section should use `Color.mlrFestInk` (legible sepia/cream)
 // — reserve `mlrFest` (wine) for headings and `mlrFestGold` for ornament.
 
-/// Aged-gold ornamental divider with a centered fleur-de-lis. The rules fade
-/// toward the ornament so it reads as a gilded manuscript flourish.
+/// Section divider. A single hairline in the theme border colour; the gilded
+/// fleur-de-lis flourish appears ONLY when the active theme line is the heraldic
+/// "Ye Olde" one (never for other themes).
 struct GoldOrnamentDivider: View {
+    @Environment(AppEnvironment.self) private var env
+    private var heraldic: Bool {
+        (env.festContentService.config?.theme ?? "").localizedCaseInsensitiveContains("olde")
+    }
     var body: some View {
         HStack(spacing: 10) {
-            LinearGradient(
-                colors: [.mlrFestGold.opacity(0), .mlrFestGold.opacity(0.7)],
-                startPoint: .leading, endPoint: .trailing)
-                .frame(height: 1)
-            Text("\u{269C}") // ⚜ fleur-de-lis
-                .font(.mlrScaled(13))
-                .foregroundStyle(Color.mlrFestGold)
-            LinearGradient(
-                colors: [.mlrFestGold.opacity(0.7), .mlrFestGold.opacity(0)],
-                startPoint: .leading, endPoint: .trailing)
-                .frame(height: 1)
+            Rectangle().fill(Color.mlrFestBorder).frame(height: 1)
+            if heraldic {
+                Text("\u{269C}").font(.mlrScaled(13)).foregroundStyle(Color.mlrFestGold)
+                Rectangle().fill(Color.mlrFestBorder).frame(height: 1)
+            }
         }
         .accessibilityHidden(true)
     }
@@ -52,10 +51,8 @@ extension Text {
     /// short headings/labels; running body text should stay in a readable system
     /// font (`.mlrScaled`) colored `mlrFestInk`.
     func festHeadingStyle(size: CGFloat = 15) -> some View {
-        self.font(.festSerif(size, weight: .bold))
-            .tracking(1.2)
-            .textCase(.uppercase)
-            .foregroundStyle(Color.mlrFest)
+        self.font(.festDisplay(size + 5, weight: .bold))
+            .foregroundStyle(Color.mlrFestInkReadable)
     }
 }
 
@@ -167,14 +164,12 @@ struct FestYearCover: View {
             }
         }
         .modifier(CoverFit(fillHeight: fillHeight))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(LinearGradient(colors: [tint, gold],
-                                             startPoint: .topLeading, endPoint: .bottomTrailing),
-                              lineWidth: 1.5)
+            RoundedRectangle(cornerRadius: 24, style: .continuous)
+                .strokeBorder(Color.mlrFestBorder, lineWidth: 1)
         )
-        .shadow(color: tint.opacity(0.18), radius: 16, x: 0, y: 8)
+        .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 2)
         .accessibilityLabel(accessibilityText)
     }
 }

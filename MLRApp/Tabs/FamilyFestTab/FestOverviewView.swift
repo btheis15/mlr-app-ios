@@ -238,21 +238,55 @@ struct FestOverviewView: View {
     // MARK: - Secondary sections
 
     private var moreSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("More")
-                .festHeadingStyle(size: 15)
-                .padding(.horizontal, 4)
-                .padding(.top, 4)
-
-            // A concluded fest drops to Overview + Past Years. "Who's coming"
-            // and "Dues & payments" are about a week that already happened —
-            // they'd read as things still to do.
+        VStack(alignment: .leading, spacing: 12) {
+            // Day chips + entry to the RSVP flow (Who's coming owns the RSVP sheet).
             if !festSeason.isConcluded {
-                FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
-                FestUtilityLink(label: "Weekly dinner menu", icon: "fork.knife") { FestDinnersView() }
-                FestUtilityLink(label: "Dues & payments", icon: "dollarsign.circle.fill") { FestPayView() }
+                NavigationLink {
+                    FestCrewView()
+                        .navigationTitle("Who's coming")
+                        .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Are you coming?")
+                            .font(.festDisplay(22))
+                            .foregroundStyle(Color.mlrFestInkReadable)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(dayGroups, id: \.day) { g in
+                                    VStack(spacing: 0) {
+                                        Text(String(g.day.prefix(3)).uppercased())
+                                            .font(.system(size: 12, weight: .semibold)).tracking(1.0)
+                                        if let d = g.isoDate?.suffix(2) {
+                                            Text(String(Int(d) ?? 0)).font(.system(.headline, design: .rounded))
+                                        }
+                                    }
+                                    .foregroundStyle(Color.mlrFestReadable)
+                                    .frame(minWidth: 52).padding(.vertical, 8)
+                                    .background(Color.mlrFest.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                }
+                            }
+                        }
+                        Text("Tap to RSVP your days")
+                            .font(.subheadline).foregroundStyle(Color.mlrFestInkReadable.opacity(0.75))
+                    }
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .festCardStyle(cornerRadius: 22)
+                }
+                .buttonStyle(.pressable)
             }
-            FestUtilityLink(label: "Past years", icon: "clock.arrow.circlepath") { FestPastYearsView() }
+
+            Text("More").festHeadingStyle(size: 17).padding(.top, 4)
+
+            // A concluded fest drops to Overview + Past Years.
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+                if !festSeason.isConcluded {
+                    FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
+                    FestUtilityLink(label: "Weekly dinner menu", icon: "fork.knife") { FestDinnersView() }
+                    FestUtilityLink(label: "Dues & payments", icon: "dollarsign.circle.fill") { FestPayView() }
+                }
+                FestUtilityLink(label: "Past years", icon: "clock.arrow.circlepath") { FestPastYearsView() }
+            }
             // Photos live on the Main Feed now — no separate Fest photo gallery.
         }
     }
@@ -299,8 +333,8 @@ private struct FestDaySection: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(day.uppercased())
-                    .font(.mlrScaled(14, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.75))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.mlrFestInkReadable.opacity(0.8))
                     .tracking(1.2)
                 Spacer()
                 // Self-hides when WeatherKit has no forecast for the date.
@@ -366,21 +400,17 @@ private struct FestUtilityLink<Destination: View>: View {
                 .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
                 .toolbarColorScheme(.light, for: .navigationBar)
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .font(.mlrScaled(14, weight: .semibold))
-                    .frame(width: 22)
+            VStack(alignment: .leading, spacing: 10) {
+                IconTile(symbol: icon, accent: .mlrFest, size: 40)
                 Text(label)
-                    .font(.festSerif(15, weight: .bold))
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.mlrScaled(12, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.35))
+                    .font(.system(.headline, weight: .semibold))
+                    .foregroundStyle(Color.mlrFestInkReadable)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .foregroundStyle(Color.mlrFest)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 13)
-            .festCardStyle(cornerRadius: 12)
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+            .festCardStyle(cornerRadius: 22)
         }
         .buttonStyle(.pressable)
     }
@@ -390,27 +420,73 @@ private struct FestUtilityLink<Destination: View>: View {
 
 // MARK: - Cover Caption
 
-/// The festive title block under the cover art — the ⚜ "Ye Olde Family Feste"
-/// theme line, then the dates and venue.
+/// Title block under the cover: the year's theme line (from config, in the
+/// display font), one divider, the dates, then countdown tiles. No hardcoded
+/// heraldic strings: a missing theme falls back to the fest name.
 private struct FestCoverCaption: View {
+    @Environment(AppEnvironment.self) private var env
+    private var config: FestConfig? { env.festContentService.config }
+    private var title: String {
+        let t = config?.theme?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return t.isEmpty ? (config?.name ?? "Family Fest") : t
+    }
+    private var dates: String {
+        "\(config?.dateRangeLabel ?? FamilyFestConfig.dateRangeLabel), \(String(config?.year ?? FamilyFestConfig.year))"
+    }
+    private var startISO: String { config?.startDate ?? FamilyFestConfig.startDate }
+
     var body: some View {
-        VStack(spacing: 6) {
-            Text("⚜ Ye Olde Family Feste ⚜")
-                .font(.festSerif(17, weight: .bold))
-                .tracking(2)
-                .textCase(.uppercase)
+        VStack(spacing: 10) {
+            Text(title)
+                .font(.festDisplay(30))
+                .foregroundStyle(Color.mlrFestInkReadable)
+            GoldOrnamentDivider()
+            Text(dates)
+                .font(.system(.title3, weight: .semibold))
                 .foregroundStyle(Color.mlrFestReadable)
-
-            Text("\(FamilyFestConfig.dateRangeLabel), \(String(FamilyFestConfig.year))")
-                .font(.festSerif(19, weight: .bold))
-                .foregroundStyle(Color.mlrFestReadable)
-
-            Text("Muskellunge Lake Resort · Tomahawk, WI")
-                .font(.mlrScaled(12))
+            Text("Muskellunge Lake Resort \u{00B7} Tomahawk, WI")
+                .font(.system(.footnote))
                 .foregroundStyle(Color.mlrFestInkReadable.opacity(0.7))
+            FestCountdownTiles(startISO: startISO)
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
+    }
+}
+
+/// Days / hrs / min until the fest starts; hidden once it has begun.
+private struct FestCountdownTiles: View {
+    let startISO: String
+    private var start: Date? {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "America/Chicago")
+        return f.date(from: startISO)
+    }
+    var body: some View {
+        if let start {
+            TimelineView(.periodic(from: .now, by: 30)) { ctx in
+                let secs = Int(start.timeIntervalSince(ctx.date))
+                if secs > 0 {
+                    HStack(spacing: 10) {
+                        tile(secs / 86_400, "days")
+                        tile((secs % 86_400) / 3_600, "hrs")
+                        tile((secs % 3_600) / 60, "min")
+                    }
+                    .padding(.top, 4)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(secs / 86_400) days until Family Fest")
+                }
+            }
+        }
+    }
+    private func tile(_ n: Int, _ label: String) -> some View {
+        VStack(spacing: 2) {
+            Text("\(n)").font(.festDisplay(28)).foregroundStyle(Color.mlrFestReadable).monospacedDigit()
+            Text(label.uppercased()).font(.system(size: 12, weight: .semibold)).tracking(1.2)
+                .foregroundStyle(Color.mlrFestInkReadable.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity).padding(.vertical, 12)
+        .festCardStyle(cornerRadius: 20)
     }
 }
 
@@ -424,8 +500,8 @@ private struct FestInfoCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.festSerif(19, weight: .bold))
-                .foregroundStyle(Color.mlrFestReadable)
+                .font(.festDisplay(22))
+                .foregroundStyle(Color.mlrFestInkReadable)
             content
         }
         .padding(16)
@@ -449,8 +525,8 @@ private struct FestAnytimeCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("ALL WEEK — ANYTIME")
-                        .font(.mlrScaled(14, weight: .semibold))
-                        .foregroundStyle(Color.mlrFest.opacity(0.75))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.mlrFestInkReadable.opacity(0.8))
                         .tracking(1.2)
                     Spacer()
                 }
