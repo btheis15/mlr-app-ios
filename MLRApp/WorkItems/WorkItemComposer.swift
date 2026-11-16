@@ -39,6 +39,29 @@ struct WorkItemComposer: View {
     @State private var pending = false
     @State private var uploading = false
     @State private var errorText: String?
+    @State private var confirmRemove = false
+
+    /// Everything the form edits as one comparable value, for dirty tracking
+    /// (`current != initial`) — new photos/video count as a change too.
+    struct Values: Equatable {
+        var title: String
+        var notes: String
+        var peopleNeeded: Int
+        var status: WorkItemStatus
+        var urgency: WorkUrgency
+        var customLabel: String
+        var customColor: WorkUrgencyColor
+        var recurEveryYears: Int?
+        var scopeHouseId: UUID?
+        var selectedEventId: String?
+    }
+    private let initial: Values
+    private var current: Values {
+        Values(title: title, notes: notes, peopleNeeded: peopleNeeded, status: status, urgency: urgency,
+               customLabel: customLabel, customColor: customColor, recurEveryYears: recurEveryYears,
+               scopeHouseId: scopeHouseId, selectedEventId: selectedEventId)
+    }
+    private var isDirty: Bool { current != initial || !newImages.isEmpty || videoData != nil }
 
     init(item: WorkItem? = nil, preLinkedEventId: String? = nil,
          prefillTitle: String? = nil, prefillNotes: String? = nil,
@@ -57,12 +80,20 @@ struct WorkItemComposer: View {
         _scopeHouseId = State(initialValue: item?.houseId)
         _existingMedia = State(initialValue: item?.media ?? [])
         _selectedEventId = State(initialValue: preLinkedEventId)
+        initial = Values(
+            title: item?.title ?? prefillTitle ?? "", notes: item?.notes ?? prefillNotes ?? "",
+            peopleNeeded: item?.peopleNeeded ?? 0, status: item?.status ?? .open,
+            urgency: item?.urgency ?? .thisYear, customLabel: item?.customLabel ?? "",
+            customColor: item?.customColor ?? .gray, recurEveryYears: item?.recurEveryYears,
+            scopeHouseId: item?.houseId, selectedEventId: preLinkedEventId)
     }
 
     private var editing: Bool { item != nil }
     private var canSubmit: Bool {
         !title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !pending && !uploading
     }
+    /// A prefilled new item (e.g. from a suggestion) can be added as it is.
+    private var dirtyOrNew: Bool { isDirty || !editing }
     private var linkableEvents: [ResortEvent] {
         guard !editing, preLinkedEventId == nil else { return [] }
         return env.eventsService.upcomingEvents
@@ -79,8 +110,11 @@ struct WorkItemComposer: View {
     }
 
     var body: some View {
-        NavigationStack {
-            ScrollView {
+        EditorSheet(title: editing ? "Edit item" : "Add work item",
+                    isDirty: dirtyOrNew && !(pending || uploading),
+                    canSave: canSubmit,
+                    save: { try await submit() }) {
+            Section {
                 VStack(alignment: .leading, spacing: 24) {
                     taskSection
                     urgencySection
@@ -91,18 +125,9 @@ struct WorkItemComposer: View {
                     if !linkableEvents.isEmpty { eventLinkSection }
                     if editing && env.isAdmin { statusSection }
 
-                    Button {
-                        Task { await submit() }
-                    } label: {
-                        Text(saveLabel)
-                            .primaryButton()
-                    }
-                    .disabled(!canSubmit)
-                    .opacity(canSubmit ? 1 : 0.5)
-
                     if editing && env.isAdmin {
                         Button {
-                            Task { await remove() }
+                            confirmRemove = true
                         } label: {
                             Text("Remove from checklist")
                                 .font(.mlrScaled(14, weight: .semibold))
@@ -112,7 +137,8 @@ struct WorkItemComposer: View {
                                 .background(Color.mlrDanger.opacity(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
-                        .disabled(pending)
+                        .buttonStyle(.plain)
+                        .disabled(pending || uploading)
                     }
 
                     if let errorText {
@@ -121,32 +147,26 @@ struct WorkItemComposer: View {
                             .foregroundStyle(Color.mlrDanger)
                     }
                 }
-                .padding(20)
-            }
-            .background(Color(.systemGroupedBackground))
-            .navigationTitle(editing ? "Edit item" : "Add work item")
-            .navigationBarTitleDisplayMode(.inline)
-            .tint(Color.mlrPrimary)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.disabled(pending || uploading)
-                }
-            }
-            .task { if env.housesService.houses.isEmpty { await env.housesService.fetchHouses() } }
-            .onChange(of: selectedPhotos) { _, items in Task { await loadPhotos(items) } }
-            .onChange(of: selectedVideo) { _, item in
-                Task {
-                    guard let item, let data = try? await item.loadTransferable(type: Data.self) else { return }
-                    await MainActor.run { videoData = data }
-                }
+                .padding(.vertical, 8)
+                .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+                .listRowBackground(Color.clear)
             }
         }
-    }
-
-    private var saveLabel: String {
-        if uploading { return "Uploading…" }
-        if pending { return "Saving…" }
-        return editing ? "Save changes" : "Add to checklist"
+        .tint(Color.mlrPrimary)
+        .confirmationDialog("Remove this item?", isPresented: $confirmRemove, titleVisibility: .visible) {
+            Button("Remove from checklist", role: .destructive) { Task { await remove() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This takes it off the work checklist for everyone.")
+        }
+        .task { if env.housesService.houses.isEmpty { await env.housesService.fetchHouses() } }
+        .onChange(of: selectedPhotos) { _, items in Task { await loadPhotos(items) } }
+        .onChange(of: selectedVideo) { _, item in
+            Task {
+                guard let item, let data = try? await item.loadTransferable(type: Data.self) else { return }
+                await MainActor.run { videoData = data }
+            }
+        }
     }
 
     // MARK: - Sections
@@ -481,79 +501,74 @@ struct WorkItemComposer: View {
             try await env.workItemsService.removeMedia(id: media.id)
             existingMedia.removeAll { $0.id == media.id }
         } catch {
-            errorText = "Couldn't remove that photo."
+            errorText = "Couldn\u{2019}t remove that photo. \(EditorError.message(error))"
         }
     }
 
-    private func submit() async {
+    private func submit() async throws {
         guard canSubmit else { return }
-        guard env.isSignedIn, let userId = env.currentProfile?.id else { env.authService.promptSignIn(); return }
+        guard env.isSignedIn, let userId = env.currentProfile?.id else {
+            env.authService.promptSignIn(); throw CancellationError()
+        }
         pending = true
         errorText = nil
-        defer { pending = false }
+        defer { pending = false; uploading = false }
 
         let trimmedTitle = title.trimmingCharacters(in: .whitespacesAndNewlines)
         let trimmedNotes = notes.trimmingCharacters(in: .whitespacesAndNewlines)
         let needed = peopleNeeded > 0 ? peopleNeeded : nil
 
-        do {
-            let itemId: UUID
-            if let item {
-                try await env.workItemsService.updateItem(
-                    id: item.id,
-                    title: trimmedTitle,
-                    notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
-                    category: item.category,
-                    status: status,
-                    peopleNeeded: needed,
-                    houseId: scopeHouseId,
-                    urgency: urgency,
-                    customLabel: customLabel.trimmingCharacters(in: .whitespaces),
-                    customColor: customColor,
-                    recurEveryYears: recurEveryYears
-                )
-                itemId = item.id
-            } else {
-                itemId = try await env.workItemsService.createItem(
-                    title: trimmedTitle,
-                    notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
-                    category: nil,
-                    peopleNeeded: needed,
-                    houseId: scopeHouseId,
-                    urgency: urgency,
-                    customLabel: customLabel.trimmingCharacters(in: .whitespaces),
-                    customColor: customColor,
-                    recurEveryYears: recurEveryYears
-                )
-                if let eventId = selectedEventId {
-                    try await env.workItemsService.addToEvent(eventId: eventId, itemId: itemId)
-                }
+        let itemId: UUID
+        if let item {
+            try await env.workItemsService.updateItem(
+                id: item.id,
+                title: trimmedTitle,
+                notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+                category: item.category,
+                status: status,
+                peopleNeeded: needed,
+                houseId: scopeHouseId,
+                urgency: urgency,
+                customLabel: customLabel.trimmingCharacters(in: .whitespaces),
+                customColor: customColor,
+                recurEveryYears: recurEveryYears
+            )
+            itemId = item.id
+        } else {
+            itemId = try await env.workItemsService.createItem(
+                title: trimmedTitle,
+                notes: trimmedNotes.isEmpty ? nil : trimmedNotes,
+                category: nil,
+                peopleNeeded: needed,
+                houseId: scopeHouseId,
+                urgency: urgency,
+                customLabel: customLabel.trimmingCharacters(in: .whitespaces),
+                customColor: customColor,
+                recurEveryYears: recurEveryYears
+            )
+            if let eventId = selectedEventId {
+                try await env.workItemsService.addToEvent(eventId: eventId, itemId: itemId)
             }
-
-            // Upload any newly-picked media and attach it (position appended).
-            if !newImages.isEmpty || videoData != nil {
-                uploading = true
-                var position = existingMedia.count
-                for image in newImages {
-                    let url = try await env.mediaService.uploadPostImage(image: image, userId: userId)
-                    try await env.workItemsService.addMedia(workItemId: itemId, url: url, mediaType: "image", position: position)
-                    position += 1
-                }
-                if let videoData {
-                    let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: userId)
-                    try await env.workItemsService.addMedia(workItemId: itemId, url: url, mediaType: "video", position: position)
-                }
-                uploading = false
-                await env.workItemsService.fetchItems()
-            }
-
-            onSaved()
-            dismiss()
-        } catch {
-            uploading = false
-            errorText = "Couldn't save. Check your connection and try again."
-            print("[WorkItemComposer] submit error: \(error)")
         }
+
+        // Upload any newly-picked media and attach it (position appended).
+        if !newImages.isEmpty || videoData != nil {
+            uploading = true
+            var position = existingMedia.count
+            for image in newImages {
+                let url = try await env.mediaService.uploadPostImage(image: image, userId: userId)
+                try await env.workItemsService.addMedia(workItemId: itemId, url: url, mediaType: "image", position: position)
+                position += 1
+            }
+            if let videoData {
+                let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: userId)
+                try await env.workItemsService.addMedia(workItemId: itemId, url: url, mediaType: "video", position: position)
+            }
+            uploading = false
+            await env.workItemsService.fetchItems()
+        }
+
+        onSaved()
     }
 
     private func remove() async {
@@ -566,7 +581,8 @@ struct WorkItemComposer: View {
             onSaved()
             dismiss()
         } catch {
-            errorText = "Couldn't remove the item. Please try again."
+            errorText = "Couldn\u{2019}t remove the item. \(EditorError.message(error))"
+            Haptics.error()
             print("[WorkItemComposer] remove error: \(error)")
         }
     }
