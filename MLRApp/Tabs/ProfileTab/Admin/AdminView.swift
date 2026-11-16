@@ -154,6 +154,14 @@ struct AdminView: View {
                 )
 
                 adminLink(
+                    destination: AdminLocalPlacesView(),
+                    icon: "mappin.and.ellipse",
+                    iconColor: Color.mlrLake,
+                    title: "Local Places",
+                    description: "Golf, food and coffee near the resort: add, edit, reorder"
+                )
+
+                adminLink(
                     destination: AdminHelpContactView(),
                     icon: "phone.fill",
                     iconColor: Color.mlrAccent,

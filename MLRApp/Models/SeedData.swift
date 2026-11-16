@@ -77,17 +77,110 @@ struct FestDinner: Identifiable {
 
 // MARK: - Local Place
 
-struct LocalPlace: Identifiable {
-    let id: String
-    let name: String
-    let category: PlaceCategory
-    let phone: String?
-    let address: String?
-    let website: String?
-    let menuUrl: String?
-    let orderUrl: String?          // online ordering, or a golf tee-time booking link
-    var ratesUrl: String? = nil    // rates-only golf course ("See Rates" pill)
-    let description: String?
+struct LocalPlace: Identifiable, Codable, Equatable, Hashable {
+    var id: String
+    var slug: String
+    var name: String
+    var category: String?          // short "what it is" line
+    var placeGroup: String         // golf | food | coffee | any other string
+    var locality: String?
+    var address: String?
+    var blurb: String?
+    var emoji: String?
+    var accent: String             // primary | lake | campfire | sun | dusk
+    var imageUrl: String?
+    var website: String?
+    var menuUrl: String?
+    var orderUrl: String?
+    var phoneDisplay: String?
+    var phoneTel: String?          // E.164
+    var internalHref: String?      // in-app hand-off, e.g. "/tee-times"
+    var internalCta: String?
+    var bookingUrl: String?
+    var bookingCta: String?
+    var ratesUrl: String?
+    var ratesCta: String?
+    var position: Int
+    var isActive: Bool
+
+    enum CodingKeys: String, CodingKey {
+        case id, slug, name, category, locality, address, blurb, emoji, accent, website, position
+        case placeGroup = "place_group"
+        case imageUrl = "image_url"
+        case menuUrl = "menu_url"
+        case orderUrl = "order_url"
+        case phoneDisplay = "phone_display"
+        case phoneTel = "phone_tel"
+        case internalHref = "internal_href"
+        case internalCta = "internal_cta"
+        case bookingUrl = "booking_url"
+        case bookingCta = "booking_cta"
+        case ratesUrl = "rates_url"
+        case ratesCta = "rates_cta"
+        case isActive = "is_active"
+    }
+
+    /// A blank place for the "Add a place" editor.
+    static func blank(group: String = "food") -> LocalPlace {
+        LocalPlace(id: UUID().uuidString, slug: "", name: "", category: nil, placeGroup: group,
+                   locality: nil, address: nil, blurb: nil, emoji: nil, accent: "primary", imageUrl: nil,
+                   website: nil, menuUrl: nil, orderUrl: nil, phoneDisplay: nil, phoneTel: nil,
+                   internalHref: nil, internalCta: nil, bookingUrl: nil, bookingCta: nil,
+                   ratesUrl: nil, ratesCta: nil, position: 0, isActive: true)
+    }
+
+    // Compatibility reads for older callers (Siri intents, Spotlight).
+    var description: String? { blurb }
+    var phone: String? { phoneTel }
+
+    // MARK: Groups
+
+    static let knownGroups = ["golf", "food", "coffee"]
+
+    /// Section title: golf, food and coffee keep their names; anything else is title-cased.
+    static func groupTitle(_ group: String) -> String {
+        switch group.lowercased() {
+        case "golf": return "Golf"
+        case "food": return "Food & Drink"
+        case "coffee": return "Coffee"
+        default: return group.replacingOccurrences(of: "-", with: " ").replacingOccurrences(of: "_", with: " ").capitalized
+        }
+    }
+
+    static func groupEmoji(_ group: String) -> String {
+        switch group.lowercased() {
+        case "golf": return "⛳"
+        case "food": return "🍽️"
+        case "coffee": return "☕"
+        default: return "📍"
+        }
+    }
+
+    var groupTitle: String { Self.groupTitle(placeGroup) }
+    var displayEmoji: String { (emoji?.isEmpty == false ? emoji : nil) ?? Self.groupEmoji(placeGroup) }
+
+    // Offline-seed row builder (maps the original hard-coded fields).
+    fileprivate static func seedRow(
+        id: String, name: String, category: PlaceCategory, phone: String?, address: String?,
+        website: String?, menuUrl: String?, orderUrl: String?, ratesUrl: String? = nil, description: String?
+    ) -> LocalPlace {
+        let group = category == .dining ? "food" : category.rawValue
+        var p = LocalPlace.blank(group: group)
+        p.id = id; p.slug = id; p.name = name
+        p.locality = address
+        p.blurb = description
+        p.phoneTel = phone
+        p.phoneDisplay = phone.flatMap { PhoneFormat.normalize($0)?.display }
+        p.website = website; p.menuUrl = menuUrl; p.ratesUrl = ratesUrl
+        if id == "inshalla" {
+            p.internalHref = "/tee-times"; p.internalCta = "Tee Times"
+        } else if group == "golf" {
+            p.bookingUrl = orderUrl; p.bookingCta = "Tee Times"
+        } else {
+            p.orderUrl = orderUrl
+        }
+        return p
+    }
 
     enum PlaceCategory: String {
         case dining, grocery, activity, marina, medical, golf, coffee
@@ -107,9 +200,9 @@ struct ResortActivity: Identifiable {
 // MARK: - Local Places Seed Data
 
 extension LocalPlace {
-    static let all: [LocalPlace] = [
+    private static let seedRows: [LocalPlace] = [
         // ── Golf ──
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "inshalla",
             name: "Inshalla Country Club",
             category: .golf,
@@ -120,7 +213,7 @@ extension LocalPlace {
             orderUrl: "https://stage.foreupsoftware.com/index.php/booking/19715/2251?booking_class_id=2431&schedule_id=2251#/teetimes",
             description: "Public 18-hole course with a pro shop, driving range, and bar & grill. Book your tee time online."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "edgewater",
             name: "Edgewater Country Club",
             category: .golf,
@@ -132,7 +225,7 @@ extension LocalPlace {
             ratesUrl: "https://edgewaterccgolf.com/rates",
             description: "Family-friendly public 9-hole course tucked along the shores of Lake Alice, just outside town."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "pinewood",
             name: "Pinewood Country Club",
             category: .golf,
@@ -144,7 +237,7 @@ extension LocalPlace {
             ratesUrl: "https://www.pinewoodcc.com",
             description: "Public 18-hole course open April through October, with a pro shop and online tee-time booking."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "merrill-golf",
             name: "Merrill Golf Club",
             category: .golf,
@@ -155,7 +248,7 @@ extension LocalPlace {
             orderUrl: "https://merrill-golf-club.book.teeitup.com/?course=17053",
             description: "18-hole championship public course with a pro shop, lessons, and a bar & grill."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "timber-ridge",
             name: "Timber Ridge Golf Club",
             category: .golf,
@@ -166,7 +259,7 @@ extension LocalPlace {
             orderUrl: "https://www.chronogolf.com/club/19672/widget?medium=widget&source=club",
             description: "Scenic 18-hole, par-72 Northwoods course with rolling elevation changes, a short drive south of Minocqua."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "northwood-golf",
             name: "Northwood Golf Club",
             category: .golf,
@@ -177,7 +270,7 @@ extension LocalPlace {
             orderUrl: "https://foreupsoftware.com/index.php/booking/22872/12171#/teetimes",
             description: "18-hole public course carved out of ancient rock and timber, with a full clubhouse, restaurant, and bar."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "trout-lake",
             name: "Trout Lake Golf Club",
             category: .golf,
@@ -189,7 +282,7 @@ extension LocalPlace {
             description: "The Northwoods' oldest 18-hole course (est. 1924), freshly renovated, with a driving range and a historic clubhouse."
         ),
         // ── Food & Drink ──
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "billy-bobs",
             name: "Billy Bob's Sports Bar & Grill",
             category: .dining,
@@ -200,7 +293,7 @@ extension LocalPlace {
             orderUrl: nil,
             description: "Our usual pizza order — plus burgers, baskets, and the big game on."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "tilted-loon",
             name: "Tilted Loon",
             category: .dining,
@@ -211,7 +304,7 @@ extension LocalPlace {
             orderUrl: "https://order.toasttab.com/online/tilted_loon",
             description: "Lakeside saloon known for pizza, burgers, and the Friday fish fry — takes online orders."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "outboards",
             name: "Outboards Bar & Grill",
             category: .dining,
@@ -222,7 +315,7 @@ extension LocalPlace {
             orderUrl: nil,
             description: "Downtown bar & grill — fish fry, happy hour, and a full grill menu."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "sideways",
             name: "Sideways Wine & Craft Beer",
             category: .dining,
@@ -234,7 +327,7 @@ extension LocalPlace {
             description: "Wine, Wisconsin craft beer, flatbreads, and charcuterie — a relaxed night out."
         ),
         // ── Coffee ──
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "northwoods-cafe",
             name: "Northwoods Cafe & Coffeehouse",
             category: .coffee,
@@ -245,7 +338,7 @@ extension LocalPlace {
             orderUrl: nil,
             description: "A cozy, family-run downtown cafe serving breakfast, lunch, and specialty coffee drinks."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "whats-brewin",
             name: "What's Brewin' Coffee Shop",
             category: .coffee,
@@ -256,7 +349,7 @@ extension LocalPlace {
             orderUrl: nil,
             description: "Downtown coffee shop pairing gourmet coffee and cold brew with homemade soups, sandwiches, baked goods, and fudge."
         ),
-        LocalPlace(
+        LocalPlace.seedRow(
             id: "rise-coffee",
             name: "Rise Coffee Co.",
             category: .coffee,
@@ -268,6 +361,26 @@ extension LocalPlace {
             description: "A friendly mother-daughter drive-thru serving fresh espresso and coffee on the go."
         ),
     ]
+
+    /// The in-code list, used only when the database read fails (missing table / offline).
+    static let seed: [LocalPlace] = {
+        var counts: [String: Int] = [:]
+        return seedRows.map { row in
+            var r = row
+            r.position = counts[r.placeGroup, default: 0]
+            counts[r.placeGroup, default: 0] += 1
+            return r
+        }
+    }()
+
+    /// Seed fallback kept for the existing call sites; prefer `current`.
+    static var all: [LocalPlace] { current }
+
+    /// Last list the app loaded (active rows) for code with no environment
+    /// (Siri, Spotlight): the saved snapshot, else the in-code seed.
+    static var current: [LocalPlace] {
+        DiskCache.load([LocalPlace].self, key: LocalPlacesService.publicSnapshotKey) ?? seed
+    }
 }
 
 // MARK: - Schedule Item Seed Data

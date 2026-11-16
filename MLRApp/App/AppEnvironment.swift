@@ -36,6 +36,7 @@ final class AppEnvironment {
     var eventMessageService: EventMessageService
     var feedMuteService: FeedMuteService
     var eventChatService: EventChatService
+    var localPlacesService: LocalPlacesService
 
     // Resolved once per session
     var currentProfile: Profile?
@@ -196,6 +197,7 @@ final class AppEnvironment {
         eventMessageService  = EventMessageService()
         feedMuteService      = FeedMuteService()
         eventChatService     = EventChatService()
+        localPlacesService   = LocalPlacesService()
 
         AppEnvironment.activeEventsService    = eventsService
         AppEnvironment.activeHelpService      = helpService

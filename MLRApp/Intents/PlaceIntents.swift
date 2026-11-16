@@ -4,7 +4,7 @@ import Foundation
 // MARK: - Local place intents (Siri / Apple Intelligence)
 //
 // The nearby spots families use around the resort (dining, golf, marina, etc.).
-// These live as in-code seed data (LocalPlace.all), so the entity query is
+// These live as in-code seed data (LocalPlace.current), so the entity query is
 // synchronous. Powers "what restaurants are near the resort," "call Billy Bob's,"
 // and "order from the Tilted Loon."
 
@@ -20,21 +20,21 @@ struct PlaceEntity: AppEntity {
     static var defaultQuery = PlaceEntityQuery()
 
     fileprivate static func from(_ p: LocalPlace) -> PlaceEntity {
-        PlaceEntity(id: p.id, name: p.name, category: p.category.rawValue.capitalized)
+        PlaceEntity(id: p.id, name: p.name, category: p.groupTitle)
     }
 }
 
 struct PlaceEntityQuery: EntityStringQuery {
     func entities(for identifiers: [String]) async throws -> [PlaceEntity] {
-        LocalPlace.all.filter { identifiers.contains($0.id) }.map(PlaceEntity.from)
+        LocalPlace.current.filter { identifiers.contains($0.id) }.map(PlaceEntity.from)
     }
     func entities(matching string: String) async throws -> [PlaceEntity] {
-        LocalPlace.all
+        LocalPlace.current
             .filter { $0.name.localizedCaseInsensitiveContains(string) }
             .map(PlaceEntity.from)
     }
     func suggestedEntities() async throws -> [PlaceEntity] {
-        LocalPlace.all.map(PlaceEntity.from)
+        LocalPlace.current.map(PlaceEntity.from)
     }
 }
 
@@ -45,8 +45,8 @@ struct LocalPlacesIntent: AppIntent {
     static var description = IntentDescription("Restaurants and spots near Muskellunge Lake Resort.")
 
     func perform() async throws -> some IntentResult & ProvidesDialog {
-        let dining = LocalPlace.all.filter { $0.category == .dining }
-        let places = dining.isEmpty ? LocalPlace.all : dining
+        let dining = LocalPlace.current.filter { $0.placeGroup == "food" }
+        let places = dining.isEmpty ? LocalPlace.current : dining
         guard !places.isEmpty else { return .result(dialog: "I don't have any local places listed.") }
         let names = places.prefix(6).map(\.name).joined(separator: ", ")
         return .result(dialog: IntentDialog(stringLiteral: "Near the resort: \(names)."))
@@ -65,7 +65,7 @@ struct CallLocalPlaceIntent: AppIntent {
     static var parameterSummary: some ParameterSummary { Summary("Call \(\.$place)") }
 
     func perform() async throws -> some IntentResult & OpensIntent & ProvidesDialog {
-        guard let match = LocalPlace.all.first(where: { $0.id == place.id }),
+        guard let match = LocalPlace.current.first(where: { $0.id == place.id }),
               let phone = match.phone?.filter({ $0.isNumber || $0 == "+" }),
               !phone.isEmpty,
               let url = URL(string: "tel:\(phone)") else {
@@ -88,7 +88,7 @@ struct OrderFromLocalPlaceIntent: AppIntent {
     static var parameterSummary: some ParameterSummary { Summary("Order from \(\.$place)") }
 
     func perform() async throws -> some IntentResult & OpensIntent & ProvidesDialog {
-        guard let match = LocalPlace.all.first(where: { $0.id == place.id }) else {
+        guard let match = LocalPlace.current.first(where: { $0.id == place.id }) else {
             throw PlaceError.noOrder(place.name)
         }
         let link = match.orderUrl ?? match.menuUrl

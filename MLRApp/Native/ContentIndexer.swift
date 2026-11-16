@@ -379,13 +379,13 @@ enum ContentIndexer {
     }
 
     private static func localPlaceItems() -> [CSSearchableItem] {
-        LocalPlace.all.map { p in
-            var keywords = [p.name, p.category.rawValue, "restaurant", "dining", "nearby", "local"]
+        LocalPlace.current.map { p in
+            var keywords = [p.name, p.groupTitle, "restaurant", "dining", "nearby", "local"]
             if p.orderUrl != nil { keywords.append("order") }
             if p.menuUrl != nil { keywords.append("menu") }
             let desc = [p.description, p.phone].compactMap { $0 }.joined(separator: " · ")
             return item(id: "mlr://places?id=\(p.id)", title: p.name,
-                        description: desc.isEmpty ? p.category.rawValue.capitalized : desc,
+                        description: desc.isEmpty ? p.groupTitle : desc,
                         keywords: keywords)
         }
     }
