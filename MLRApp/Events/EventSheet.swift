@@ -28,7 +28,7 @@ struct EventSheet: View {
     @State private var dayStatuses: [String: AttendanceStatus] = [:]
     @State private var isSaving = false
     @State private var attendees: [EventAttendee] = []
-    @State private var dayAttendees: [FestAttendee] = []   // per-day roster (day_rsvp events)
+    @State private var dayAttendees: [DayRosterEntry] = []   // per-day roster (day_rsvp events)
     @State private var loadingAttendees = true
     @State private var showEditor = false
     @State private var showDeleteConfirm = false
@@ -433,7 +433,7 @@ struct EventSheet: View {
                 // Avatar stack
                 HStack(spacing: -10) {
                     ForEach(attendees.prefix(8)) { person in
-                        AvatarView(profile: person.profile, size: .small)
+                        AvatarView(url: person.profile?.avatarUrl, size: .small)
                             .overlay(Circle().stroke(Color.mlrSurface, lineWidth: 2))
                     }
                     if attendees.count > 8 {
@@ -449,9 +449,36 @@ struct EventSheet: View {
                 // Names — an RSVP carried over from a family meeting poll
                 // (migration 0122) and never re-confirmed gets a quiet tag,
                 // visible to whoever's planning; invisible clutter for everyone else.
-                Text(attendees.map { $0.confirmed ? $0.name : "\($0.name) (hasn't confirmed)" }.joined(separator: ", "))
-                    .font(.mlrCaption)
-                    .foregroundStyle(Color.mlrTextMuted)
+                VStack(alignment: .leading, spacing: 6) {
+                    ForEach(attendees) { person in
+                        HStack(spacing: 6) {
+                            Text(person.name)
+                                .font(.mlrCaption)
+                                .foregroundStyle(Color.mlrText)
+                            if let note = person.note {
+                                Text(note).font(.mlrScaled(11)).foregroundStyle(Color.mlrTextMuted)
+                            }
+                            if !person.confirmed {
+                                Text("(hasn't confirmed)").font(.mlrScaled(11)).foregroundStyle(Color.mlrTextMuted)
+                            }
+                            Spacer()
+                            if env.isAdmin || eventPermissions.canManage {
+                                Button {
+                                    Task { await removeAttendee(person) }
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill").foregroundStyle(Color.mlrTextMuted)
+                                }
+                                .buttonStyle(.borderless)
+                                .accessibilityLabel("Remove \(person.name)")
+                            }
+                        }
+                    }
+                }
+                if myStatus != nil, env.isSignedIn {
+                    Button("Clear my RSVP") { Task { await clearMyRSVP() } }
+                        .font(.mlrScaled(12, weight: .semibold))
+                        .buttonStyle(.borderless)
+                }
             }
 
             // Per-day breakdown for day-RSVP events.
@@ -470,7 +497,7 @@ struct EventSheet: View {
             ForEach(event.dayLabels, id: \.self) { day in
                 let names = dayAttendees
                     .filter { $0.goingDays(allDays: event.dayLabels).contains(day) }
-                    .map { $0.profile.name }
+                    .map { $0.name }
                 HStack(alignment: .top, spacing: 8) {
                     Text(day)
                         .font(.mlrScaled(12, weight: .semibold))
@@ -548,7 +575,7 @@ struct EventSheet: View {
         }
         // Per-day roster for day-RSVP events (Family Fest week, etc.).
         if event.dayRsvp {
-            dayAttendees = await env.eventsService.fetchAttendeesWithDays(eventId: event.id)
+            dayAttendees = await env.eventsService.fetchDayRoster(eventId: event.id)
         }
         loadingAttendees = false
     }
@@ -584,6 +611,28 @@ struct EventSheet: View {
             await refreshAfterRSVP()
         } catch {
             actionError = "Couldn't save your days. Try again."
+        }
+    }
+
+    private func removeAttendee(_ person: EventAttendee) async {
+        do {
+            try await env.eventsService.removeAttendanceEntry(id: person.id)
+            Haptics.success()
+            if person.userId != nil, person.userId == env.currentProfile?.id { myStatus = nil }
+            await load()
+        } catch {
+            actionError = "Couldn't remove \(person.name)."
+        }
+    }
+
+    private func clearMyRSVP() async {
+        do {
+            try await env.eventsService.clearMyAttendance(eventId: event.id)
+            myStatus = nil
+            dayStatuses = [:]
+            await load()
+        } catch {
+            actionError = "Couldn't clear your RSVP."
         }
     }
 

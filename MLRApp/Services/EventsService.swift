@@ -163,23 +163,60 @@ final class EventsService {
 
     // MARK: - Who is going
 
-    func fetchWhoIsGoing(eventId: String) async throws -> [EventAttendee] {
-        let rows: [AttendanceWithProfile] = try await supabase
+    /// ⚠️ event_attendance has THREE FKs to profiles (user_id, sponsor_user_id,
+    /// added_by) — every embed names its FK or PostgREST returns PGRST201.
+    /// Roster people (`roster_id`) and outside guests (`guest_name` +
+    /// `sponsor_user_id`) have no profile, so they resolve from the extra embeds.
+    private static let attendeeSelect = """
+        id, user_id, roster_id, guest_name, sponsor_user_id, status, days, confirmed,
+        profiles!event_attendance_user_id_fkey(id, display_name, contact_email, avatar_url, phone, is_admin,
+                         beta_tester, willing_to_help, intro_seen,
+                         email_alerts, push_level, push_types,
+                         notif_types, push_prompted, created_at),
+        family_roster(name),
+        sponsor:profiles!event_attendance_sponsor_user_id_fkey(display_name)
+        """
+
+    private func fetchAttendanceRows(eventId: String) async throws -> [AttendanceWithProfile] {
+        try await supabase
             .from("event_attendance")
-            .select("""
-                status, confirmed,
-                profiles!user_id(id, display_name, contact_email, avatar_url, phone, is_admin,
-                                 beta_tester, willing_to_help, intro_seen,
-                                 email_alerts, push_level, push_types,
-                                 notif_types, push_prompted, created_at)
-            """)
+            .select(Self.attendeeSelect)
             .eq("event_id", value: eventId)
             .in("status", values: ["going", "maybe"])
             .execute()
             .value
-        return rows.compactMap { row in
-            row.profile.map { EventAttendee(profile: $0, confirmed: row.confirmed ?? true) }
+    }
+
+    func fetchWhoIsGoing(eventId: String) async throws -> [EventAttendee] {
+        try await fetchAttendanceRows(eventId: eventId).map { $0.asAttendee }
+    }
+
+    /// Per-day roster for day-RSVP events: every going/maybe row incl. roster
+    /// people and guests, keyed on the attendance row id.
+    func fetchDayRoster(eventId: String) async -> [DayRosterEntry] {
+        do {
+            return try await fetchAttendanceRows(eventId: eventId).map {
+                DayRosterEntry(id: $0.id, name: $0.asAttendee.name, status: $0.status, days: $0.days)
+            }
+        } catch {
+            print("[EventsService] fetchDayRoster error: \(error)")
+            return []
         }
+    }
+
+    /// Remove one attendance row (migration 0196): a manager may remove any row;
+    /// a member only their own. Same RPC the web uses.
+    func removeAttendanceEntry(id: UUID) async throws {
+        struct P: Encodable { let p_id: String }
+        try await supabase.rpc("remove_event_attendance_entry", params: P(p_id: id.uuidString)).execute()
+    }
+
+    /// Clear the VIEWER'S OWN RSVP (`clear_event_attendance` is self-only on the
+    /// server: event + auth.uid()). Managers use `removeAttendanceEntry`.
+    func clearMyAttendance(eventId: String) async throws {
+        struct P: Encodable { let p_event: String }
+        try await supabase.rpc("clear_event_attendance", params: P(p_event: eventId)).execute()
+        attendances[eventId] = nil
     }
 
     /// Attendees (going/maybe) of an event, each with their per-day RSVP — used
@@ -190,7 +227,7 @@ final class EventsService {
                 .from("event_attendance")
                 .select("""
                     status, days,
-                    profiles!user_id(id, display_name, contact_email, avatar_url, phone, is_admin,
+                    profiles!event_attendance_user_id_fkey(id, display_name, contact_email, avatar_url, phone, is_admin,
                                      beta_tester, willing_to_help, intro_seen,
                                      email_alerts, push_level, push_types,
                                      notif_types, push_prompted, created_at)
@@ -357,25 +394,71 @@ final class EventsService {
 // MARK: - Attendance row with embedded profile
 
 private struct AttendanceWithProfile: Decodable {
+    let id: UUID
+    let userId: UUID?
+    let rosterId: UUID?
+    let guestName: String?
     let status: AttendanceStatus
+    let days: [String: AttendanceStatus]?
     let confirmed: Bool?
     let profile: Profile?
+    let roster: RosterName?
+    let sponsor: RosterName?
+
+    struct RosterName: Decodable {
+        let name: String?
+        let displayName: String?
+        enum CodingKeys: String, CodingKey { case name; case displayName = "display_name" }
+    }
 
     enum CodingKeys: String, CodingKey {
-        case status
-        case confirmed
+        case id, status, days, confirmed
+        case userId = "user_id"
+        case rosterId = "roster_id"
+        case guestName = "guest_name"
         case profile = "profiles"
+        case roster = "family_roster"
+        case sponsor
+    }
+
+    /// Same precedence as web's lib/events.ts: profile, roster, then guest.
+    var asAttendee: EventAttendee {
+        func clean(_ s: String?) -> String? {
+            let t = s?.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (t?.isEmpty ?? true) ? nil : t
+        }
+        var name = clean(profile?.name) ?? clean(roster?.name) ?? clean(guestName) ?? "Someone"
+        var note: String?
+        if profile == nil, roster == nil, guestName != nil {
+            note = "Guest of \(clean(sponsor?.displayName) ?? "a member")"
+            name = clean(guestName) ?? name
+        }
+        return EventAttendee(id: id, userId: userId, profile: profile, name: name,
+                             note: note, confirmed: confirmed ?? true)
     }
 }
 
-/// One event's attendee, tagged with whether they've confirmed their own RSVP
-/// (migration 0122) — false for a family-poll-carried-over row nobody has
-/// re-tapped their Going/Maybe/Can't-make control on yet.
+/// One event's attendee: a member (has `profile`), a roster person, or an outside
+/// guest (`note` = "Guest of …"). Keyed on the attendance row id.
 struct EventAttendee: Identifiable {
-    let profile: Profile
+    let id: UUID
+    let userId: UUID?
+    let profile: Profile?
+    let name: String
+    let note: String?
     let confirmed: Bool
-    var id: UUID { profile.id }
-    var name: String { profile.name }
+}
+
+struct DayRosterEntry: Identifiable {
+    let id: UUID
+    let name: String
+    let status: AttendanceStatus
+    let days: [String: AttendanceStatus]?
+
+    func goingDays(allDays: [String]) -> Set<String> {
+        if let days, !days.isEmpty { return Set(days.filter { $0.value == .going }.keys) }
+        return status == .going ? Set(allDays) : []
+    }
 }
 
 private struct AttendeeWithDaysRow: Decodable {

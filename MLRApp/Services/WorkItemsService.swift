@@ -108,7 +108,7 @@ final class WorkItemsService {
                 .eq("event_id", value: eventId)
                 .execute()
                 .value
-            return rows.compactMap(\.workItem)
+            return rows.compactMap(\.workItem).filter(\.isSurfaced)
         } catch {
             print("[WorkItemsService] fetchEventItems error: \(error)")
             return []
@@ -330,6 +330,20 @@ final class WorkItemsService {
         }
         try await supabase
             .rpc("add_work_item_to_event", params: LinkParams(
+                p_event_id: eventId, p_work_item_id: itemId.uuidString
+            ))
+            .execute()
+    }
+
+    /// Unlink a single item from an event (admin or the event's creator; never
+    /// deletes the item). Same RPC as web's `remove_work_item_from_event` (0188).
+    func removeFromEvent(eventId: String, itemId: UUID) async throws {
+        struct P: Encodable {
+            let p_event_id: String
+            let p_work_item_id: String
+        }
+        try await supabase
+            .rpc("remove_work_item_from_event", params: P(
                 p_event_id: eventId, p_work_item_id: itemId.uuidString
             ))
             .execute()
