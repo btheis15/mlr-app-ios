@@ -41,16 +41,22 @@ struct MLRApp: App {
                     ])
                     await env.authService.restoreSession()
                     if env.authService.isSignedIn {
-                        await env.loadProfile()
-                        // Always a live fetch, even if a cached token looks fine —
+                        // Independent launch loads run concurrently: the media token and
+                        // push registration don't need the profile, so they overlap it.
+                        // Always a live token fetch, even if a cached token looks fine —
                         // see MediaTokenService.refresh(). Every photo/video URL in
                         // the app renders through it.
-                        await env.mediaTokenService.refresh()
+                        async let mediaToken: Void = env.mediaTokenService.refresh()
                         // Re-register on launch when already authorized so the token
                         // is refreshed/issued; the AppDelegate callback saves it.
-                        await env.pushService.registerIfAuthorized()
-                        await env.pushService.reconcileToken()
+                        async let push: Void = {
+                            await env.pushService.registerIfAuthorized()
+                            await env.pushService.reconcileToken()
+                        }()
+                        await env.loadProfile()
+                        // Needs currentProfile, so it stays after loadProfile.
                         await env.startNotificationsRealtime()
+                        _ = await (mediaToken, push)
                         // Feed resort content to Spotlight's semantic index so
                         // Siri / Apple Intelligence can find it by natural language.
                         Task { await ContentIndexer.reindexAll() }
@@ -61,11 +67,14 @@ struct MLRApp: App {
                 .onChange(of: env.authService.isSignedIn) { _, signedIn in
                     if signedIn {
                         Task {
+                            async let mediaToken: Void = env.mediaTokenService.refresh()
+                            async let push: Void = {
+                                await env.pushService.registerIfAuthorized()
+                                await env.pushService.reconcileToken()
+                            }()
                             await env.loadProfile()
-                            await env.mediaTokenService.refresh()
-                            await env.pushService.registerIfAuthorized()
-                            await env.pushService.reconcileToken()
                             await env.startNotificationsRealtime()
+                            _ = await (mediaToken, push)
                             await ContentIndexer.reindexAll()
                             await ContentIndexer.publishWidgetSnapshots()
                         }

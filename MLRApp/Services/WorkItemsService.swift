@@ -33,11 +33,24 @@ final class WorkItemsService {
     }
 
     private var realtimeChannel: RealtimeChannelV2? = nil
+    private var freshness = FreshnessWindow()
+
+    /// Whose snapshot to paint/save for the checklist (items are RLS-scoped per
+    /// member: house items). The Home card sets it to the real viewer, and to nil
+    /// while an admin is previewing — nil means no disk read or write.
+    var snapshotUser: UUID? = nil
 
     // MARK: - Fetch
 
     /// All work items, open first then done (newest-first within each group).
-    func fetchItems() async {
+    /// `ifStale: true` skips the network when fetched in the last 30s (card re-appearance).
+    func fetchItems(ifStale: Bool = false) async {
+        let cacheKey = snapshotUser.map { DiskCache.key("work-items", user: $0) }
+        if items.isEmpty, let cacheKey,
+           let cached = DiskCache.load([WorkItemSnapshot].self, key: cacheKey) {
+            items = cached.map(\.item)
+        }
+        if ifStale && freshness.isFresh() { return }
         isLoading = true
         error = nil
         defer { isLoading = false }
@@ -53,8 +66,10 @@ final class WorkItemsService {
                 .order("created_at", ascending: false)
                 .execute()
                 .value
-            items = rows
+            applyRefreshed { items = rows }
             await resolveCompletedByNames()
+            freshness.touch()
+            if let cacheKey { DiskCache.save(items.map(WorkItemSnapshot.init), key: cacheKey) }
             writeTodoSnapshot()
         } catch {
             self.error = "Couldn't load the work checklist."
@@ -439,5 +454,51 @@ private struct WorkItemCommentRow: Decodable {
             mentions: mentions,
             createdAt: createdAt
         )
+    }
+}
+
+
+// MARK: - Disk snapshot
+// `WorkItem.encode(to:)` is deliberately lossy (it is the write shape), so the
+// cache stores this wrapper, which writes the full read shape back out in the
+// same keys `WorkItem.init(from:)` decodes (media + comment count included).
+
+struct WorkItemSnapshot: Codable, Sendable {
+    let item: WorkItem
+
+    init(_ item: WorkItem) { self.item = item }
+    init(from decoder: Decoder) throws { item = try WorkItem(from: decoder) }
+
+    private struct CommentRef: Encodable { let id: UUID }
+    private struct NameRef: Encodable {
+        let displayName: String?
+        enum CodingKeys: String, CodingKey { case displayName = "display_name" }
+    }
+
+    func encode(to encoder: Encoder) throws {
+        typealias K = WorkItem.CodingKeys
+        var c = encoder.container(keyedBy: K.self)
+        try c.encode(item.id, forKey: .id)
+        try c.encode(item.title, forKey: .title)
+        try c.encodeIfPresent(item.notes, forKey: .notes)
+        try c.encodeIfPresent(item.category, forKey: .category)
+        try c.encode(item.status, forKey: .status)
+        try c.encodeIfPresent(item.peopleNeeded, forKey: .peopleNeeded)
+        try c.encodeIfPresent(item.houseId, forKey: .houseId)
+        try c.encodeIfPresent(item.urgency, forKey: .urgency)
+        try c.encodeIfPresent(item.customLabel, forKey: .customLabel)
+        try c.encodeIfPresent(item.customColor, forKey: .customColor)
+        try c.encodeIfPresent(item.recurEveryYears, forKey: .recurEveryYears)
+        try c.encodeIfPresent(item.surfaceOn, forKey: .surfaceOn)
+        try c.encode(item.media, forKey: .media)
+        try c.encode((0..<item.commentCount).map { _ in CommentRef(id: UUID()) }, forKey: .comments)
+        try c.encodeIfPresent(item.createdBy, forKey: .createdBy)
+        try c.encode(item.createdAt, forKey: .createdAt)
+        try c.encode(item.updatedAt, forKey: .updatedAt)
+        try c.encodeIfPresent(item.completedBy, forKey: .completedBy)
+        try c.encodeIfPresent(item.completedAt, forKey: .completedAt)
+        if let name = item.completedByName {
+            try c.encode(NameRef(displayName: name), forKey: .completedByProfile)
+        }
     }
 }

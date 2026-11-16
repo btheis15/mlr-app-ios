@@ -12,7 +12,7 @@ import Kingfisher
 struct OnThisDayCard: View {
     @Environment(AppEnvironment.self) private var env
 
-    struct Memory: Equatable {
+    struct Memory: Equatable, Codable {
         let id: UUID
         let year: Int
         let caption: String
@@ -74,8 +74,17 @@ struct OnThisDayCard: View {
 
     private func load() async {
         guard env.isSignedIn else { return }
+        // The pick is the same for everyone on a given day; key carries the date.
+        // Never read or written while previewing as someone else.
+        let day = Date().formatted(.iso8601.year().month().day())
+        let cacheKey = env.isPreviewing ? nil : DiskCache.key("home-on-this-day-\(day)", user: env.currentProfile?.id)
+        if memory == nil, let cacheKey,
+           let cached = DiskCache.load(Memory.self, key: cacheKey) { memory = cached }
         let picked = await Self.fetchTodaysMemory()
-        if picked != memory { memory = picked }
+        if picked != memory { applyRefreshed { memory = picked } }
+        if let cacheKey {
+            if let picked { DiskCache.save(picked, key: cacheKey) } else { DiskCache.remove(key: cacheKey) }
+        }
     }
 
     // MARK: - Fetch + deterministic pick

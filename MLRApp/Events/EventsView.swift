@@ -66,7 +66,7 @@ struct EventsView: View {
                 // Active family-wide date poll (#328) — every signed-in member sees it.
                 MeetingSectionBar(scope: .family, members: [], surface: .card, refreshID: meetingRefreshID)
                 Group {
-                    if env.eventsService.isLoading && !hasLoaded {
+                    if env.eventsService.isLoading && env.eventsService.events.isEmpty {
                         ScrollView {
                             VStack(spacing: 16) {
                                 ForEach(0..<4, id: \.self) { _ in SkeletonCard(height: 120) }

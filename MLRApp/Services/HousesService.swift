@@ -30,7 +30,19 @@ final class HousesService {
 
     // MARK: - Houses
 
+    /// The houses list is the same for every viewer, so its snapshot uses the
+    /// shared "guest" key.
+    private static let housesCacheKey = DiskCache.key("houses", user: nil)
+
+    /// Paint the last houses snapshot (no network) when nothing is loaded yet.
+    func hydrateFromCache() {
+        guard houses.isEmpty,
+              let cached = DiskCache.load([House].self, key: Self.housesCacheKey) else { return }
+        houses = cached
+    }
+
     func fetchHouses() async {
+        hydrateFromCache()
         isLoading = true
         error = nil
         defer { isLoading = false }
@@ -41,7 +53,8 @@ final class HousesService {
                 .order("position", ascending: true)
                 .execute()
                 .value
-            houses = rows
+            applyRefreshed { houses = rows }
+            DiskCache.save(rows, key: Self.housesCacheKey)
         } catch {
             self.error = "Couldn't load houses."
             print("[HousesService] fetchHouses error: \(error)")

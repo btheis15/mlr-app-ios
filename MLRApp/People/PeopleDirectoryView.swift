@@ -16,6 +16,13 @@ struct PeopleDirectoryView: View {
     @State private var selectedMember: Profile?
     @State private var showEmailGroup = false
     @State private var composeState: MessageComposeState?
+    @State private var freshness = FreshnessWindow()
+
+    /// Snapshot key for the directory: the real viewer, never while an admin is
+    /// previewing as someone else (nil = no disk read or write).
+    private var cacheKey: String? {
+        env.isPreviewing ? nil : DiskCache.key("people-directory", user: env.currentProfile?.id)
+    }
 
     private var filteredMembers: [Profile] {
         guard !searchText.isEmpty else { return members }
@@ -27,7 +34,7 @@ struct PeopleDirectoryView: View {
 
     var body: some View {
         Group {
-            if isLoading {
+            if isLoading && members.isEmpty {
                 List {
                     Section { SkeletonList(count: 8).listRowInsets(EdgeInsets()) }
                 }
@@ -64,7 +71,7 @@ struct PeopleDirectoryView: View {
             EmailPoolsView()
         }
         .messageComposer($composeState)
-        .task { await load() }
+        .task { await load(ifStale: true) }
     }
 
     // MARK: - List
@@ -107,7 +114,12 @@ struct PeopleDirectoryView: View {
 
     // MARK: - Load
 
-    private func load() async {
+    private func load(ifStale: Bool = false) async {
+        if members.isEmpty, let cacheKey,
+           let cached = DiskCache.load([Profile].self, key: cacheKey), !cached.isEmpty {
+            members = cached
+        }
+        if ifStale && freshness.isFresh() && !members.isEmpty { isLoading = false; return }
         isLoading = members.isEmpty
         loadError = nil
         do {
@@ -118,7 +130,10 @@ struct PeopleDirectoryView: View {
                 .execute()
                 .value
             // Never list the App Review account (kept hidden from all members).
-            members = rows.filter { !ReviewAccess.isReviewEmail($0.email) }
+            let visible = rows.filter { !ReviewAccess.isReviewEmail($0.email) }
+            applyRefreshed { members = visible }
+            freshness.touch()
+            if let cacheKey { DiskCache.save(visible, key: cacheKey) }
         } catch {
             loadError = "Check your connection and try again."
             print("[PeopleDirectory] load error: \(error)")

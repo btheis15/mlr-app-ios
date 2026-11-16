@@ -231,7 +231,7 @@ struct NotificationsView: View {
         defer { isLoading = false }
 
         // fetchNotifications is non-throwing; it sets .error and returns via .notifications
-        await env.notificationsService.fetchNotifications(userId: userId)
+        await env.notificationsService.fetchNotifications(userId: userId, cache: !env.isPreviewing)
         if env.notificationsService.error != nil {
             self.error = "Couldn't load notifications. Pull to retry."
             return

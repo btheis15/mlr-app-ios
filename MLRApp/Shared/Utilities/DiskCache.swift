@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 // MARK: - DiskCache
 // Last-known-good snapshots so a screen can paint instantly on open and then
@@ -63,4 +64,25 @@ enum DiskCache {
         let files = (try? FileManager.default.contentsOfDirectory(at: directory, includingPropertiesForKeys: nil)) ?? []
         for file in files { try? FileManager.default.removeItem(at: file) }
     }
+}
+
+// MARK: - Refresh helpers
+
+/// Swap freshly fetched data in with the app's standard spring so rows move
+/// rather than flash; plain assignment under Reduce Motion.
+@MainActor
+func applyRefreshed(_ change: () -> Void) {
+    if MLRMotion.reduceMotion { change() } else { withAnimation(MLRMotion.spring, change) }
+}
+
+/// Tiny "fetched recently" gate so a tab's `.task` doesn't refetch on every
+/// appearance. Pull-to-refresh and realtime refreshes ignore it.
+struct FreshnessWindow {
+    private var last: Date?
+    func isFresh(within seconds: TimeInterval = 30) -> Bool {
+        guard let last else { return false }
+        return Date().timeIntervalSince(last) < seconds
+    }
+    mutating func touch() { last = Date() }
+    mutating func reset() { last = nil }
 }

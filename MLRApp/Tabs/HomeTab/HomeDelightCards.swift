@@ -18,10 +18,15 @@ struct UpcomingBirthdaysCard: View {
 
     @State private var upcoming: [BirthdayPerson] = []
 
+    // The loader hangs off the always-present container (not the conditional
+    // card), otherwise an empty card would never get a chance to load.
     var body: some View {
-        if env.isSignedIn, !upcoming.isEmpty {
-            card
+        Group {
+            if env.isSignedIn, !upcoming.isEmpty {
+                card
+            }
         }
+        .task(id: env.currentProfile?.id) { await load() }
     }
 
     private var card: some View {
@@ -62,11 +67,17 @@ struct UpcomingBirthdaysCard: View {
         }
         .padding(14)
         .cardStyle()
-        .task { await load() }
     }
 
     private func load() async {
         guard let myId = env.currentProfile?.id else { return }
+        // Snapshot holds the raw rows (days-until is recomputed against today);
+        // never read or written while an admin is previewing as someone else.
+        let cacheKey = env.isPreviewing ? nil : DiskCache.key("home-birthdays", user: myId)
+        if upcoming.isEmpty, let cacheKey,
+           let cached = DiskCache.load([BirthdayFetchRow].self, key: cacheKey) {
+            applyRows(cached, myId: myId)
+        }
 
         do {
             let rows: [BirthdayFetchRow] = try await supabase
@@ -74,7 +85,15 @@ struct UpcomingBirthdaysCard: View {
                 .select("id, display_name, avatar_url, birthday")
                 .execute()
                 .value
+            applyRows(rows, myId: myId)
+            if let cacheKey { DiskCache.save(rows, key: cacheKey) }
+        } catch {
+            print("[UpcomingBirthdaysCard] \(error)")
+        }
+    }
 
+    private func applyRows(_ rows: [BirthdayFetchRow], myId: UUID) {
+        do {
             var cal = Calendar.current
             cal.timeZone = TimeZone(identifier: "America/Chicago")!
             let today = cal.startOfDay(for: Date())
@@ -82,7 +101,7 @@ struct UpcomingBirthdaysCard: View {
             let fmt = DateFormatter()
             fmt.dateFormat = "MMM d"
 
-            upcoming = rows.compactMap { row -> BirthdayPerson? in
+            let fresh = rows.compactMap { row -> BirthdayPerson? in
                 guard row.id != myId,
                       let bday = row.birthday,
                       let next = nextOccurrence(of: bday, from: today, calendar: cal),
@@ -99,8 +118,7 @@ struct UpcomingBirthdaysCard: View {
                 )
             }
             .sorted { $0.daysUntil < $1.daysUntil }
-        } catch {
-            print("[UpcomingBirthdaysCard] \(error)")
+            applyRefreshed { upcoming = fresh }
         }
     }
 
@@ -133,7 +151,7 @@ struct UpcomingBirthdaysCard: View {
 struct WhosUpNorthCard: View {
     @Environment(AppEnvironment.self) private var env
 
-    struct UpNorthPerson: Identifiable {
+    struct UpNorthPerson: Identifiable, Codable {
         let id: UUID
         let name: String
         let avatarUrl: String?
@@ -142,14 +160,19 @@ struct WhosUpNorthCard: View {
     @State private var people: [UpNorthPerson] = []
     @State private var showRoster = false
 
+    // The loader hangs off the always-present container (not the conditional
+    // card), otherwise an empty card would never get a chance to load.
     var body: some View {
-        if env.isSignedIn, !people.isEmpty {
-            Button { showRoster = true } label: { card }
-                .buttonStyle(.pressable)
-                .sheet(isPresented: $showRoster) {
-                    UpNorthRosterSheet(people: people)
-                }
+        Group {
+            if env.isSignedIn, !people.isEmpty {
+                Button { showRoster = true } label: { card }
+                    .buttonStyle(.pressable)
+                    .sheet(isPresented: $showRoster) {
+                        UpNorthRosterSheet(people: people)
+                    }
+            }
         }
+        .task(id: env.currentProfile?.id) { await load() }
     }
 
     private var card: some View {
@@ -189,7 +212,6 @@ struct WhosUpNorthCard: View {
         }
         .padding(14)
         .cardStyle()
-        .task { await load() }
     }
 }
 
@@ -261,6 +283,11 @@ extension WhosUpNorthCard {
         guard let myId = env.currentProfile?.id else { return }
         let today = isoToday()
         var byId: [UUID: UpNorthPerson] = [:]
+        // "Who's here today" is only valid for today, so the snapshot key carries
+        // the date; never read or written while previewing as someone else.
+        let cacheKey = env.isPreviewing ? nil : DiskCache.key("home-up-north-\(today)", user: myId)
+        if people.isEmpty, let cacheKey,
+           let cached = DiskCache.load([UpNorthPerson].self, key: cacheKey) { people = cached }
 
         // 1. Events ACTUALLY HAPPENING today (started, not past end — no grace
         //    either side, unlike Ask-for-Help: this card should clear the moment
@@ -361,7 +388,9 @@ extension WhosUpNorthCard {
             // Not fatal — house stays are visible only to that house's members.
         }
 
-        people = Array(byId.values).sorted { $0.name < $1.name }
+        let fresh = Array(byId.values).sorted { $0.name < $1.name }
+        applyRefreshed { people = fresh }
+        if let cacheKey { DiskCache.save(fresh, key: cacheKey) }
     }
 
     private func isoToday() -> String {
@@ -378,7 +407,7 @@ extension WhosUpNorthCard {
 
 // MARK: - Private fetch row types
 
-private struct BirthdayFetchRow: Decodable {
+private struct BirthdayFetchRow: Codable {
     let id: UUID
     let displayName: String?
     let avatarUrl: String?

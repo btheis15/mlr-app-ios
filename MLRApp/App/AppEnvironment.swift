@@ -248,7 +248,14 @@ final class AppEnvironment {
             housesService.myHouse = nil
             return
         }
-        housesService.myHouse = await housesService.house(withId: hid)
+        // Instant paint: resolve from the last houses snapshot, then refresh.
+        housesService.hydrateFromCache()
+        if housesService.myHouse == nil,
+           let cached = housesService.houses.first(where: { $0.id == hid }) {
+            housesService.myHouse = cached
+        }
+        let fresh = await housesService.house(withId: hid)
+        if fresh != nil || housesService.myHouse == nil { housesService.myHouse = fresh }
     }
 
     private func fetchProfile(id: UUID) async -> Profile? {
@@ -298,6 +305,7 @@ final class AppEnvironment {
     @MainActor
     func startNotificationsRealtime() async {
         guard let uid = currentProfile?.id else { return }
+        if !isPreviewing { notificationsService.hydrateFromCache(userId: uid) }
         notificationsService.subscribeToRealtime(userId: uid)
         await notificationsService.fetchUnreadCount(userId: uid)
     }

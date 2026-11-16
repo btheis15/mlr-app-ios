@@ -19,6 +19,11 @@ final class EventsService {
     var error: String? = nil
 
     private var realtimeChannel: RealtimeChannelV2? = nil
+    private var eventsFreshness = FreshnessWindow()
+
+    /// Calendar events are family-wide (identical for every viewer), so their
+    /// snapshot uses the shared "guest" key; attendance is keyed per user.
+    private static let eventsCacheKey = DiskCache.key("events", user: nil)
 
     // MARK: - Computed
 
@@ -44,7 +49,14 @@ final class EventsService {
 
     // MARK: - Fetch events
 
-    func fetchEvents() async {
+    /// `ifStale: true` skips the network when events were fetched in the last 30s
+    /// (tab re-appearance); realtime, pull-to-refresh and mutations pass the default.
+    func fetchEvents(ifStale: Bool = false) async {
+        if events.isEmpty,
+           let cached = DiskCache.load([ResortEvent].self, key: Self.eventsCacheKey), !cached.isEmpty {
+            events = cached
+        }
+        if ifStale && eventsFreshness.isFresh() { return }
         isLoading = true
         error = nil
         defer { isLoading = false }
@@ -70,20 +82,27 @@ final class EventsService {
             let fest = synthesizeFamilyFest()
             merged[fest.id] = fest
 
-            events = Array(merged.values).sorted {
+            let sorted = Array(merged.values).sorted {
                 ($0.startDateParsed ?? .distantFuture) < ($1.startDateParsed ?? .distantFuture)
             }
+            applyRefreshed { events = sorted }
+            eventsFreshness.touch()
+            DiskCache.save(sorted, key: Self.eventsCacheKey)
         } catch {
             self.error = "Couldn't load events."
             print("[EventsService] fetchEvents error: \(error)")
-            // Fall back to seed data so the UI isn't empty
-            events = ResortEvent.seedEvents
+            // Fall back to seed data so the UI isn't empty (keep a cached list if we have one)
+            if events.isEmpty { events = ResortEvent.seedEvents }
         }
     }
 
     // MARK: - Attendance
 
     func fetchAttendance(userId: UUID) async {
+        let cacheKey = DiskCache.key("event-attendance", user: userId)
+        if attendances.isEmpty, let cached = DiskCache.load([EventAttendance].self, key: cacheKey) {
+            attendances = Dictionary(cached.map { ($0.eventId, $0) }, uniquingKeysWith: { $1 })
+        }
         do {
             let rows: [EventAttendance] = try await supabase
                 .from("event_attendance")
@@ -93,7 +112,8 @@ final class EventsService {
                 .value
             var map: [String: EventAttendance] = [:]
             for row in rows { map[row.eventId] = row }
-            attendances = map
+            applyRefreshed { attendances = map }
+            DiskCache.save(rows, key: cacheKey)
         } catch {
             print("[EventsService] fetchAttendance error: \(error)")
         }

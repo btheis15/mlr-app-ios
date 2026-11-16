@@ -46,7 +46,7 @@ struct PollsView: View {
             await env.pollsService.fetchPolls(userId: env.currentProfile?.id)
         }
         .task {
-            await env.pollsService.fetchPolls(userId: env.currentProfile?.id)
+            await env.pollsService.fetchPolls(userId: env.currentProfile?.id, ifStale: true)
         }
         .sheet(isPresented: $showCreate) {
             NavigationStack {
