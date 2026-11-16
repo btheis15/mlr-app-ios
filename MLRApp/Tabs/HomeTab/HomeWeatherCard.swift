@@ -66,8 +66,8 @@ struct HomeWeatherCard: View {
     private func symbolView(_ snap: HomeWeatherSnapshot, size: CGFloat, width: CGFloat) -> some View {
         Image(systemName: snap.symbol)
             .font(.mlrScaled(size, weight: .medium))
-            .foregroundStyle(Color.mlrPrimary)
-            .symbolRenderingMode(.multicolor)
+            .symbolRenderingMode(.palette)
+            .foregroundStyle(WeatherSymbolTint.primary(snap.symbol), WeatherSymbolTint.secondary(snap.symbol))
             .contentTransition(.symbolEffect(.replace))
             .symbolEffect(.bounce, options: .nonRepeating, value: reduceMotion ? "" : snap.symbol)
             .frame(width: width)
@@ -189,8 +189,8 @@ struct HomeWeatherCard: View {
                                 .foregroundStyle(Color.mlrTextMuted)
                             Image(systemName: day.symbol)
                                 .font(.mlrScaled(14))
-                                .foregroundStyle(Color.mlrPrimary)
-                                .symbolRenderingMode(.multicolor)
+                                .symbolRenderingMode(.palette)
+                                .foregroundStyle(WeatherSymbolTint.primary(day.symbol), WeatherSymbolTint.secondary(day.symbol))
                                 .frame(height: 18)
                             Text("\(day.hi)°")
                                 .font(.mlrScaled(11, weight: .semibold))
@@ -421,5 +421,32 @@ enum HomeWeatherFetch {
         fmt.locale = Locale(identifier: "en_US_POSIX")
         fmt.timeZone = TimeZone(identifier: "America/Chicago")
         return fmt.string(from: date)
+    }
+}
+
+// MARK: - Weather symbol colours
+// Multicolor weather symbols draw their clouds white, which vanishes on the
+// app's light cards. Palette rendering keeps the sun gold and the rain blue but
+// gives clouds a visible slate.
+
+enum WeatherSymbolTint {
+    private static let cloud = Color(light: "#7C8794", dark: "#C3CAD3")
+    private static let sun   = Color(light: "#E9A100", dark: "#FFC83D")
+    private static let water = Color(light: "#2F7FD1", dark: "#6FB2F2")
+
+    /// The symbol's main shape: the cloud when there is one, else the sun/moon/flake.
+    static func primary(_ symbol: String) -> Color {
+        if symbol.hasPrefix("cloud") || symbol.contains("fog") || symbol.contains("wind") { return cloud }
+        if symbol.contains("snow") { return water }
+        if symbol.contains("drop") || symbol.contains("rain") { return water }
+        return sun
+    }
+
+    /// The accent layer: sun or moon behind a cloud, rain, snow or lightning under it.
+    static func secondary(_ symbol: String) -> Color {
+        if symbol.contains("sun") || symbol.contains("moon") || symbol.contains("bolt") { return sun }
+        if symbol.contains("rain") || symbol.contains("drizzle") || symbol.contains("snow")
+            || symbol.contains("sleet") || symbol.contains("hail") { return water }
+        return primary(symbol)
     }
 }

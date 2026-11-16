@@ -277,6 +277,8 @@ struct HomeView: View {
             Spacer()
             SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
                 .scaledToFit()
+                // The season's still scene (the splash's final frame), as on web.
+                .overlay { SeasonalLogoFX(season: .current(), progress: 1).allowsHitTesting(false) }
                 .frame(maxWidth: logoWidth)
                 .padding(.top, 10)
                 .padding(.bottom, 4)

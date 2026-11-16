@@ -141,7 +141,7 @@ private struct AppImageRow: View {
 /// Puts a small pencil on the Home logo for whoever may edit app images
 /// (admins, plus fest editors via `can_edit_fest`, the same rule
 /// `AppImagesService.canEdit()` documents). Hidden while previewing as someone
-/// else. Opens the App Images screen (pushed on the surrounding NavigationStack).
+/// else. Opens the App Images screen as a sheet.
 private struct HomeLogoEditPencil: ViewModifier {
     @Environment(AppEnvironment.self) private var env
     @State private var canEdit = false
@@ -149,13 +149,18 @@ private struct HomeLogoEditPencil: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .topLeading) {
+            // Bottom-trailing: the leading edge holds the admin date preview and
+            // the trailing centre holds Search.
+            .overlay(alignment: .bottomTrailing) {
                 if (env.isAdmin || canEdit) && !env.isPreviewing {
                     EditPencil("app images") { open = true }
-                        .padding(.leading, 8)
+                        .padding(.trailing, 8)
                 }
             }
-            .navigationDestination(isPresented: $open) { AppImagesAdminView() }
+            // A sheet, not a navigationDestination: this sits inside Home's lazy stack.
+            .sheet(isPresented: $open) {
+                NavigationStack { AppImagesAdminView() }
+            }
             .task(id: env.currentProfile?.id) {
                 guard env.isSignedIn, !env.isAdmin else { return }
                 canEdit = await env.appImagesService.canEdit()
