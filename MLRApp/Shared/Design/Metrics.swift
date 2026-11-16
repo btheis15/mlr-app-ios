@@ -18,18 +18,20 @@ enum MLRSpacing {
     /// Default screen edge padding.
     static let page: CGFloat = 16
     /// Default padding inside a card.
-    static let cardInset: CGFloat = 14
+    static let cardInset: CGFloat = 12
     /// Default spacing between stacked cards/sections.
-    static let stack: CGFloat = 12
+    static let stack: CGFloat = 10
+    /// Default spacing between sections.
+    static let section: CGFloat = 16
 }
 
 /// Corner radius scale (pt).
 enum MLRRadius {
     static let sm: CGFloat     = 8
     static let button: CGFloat = 14
-    static let card: CGFloat   = 20
+    static let card: CGFloat   = 18
     static let lg: CGFloat     = 18
-    static let hero: CGFloat   = 24
+    static let hero: CGFloat   = 22
     static let xl: CGFloat     = 24
     static let pill: CGFloat   = 999
 }

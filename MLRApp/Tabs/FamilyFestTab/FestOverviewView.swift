@@ -328,7 +328,7 @@ struct FestOverviewView: View {
             Text("More").festHeadingStyle(size: 17).padding(.top, 4)
 
             // A concluded fest drops to Overview + Past Years.
-            LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: MLRSpacing.stack), GridItem(.flexible(), spacing: MLRSpacing.stack)], spacing: MLRSpacing.stack) {
                 if !festSeason.isConcluded {
                     FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
                     FestUtilityLink(label: "Weekly dinner menu", icon: "fork.knife") { FestDinnersView() }
@@ -450,7 +450,7 @@ private struct FestUtilityLink<Destination: View>: View {
                 .toolbarColorScheme(.light, for: .navigationBar)
         } label: {
             VStack(alignment: .leading, spacing: 10) {
-                IconTile(symbol: icon, accent: .mlrFest, size: 36)
+                IconTile(symbol: icon, accent: .mlrFest, size: 34)
                 Text(label)
                     .font(.system(.headline, weight: .semibold))
                     .foregroundStyle(Color.mlrFestInkReadable)
@@ -487,11 +487,11 @@ private struct FestCoverCaption: View {
     var body: some View {
         VStack(spacing: 10) {
             Text(title)
-                .font(.festDisplay(24))
+                .font(.festDisplay(21))
                 .foregroundStyle(Color.mlrFestInkReadable)
             GoldOrnamentDivider()
             Text(dates)
-                .font(.mlrScaled(17, weight: .semibold, relativeTo: .title3))
+                .font(.mlrScaled(16, weight: .semibold, relativeTo: .title3))
                 .foregroundStyle(Color.mlrFestReadable)
             Text("Muskellunge Lake Resort \u{00B7} Tomahawk, WI")
                 .font(.system(.footnote))
@@ -530,11 +530,11 @@ private struct FestCountdownTiles: View {
     }
     private func tile(_ n: Int, _ label: String) -> some View {
         VStack(spacing: 2) {
-            Text("\(n)").font(.festDisplay(26)).foregroundStyle(Color.mlrFestReadable).monospacedDigit()
+            Text("\(n)").font(.festDisplay(22)).foregroundStyle(Color.mlrFestReadable).monospacedDigit()
             Text(label.uppercased()).font(.system(size: 11, weight: .semibold)).tracking(1.2)
                 .foregroundStyle(Color.mlrFestInkReadable.opacity(0.7))
         }
-        .frame(maxWidth: .infinity, minHeight: 64)
+        .frame(maxWidth: .infinity, minHeight: 56)
         .festCardStyle(cornerRadius: 20)
     }
 }

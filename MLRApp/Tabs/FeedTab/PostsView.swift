@@ -437,12 +437,12 @@ private struct ConversationRow: View {
         let hasUnread = unread > 0
         MLRCard(.plain, padding: 14) {
             HStack(spacing: 14) {
-                IconTile(emoji: emoji, accent: accent, size: 44)
+                IconTile(emoji: emoji, accent: accent, size: 40)
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
                         Text(title)
-                            .font(.system(size: 16, weight: hasUnread ? .bold : .semibold))
+                            .font(.system(size: 15, weight: hasUnread ? .bold : .semibold))
                             .foregroundStyle(Color.mlrText)
                             .lineLimit(1)
                         if summary?.muted == true {

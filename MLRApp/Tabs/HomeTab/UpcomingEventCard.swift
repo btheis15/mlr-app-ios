@@ -49,10 +49,10 @@ struct UpcomingEventCard: View {
             MLRCard(.hero) {
                 VStack(alignment: .leading, spacing: 14) {
                     HStack(alignment: .top, spacing: 14) {
-                        IconTile(emoji: kindEmoji, accent: kindTint, size: 54)
+                        IconTile(emoji: kindEmoji, accent: kindTint, size: 48)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(event.title)
-                                .font(.mlrScaled(18, weight: .semibold, design: .serif, relativeTo: .title3))
+                                .font(.mlrScaled(17, weight: .semibold, design: .serif, relativeTo: .title3))
                                 .foregroundStyle(Color.mlrText)
                                 .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)

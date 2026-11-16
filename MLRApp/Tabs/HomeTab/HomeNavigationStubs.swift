@@ -160,7 +160,7 @@ struct LocalPlaceCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
                     if url(place.imageUrl) == nil {
-                        IconTile(emoji: place.displayEmoji, accent: accent, size: 54)
+                        IconTile(emoji: place.displayEmoji, accent: accent, size: 48)
                             .accessibilityHidden(true)
                     }
                     VStack(alignment: .leading, spacing: 3) {

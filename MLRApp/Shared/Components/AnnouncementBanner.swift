@@ -148,16 +148,16 @@ private struct AnnouncementBannerRow: View {
     var body: some View {
         MLRCard(.tinted(kindColor), padding: 14) {
             HStack(alignment: .top, spacing: 12) {
-                IconTile(symbol: kindSymbol, accent: kindColor, size: 36)
+                IconTile(symbol: kindSymbol, accent: kindColor, size: 34)
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(announcement.title)
-                        .font(.system(.body, weight: .semibold))
+                        .font(.mlrScaled(15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
 
                     if let body = announcement.body, !body.isEmpty {
                         Text(body)
-                            .font(.subheadline)
+                            .font(.mlrScaled(13, relativeTo: .subheadline))
                             .foregroundStyle(Color.mlrTextMuted)
                             .fixedSize(horizontal: false, vertical: true)
                     }

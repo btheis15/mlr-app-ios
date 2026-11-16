@@ -131,7 +131,8 @@ private struct CoverFit: ViewModifier {
         if let h = fillHeight {
             content.scaledToFill().frame(maxWidth: .infinity).frame(height: h).clipped()
         } else {
-            content.scaledToFit().frame(maxWidth: .infinity)
+            Color.clear.aspectRatio(1 / 0.62, contentMode: .fit).frame(maxWidth: .infinity)
+                .overlay { content.scaledToFill() }.clipped()
         }
     }
 }
@@ -164,9 +165,9 @@ struct FestYearCover: View {
             }
         }
         .modifier(CoverFit(fillHeight: fillHeight))
-        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 24, style: .continuous)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
                 .strokeBorder(Color.mlrFestBorder, lineWidth: 1)
         )
         .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 2)

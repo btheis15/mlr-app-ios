@@ -43,7 +43,7 @@ struct WelcomeCard: View {
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Welcome to MLR")
-                        .font(.mlrScaled(17, weight: .bold, design: .rounded))
+                        .font(.mlrScaled(15, weight: .bold, design: .rounded))
                         .foregroundStyle(Color.mlrPrimary)
 
                     Text("Muskellunge Lake Resort — Est. 1987")
@@ -131,7 +131,7 @@ private struct WelcomeBullet: View {
                 .padding(.top, 1)
 
             Text(text)
-                .font(.mlrScaled(14))
+                .font(.mlrScaled(13))
                 .foregroundStyle(Color.mlrText)
                 .fixedSize(horizontal: false, vertical: true)
         }

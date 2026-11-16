@@ -232,7 +232,7 @@ struct HomeCalloutCard: View {
                     // Eyebrow row — only text-only cards get this branded label
                     if !hasImage {
                         HStack(spacing: 12) {
-                            IconTile(symbol: "megaphone.fill", accent: .mlrPrimary, size: 36)
+                            IconTile(symbol: "megaphone.fill", accent: .mlrPrimary, size: 34)
                             Eyebrow("Announcement", color: .mlrPrimary)
                         }
                         .padding(.bottom, 10)
@@ -240,7 +240,7 @@ struct HomeCalloutCard: View {
 
                     if let title = callout.title?.nilIfEmpty {
                         Text(title)
-                            .font(.system(.title3, design: .serif, weight: .semibold))
+                            .font(.mlrScaled(17, weight: .semibold, design: .serif, relativeTo: .title3))
                             .foregroundStyle(Color.mlrText)
                             .padding(.trailing, onDismiss != nil ? 30 : 0)
                             .padding(.bottom, callout.body?.nilIfEmpty != nil ? 8 : 0)
@@ -248,7 +248,7 @@ struct HomeCalloutCard: View {
 
                     if let body = callout.body?.nilIfEmpty {
                         Text(body)
-                            .font(.subheadline)
+                            .font(.mlrScaled(13, relativeTo: .subheadline))
                             .foregroundStyle(Color.mlrTextMuted)
                             .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
