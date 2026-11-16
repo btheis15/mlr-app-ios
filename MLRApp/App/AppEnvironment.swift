@@ -122,6 +122,9 @@ final class AppEnvironment {
     /// committee memberships) for whoever the UI is currently scoped to.
     @MainActor
     func reloadPreviewScopedData() async {
+        // Event chats list per previewed member (preview_event_chats) and never write.
+        eventChatService.previewUserId = previewMember?.id
+        await eventChatService.loadChats()
         guard let uid = effectiveUserId else { return }
         await festContentService.fetchMyCalloutCompletions(userId: uid, useLocal: previewMember == nil)
         await committeeService.fetchMyMemberships(userId: uid)

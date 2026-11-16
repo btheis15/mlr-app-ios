@@ -84,6 +84,13 @@ struct AdminView: View {
                     title: "Content Review",
                     description: "Review flagged posts and comments"
                 )
+                adminLink(
+                    destination: AdminEventChatsView(),
+                    icon: "archivebox.fill",
+                    iconColor: Color.mlrInfo,
+                    title: "Event chats",
+                    description: "Reopen an archived event chat"
+                )
             }
 
             Section("Alerts & Notifications") {
