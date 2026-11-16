@@ -120,3 +120,139 @@ extension View {
         modifier(FestThemeScope(config: config))
     }
 }
+
+// MARK: - Fest cover (per-year, app-wide fallback)
+
+/// The fest cover. Priority matches web's FestCover: THIS YEAR's own
+/// `fest_config.cover_url` first, then the app-wide `app_images.fest_cover`,
+/// then the bundled art. A year's cover failing to load also falls back to the
+/// app-wide image so the header is never blank. `tint`/`gold` default to the
+/// active look; the editor preview passes its draft colours instead.
+struct FestYearCover: View {
+    let coverUrl: String?
+    var tint: Color = .mlrFest
+    var gold: Color = .mlrFestGold
+    var accessibilityText = "Family Fest cover"
+
+    private var yearURL: URL? {
+        guard let s = coverUrl?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return nil }
+        return URL(string: s)
+    }
+
+    private var fallback: some View {
+        SiteImage(key: SiteImageKey.festCover, fallback: "family-fest-cover")
+    }
+
+    var body: some View {
+        Group {
+            if let url = yearURL {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image { image.resizable() } else { fallback }
+                }
+            } else {
+                fallback
+            }
+        }
+        .scaledToFit()
+        .frame(maxWidth: .infinity)
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+        .overlay(
+            RoundedRectangle(cornerRadius: 16)
+                .strokeBorder(LinearGradient(colors: [tint, gold],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing),
+                              lineWidth: 1.5)
+        )
+        .shadow(color: tint.opacity(0.18), radius: 16, x: 0, y: 8)
+        .accessibilityLabel(accessibilityText)
+    }
+}
+
+// MARK: - Draft look preview (editor)
+
+/// Renders a DRAFT look without touching `FestThemeStore.active`: the real fest
+/// pieces (cover, card, heading, background treatment) are drawn from the draft's
+/// own resolved colours and font, so the app-wide look never changes while editing.
+/// Light-mode values, like web's editor (dark mode only takes primary and accent).
+struct FestLookPreview: View {
+    let look: FestTheme
+    let coverUrl: String?
+    let themeLine: String?
+
+    private func color(_ slot: FestTheme.Slot, _ builtIn: String) -> Color {
+        Color(hex: look.hex(slot, dark: false) ?? builtIn)
+    }
+    // Built-in values mirror Colors.swift (light).
+    private var primary: Color { color(.primary, "#6B0F24") }
+    private var gold: Color { color(.accent, "#C29A2E") }
+    private var parchment: Color { color(.background, "#ECDCBE") }
+    private var card: Color { color(.card, "#FBF3E1") }
+    private var ink: Color { color(.ink, "#33240F") }
+    private var border: Color {
+        look.hex(.border, dark: false).map { Color(hex: $0) } ?? Color(hex: "#C29A2E").opacity(0.6)
+    }
+
+    private func serif(_ size: CGFloat) -> Font {
+        switch look.font {
+        case "playfair": return .system(size: size, weight: .bold, design: .serif)
+        case "sans": return .system(size: size, weight: .bold)
+        default: return .custom("Cinzel-Bold", size: size)
+        }
+    }
+
+    private var headline: String {
+        let t = themeLine?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return t.isEmpty ? "Family Fest" : t
+    }
+
+    var body: some View {
+        ZStack {
+            parchment
+            if look.bgStyle == "image", let url = look.safeImageURL {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        if look.bgImageMode == "tile" {
+                            image.resizable(resizingMode: .tile)
+                        } else {
+                            image.resizable().scaledToFill()
+                        }
+                    }
+                }
+                .opacity(look.imageStrength)
+                .allowsHitTesting(false)
+            }
+            VStack(spacing: 12) {
+                FestYearCover(coverUrl: coverUrl, tint: primary, gold: gold)
+                    .frame(maxHeight: 120)
+                Text(headline)
+                    .font(serif(15))
+                    .tracking(1.2)
+                    .textCase(.uppercase)
+                    .foregroundStyle(primary)
+                    .multilineTextAlignment(.center)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Wednesday")
+                        .font(serif(14))
+                        .foregroundStyle(primary)
+                    Text("Sample card text on the card colour.")
+                        .font(.mlrScaled(12))
+                        .foregroundStyle(ink)
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+                .background(card)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay(RoundedRectangle(cornerRadius: 12).stroke(border, lineWidth: 1))
+                Text("Button")
+                    .font(.mlrScaled(13, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 18).padding(.vertical, 8)
+                    .background(primary, in: Capsule())
+            }
+            .padding(14)
+        }
+        .clipShape(RoundedRectangle(cornerRadius: 14))
+        .environment(\.colorScheme, .light)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Preview of this year's look")
+    }
+}
