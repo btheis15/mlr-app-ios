@@ -29,6 +29,9 @@ struct FamilyFestPlannerView: View {
             }
 
             Section {
+                NavigationLink { FestDetailsEditor() } label: {
+                    Label("Fest details & dates", systemImage: "calendar.badge.clock")
+                }
                 NavigationLink { FestYearLookEditor() } label: {
                     Label("This year's theme & cover", systemImage: "paintpalette")
                 }
@@ -82,6 +85,104 @@ struct FamilyFestPlannerView: View {
         }
         if let url = URL(string: urlString) {
             openURL(url)
+        }
+    }
+}
+
+// MARK: - Fest details (name, tagline, dates)
+// Mirrors the config card in web's FestPlanner. Saves through `save_fest_config`
+// so the planned week follows a moved start date. Still offered once the fest is
+// over (web does the same, to correct the record), with a pointer to "Start next
+// year's fest" for planning the next one.
+
+private struct FestDetailsEditor: View {
+    @Environment(AppEnvironment.self) private var env
+
+    @State private var name = ""
+    @State private var tagline = ""
+    @State private var start = Date()
+    @State private var end = Date()
+    @State private var loaded = false
+    @State private var saving = false
+    @State private var confirmMove = false
+    @State private var message: String?
+    @State private var error: String?
+
+    private var service: FestContentService { env.festContentService }
+
+    private func date(_ iso: String) -> Date? { FestDays.isoFmt.date(from: iso) }
+    private var startISO: String { FestDays.isoFmt.string(from: start) }
+    private var endISO: String { FestDays.isoFmt.string(from: end) }
+    private var startChanged: Bool { startISO != service.config?.startDate }
+    private var validRange: Bool { endISO >= startISO }
+    private var canSave: Bool {
+        loaded && !saving && validRange && !name.trimmingCharacters(in: .whitespaces).isEmpty
+    }
+
+    var body: some View {
+        Form {
+            if service.config?.season.isConcluded == true {
+                Section {
+                    Text("This fest is already over. Edit these only to correct the record. To plan the next one, use \u{201C}Start next year\u{2019}s fest\u{201D} on the planner page, which adds a new year and leaves this one intact in Past Years.")
+                        .font(.mlrScaled(13))
+                }
+            }
+            Section("Fest name") { TextField("Fest name", text: $name) }
+            Section("Tagline") { TextField("Tagline (optional)", text: $tagline) }
+            Section {
+                DatePicker("Start", selection: $start, displayedComponents: .date)
+                DatePicker("End", selection: $end, in: start..., displayedComponents: .date)
+            } header: {
+                Text("Dates")
+            } footer: {
+                if !validRange {
+                    Text("End date must be on or after the start.").foregroundStyle(Color.mlrDanger)
+                } else {
+                    Text("Changing the start date moves the whole planned week with it: dinners, schedule, sign-ups and everyone\u{2019}s day RSVPs keep their weekday. Changing only the end date moves nothing.")
+                }
+            }
+            if let message { Section { Text(message).foregroundStyle(Color.mlrPrimary).font(.mlrScaled(13)) } }
+            if let error { Section { Text(error).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) } }
+            Section {
+                Button {
+                    if startChanged { confirmMove = true } else { Task { await save() } }
+                } label: {
+                    HStack { Text("Save details"); if saving { Spacer(); ProgressView() } }
+                }
+                .disabled(!canSave)
+            }
+        }
+        .navigationTitle("Fest details")
+        .navigationBarTitleDisplayMode(.inline)
+        .task { populate() }
+        .confirmationDialog("Move the whole week?", isPresented: $confirmMove, titleVisibility: .visible) {
+            Button("Move the week and save") { Task { await save() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("The start date is changing, so the whole planned week (dinners, schedule, sign-ups and day RSVPs) moves with it.")
+        }
+    }
+
+    private func populate() {
+        guard !loaded, let c = service.config else { return }
+        name = c.name; tagline = c.tagline ?? ""
+        start = date(c.startDate) ?? .now; end = date(c.endDate) ?? start
+        loaded = true
+    }
+
+    private func save() async {
+        saving = true; error = nil; message = nil
+        defer { saving = false }
+        do {
+            let t = tagline.trimmingCharacters(in: .whitespaces)
+            let r = try await service.saveConfig(
+                name: name.trimmingCharacters(in: .whitespaces),
+                tagline: t.isEmpty ? nil : t,
+                startDate: startISO, endDate: endISO)
+            message = r.message
+            await service.reload()
+        } catch {
+            self.error = "Couldn\u{2019}t save. Check you can edit this fest and try again."
         }
     }
 }
