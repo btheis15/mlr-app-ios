@@ -74,11 +74,13 @@ private struct FestThemeScope: ViewModifier {
 
     func body(content: Content) -> some View {
         // Set during body so children resolve against the right look on first render.
+        // The current year's look is kept by FestContentService; only an archived
+        // year overrides it, for as long as its page is up.
         let l = look
-        FestThemeStore.active = l
+        if config != nil { FestThemeStore.active = l }
         return content
             .id(l)
-            .onAppear { FestThemeStore.active = look }
+            .onAppear { if config != nil { FestThemeStore.active = look } }
             .onDisappear { if config != nil { FestThemeStore.active = currentLook } }
     }
 }

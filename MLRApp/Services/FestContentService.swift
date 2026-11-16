@@ -26,7 +26,7 @@ struct FestConfig: Equatable, Identifiable {
 
 /// A fest year's look. Every field nil = the built-in look; hex is validated
 /// (`^#[0-9A-Fa-f]{6}$`) so a bad value falls back per field, never blanks.
-struct FestTheme: Equatable {
+struct FestTheme: Hashable {
     enum Slot { case primary, accent, background, card, border, ink }
 
     var primary: String?
@@ -275,7 +275,11 @@ private let seedCallout = HomeCallout(
 @Observable
 @MainActor
 final class FestContentService {
-    var config: FestConfig?
+    var config: FestConfig? {
+        // The current year's look is app-wide (Home's fest card included), so
+        // it follows the config rather than whichever fest screen rendered last.
+        didSet { FestThemeStore.active = config?.look ?? .builtIn }
+    }
     var schedule: [ScheduleItem] = ScheduleItem.seed   // timed items + anytime
     var dinners: [FestDinner] = FestDinner.seed
     var payees: [Payee] = FestContentService.seedPayees

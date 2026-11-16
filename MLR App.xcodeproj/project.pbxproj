@@ -37,6 +37,7 @@
 		D31B538C3013A0E800C8D189 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538B3013A0E800C8D189 /* Motion.swift */; };
 		D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538D3013A0F900C8D189 /* Feedback.swift */; };
 		D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */; };
+		D3A0000000000000000000F3 /* SeasonalLogoFX.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3A0000000000000000000F2 /* SeasonalLogoFX.swift */; };
 		D31B53923013A61A00C8D189 /* BracketDiagram.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53913013A61A00C8D189 /* BracketDiagram.swift */; };
 		D31B53943016506100C8D189 /* HomeHero.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53933016506100C8D189 /* HomeHero.swift */; };
 		D31B53963016550800C8D189 /* DateMedallion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53953016550800C8D189 /* DateMedallion.swift */; };
@@ -74,6 +75,7 @@
 		D33F9E7D2FEC086700603CE7 /* FestDinnersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E352FEC086700603CE7 /* FestDinnersView.swift */; };
 		D33F9E7E2FEC086700603CE7 /* FestCountdownIntent.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DF92FEC086700603CE7 /* FestCountdownIntent.swift */; };
 		D33F9E7F2FEC086700603CE7 /* FestSeason.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E2C2FEC086700603CE7 /* FestSeason.swift */; };
+		D3C0D84C8D700976FFD9EDBB /* DiskCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B0D84C8D700976FFD9EDBB /* DiskCache.swift */; };
 		D33F9E802FEC086700603CE7 /* Event.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E012FEC086700603CE7 /* Event.swift */; };
 		D33F9E812FEC086700603CE7 /* EventCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DF02FEC086700603CE7 /* EventCard.swift */; };
 		D33F9E822FEC086700603CE7 /* AdminSignInsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E502FEC086700603CE7 /* AdminSignInsView.swift */; };
@@ -131,7 +133,6 @@
 		D33F9EB82FEC086700603CE7 /* PushService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E1B2FEC086700603CE7 /* PushService.swift */; };
 		D33F9EB92FEC086700603CE7 /* PostsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E422FEC086700603CE7 /* PostsView.swift */; };
 		D33F9EBA2FEC086700603CE7 /* ProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E542FEC086700603CE7 /* ProfileView.swift */; };
-		D33F9EBB2FEC086700603CE7 /* FestPhotosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E382FEC086700603CE7 /* FestPhotosView.swift */; };
 		D33F9EBC2FEC086700603CE7 /* AdminView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E512FEC086700603CE7 /* AdminView.swift */; };
 		D33F9EBD2FEC086700603CE7 /* LiquidGlass.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E292FEC086700603CE7 /* LiquidGlass.swift */; };
 		D33F9EBE2FEC086700603CE7 /* HelpRequestsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DF62FEC086700603CE7 /* HelpRequestsView.swift */; };
@@ -307,6 +308,7 @@
 		D31B538B3013A0E800C8D189 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
 		D31B538D3013A0F900C8D189 /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
 		D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshHeroBackground.swift; sourceTree = "<group>"; };
+		D3A0000000000000000000F2 /* SeasonalLogoFX.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SeasonalLogoFX.swift; sourceTree = "<group>"; };
 		D31B53913013A61A00C8D189 /* BracketDiagram.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BracketDiagram.swift; sourceTree = "<group>"; };
 		D31B53933016506100C8D189 /* HomeHero.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeHero.swift; sourceTree = "<group>"; };
 		D31B53953016550800C8D189 /* DateMedallion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DateMedallion.swift; sourceTree = "<group>"; };
@@ -372,6 +374,7 @@
 		D33F9E292FEC086700603CE7 /* LiquidGlass.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiquidGlass.swift; sourceTree = "<group>"; };
 		D33F9E2A2FEC086700603CE7 /* Typography.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Typography.swift; sourceTree = "<group>"; };
 		D33F9E2C2FEC086700603CE7 /* FestSeason.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestSeason.swift; sourceTree = "<group>"; };
+		D3B0D84C8D700976FFD9EDBB /* DiskCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiskCache.swift; sourceTree = "<group>"; };
 		D33F9E2D2FEC086700603CE7 /* Formatters.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Formatters.swift; sourceTree = "<group>"; };
 		D33F9E302FEC086700603CE7 /* NotificationRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationRow.swift; sourceTree = "<group>"; };
 		D33F9E312FEC086700603CE7 /* NotificationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsView.swift; sourceTree = "<group>"; };
@@ -380,7 +383,6 @@
 		D33F9E352FEC086700603CE7 /* FestDinnersView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestDinnersView.swift; sourceTree = "<group>"; };
 		D33F9E362FEC086700603CE7 /* FestOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestOverviewView.swift; sourceTree = "<group>"; };
 		D33F9E372FEC086700603CE7 /* FestPayView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestPayView.swift; sourceTree = "<group>"; };
-		D33F9E382FEC086700603CE7 /* FestPhotosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestPhotosView.swift; sourceTree = "<group>"; };
 		D33F9E392FEC086700603CE7 /* FestScheduleDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestScheduleDetailView.swift; sourceTree = "<group>"; };
 		D33F9E3A2FEC086700603CE7 /* FestScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestScheduleView.swift; sourceTree = "<group>"; };
 		D33F9E3B2FEC086700603CE7 /* FestStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestStatus.swift; sourceTree = "<group>"; };
@@ -802,6 +804,7 @@
 				D31B5358301167A700C8D189 /* ChatTyping.swift */,
 				D31B536A301169D200C8D189 /* ConfettiView.swift */,
 				D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */,
+				D3A0000000000000000000F2 /* SeasonalLogoFX.swift */,
 			);
 			path = Components;
 			sourceTree = "<group>";
@@ -825,6 +828,7 @@
 			isa = PBXGroup;
 			children = (
 				D33F9E2C2FEC086700603CE7 /* FestSeason.swift */,
+				D3B0D84C8D700976FFD9EDBB /* DiskCache.swift */,
 				D33F9E2D2FEC086700603CE7 /* Formatters.swift */,
 				D3A0000000000000000000AD /* Owner.swift */,
 			);
@@ -858,7 +862,6 @@
 				D33F9E352FEC086700603CE7 /* FestDinnersView.swift */,
 				D33F9E362FEC086700603CE7 /* FestOverviewView.swift */,
 				D33F9E372FEC086700603CE7 /* FestPayView.swift */,
-				D33F9E382FEC086700603CE7 /* FestPhotosView.swift */,
 				D33F9E392FEC086700603CE7 /* FestScheduleDetailView.swift */,
 				D33F9E3A2FEC086700603CE7 /* FestScheduleView.swift */,
 				D33F9E3B2FEC086700603CE7 /* FestStatus.swift */,
@@ -1262,6 +1265,7 @@
 				D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */,
 				D3A0000000000000000000B5 /* HouseHubView.swift in Sources */,
 				D33F9E7F2FEC086700603CE7 /* FestSeason.swift in Sources */,
+				D3C0D84C8D700976FFD9EDBB /* DiskCache.swift in Sources */,
 				D33F9E802FEC086700603CE7 /* Event.swift in Sources */,
 				D33F9EDD2FF319F800603CE7 /* CommitteeMemberManageSheet.swift in Sources */,
 				D33F9E812FEC086700603CE7 /* EventCard.swift in Sources */,
@@ -1285,6 +1289,7 @@
 				D33F9E8C2FEC086700603CE7 /* FestCrewView.swift in Sources */,
 				D33F9E8D2FEC086700603CE7 /* PostCard.swift in Sources */,
 				D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */,
+				D3A0000000000000000000F3 /* SeasonalLogoFX.swift in Sources */,
 				D33F9E8E2FEC086700603CE7 /* AskForHelpHomeCard.swift in Sources */,
 				D33F9E8F2FEC086700603CE7 /* PostsService.swift in Sources */,
 				D33F9E902FEC086700603CE7 /* Committee.swift in Sources */,
@@ -1390,7 +1395,6 @@
 				D31B535D3011689A00C8D189 /* FamilyRosterEntry.swift in Sources */,
 				D31B537C3012B5E600C8D189 /* PrivateActivityViews.swift in Sources */,
 				D3E9F7D030461D5800180C79 /* AddEventAttendeeSheet.swift in Sources */,
-				D33F9EBB2FEC086700603CE7 /* FestPhotosView.swift in Sources */,
 				D33F9EBC2FEC086700603CE7 /* AdminView.swift in Sources */,
 				D33F9ED72FF3178900603CE7 /* WorkItemComposer.swift in Sources */,
 				D33F9EBD2FEC086700603CE7 /* LiquidGlass.swift in Sources */,

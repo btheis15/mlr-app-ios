@@ -489,12 +489,12 @@ struct CommentRow: View {
     let isSignedIn: Bool
     let canReport: Bool
     var canDelete: Bool = false
-    let onReport: () async -> Void
-    var onDelete: (() async -> Void)? = nil
     var reactions: [CommentReaction] = []
     var myUserId: UUID? = nil
     var canReact: Bool = false
     var onReact: ((String) async -> Void)? = nil
+    let onReport: () async -> Void
+    var onDelete: (() async -> Void)? = nil
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var showPalette = false

@@ -500,7 +500,11 @@ private struct PostRow: Decodable {
         )
     }
 
-    // MARK: - Comment reactions (migration 0223)
+}
+
+// MARK: - Comment reactions (migration 0223)
+
+extension PostsService {
 
     /// All reactions for a set of comments in ONE query, with reactor names.
     func fetchCommentReactions(commentIds: [UUID]) async -> [CommentReaction] {
