@@ -49,7 +49,7 @@ struct AdminHousesView: View {
                         }
                     }
                 }
-                Section { } footer: { footer }
+                Section { EmptyView() } footer: { footer }
             }
         }
         .editorListChrome(model)
