@@ -47,6 +47,12 @@ struct HomeView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
 
+                        // ── Weather strip — the very top of Home, as on the web app.
+                        // Self-hides until a source answers, so it never leaves a gap.
+                        HomeWeatherCard(style: .compact)
+                            .padding(.horizontal, 16)
+                            .padding(.top, 4)
+
                         // ── 1. MLR logo hero ──────────────────────────────
                         logoHero(geometry: geometry)
 
@@ -63,14 +69,10 @@ struct HomeView: View {
 
                         VStack(alignment: .leading, spacing: 20) {
 
-                            // ── 2. Weather — "what's it like Up North right now" ──
-                            // Self-hides on load failure — never leaves an empty gap.
                             // Every card below gets `.scrollEntrance()` — a gentle
                             // fade/scale/rise as it crosses into view, so the whole
                             // feed feels alive while scrolling, not just on first
                             // load (Reduce Motion turns this into a no-op).
-                            HomeWeatherCard()
-                                .scrollEntrance()
 
                             // ── 3. Announcement banner ────────────────────
                             AnnouncementBannerStack()

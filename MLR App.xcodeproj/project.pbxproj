@@ -80,6 +80,7 @@
 		D33F9E812FEC086700603CE7 /* EventCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DF02FEC086700603CE7 /* EventCard.swift */; };
 		D33F9E822FEC086700603CE7 /* AdminSignInsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E502FEC086700603CE7 /* AdminSignInsView.swift */; };
 		D33F9E832FEC086700603CE7 /* CommentsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E3E2FEC086700603CE7 /* CommentsView.swift */; };
+		D3C98CAB3CACA7DC1E765F0D /* CommentsLive.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B98CAB3CACA7DC1E765F0D /* CommentsLive.swift */; };
 		D33F9E842FEC086700603CE7 /* AskForHelpSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DF52FEC086700603CE7 /* AskForHelpSheet.swift */; };
 		D33F9E852FEC086700603CE7 /* Colors.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E282FEC086700603CE7 /* Colors.swift */; };
 		D33F9E872FEC086700603CE7 /* CabinRequestSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DEA2FEC086700603CE7 /* CabinRequestSheet.swift */; };
@@ -387,6 +388,7 @@
 		D33F9E3A2FEC086700603CE7 /* FestScheduleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestScheduleView.swift; sourceTree = "<group>"; };
 		D33F9E3B2FEC086700603CE7 /* FestStatus.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FestStatus.swift; sourceTree = "<group>"; };
 		D33F9E3E2FEC086700603CE7 /* CommentsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentsView.swift; sourceTree = "<group>"; };
+		D3B98CAB3CACA7DC1E765F0D /* CommentsLive.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommentsLive.swift; sourceTree = "<group>"; };
 		D33F9E3F2FEC086700603CE7 /* LightboxView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LightboxView.swift; sourceTree = "<group>"; };
 		D33F9E402FEC086700603CE7 /* PostCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostCard.swift; sourceTree = "<group>"; };
 		D33F9E412FEC086700603CE7 /* PostComposer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostComposer.swift; sourceTree = "<group>"; };
@@ -881,6 +883,7 @@
 			isa = PBXGroup;
 			children = (
 				D33F9E3E2FEC086700603CE7 /* CommentsView.swift */,
+				D3B98CAB3CACA7DC1E765F0D /* CommentsLive.swift */,
 				D33F9E3F2FEC086700603CE7 /* LightboxView.swift */,
 				D33F9E402FEC086700603CE7 /* PostCard.swift */,
 				D33F9E412FEC086700603CE7 /* PostComposer.swift */,
@@ -1271,6 +1274,7 @@
 				D33F9E812FEC086700603CE7 /* EventCard.swift in Sources */,
 				D33F9E822FEC086700603CE7 /* AdminSignInsView.swift in Sources */,
 				D33F9E832FEC086700603CE7 /* CommentsView.swift in Sources */,
+				D3C98CAB3CACA7DC1E765F0D /* CommentsLive.swift in Sources */,
 				D33F9E842FEC086700603CE7 /* AskForHelpSheet.swift in Sources */,
 				D33F9E852FEC086700603CE7 /* Colors.swift in Sources */,
 				D33F9ED52FF3175D00603CE7 /* WorkItemsSection.swift in Sources */,
