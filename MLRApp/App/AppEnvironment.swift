@@ -307,6 +307,7 @@ final class AppEnvironment {
         notificationsService.unsubscribeFromRealtime()
         notificationsService.notifications = []
         notificationsService.unreadCount = 0
+        DiskCache.removeAll()
         await authService.signOut()
         currentProfile = nil
         housesService.myHouse = nil
