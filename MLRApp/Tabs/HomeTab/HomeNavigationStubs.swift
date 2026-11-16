@@ -85,7 +85,7 @@ struct LocalPlacesView: View {
                         HStack(spacing: 8) {
                             Text(LocalPlace.groupEmoji(section.group)).font(.mlrScaled(20))
                             Text(LocalPlace.groupTitle(section.group))
-                                .font(.mlrScaled(18, weight: .bold))
+                                .font(.mlrSectionTitle)
                                 .foregroundStyle(Color.mlrText)
                             Text("\(section.places.count)")
                                 .font(.mlrScaled(12, weight: .semibold))
@@ -118,7 +118,7 @@ struct LocalPlacesView: View {
             }
             .padding(16)
         }
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
         .navigationTitle("Local Places")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $search, prompt: "Search places")
@@ -160,16 +160,16 @@ struct LocalPlaceCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
                     if url(place.imageUrl) == nil {
-                        Text(place.displayEmoji)
-                            .font(.mlrScaled(24))
-                            .frame(width: 46, height: 46)
-                            .background(accent.opacity(0.14), in: RoundedRectangle(cornerRadius: 12))
+                        IconTile(emoji: place.displayEmoji, accent: accent, size: 64)
                             .accessibilityHidden(true)
                     }
-                    VStack(alignment: .leading, spacing: 2) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        if let cat = nonEmpty(place.category) {
+                            Eyebrow(cat, color: accent)
+                        }
                         HStack(spacing: 6) {
                             Text(place.name.isEmpty ? "Name" : place.name)
-                                .font(.mlrScaled(16, weight: .semibold))
+                                .font(.system(.title3, weight: .semibold))
                                 .foregroundStyle(Color.mlrText)
                             if !place.isActive {
                                 Text("Hidden")
@@ -179,12 +179,9 @@ struct LocalPlaceCard: View {
                                     .foregroundStyle(Color.mlrWarning)
                             }
                         }
-                        if let cat = nonEmpty(place.category) {
-                            Text(cat).font(.mlrScaled(13, weight: .medium)).foregroundStyle(accent)
-                        }
                         if let loc = nonEmpty(place.locality) {
                             Label(loc, systemImage: "mappin.and.ellipse")
-                                .font(.mlrScaled(12))
+                                .font(.mlrSecondary)
                                 .foregroundStyle(Color.mlrTextMuted)
                         }
                     }
@@ -204,7 +201,7 @@ struct LocalPlaceCard: View {
 
                 if let blurb = nonEmpty(place.blurb) {
                     Text(blurb)
-                        .font(.mlrScaled(14))
+                        .font(.mlrSecondary)
                         .foregroundStyle(Color.mlrTextMuted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -214,7 +211,7 @@ struct LocalPlaceCard: View {
             .padding(14)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .cardStyle(tint: accent)
+        .mlrCard(.plain, padding: 0)
         .opacity(place.isActive ? 1 : 0.7)
         .contextMenu {
             if let phone = nonEmpty(place.phoneDisplay) ?? nonEmpty(place.phoneTel) {
@@ -312,14 +309,14 @@ private struct PlaceChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.mlrScaled(11, weight: .semibold))
-            Text(label)
                 .font(.mlrScaled(13, weight: .semibold))
+            Text(label)
+                .font(.mlrScaled(14, weight: .semibold))
         }
         .foregroundStyle(Color.mlrPrimary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(Color.mlrPrimaryLight)
+        .padding(.horizontal, 14)
+        .padding(.vertical, 9)
+        .background(Color.mlrPrimary.opacity(0.10))
         .clipShape(Capsule())
     }
 }

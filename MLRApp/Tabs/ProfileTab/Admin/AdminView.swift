@@ -184,7 +184,9 @@ struct AdminView: View {
                 } header: {
                     VStack(alignment: .leading, spacing: 2) {
                         Label(group.title, systemImage: group.icon)
-                            .font(.mlrScaled(13, weight: .bold))
+                            .font(.system(.title3, design: .serif, weight: .semibold))
+                            .foregroundStyle(Color.mlrText)
+                            .textCase(nil)
                         Text(group.blurb)
                             .font(.caption)
                             .textCase(nil)
@@ -197,6 +199,7 @@ struct AdminView: View {
                     .foregroundStyle(Color.mlrTextMuted)
             }
         }
+        .mlrBackdrop()
         .navigationTitle("Admin")
         .navigationBarTitleDisplayMode(.large)
         .searchable(text: $query, placement: .navigationBarDrawer(displayMode: .automatic), prompt: "Search admin tools")
