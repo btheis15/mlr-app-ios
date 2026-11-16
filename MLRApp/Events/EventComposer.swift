@@ -6,85 +6,43 @@ import SwiftUI
 
 struct EventComposer: View {
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.dismiss) private var dismiss
 
     let existing: ResortEvent?
 
-    @State private var title: String
-    @State private var description: String
-    @State private var kind: EventKind
-    @State private var startDate: Date
-    @State private var endDate: Date
-    @State private var hasEndDate: Bool
-    @State private var location: String
-    @State private var dayRsvp: Bool
+    struct Values: Equatable {
+        var title = ""
+        var description = ""
+        var emoji: String?
+        var kind: EventKind = .custom
+        var startISO = ""            // yyyy-MM-dd
+        var endISO: String?          // nil = single day
+        var startTime: String?       // HH:mm (nil = no set time)
+        var location = ""
+        var dayRsvp = false
+    }
 
-    @State private var hasStartTime: Bool
-    @State private var startTimeDate: Date
-
-    @State private var isSaving = false
-    @State private var saveError: String?
+    @State private var draft: EditorDraft<Values>
 
     // Work items that can be linked to this event (open items), + current selection.
     @State private var openWorkItems: [WorkItem] = []
     @State private var selectedItemIds: Set<UUID> = []
+    @State private var originalItemIds: Set<UUID> = []
 
     init(existing: ResortEvent? = nil) {
         self.existing = existing
-        let iso = DateFormatter()
-        iso.dateFormat = "yyyy-MM-dd"
-        iso.timeZone = TimeZone(identifier: "America/Chicago")
-
-        _title       = State(initialValue: existing?.title ?? "")
-        _description = State(initialValue: existing?.description ?? "")
-        _kind        = State(initialValue: existing?.kind ?? .custom)
-        _location    = State(initialValue: existing?.location ?? "")
-        _dayRsvp     = State(initialValue: existing?.dayRsvp ?? false)
-
-        let start = existing.flatMap { iso.date(from: $0.startDate) } ?? .now
-        _startDate = State(initialValue: start)
-
-        if let endStr = existing?.endDate, let end = iso.date(from: endStr) {
-            _endDate = State(initialValue: end)
-            _hasEndDate = State(initialValue: true)
-        } else {
-            _endDate = State(initialValue: start)
-            _hasEndDate = State(initialValue: false)
+        var v = Values()
+        v.startISO = existing?.startDate ?? FestDays.isoFmt.string(from: .now)
+        if let existing {
+            v.title = existing.title
+            v.description = existing.description ?? ""
+            v.emoji = existing.emoji
+            v.kind = existing.kind
+            v.location = existing.location ?? ""
+            v.dayRsvp = existing.dayRsvp
+            v.endISO = existing.endDate
+            v.startTime = existing.startTime
         }
-
-        if let hhmm = existing?.startTime {
-            _hasStartTime = State(initialValue: true)
-            _startTimeDate = State(initialValue: Self.parseTime(hhmm))
-        } else {
-            _hasStartTime = State(initialValue: false)
-            _startTimeDate = State(initialValue: Self.defaultTime())
-        }
-    }
-
-    private static func parseTime(_ hhmm: String) -> Date {
-        let parts = hhmm.split(separator: ":").compactMap { Int($0) }
-        guard parts.count >= 2 else { return defaultTime() }
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "America/Chicago")!
-        var comps = cal.dateComponents([.year, .month, .day], from: .now)
-        comps.hour = parts[0]; comps.minute = parts[1]
-        return cal.date(from: comps) ?? defaultTime()
-    }
-
-    private static func defaultTime() -> Date {
-        var cal = Calendar(identifier: .gregorian)
-        cal.timeZone = TimeZone(identifier: "America/Chicago")!
-        var comps = cal.dateComponents([.year, .month, .day], from: .now)
-        comps.hour = 9; comps.minute = 0
-        return cal.date(from: comps) ?? .now
-    }
-
-    private var startTimeString: String? {
-        guard hasStartTime else { return nil }
-        let f = DateFormatter()
-        f.dateFormat = "HH:mm"
-        f.timeZone = TimeZone(identifier: "America/Chicago")!
-        return f.string(from: startTimeDate)
+        _draft = State(initialValue: EditorDraft(v))
     }
 
     private var isEditing: Bool { existing != nil }
@@ -109,123 +67,101 @@ struct EventComposer: View {
         return ReminderAnchor(date: day, hasTime: false)
     }
 
+    private var endBeforeStart: Bool {
+        if let end = draft.value.endISO { return end < draft.value.startISO }
+        return false
+    }
+
     private var canSave: Bool {
-        !title.trimmingCharacters(in: .whitespaces).isEmpty && !isSaving
+        !draft.value.title.trimmingCharacters(in: .whitespaces).isEmpty && !endBeforeStart
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Details") {
-                    TextField("Event title", text: $title)
-                    TextField("Description", text: $description, axis: .vertical)
-                        .lineLimit(3...6)
-                    TextField("Location", text: $location)
-                }
+        EditorSheet(title: isEditing ? "Edit Event" : "New Event",
+                    isDirty: draft.isDirty || selectedItemIds != originalItemIds,
+                    canSave: canSave,
+                    save: { try await save() }) {
+            Section("Details") {
+                EditorTextField("Event title", text: $draft.value.title, limit: 120, required: true)
+                EditorEmojiField("Emoji", emoji: $draft.value.emoji)
+                EditorLongText("Description", text: $draft.value.description, lines: 3...6)
+                EditorTextField("Location", text: $draft.value.location, limit: 120)
+            }
 
-                Section("Kind") {
-                    Picker("Kind", selection: $kind) {
-                        Text("Work Weekend").tag(EventKind.workWeekend)
-                        Text("Holiday").tag(EventKind.holiday)
-                        Text("Other event").tag(EventKind.custom)
-                    }
-                    .pickerStyle(.segmented)
-                    if isEditing && existing?.isFamilyFest == true {
-                        Text("Family Fest kind is fixed.")
-                            .font(.caption)
-                            .foregroundStyle(Color.mlrTextMuted)
-                    }
+            Section("Kind") {
+                Picker("Kind", selection: $draft.value.kind) {
+                    Text("Work Weekend").tag(EventKind.workWeekend)
+                    Text("Holiday").tag(EventKind.holiday)
+                    Text("Other event").tag(EventKind.custom)
                 }
-                .disabled(existing?.isFamilyFest == true)
-
-                Section("Dates") {
-                    DatePicker("Starts", selection: $startDate, displayedComponents: .date)
-                    Toggle("Multi-day event", isOn: $hasEndDate.animation())
-                    if hasEndDate {
-                        DatePicker("Ends", selection: $endDate,
-                                   in: startDate..., displayedComponents: .date)
-                    }
-                    Toggle("Set start time", isOn: $hasStartTime.animation())
-                    if hasStartTime {
-                        DatePicker("Time", selection: $startTimeDate,
-                                   displayedComponents: .hourAndMinute)
-                    }
+                .pickerStyle(.segmented)
+                if isEditing && existing?.isFamilyFest == true {
+                    Text("Family Fest kind is fixed.")
+                        .font(.caption)
+                        .foregroundStyle(Color.mlrTextMuted)
                 }
+            }
+            .disabled(existing?.isFamilyFest == true)
 
+            Section("Dates") {
+                EditorDateField("Starts", iso: $draft.value.startISO)
+                EditorDateField("Ends (multi-day events)", iso: $draft.value.endISO,
+                                isOptional: true, minISO: draft.value.startISO)
+                if endBeforeStart {
+                    Text("The end date can\u{2019}t be before the start date.")
+                        .font(.caption).foregroundStyle(Color.mlrDanger)
+                }
+                EditorTimeField("Start time", time: $draft.value.startTime)
+            }
+
+            Section {
+                EditorToggle("Per-day RSVP", isOn: $draft.value.dayRsvp,
+                             caption: "Lets members pick which days they're coming (used for Family Fest).")
+            }
+
+            if !openWorkItems.isEmpty {
                 Section {
-                    Toggle("Per-day RSVP", isOn: $dayRsvp)
-                } footer: {
-                    Text("Lets members pick which days they're coming (used for Family Fest).")
-                }
-
-                if !openWorkItems.isEmpty {
-                    Section {
-                        ForEach(openWorkItems) { item in
-                            Button {
-                                if selectedItemIds.contains(item.id) {
-                                    selectedItemIds.remove(item.id)
-                                } else {
-                                    selectedItemIds.insert(item.id)
-                                }
-                            } label: {
-                                HStack {
-                                    Image(systemName: selectedItemIds.contains(item.id) ? "checkmark.square.fill" : "square")
-                                        .foregroundStyle(selectedItemIds.contains(item.id) ? Color.mlrPrimary : Color.mlrTextSubtle)
-                                    Text(item.title)
-                                        .foregroundStyle(Color.mlrText)
-                                    Spacer()
-                                }
+                    ForEach(openWorkItems) { item in
+                        Button {
+                            if selectedItemIds.contains(item.id) {
+                                selectedItemIds.remove(item.id)
+                            } else {
+                                selectedItemIds.insert(item.id)
+                            }
+                        } label: {
+                            HStack {
+                                Image(systemName: selectedItemIds.contains(item.id) ? "checkmark.square.fill" : "square")
+                                    .foregroundStyle(selectedItemIds.contains(item.id) ? Color.mlrPrimary : Color.mlrTextSubtle)
+                                Text(item.title)
+                                    .foregroundStyle(Color.mlrText)
+                                Spacer()
                             }
                         }
-                    } header: {
-                        Text("Work items")
-                    } footer: {
-                        Text("Check off tasks from the work checklist to plan them for this event.")
                     }
-                }
-
-                // Reminders — only for a saved event (needs a real id to attach to).
-                if let existing {
-                    Section {
-                        ReminderScheduler(
-                            sourceType: "event",
-                            sourceId: existing.id,
-                            sourceLabel: existing.title,
-                            anchor: reminderAnchor,
-                            eventId: existing.id
-                        )
-                        .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
-                        .listRowBackground(Color.clear)
-                    }
-                }
-
-                if let saveError {
-                    Section {
-                        Text(saveError)
-                            .font(.mlrCaption)
-                            .foregroundStyle(Color.mlrDanger)
-                    }
+                } header: {
+                    Text("Work items")
+                } footer: {
+                    Text("Check off tasks from the work checklist to plan them for this event.")
                 }
             }
-            .navigationTitle(isEditing ? "Edit Event" : "New Event")
-            .navigationBarTitleDisplayMode(.inline)
-            .tint(Color.mlrPrimary)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    if isSaving {
-                        ProgressView()
-                    } else {
-                        Button("Save") { Task { await save() } }
-                            .fontWeight(.semibold)
-                            .disabled(!canSave)
-                    }
+
+            // Reminders — only for a saved event (needs a real id to attach to).
+            if let existing {
+                Section {
+                    ReminderScheduler(
+                        sourceType: "event",
+                        sourceId: existing.id,
+                        sourceLabel: existing.title,
+                        anchor: reminderAnchor,
+                        eventId: existing.id
+                    )
+                    .listRowInsets(EdgeInsets(top: 8, leading: 12, bottom: 8, trailing: 12))
+                    .listRowBackground(Color.clear)
                 }
             }
-            .task { await loadWorkItems() }
         }
+        .tint(Color.mlrPrimary)
+        .task { await loadWorkItems() }
     }
 
     private func loadWorkItems() async {
@@ -233,55 +169,50 @@ struct EventComposer: View {
         openWorkItems = env.workItemsService.openItems
         if let existing {
             let linked = await env.workItemsService.fetchEventItems(eventId: existing.id)
-            selectedItemIds = Set(linked.map(\.id))
+            let ids = Set(linked.map(\.id))
+            // Don't clobber ticks the user made while this was loading.
+            if selectedItemIds == originalItemIds { selectedItemIds = ids }
+            originalItemIds = ids
         }
     }
 
-    private func save() async {
-        isSaving = true
-        saveError = nil
-        defer { isSaving = false }
-
-        let startISO = startDate.isoDateString
-        let endISO: String? = hasEndDate ? endDate.isoDateString : nil
-        let trimmedDesc = description.trimmingCharacters(in: .whitespacesAndNewlines)
+    private func save() async throws {
+        let v = draft.value
+        let trimmedDesc = v.description.trimmingCharacters(in: .whitespacesAndNewlines)
         let descParam = trimmedDesc.isEmpty ? nil : trimmedDesc
-        let trimmedLoc = location.trimmingCharacters(in: .whitespacesAndNewlines)
+        let trimmedLoc = v.location.trimmingCharacters(in: .whitespacesAndNewlines)
         let locParam = trimmedLoc.isEmpty ? nil : trimmedLoc
+        let title = v.title.trimmingCharacters(in: .whitespaces)
 
-        do {
-            let eventId: String
-            if let existing {
-                try await env.eventsService.updateEvent(
-                    id: existing.id,
-                    title: title,
-                    description: descParam,
-                    kind: kind,
-                    startDate: startISO,
-                    endDate: endISO,
-                    location: locParam,
-                    dayRsvp: dayRsvp,
-                    startTime: startTimeString
-                )
-                eventId = existing.id
-            } else {
-                eventId = try await env.eventsService.createEvent(
-                    title: title,
-                    description: descParam,
-                    kind: kind,
-                    startDate: startISO,
-                    endDate: endISO,
-                    location: locParam,
-                    dayRsvp: dayRsvp,
-                    startTime: startTimeString
-                )
-            }
-            // Replace the event's linked work items with the current selection.
-            try await env.workItemsService.syncEventItems(eventId: eventId, itemIds: Array(selectedItemIds))
-            dismiss()
-        } catch {
-            saveError = "Couldn't save the event. Check your connection and try again."
-            print("[EventComposer] save error: \(error)")
+        let eventId: String
+        if let existing {
+            try await env.eventsService.updateEvent(
+                id: existing.id,
+                title: title,
+                description: descParam,
+                kind: v.kind,
+                startDate: v.startISO,
+                endDate: v.endISO,
+                location: locParam,
+                dayRsvp: v.dayRsvp,
+                emoji: v.emoji,
+                startTime: v.startTime
+            )
+            eventId = existing.id
+        } else {
+            eventId = try await env.eventsService.createEvent(
+                title: title,
+                description: descParam,
+                kind: v.kind,
+                startDate: v.startISO,
+                endDate: v.endISO,
+                location: locParam,
+                dayRsvp: v.dayRsvp,
+                emoji: v.emoji,
+                startTime: v.startTime
+            )
         }
+        // Replace the event's linked work items with the current selection.
+        try await env.workItemsService.syncEventItems(eventId: eventId, itemIds: Array(selectedItemIds))
     }
 }
