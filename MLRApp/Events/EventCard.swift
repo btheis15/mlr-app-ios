@@ -15,81 +15,78 @@ struct EventCard: View {
         EventKindStyle.color(for: event.kind)
     }
 
+    private var symbol: String {
+        switch event.kind {
+        case .familyFest:  return "tent.fill"
+        case .workWeekend: return "hammer.fill"
+        case .holiday:     return "gift.fill"
+        case .custom:      return "calendar"
+        }
+    }
+
     var body: some View {
         Button(action: onTap) {
-            VStack(alignment: .leading, spacing: 12) {
-                HStack(alignment: .top, spacing: 12) {
-                    // Bold date block anchors the card (Phase 5).
-                    DateMedallion(isoDate: event.startDate, tint: accent)
-                    VStack(alignment: .leading, spacing: 6) {
-                        KindBadge(kind: event.kind)
-                        Text(event.title)
-                            .font(event.isFamilyFest
-                                  ? .festSerif(20, weight: .bold)
-                                  : .mlrScaled(18, weight: .bold))
-                            .foregroundStyle(event.isFamilyFest ? Color.mlrFest : Color.mlrText)
-                            .multilineTextAlignment(.leading)
-                    }
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.mlrScaled(13, weight: .semibold))
-                        .foregroundStyle(Color.mlrTextSubtle)
-                }
-
-                HStack(spacing: 14) {
-                    Label(MLRFormat.dateRange(start: event.startDate, end: event.endDate),
-                          systemImage: "calendar")
-                        .font(.mlrScaled(13, weight: .medium))
-                        .foregroundStyle(Color.mlrTextMuted)
-
-                    if let location = event.location, !location.isEmpty {
-                        Label(location, systemImage: "mappin.and.ellipse")
-                            .font(.mlrScaled(13))
-                            .foregroundStyle(Color.mlrTextMuted)
-                            .lineLimit(1)
-                    }
-
-                    EventWeatherBadge(isoDate: event.startDate)
-                }
-
-                HStack {
-                    if let summary, summary.going > 0 {
-                        HStack(spacing: 4) {
-                            Image(systemName: "person.2.fill")
-                                .font(.mlrScaled(11))
-                            Text("\(summary.going) going")
-                                .font(.mlrScaled(13, weight: .medium))
-                                .numericTransition()
+            MLRCard(event.isFamilyFest ? .tinted(accent) : .plain, padding: 16) {
+                VStack(alignment: .leading, spacing: 12) {
+                    HStack(alignment: .top, spacing: 14) {
+                        IconTile(symbol: symbol, accent: accent, size: 52)
+                        VStack(alignment: .leading, spacing: 4) {
+                            Eyebrow(EventKindStyle.label(for: event.kind), color: accent)
+                            Text(event.title)
+                                .font(event.isFamilyFest
+                                      ? .festSerif(20, weight: .bold)
+                                      : .system(.title3, weight: .semibold))
+                                .foregroundStyle(event.isFamilyFest ? Color.mlrFest : Color.mlrText)
+                                .multilineTextAlignment(.leading)
+                            HStack(spacing: 8) {
+                                Text(MLRFormat.dateRange(start: event.startDate, end: event.endDate))
+                                    .font(.mlrSecondary)
+                                    .foregroundStyle(Color.mlrTextMuted)
+                                if let start = event.startDateParsed {
+                                    RelativeDue(start)
+                                }
+                            }
                         }
-                        .foregroundStyle(accent)
+                        Spacer(minLength: 0)
+                        Image(systemName: "chevron.right")
+                            .font(.mlrScaled(13, weight: .semibold))
+                            .foregroundStyle(Color.mlrTextSubtle)
                     }
-                    Spacer()
-                    if let myStatus {
-                        Text("\(myStatus.emoji) \(myStatus.label)")
-                            .font(.mlrScaled(12, weight: .semibold))
+
+                    HStack(spacing: 14) {
+                        if let location = event.location, !location.isEmpty {
+                            Label(location, systemImage: "mappin.and.ellipse")
+                                .font(.mlrSecondary)
+                                .foregroundStyle(Color.mlrTextMuted)
+                                .lineLimit(1)
+                        }
+                        EventWeatherBadge(isoDate: event.startDate)
+                    }
+
+                    HStack {
+                        if let summary, summary.going > 0 {
+                            HStack(spacing: 5) {
+                                Image(systemName: "person.2.fill")
+                                    .font(.mlrScaled(12))
+                                Text("\(summary.going) going")
+                                    .font(.mlrScaled(14, weight: .medium))
+                                    .numericTransition()
+                            }
                             .foregroundStyle(accent)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 5)
-                            .background(accent.opacity(0.12))
-                            .clipShape(Capsule())
+                        }
+                        Spacer()
+                        if let myStatus {
+                            Text("\(myStatus.emoji) \(myStatus.label)")
+                                .font(.mlrScaled(13, weight: .semibold))
+                                .foregroundStyle(accent)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(accent.opacity(0.12))
+                                .clipShape(Capsule())
+                        }
                     }
                 }
             }
-            .padding(16)
-            .background(event.isFamilyFest ? Color.mlrFestLight : Color.mlrCard)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(event.isFamilyFest ? Color.mlrFest.opacity(0.25) : Color.mlrBorder,
-                                  lineWidth: 1)
-            )
-            // Kind color band along the leading edge.
-            .overlay(alignment: .leading) {
-                UnevenRoundedRectangle(topLeadingRadius: 16, bottomLeadingRadius: 16)
-                    .fill(accent)
-                    .frame(width: 4)
-            }
-            .shadow(.medium)
             .contentShape(Rectangle())
         }
         .buttonStyle(.pressable)

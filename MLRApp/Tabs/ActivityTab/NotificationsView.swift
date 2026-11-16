@@ -85,10 +85,10 @@ struct NotificationsView: View {
                         NotificationRow(notification: notif)
                             .contentShape(Rectangle())
                             .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: notif.isUnread)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 0))
-                            .listRowBackground(notif.isUnread
-                                               ? Color.mlrPrimaryLight.opacity(0.35)
-                                               : Color.mlrSurface)
+                            .mlrCard(notif.isUnread ? .tinted(Color.mlrPrimary) : .plain, padding: 4)
+                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                             .onTapGesture {
                                 Task { await handleTap(notif) }
                             }
@@ -106,8 +106,8 @@ struct NotificationsView: View {
                     }
                 } header: {
                     Text(group.label)
-                        .font(.mlrScaled(12, weight: .semibold))
-                        .foregroundStyle(Color.mlrTextMuted)
+                        .font(.mlrSectionTitle)
+                        .foregroundStyle(Color.mlrText)
                         .textCase(nil)
                 }
             }

@@ -78,18 +78,8 @@ struct EventsView: View {
                     }
                 }
             }
-            .background(Color.mlrSurface)
             .navigationTitle("Events")
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Picker("Filter", selection: $filter) {
-                        ForEach(TimeFilter.allCases, id: \.self) { f in
-                            Text(f.rawValue).tag(f)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 200)
-                }
                 // Unverified accounts can't write (0213) — hide the create entry points.
                 if env.isSignedIn, !env.isAwaitingVerification {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -116,6 +106,7 @@ struct EventsView: View {
                             Image(systemName: "plus")
                         }
                         .tint(Color.mlrPrimary)
+                        .accessibilityLabel("Create")
                     }
                 }
             }
@@ -155,7 +146,8 @@ struct EventsView: View {
 
     private var eventList: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 24, pinnedViews: [.sectionHeaders]) {
+            LazyVStack(alignment: .leading, spacing: 24) {
+                headerBlock
                 activitiesSection
                 if filteredEvents.isEmpty {
                     Text(filter == .upcoming ? "Nothing on the calendar yet." : "No past events.")
@@ -183,12 +175,9 @@ struct EventsView: View {
                     } header: {
                         HStack(spacing: 10) {
                             Text(group.month)
-                                .font(.mlrScaled(20, weight: .bold, design: .rounded))
+                                .font(.mlrSectionTitle)
                                 .foregroundStyle(Color.mlrText)
-                            Rectangle()
-                                .fill(Color.mlrCampfire.opacity(0.5))
-                                .frame(height: 2)
-                                .clipShape(Capsule())
+                            Spacer()
                             Text("\(group.events.count)")
                                 .font(.mlrScaled(13, weight: .bold))
                                 .foregroundStyle(Color.mlrCampfire)
@@ -196,8 +185,6 @@ struct EventsView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.mlrSurface)
                     }
                 }
             }
@@ -212,6 +199,37 @@ struct EventsView: View {
         }
     }
 
+    // MARK: - Header (subtitle, actions, filter pills)
+
+    private var headerBlock: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Gatherings, work weekends and games at the lake.")
+                .font(.mlrSecondary)
+                .foregroundStyle(Color.mlrTextMuted)
+            if env.isSignedIn, !env.isAwaitingVerification {
+                HStack(spacing: 10) {
+                    if env.isAdmin {
+                        Button { showComposer = true } label: {
+                            Label("New event", systemImage: "calendar.badge.plus")
+                        }
+                        .buttonStyle(.mlrSecondary)
+                    }
+                    Button { showActivityComposer = true } label: {
+                        Label("Create an activity", systemImage: "gamecontroller")
+                            .font(.system(.body, weight: .semibold))
+                            .foregroundStyle(Color.mlrCampfire)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .background(Color.mlrCampfire.opacity(0.10))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.pressable)
+                }
+            }
+            MLRPills(TimeFilter.allCases, selection: $filter) { $0.rawValue }
+        }
+        .padding(.horizontal, 16)
+    }
+
     // MARK: - Private activities & games
 
     @ViewBuilder
@@ -220,8 +238,8 @@ struct EventsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 if !activities.isEmpty {
                     Text("Games & activities")
-                        .font(.mlrScaled(13, weight: .bold))
-                        .foregroundStyle(Color.mlrTextMuted)
+                        .font(.mlrSectionTitle)
+                        .foregroundStyle(Color.mlrText)
                     ForEach(activities) { activity in
                         Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
                             .buttonStyle(.pressable)

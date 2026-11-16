@@ -82,7 +82,7 @@ struct HelpView: View {
             }
             .padding(16)
         }
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
         .navigationTitle("Help & how-to")
         .navigationBarTitleDisplayMode(.inline)
         .messageComposer($composeState)

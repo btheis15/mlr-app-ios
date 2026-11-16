@@ -68,7 +68,7 @@ struct ProfileView: View {
                 }
             }
             .navigationTitle("Profile")
-            .navigationBarTitleDisplayMode(.inline)
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
                 if env.isSignedIn && isDirty {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -150,7 +150,8 @@ struct ProfileView: View {
 
     private var avatarSection: some View {
         Section {
-            HStack {
+            MLRCard(.hero, padding: 20) {
+              HStack {
                 Spacer()
                 VStack(spacing: 12) {
                     ZStack(alignment: .bottomTrailing) {
@@ -179,24 +180,25 @@ struct ProfileView: View {
                                 .clipShape(Circle())
                                 .overlay(
                                     Circle()
-                                        .stroke(Color.mlrSurface, lineWidth: 2)
+                                        .stroke(Color.white, lineWidth: 2)
                                 )
                         }
                     }
 
                     Text(profile?.name ?? "")
-                        .font(.title3.bold())
+                        .font(.system(size: 26, weight: .semibold, design: .serif))
                         .foregroundStyle(Color.mlrText)
 
                     Text(profile?.email ?? "")
-                        .font(.subheadline)
+                        .font(.mlrSecondary)
                         .foregroundStyle(Color.mlrTextMuted)
                 }
                 Spacer()
+              }
             }
             .padding(.vertical, 8)
             .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets())
+            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
         }
     }
 
@@ -607,7 +609,7 @@ struct ProfileView: View {
 
             VStack(spacing: 8) {
                 Text("Sign in to access your profile")
-                    .font(.title3.bold())
+                    .font(.system(.title2, design: .serif, weight: .semibold))
                 Text("Manage your info, payment handles, and notification settings.")
                     .font(.subheadline)
                     .foregroundStyle(Color.mlrTextMuted)
@@ -627,7 +629,6 @@ struct ProfileView: View {
                 .opacity(0.7)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.mlrSurface)
     }
 
     // MARK: - Helpers

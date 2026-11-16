@@ -91,7 +91,7 @@ struct EventSheet: View {
                 }
                 .padding(20)
             }
-            .background(Color.mlrSurface)
+            .mlrBackdrop()
             .overlay(ConfettiView(trigger: confettiTrigger).allowsHitTesting(false))
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

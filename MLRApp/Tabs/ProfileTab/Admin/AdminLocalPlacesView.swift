@@ -34,7 +34,7 @@ struct AdminLocalPlacesView: View {
                 list
             }
         }
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
         .navigationTitle("Local Places")
         .navigationBarTitleDisplayMode(.inline)
         .task {

@@ -38,7 +38,7 @@ struct NotificationRow: View {
 
             // Unread accent strip
             Rectangle()
-                .fill(isUnread ? accentColor : Color.clear)
+                .fill(Color.clear)
                 .frame(width: 3)
                 .clipShape(Capsule())
                 .padding(.trailing, 10)
@@ -51,15 +51,15 @@ struct NotificationRow: View {
                 // Title — bold when unread
                 Text(notification.title)
                     .font(isUnread
-                          ? .mlrScaled(15, weight: .semibold)
-                          : .mlrScaled(15, weight: .regular))
+                          ? .mlrScaled(17, weight: .bold)
+                          : .mlrScaled(17, weight: .regular))
                     .foregroundStyle(Color.mlrText)
                     .fixedSize(horizontal: false, vertical: true)
 
                 // Optional body preview
                 if let body = notification.body, !body.isEmpty {
                     Text(body)
-                        .font(.mlrScaled(13))
+                        .font(.mlrSecondary)
                         .foregroundStyle(Color.mlrTextMuted)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -68,7 +68,7 @@ struct NotificationRow: View {
                 // Relative timestamp + kind badge
                 HStack(spacing: 6) {
                     Text(MLRFormat.relativeTime(notification.createdAt))
-                        .font(.mlrScaled(12))
+                        .font(.mlrCaption13)
                         .foregroundStyle(Color.mlrTextSubtle)
 
                     kindBadge
@@ -81,8 +81,8 @@ struct NotificationRow: View {
             // Unread dot indicator
             if isUnread {
                 Circle()
-                    .fill(accentColor)
-                    .frame(width: 8, height: 8)
+                    .fill(Color.mlrPrimary)
+                    .frame(width: 10, height: 10)
                     .padding(.top, 4)
                     .padding(.leading, 8)
             }
