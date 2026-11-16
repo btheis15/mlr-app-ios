@@ -149,10 +149,10 @@ private struct HomeLogoEditPencil: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .overlay(alignment: .topTrailing) {
+            .overlay(alignment: .topLeading) {
                 if (env.isAdmin || canEdit) && !env.isPreviewing {
                     InPlaceEditPencil(thing: "app images") { open = true }
-                        .padding(.trailing, 8)
+                        .padding(.leading, 8)
                 }
             }
             .navigationDestination(isPresented: $open) { AppImagesAdminView() }
