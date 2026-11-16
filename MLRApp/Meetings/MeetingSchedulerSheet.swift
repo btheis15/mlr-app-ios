@@ -57,7 +57,7 @@ struct MeetingSchedulerSheet: View {
             Group {
                 if let finalizing { finalizeStep(finalizing) } else { mainSheet }
             }
-            .background(Color.mlrSurface)
+            .mlrBackdrop()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } }

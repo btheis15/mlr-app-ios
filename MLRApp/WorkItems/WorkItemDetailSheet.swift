@@ -77,7 +77,7 @@ struct WorkItemDetailSheet: View {
                     )
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .mlrBackdrop()
             .navigationTitle("Work item")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

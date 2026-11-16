@@ -35,7 +35,7 @@ struct CabinBookingsView: View {
                     bookingList
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .mlrBackdrop()
             .navigationTitle("My Cabin Stays")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {

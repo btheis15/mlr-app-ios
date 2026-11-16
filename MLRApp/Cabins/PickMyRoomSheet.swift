@@ -36,7 +36,7 @@ struct PickMyRoomSheet: View {
                     form
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .mlrBackdrop()
             .navigationTitle("Choose your room")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

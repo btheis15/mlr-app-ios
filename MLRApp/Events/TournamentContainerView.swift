@@ -555,7 +555,7 @@ private struct MatchCard: View {
             }
         }
         .padding(.horizontal, 14).padding(.vertical, 6)
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
     }
 }
 

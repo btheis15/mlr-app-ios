@@ -501,7 +501,7 @@ struct TournamentShareCard: View {
         .padding(24)
         .frame(width: tournament.isFinished || !showsBracket ? 420 : nil, alignment: .leading)
         .fixedSize(horizontal: true, vertical: true)
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
     }
 
     private var standings: some View {

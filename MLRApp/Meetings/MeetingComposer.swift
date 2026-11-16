@@ -130,7 +130,7 @@ struct MeetingComposer: View {
                 }
                 .padding(20)
             }
-            .background(Color.mlrSurface)
+            .mlrBackdrop()
             .navigationTitle("📅 Schedule a meeting")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
