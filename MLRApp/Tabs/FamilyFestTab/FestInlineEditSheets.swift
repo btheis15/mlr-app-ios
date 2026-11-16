@@ -1,465 +1,624 @@
 import SwiftUI
+import Supabase
 
-// MARK: - FestScheduleEditSheet
-// Lets a fest editor or the assigned lead update location, description, and
-// lead assignment for a schedule item. Title and day stay planner-managed.
-// Lead linking lets a named person get the inline "Edit event" button on their
-// own device — they only need to be in the app as a member.
+// MARK: - Fest in-place editors (schedule events, dinner crew)
+//
+// Everything here runs on the EditorKit (real server errors, unsaved guard, no
+// double submit) and mirrors web's rules for who may edit what:
+//   • full editors (admin / can_edit_fest) get the whole event editor, the same
+//     fields as the Planner (`FestScheduleFullEditor`);
+//   • an event's lead or crew member (not a full editor) gets only web's narrower
+//     `updateScheduleDetails` set: location, description, what to bring, links.
+// The pencil is shown to exactly those people, never while an admin previews as
+// another member, and never on the read-only Past Years page (that page uses its
+// own read-only rows).
+
+// MARK: - Who may edit
+
+extension AppEnvironment {
+    /// Admin or fest-committee editor (server-authoritative flag cached by
+    /// `FestContentService.canEditFest()`), hidden while previewing as someone else.
+    var isFullFestEditor: Bool {
+        isSignedIn && !isPreviewing && (isAdmin || festContentService.userCanEditFest)
+    }
+
+    /// Web's rule for the Edit button on an event: full editor, or that event's lead/crew.
+    func canEditFestEvent(_ item: ScheduleItem) -> Bool {
+        guard isSignedIn, !isPreviewing else { return false }
+        if isFullFestEditor { return true }
+        guard let me = currentProfile?.id else { return false }
+        return item.leadUserId == me || item.crewUserIds.contains(me)
+    }
+
+    /// Web's rule for a dinner: full editor, or that dinner's chef/crew.
+    func canEditFestDinner(chefUserId: UUID?, crewUserIds: [UUID]) -> Bool {
+        guard isSignedIn, !isPreviewing else { return false }
+        if isFullFestEditor { return true }
+        guard let me = currentProfile?.id else { return false }
+        return chefUserId == me || crewUserIds.contains(me)
+    }
+}
+
+// MARK: - Edit pencil (one look everywhere in Fest)
+// EditorKit has no `EditPencil` yet; unify with it at integration.
+
+struct FestEditPencil: View {
+    let label: String
+    let action: () -> Void
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            Image(systemName: "pencil.circle.fill")
+                .font(.system(size: 24))
+                .foregroundStyle(Color.mlrFest)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.pressable)
+        .accessibilityLabel("Edit \(label)")
+    }
+}
+
+// MARK: - Member directory (throws, so callers can show an error + retry)
+
+enum FestMemberDirectory {
+    static func all() async throws -> [Profile] {
+        try await supabase.from("profiles").select("*")
+            .order("display_name", ascending: true).execute().value
+    }
+    static func profiles(ids: [UUID]) async throws -> [Profile] {
+        guard !ids.isEmpty else { return [] }
+        return try await supabase.from("profiles").select("*")
+            .in("id", values: ids.map(\.uuidString)).execute().value
+    }
+}
+
+// MARK: - Draft loader
+// Fetches one row, then hands it to the editor. Failure shows the real error with Retry.
+
+struct FestDraftLoader<Draft, Content: View>: View {
+    let title: String
+    let load: () async throws -> Draft?
+    @ViewBuilder let content: (Draft) -> Content
+
+    @Environment(\.dismiss) private var dismiss
+    @State private var draft: Draft?
+    @State private var error: String?
+    @State private var gone = false
+
+    init(title: String, load: @escaping () async throws -> Draft?,
+         @ViewBuilder content: @escaping (Draft) -> Content) {
+        self.title = title; self.load = load; self.content = content
+    }
+
+    var body: some View {
+        if let draft {
+            content(draft)
+        } else {
+            NavigationStack {
+                Group {
+                    if let error {
+                        ContentUnavailableView {
+                            Label("Couldn't load", systemImage: "exclamationmark.triangle")
+                        } description: {
+                            Text(error)
+                        } actions: {
+                            Button("Retry") { Task { await run() } }
+                        }
+                    } else if gone {
+                        ContentUnavailableView("No longer exists", systemImage: "trash",
+                                               description: Text("This was deleted by someone else."))
+                    } else {
+                        ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                    }
+                }
+                .navigationTitle(title)
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+            }
+            .task { await run() }
+        }
+    }
+
+    private func run() async {
+        error = nil
+        do {
+            if let d = try await load() { draft = d } else { gone = true }
+        } catch {
+            self.error = EditorError.message(error)
+        }
+    }
+}
+
+// MARK: - Legacy time note
+// Older rows hold free text ("after lunch"). The kit shows them untouched; the
+// picker can't display them, so say what is stored until the editor changes it.
+
+struct FestLegacyTimeNote: View {
+    let value: String?
+    var body: some View {
+        if let v = value?.trimmingCharacters(in: .whitespaces), !v.isEmpty, EditorTimeField.parts(v) == nil {
+            Text("Currently saved as \u{201C}\(v)\u{201D}. Picking a time replaces it.")
+                .font(.mlrCaption).foregroundStyle(Color.mlrTextMuted)
+        }
+    }
+}
+
+// MARK: - Crew picker field (a Form Section)
+
+struct FestCrewField: View {
+    @Binding var ids: [UUID]
+    var footer = "Crew members also get editing rights for this one."
+
+    @State private var people: [UUID: Profile] = [:]
+    @State private var loadError: String?
+    @State private var showPicker = false
+
+    var body: some View {
+        Section {
+            ForEach(ids, id: \.self) { id in
+                HStack(spacing: 12) {
+                    if let p = people[id] {
+                        AvatarView(profile: p, size: .small)
+                        Text(p.name).font(.mlrScaled(14))
+                    } else {
+                        Image(systemName: "person.circle").foregroundStyle(Color.mlrTextSubtle)
+                        Text("Member").font(.mlrScaled(14)).foregroundStyle(Color.mlrTextMuted)
+                    }
+                    Spacer()
+                    Button(role: .destructive) {
+                        withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) { ids.removeAll { $0 == id } }
+                        Haptics.tap()
+                    } label: { Image(systemName: "minus.circle.fill") }
+                        .buttonStyle(.borderless)
+                        .accessibilityLabel("Remove \(people[id]?.name ?? "member") from crew")
+                }
+            }
+            if let loadError {
+                HStack(alignment: .top) {
+                    Text("Couldn't load names: \(loadError)").font(.mlrCaption).foregroundStyle(Color.mlrDanger)
+                    Spacer()
+                    Button("Retry") { Task { await loadNames() } }.buttonStyle(.borderless)
+                }
+            }
+            Button { showPicker = true } label: { Label("Add crew member", systemImage: "person.badge.plus") }
+                .buttonStyle(.borderless)
+                .task(id: ids) { await loadNames() }
+                .sheet(isPresented: $showPicker) {
+                    InlineMemberPickerSheet(excludeIds: ids) { p in
+                        guard !ids.contains(p.id) else { return }
+                        people[p.id] = p
+                        ids.append(p.id)
+                    }
+                }
+        } header: {
+            Text("Crew")
+        } footer: {
+            Text(footer)
+        }
+    }
+
+    private func loadNames() async {
+        let missing = ids.filter { people[$0] == nil }
+        guard !missing.isEmpty else { loadError = nil; return }
+        do {
+            for p in try await FestMemberDirectory.profiles(ids: missing) { people[p.id] = p }
+            loadError = nil
+        } catch {
+            loadError = EditorError.message(error)
+        }
+    }
+}
+
+// MARK: - FestScheduleEditSheet (entry point used from the event's own screen)
+//
+// Full editors get the whole event editor; a lead/crew member gets web's narrower
+// details editor. `onSaved` runs after the write so the screen underneath refreshes.
 
 struct FestScheduleEditSheet: View {
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.dismiss) private var dismiss
 
     let item: ScheduleItem
     let onSaved: () async -> Void
 
-    @State private var location: String = ""
-    @State private var description: String = ""
-    @State private var bring: String = ""
-    @State private var leadName: String = ""
-    @State private var linkedUser: Profile? = nil
-    @State private var links: [LinkDraft] = []
-    @State private var showPicker = false
-    @State private var isSaving = false
-    @State private var saveError: String? = nil
+    var body: some View {
+        if env.isFullFestEditor {
+            FestDraftLoader(title: "Edit event", load: {
+                guard let uid = UUID(uuidString: item.id) else { throw FestEditError.badId }
+                return try await env.festContentService.scheduleDraft(id: uid)
+            }) { d in
+                FestScheduleFullEditor(draft: d, onSaved: onSaved)
+            }
+        } else {
+            FestScheduleDetailsEditor(item: item, onSaved: onSaved)
+        }
+    }
+}
 
-    // Sign-up config (admin / fest-editor only).
-    @State private var signupEnabled = false
-    @State private var signupMode = "interval"       // interval | slots | headcount
-    @State private var signupCapacity = ""
-    @State private var signupTeamSize = 1
-    @State private var signupInstructions = ""
-    @State private var signupStart = FestScheduleEditSheet.defaultTime(18, 0)
-    @State private var signupEnd = FestScheduleEditSheet.defaultTime(20, 0)
-    @State private var signupSlotMinutes = 15
-    @State private var signupHideNames = false
+enum FestEditError: LocalizedError {
+    case badId, notificationFailed(String)
+    var errorDescription: String? {
+        switch self {
+        case .badId: return "This item has an invalid id."
+        case .notificationFailed(let m): return "Saved, but the notification didn't send: \(m) Tap Retry to send it."
+        }
+    }
+}
 
-    // Per-slot capacity editing (slots mode only).
+// MARK: - Narrow editor (event lead / crew): location, description, bring, links
+
+struct FestScheduleDetailsEditor: View {
+    @Environment(AppEnvironment.self) private var env
+
+    struct Values: Equatable {
+        var location: String?
+        var description: String?
+        var bring: String?
+        var links: [EditorLink]
+    }
+
+    let item: ScheduleItem
+    let onSaved: () async -> Void
+    @State private var draft: EditorDraft<Values>
+
+    init(item: ScheduleItem, onSaved: @escaping () async -> Void) {
+        self.item = item; self.onSaved = onSaved
+        _draft = State(initialValue: EditorDraft(Values(
+            location: item.location == "TBD" ? nil : item.location,
+            description: item.description,
+            bring: item.bring,
+            links: item.links.map { EditorLink(label: $0.label ?? "", url: $0.href) })))
+    }
+
+    var body: some View {
+        EditorSheet(
+            title: "Edit event",
+            isDirty: draft.isDirty,
+            canSave: linksOK(draft.value.links),
+            save: {
+                guard let uid = UUID(uuidString: item.id) else { throw FestEditError.badId }
+                let v = draft.value
+                try await env.festContentService.updateScheduleDetails(
+                    itemId: uid, location: v.location?.trimBlank, description: v.description?.trimBlank,
+                    bring: v.bring?.trimBlank, links: v.links)
+                await env.festContentService.reload()
+                await onSaved()
+            }
+        ) {
+            Section {
+                EditorTextField("Location", text: $draft.value.location, placeholder: "Where (blank = TBD)", limit: 120)
+                EditorLongText("Details", text: $draft.value.description, placeholder: "What it is, when to arrive\u{2026}", lines: 2...5)
+                EditorLongText("What to bring (optional)", text: $draft.value.bring, lines: 1...3)
+            } header: {
+                Text("Details")
+            } footer: {
+                Text("Location, details, and what to bring \u{2014} since you\u{2019}re running this one.")
+            }
+            Section("Links") {
+                EditorLinksField("Links (optional)", links: $draft.value.links)
+            }
+        }
+    }
+}
+
+/// Blank rows are dropped on save; any row with text must be a valid web address.
+private func linksOK(_ links: [EditorLink]) -> Bool {
+    links.allSatisfy { $0.url.trimmingCharacters(in: .whitespaces).isEmpty || EditorLink.isValidURL($0.url) }
+}
+
+// MARK: - Full event editor (fest editors) — used in place AND by the Planner
+
+struct FestScheduleFullEditor: View {
+    @Environment(AppEnvironment.self) private var env
+
+    var onSaved: (() async -> Void)?
+    @State private var draft: EditorDraft<FestScheduleDraft>
+    @State private var imageKey = UUID().uuidString
+    @State private var showLeadPicker = false
+
+    // Per-slot capacity editing (named-slot mode, existing events only).
     @State private var slotList: [ScheduleSlot] = []
     @State private var slotCapacities: [UUID: String] = [:]
 
-    // Edit-and-notify (#393) — admin-only, default OFF; sends on save when on.
-    @State private var notifyOnSave = false
+    // Edit-and-notify (#393): opt-in, sent after a successful save.
+    @State private var notifyOn = false
     @State private var notifyMessage = ""
     @State private var notifyBanner = true
     @State private var notifyActivity = true
     @State private var notifyEmail = false
 
-    static func defaultTime(_ h: Int, _ m: Int) -> Date {
-        Calendar.current.date(bySettingHour: h, minute: m, second: 0, of: Date()) ?? Date()
+    init(draft: FestScheduleDraft, onSaved: (() async -> Void)? = nil) {
+        _draft = State(initialValue: EditorDraft(draft))
+        _notifyMessage = State(initialValue: "Update: \(draft.title)")
+        self.onSaved = onSaved
     }
 
-    /// Editable link row (ScheduleLink is immutable; this backs the text fields).
-    struct LinkDraft: Identifiable { let id = UUID(); var label: String; var href: String }
+    private var isNew: Bool { draft.value.id == nil }
+    private var service: FestContentService { env.festContentService }
 
-    private var canAssignLead: Bool { env.isAdmin || env.festContentService.userCanEditFest }
+    private var dayOptions: [String] {
+        var days = FestDays.options(service.config)
+        if !days.contains(draft.value.day) { days.insert(draft.value.day, at: 0) }
+        return days
+    }
+
+    private var slotsDirty: Bool {
+        slotList.contains { slot in
+            guard let raw = slotCapacities[slot.id] else { return false }
+            let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+            return (t.isEmpty ? nil : Int(t)) != slot.capacity
+        }
+    }
+
+    private var canSave: Bool {
+        let d = draft.value
+        return !d.title.trimmingCharacters(in: .whitespaces).isEmpty
+            && (d.anytime || !d.day.isEmpty)
+            && d.signup.isValid
+            && linksOK(d.links)
+    }
+
+    private var showsSlots: Bool {
+        !isNew && draft.value.signup.enabled && draft.value.signup.mode == "slots"
+    }
 
     var body: some View {
-        Form {
-            Section("Details") {
-                LabeledContent("Location") {
-                    TextField("Where?", text: $location)
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                }
-                TextField("Description (optional)", text: $description, axis: .vertical)
-                    .lineLimit(3...5)
-                TextField("What to bring (optional)", text: $bring, axis: .vertical)
-                    .lineLimit(1...4)
-            }
-
-            if canAssignLead {
-                Section {
-                    if let user = linkedUser {
-                        HStack(spacing: 10) {
-                            AvatarView(profile: user, size: .small)
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(user.name).font(.mlrScaled(14, weight: .medium))
-                                Text("Linked — they can edit from the Fest tab")
-                                    .font(.caption).foregroundStyle(Color.mlrTextMuted)
-                            }
-                            Spacer()
-                            Button {
-                                linkedUser = nil
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .foregroundStyle(Color.mlrTextSubtle)
-                            }
-                            .buttonStyle(.pressable)
-                        }
-                    } else {
-                        LabeledContent("Name") {
-                            TextField("Lead's name", text: $leadName)
-                                .multilineTextAlignment(.trailing)
-                        }
-                        Button("Link to an app member…") { showPicker = true }
-                            .font(.mlrScaled(13))
-                            .foregroundStyle(Color.mlrPrimary)
+        EditorSheet(
+            title: isNew ? "Add event" : "Edit event",
+            isDirty: draft.isDirty || slotsDirty || notifyOn,
+            canSave: canSave,
+            save: save
+        ) {
+            Section("What & when") {
+                EditorEmojiField("Emoji (optional)", emoji: $draft.value.emoji)
+                EditorTextField("Title", text: $draft.value.title, placeholder: "e.g. Lake Day", limit: 80, required: true)
+                EditorToggle("Anytime (no set day)", isOn: $draft.value.anytime.animation(),
+                             caption: "Shows in \u{201C}Anytime all week\u{201D} instead of on a day.")
+                if !draft.value.anytime {
+                    Picker("Day", selection: $draft.value.day) {
+                        ForEach(dayOptions, id: \.self) { Text(FestDays.label($0)).tag($0) }
                     }
-                } header: {
-                    Text("Lead")
-                } footer: {
-                    Text("Linking to a member lets them edit this event from the Fest tab without needing admin access.")
-                        .font(.caption)
                 }
+                EditorTimeField("Starts", time: $draft.value.startTime)
+                FestLegacyTimeNote(value: draft.value.startTime)
+                if draft.value.startTime != nil {
+                    EditorTimeField("Ends (optional)", time: $draft.value.endTime)
+                    FestLegacyTimeNote(value: draft.value.endTime)
+                }
+                EditorTextField("Location", text: $draft.value.location, placeholder: "Blank = TBD", limit: 120)
             }
 
-            // Link buttons (migration 0142) — e.g. a sign-up form + an info doc.
             Section {
-                ForEach($links) { $link in
-                    VStack(spacing: 4) {
-                        TextField("Label (e.g. Sign-up form)", text: $link.label)
-                        HStack {
-                            TextField("https://…", text: $link.href)
-                                .textInputAutocapitalization(.never)
-                                .autocorrectionDisabled()
-                                .keyboardType(.URL)
-                            Button { links.removeAll { $0.id == link.id } } label: {
-                                Image(systemName: "minus.circle.fill").foregroundStyle(Color.mlrDanger)
-                            }.buttonStyle(.pressable)
-                        }
+                EditorTextField("Name", text: $draft.value.leadName, limit: 80)
+                if draft.value.leadUserId != nil {
+                    HStack {
+                        Label("Linked to an app member", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(Color.mlrSuccess)
+                        Spacer()
+                        Button("Unlink", role: .destructive) { draft.value.leadUserId = nil }
+                            .buttonStyle(.borderless)
                     }
+                    .font(.mlrScaled(13))
+                } else {
+                    Button { showLeadPicker = true } label: {
+                        Label("Link a member", systemImage: "person.crop.circle.badge.plus")
+                    }
+                    .buttonStyle(.borderless)
                 }
-                Button { links.append(LinkDraft(label: "", href: "")) } label: {
-                    Label("Add a link", systemImage: "plus.circle")
-                }
+                EditorTextField("Phone (optional)", text: $draft.value.leadPhone, keyboard: .phonePad)
             } header: {
-                Text("Links")
+                Text("Who\u{2019}s in charge")
             } footer: {
-                Text("Buttons shown on the event — a sign-up form, an info doc, etc.")
-                    .font(.caption)
+                Text("A linked lead can edit this event\u{2019}s location and details from the Fest tab.")
             }
 
-            // Sign-ups (migrations 0135/0143) — authoring is admin / fest-editor only.
-            if canAssignLead {
-                Section {
-                    Toggle("Take sign-ups", isOn: $signupEnabled)
-                    if signupEnabled {
-                        Picker("Type", selection: $signupMode) {
-                            Text("Head count").tag("headcount")
-                            Text("Time slots").tag("interval")
-                            Text("Named slots").tag("slots")
-                        }
-                        LabeledContent("Capacity") {
-                            TextField("No limit", text: $signupCapacity)
-                                .keyboardType(.numberPad).multilineTextAlignment(.trailing)
-                        }
-                        Stepper("Team size: \(signupTeamSize)", value: $signupTeamSize, in: 1...8)
-                        Toggle("🙈 Hide who's signed up", isOn: $signupHideNames)
-                        TextField("Instructions (optional)", text: $signupInstructions, axis: .vertical).lineLimit(1...3)
-                        if signupMode == "interval" {
-                            DatePicker("First slot", selection: $signupStart, displayedComponents: .hourAndMinute)
-                            DatePicker("Ends by", selection: $signupEnd, displayedComponents: .hourAndMinute)
-                            Picker("Slot length", selection: $signupSlotMinutes) {
-                                ForEach([10, 15, 20, 30, 45, 60], id: \.self) { Text("\($0) min").tag($0) }
-                            }
-                        }
-                    }
-                } header: {
-                    Text("Sign-ups")
-                } footer: {
-                    Text(signupMode == "slots"
-                         ? "Named-slot lists are managed on the web. You can edit each slot's capacity below."
-                         : "Members can sign up right on the event.")
-                        .font(.caption)
-                }
+            FestCrewField(ids: $draft.value.crewUserIds)
 
-                // Per-slot capacity editor (slots mode) — add/remove slots on the web.
-                if signupEnabled && signupMode == "slots" && !slotList.isEmpty {
-                    Section {
-                        ForEach(slotList) { slot in
-                            HStack {
-                                Text(slotDisplayLabel(slot))
-                                    .font(.mlrScaled(14))
-                                    .foregroundStyle(Color.mlrText)
-                                Spacer()
-                                TextField("No limit", text: Binding(
-                                    get: { slotCapacities[slot.id] ?? (slot.capacity.map(String.init) ?? "") },
-                                    set: { slotCapacities[slot.id] = $0 }
-                                ))
-                                .keyboardType(.numberPad)
-                                .multilineTextAlignment(.trailing)
-                                .frame(width: 70)
-                            }
-                        }
-                    } header: {
-                        Text("Slot capacities")
-                    } footer: {
-                        Text("Override the default capacity for individual slots. Leave blank to use the default above.")
-                            .font(.caption)
-                    }
-                    .task(id: signupMode) { await loadSlots() }
+            Section("More details") {
+                EditorLongText("Details", text: $draft.value.description, placeholder: "What it is, when to arrive\u{2026}", lines: 2...5)
+                EditorTextField("What to bring (optional)", text: $draft.value.bring, limit: 160)
+                EditorImageField("Photo (optional)", url: $draft.value.imageUrl) { img in
+                    try await env.mediaService.uploadSiteImage(
+                        image: img, key: "schedule/\(draft.value.id?.uuidString ?? imageKey)")
                 }
+                EditorLinksField("Links (optional)", links: $draft.value.links)
             }
 
-            // Edit-and-notify (#393) — admin-only. Off by default; when on, a send
-            // fires on Save to everyone at Family Fest except those who RSVP'd "not
-            // coming" (people who haven't RSVP'd still get it).
-            if canAssignLead {
-                Section {
-                    Toggle("📣 Notify about this change", isOn: $notifyOnSave)
-                    if notifyOnSave {
-                        TextField("Message", text: $notifyMessage, axis: .vertical).lineLimit(1...3)
-                        Toggle("Banner + push", isOn: $notifyBanner)
-                        Toggle("Activity tab", isOn: $notifyActivity)
-                        Toggle("Email", isOn: $notifyEmail)
-                    }
-                } header: {
-                    Text("Tell everyone")
-                } footer: {
-                    if notifyOnSave {
-                        Text("Sends on Save to everyone at Family Fest except those who said they're not coming.")
-                            .font(.caption)
+            signupSection
+
+            if showsSlots && !slotList.isEmpty { slotCapacitySection }
+
+            Section("Advanced") {
+                EditorToggle("Private (members only)", isOn: $draft.value.isPrivate,
+                             caption: "Hide location and details from signed-out guests.")
+            }
+
+            if !isNew && (env.isAdmin || service.userCanEditFest) { notifySection }
+        }
+        .sheet(isPresented: $showLeadPicker) {
+            InlineMemberPickerSheet { p in
+                draft.value.leadUserId = p.id
+                draft.value.leadName = p.name
+            }
+        }
+        .task(id: "\(draft.value.signup.enabled)-\(draft.value.signup.mode)") { await loadSlots() }
+    }
+
+    // MARK: Sections
+
+    @ViewBuilder private var signupSection: some View {
+        Section {
+            EditorToggle("Take sign-ups", isOn: $draft.value.signup.enabled.animation())
+            if draft.value.signup.enabled {
+                Picker("Type", selection: $draft.value.signup.mode) {
+                    Text("Head count").tag("headcount")
+                    Text("Time slots").tag("interval")
+                    Text("Named slots").tag("slots")
+                }
+                EditorIntField("Capacity", value: $draft.value.signup.capacity,
+                               placeholder: draft.value.signup.mode == "headcount" ? "No limit" : "Per slot")
+                Stepper("Team size: \(draft.value.signup.teamSize)", value: $draft.value.signup.teamSize,
+                        in: 1...max(8, draft.value.signup.teamSize))
+                EditorToggle("Hide who\u{2019}s signed up", isOn: $draft.value.signup.hideNames)
+                EditorLongText("Instructions (optional)", text: $draft.value.signup.instructions, lines: 1...3)
+                if draft.value.signup.mode == "interval" {
+                    EditorTimeField("First slot", time: $draft.value.signup.startTime, isOptional: false)
+                    EditorTimeField("Ends by", time: $draft.value.signup.endTime, isOptional: false)
+                    Picker("Slot length", selection: $draft.value.signup.slotMinutes) {
+                        ForEach(slotLengths, id: \.self) { Text("\($0) min").tag($0) }
                     }
                 }
             }
-
-            if let err = saveError {
-                Section { Text(err).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) }
-            }
-        }
-        .navigationTitle("Edit event")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                if isSaving { ProgressView() }
-                else { Button("Save") { Task { await save() } }.fontWeight(.semibold) }
-            }
-        }
-        .sheet(isPresented: $showPicker) {
-            InlineMemberPickerSheet { profile in
-                linkedUser = profile
-                leadName   = profile.name
-            }
-        }
-        .onAppear {
-            seed()
-            if (item.signupMode ?? "interval") == "slots" {
-                Task { await loadSlots() }
+            EditorToggle("\u{1F3C6} Tournament", isOn: $draft.value.tournamentEnabled)
+        } header: {
+            Text("Sign-ups")
+        } footer: {
+            if !draft.value.signup.isValid {
+                Text(draft.value.signup.mode == "interval"
+                     ? "Time slots need a capacity, a slot length, and a start before the end."
+                     : "Check the sign-up settings.")
+                    .foregroundStyle(Color.mlrDanger)
+            } else if draft.value.signup.mode == "slots" && draft.value.signup.enabled {
+                Text("Named-slot lists are managed on the web. You can edit each slot\u{2019}s capacity below.")
+            } else {
+                Text("Members can sign up right on the event.")
             }
         }
     }
 
-    private func seed() {
-        location    = (item.location == "TBD" ? nil : item.location) ?? ""
-        description = item.description ?? ""
-        bring       = item.bring ?? ""
-        leadName    = item.leads.first ?? ""
-        links       = item.links.map { LinkDraft(label: $0.label ?? "", href: $0.href) }
-        signupEnabled      = item.signupEnabled
-        signupMode         = item.signupMode ?? "interval"
-        signupCapacity     = item.signupCapacity.map(String.init) ?? ""
-        signupTeamSize     = item.signupTeamSize ?? 1
-        signupHideNames    = item.signupHideNames
-        signupInstructions = item.signupInstructions ?? ""
-        signupSlotMinutes  = item.signupSlotMinutes ?? 15
-        if let s = Self.timeFromHHMM(item.signupStartTime) { signupStart = s }
-        if let e = Self.timeFromHHMM(item.signupEndTime) { signupEnd = e }
-        notifyMessage = "Update: \(item.title)"
+    private var slotLengths: [Int] {
+        var l = [10, 15, 20, 30, 45, 60, 90, 120]
+        if !l.contains(draft.value.signup.slotMinutes) { l.append(draft.value.signup.slotMinutes); l.sort() }
+        return l
     }
 
-    private static func timeFromHHMM(_ s: String?) -> Date? {
-        guard let parts = s?.split(separator: ":"), parts.count == 2,
-              let h = Int(parts[0]), let m = Int(parts[1]) else { return nil }
-        return defaultTime(h, m)
-    }
-    private static func hhmm(_ d: Date) -> String {
-        let c = Calendar.current.dateComponents([.hour, .minute], from: d)
-        return String(format: "%02d:%02d", c.hour ?? 0, c.minute ?? 0)
+    @ViewBuilder private var slotCapacitySection: some View {
+        Section {
+            ForEach(slotList) { slot in
+                HStack {
+                    Text(slotLabel(slot)).font(.mlrScaled(14))
+                    Spacer()
+                    TextField("No limit", text: Binding(
+                        get: { slotCapacities[slot.id] ?? (slot.capacity.map(String.init) ?? "") },
+                        set: { slotCapacities[slot.id] = $0 }))
+                        .keyboardType(.numberPad)
+                        .multilineTextAlignment(.trailing)
+                        .frame(width: 80)
+                }
+            }
+        } header: {
+            Text("Slot capacities")
+        } footer: {
+            Text("Override the default capacity for individual slots. Leave blank to use the default above.")
+        }
     }
 
-    private func loadSlots() async {
-        guard let uid = UUID(uuidString: item.id) else { return }
-        slotList = await env.signupsService.fetchSlots(itemId: uid)
+    @ViewBuilder private var notifySection: some View {
+        Section {
+            EditorToggle("\u{1F4E3} Notify about this change", isOn: $notifyOn.animation())
+            if notifyOn {
+                EditorTextField("Message", text: $notifyMessage, limit: 140)
+                EditorToggle("Banner + push", isOn: $notifyBanner)
+                EditorToggle("Activity tab", isOn: $notifyActivity)
+                EditorToggle("Email", isOn: $notifyEmail)
+            }
+        } header: {
+            Text("Tell everyone")
+        } footer: {
+            if notifyOn {
+                Text("Sends on Save to everyone at Family Fest except those who said they\u{2019}re not coming.")
+            }
+        }
     }
 
-    private func slotDisplayLabel(_ slot: ScheduleSlot) -> String {
+    // MARK: Actions
+
+    private func slotLabel(_ slot: ScheduleSlot) -> String {
         if let label = slot.label, !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { return label }
         let start = MLRFormat.time(slot.startTime)
-        if let end = slot.endTime, !end.isEmpty { return "\(start)–\(MLRFormat.time(end))" }
+        if let end = slot.endTime, !end.isEmpty { return "\(start)\u{2013}\(MLRFormat.time(end))" }
         return start
     }
 
-    private func save() async {
-        isSaving = true; saveError = nil; defer { isSaving = false }
-        guard let uid = UUID(uuidString: item.id) else { saveError = "Invalid item ID."; return }
-        let name = (linkedUser?.name ?? leadName).trimBlank
-        let leadId = linkedUser?.id ?? item.leadUserId
-        // Keep only links with a real URL; label falls back to the URL when blank.
-        let cleanedLinks: [ScheduleLink] = links.compactMap { d in
-            let href = d.href.trimmingCharacters(in: .whitespacesAndNewlines)
-            guard !href.isEmpty else { return nil }
-            return ScheduleLink(href: href, label: d.label.trimBlank)
-        }
-        // Only admins/fest editors author sign-up config; leads leave it untouched.
-        let signupConfig: FestContentService.SignupConfig? = canAssignLead
-            ? .init(
-                enabled: signupEnabled,
-                mode: signupMode,
-                capacity: Int(signupCapacity.trimmingCharacters(in: .whitespaces)),
-                slotMinutes: signupMode == "interval" ? signupSlotMinutes : nil,
-                startTime: signupMode == "interval" ? Self.hhmm(signupStart) : nil,
-                endTime: signupMode == "interval" ? Self.hhmm(signupEnd) : nil,
-                instructions: signupInstructions.trimBlank,
-                teamSize: signupTeamSize > 1 ? signupTeamSize : nil,
-                hideNames: signupHideNames)
-            : nil
-        do {
-            try await env.festContentService.updateScheduleItem(
-                itemId:      uid,
-                location:    location.trimBlank,
-                description: description.trimBlank,
-                leadName:    name,
-                leadUserId:  leadId,
-                leadPhone:   nil,
-                bring:       bring.trimBlank,
-                links:       cleanedLinks,
-                signup:      signupConfig
-            )
-            // Save any changed per-slot capacities (slots mode).
-            if signupMode == "slots" {
-                for slot in slotList {
-                    let raw = slotCapacities[slot.id]?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                    let newCap = raw.isEmpty ? nil : Int(raw)
-                    if newCap != slot.capacity {
-                        try await env.signupsService.updateSlotCapacity(slotId: slot.id, capacity: newCap)
-                    }
+    private func loadSlots() async {
+        guard showsSlots, let id = draft.value.id else { return }
+        slotList = await env.signupsService.fetchSlots(itemId: id)
+    }
+
+    private func save() async throws {
+        var d = draft.value
+        d.title = d.title.trimmingCharacters(in: .whitespaces)
+        // Web writes an end time only alongside a start time.
+        if d.startTime == nil { d.endTime = nil }
+        try await service.saveSchedule(d)
+
+        if d.signup.enabled && d.signup.mode == "slots" {
+            for slot in slotList {
+                guard let raw = slotCapacities[slot.id] else { continue }
+                let t = raw.trimmingCharacters(in: .whitespacesAndNewlines)
+                let newCap = t.isEmpty ? nil : Int(t)
+                if newCap != slot.capacity {
+                    try await env.signupsService.updateSlotCapacity(slotId: slot.id, capacity: newCap)
                 }
             }
-            // Optional: tell everyone about the change (#393). Admin-only, opt-in.
-            if canAssignLead, notifyOnSave {
-                let msg = notifyMessage.trimBlank
-                if let msg, (notifyBanner || notifyActivity || notifyEmail) {
-                    do {
-                        try await env.notificationsService.sendActivityNotify(
-                            title: msg, body: nil,
-                            banner: notifyBanner, activity: notifyActivity, email: notifyEmail,
-                            scheduleItemId: item.id)
-                    } catch {
-                        // The edit saved; only the notification failed — surface it,
-                        // don't dismiss, so they can retry the send.
-                        saveError = "Saved, but the notification didn't send. Try again."
-                        return
-                    }
-                }
-            }
-            await onSaved()
-            dismiss()
-        } catch {
-            saveError = "Save failed. Check your connection."
         }
+
+        if notifyOn, !isNew, let id = d.id,
+           let msg = notifyMessage.trimBlank, notifyBanner || notifyActivity || notifyEmail {
+            do {
+                try await env.notificationsService.sendActivityNotify(
+                    title: msg, body: nil, banner: notifyBanner, activity: notifyActivity,
+                    email: notifyEmail, scheduleItemId: id.uuidString)
+            } catch {
+                // The edit itself saved; keep the sheet open so the send can be retried.
+                await service.reload()
+                throw FestEditError.notificationFailed(EditorError.message(error))
+            }
+        }
+        await service.reload()
+        await onSaved?()
     }
 }
 
 // MARK: - FestCrewAssignSheet
-// Admin, canEditFest users, and the chef can assign members to a dinner's crew.
-// Assigned crew members see "Edit menu & details" on that dinner from the Fest tab.
+// A dinner's head chef (who is not a full editor) assigns crew here; full editors
+// do it inside the full dinner editor. Crew members then see Edit on that dinner.
 
 struct FestCrewAssignSheet: View {
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.dismiss) private var dismiss
 
     let dinner: FestDinner
     let onSaved: () async -> Void
+    @State private var crew: EditorDraft<[UUID]>
 
-    @State private var crewIds: [UUID] = []
-    @State private var crewProfiles: [Profile] = []
-    @State private var showPicker = false
-    @State private var isLoading = false
-    @State private var isSaving = false
-    @State private var saveError: String? = nil
+    init(dinner: FestDinner, onSaved: @escaping () async -> Void) {
+        self.dinner = dinner; self.onSaved = onSaved
+        _crew = State(initialValue: EditorDraft(dinner.crewUserIds))
+    }
 
     var body: some View {
-        Form {
-            Section {
-                if isLoading {
-                    ProgressView().frame(maxWidth: .infinity)
-                } else if crewProfiles.isEmpty {
-                    Text("No crew assigned yet")
-                        .foregroundStyle(Color.mlrTextMuted)
-                        .font(.mlrScaled(14))
-                } else {
-                    ForEach(crewProfiles) { member in
-                        HStack(spacing: 12) {
-                            AvatarView(profile: member, size: .small)
-                            Text(member.name).font(.mlrScaled(14))
-                            Spacer()
-                            Button {
-                                crewIds.removeAll { $0 == member.id }
-                                crewProfiles.removeAll { $0.id == member.id }
-                            } label: {
-                                Image(systemName: "minus.circle.fill")
-                                    .foregroundStyle(Color.mlrDanger)
-                            }
-                            .buttonStyle(.pressable)
-                        }
-                    }
-                }
-                Button { showPicker = true } label: {
-                    Label("Add crew member", systemImage: "person.badge.plus")
-                        .font(.mlrScaled(14))
-                        .foregroundStyle(Color.mlrPrimary)
-                }
-            } header: {
-                Text("Crew")
-            } footer: {
-                Text("Crew members can update the menu, serving time, and location from the Fest tab.")
-                    .font(.caption)
+        EditorSheet(
+            title: "Manage crew",
+            isDirty: crew.isDirty,
+            canSave: true,
+            save: {
+                guard let uid = UUID(uuidString: dinner.id) else { throw FestEditError.badId }
+                try await env.festContentService.updateDinnerCrew(dinnerId: uid, crewUserIds: crew.value)
+                await onSaved()
             }
-
-            if let err = saveError {
-                Section { Text(err).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) }
-            }
-        }
-        .navigationTitle("Manage crew")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                if isSaving { ProgressView() }
-                else { Button("Save") { Task { await save() } }.fontWeight(.semibold) }
-            }
-        }
-        .sheet(isPresented: $showPicker) {
-            InlineMemberPickerSheet(excludeIds: crewIds) { profile in
-                guard !crewIds.contains(profile.id) else { return }
-                crewIds.append(profile.id)
-                crewProfiles.append(profile)
-            }
-        }
-        .task { await loadCrew() }
-    }
-
-    private func loadCrew() async {
-        isLoading = true; defer { isLoading = false }
-        crewIds = dinner.crewUserIds
-        guard !crewIds.isEmpty else { return }
-        let rows: [Profile] = (try? await supabase
-            .from("profiles").select("*")
-            .in("id", values: crewIds.map(\.uuidString))
-            .execute().value) ?? []
-        crewProfiles = crewIds.compactMap { id in rows.first { $0.id == id } }
-    }
-
-    private func save() async {
-        isSaving = true; saveError = nil; defer { isSaving = false }
-        guard let uid = UUID(uuidString: dinner.id) else { saveError = "Invalid dinner ID."; return }
-        do {
-            try await env.festContentService.updateDinnerCrew(dinnerId: uid, crewUserIds: crewIds)
-            await onSaved()
-            dismiss()
-        } catch {
-            saveError = "Save failed. Check your connection."
+        ) {
+            FestCrewField(ids: $crew.value,
+                          footer: "Crew members can update the menu, serving time, and location from the Fest tab.")
         }
     }
 }
 
 // MARK: - InlineMemberPickerSheet
-// Searchable profile list used by both edit sheets. Tapping a row calls `onPick`
-// and dismisses — caller handles single vs. multi-select semantics.
+// Searchable profile list. Tapping a row calls `onPick` and dismisses. A failed
+// load shows the real error with Retry (never a silent empty list).
 
 struct InlineMemberPickerSheet: View {
     @Environment(\.dismiss) private var dismiss
@@ -470,6 +629,7 @@ struct InlineMemberPickerSheet: View {
     @State private var profiles: [Profile] = []
     @State private var search: String = ""
     @State private var isLoading = false
+    @State private var errorMessage: String?
 
     private var filtered: [Profile] {
         let excluded = Set(excludeIds)
@@ -496,8 +656,13 @@ struct InlineMemberPickerSheet: View {
                 .buttonStyle(.pressable)
             }
             .searchable(text: $search, prompt: "Search members")
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let errorMessage {
+                    EditorErrorBanner(message: "Couldn't load members. \(errorMessage)") { Task { await load() } }
+                }
+            }
             .overlay {
-                if isLoading { ProgressView() }
+                if isLoading && profiles.isEmpty { ProgressView() }
                 else if !search.isEmpty && filtered.isEmpty {
                     ContentUnavailableView("No results for \"\(search)\"", systemImage: "person.slash")
                 }
@@ -512,15 +677,15 @@ struct InlineMemberPickerSheet: View {
     }
 
     private func load() async {
-        isLoading = true; defer { isLoading = false }
-        profiles = (try? await supabase
-            .from("profiles").select("*")
-            .order("display_name", ascending: true)
-            .execute().value) ?? []
+        isLoading = true; errorMessage = nil
+        defer { isLoading = false }
+        do { profiles = try await FestMemberDirectory.all() }
+        catch { errorMessage = EditorError.message(error) }
     }
 }
 
-private extension String {
+extension String {
+    /// Trimmed text, or nil when blank.
     var trimBlank: String? {
         let t = trimmingCharacters(in: .whitespacesAndNewlines)
         return t.isEmpty ? nil : t

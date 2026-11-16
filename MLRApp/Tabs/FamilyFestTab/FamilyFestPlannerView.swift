@@ -321,63 +321,11 @@ private struct FestScheduleEditor: View {
     }
 }
 
+/// The Planner's event editor is the same full editor used in place on the
+/// event's own screen (FestInlineEditSheets.swift), so both always have every field.
 private struct ScheduleEditSheet: View {
-    @Environment(AppEnvironment.self) private var env
-    @State private var draft: EditorDraft<FestScheduleDraft>
-    @State private var showMemberPicker = false
-
-    init(draft: FestScheduleDraft) { _draft = State(initialValue: EditorDraft(draft)) }
-
-    var body: some View {
-        EditorSheet(
-            title: draft.value.id == nil ? "Add event" : "Edit event",
-            isDirty: draft.isDirty,
-            canSave: !draft.value.title.trimmingCharacters(in: .whitespaces).isEmpty,
-            save: {
-                var d = draft.value
-                d.title = d.title.trimmingCharacters(in: .whitespaces)
-                try await env.festContentService.saveSchedule(d)
-                await env.festContentService.reload()
-            }
-        ) {
-            Section("Event") {
-                EditorToggle("Anytime (no set day)", isOn: $draft.value.anytime.animation(),
-                             caption: "Shows in \u{201C}Anytime all week\u{201D} instead of on a day.")
-                if !draft.value.anytime {
-                    Picker("Day", selection: $draft.value.day) {
-                        ForEach(FestDays.options(env.festContentService.config), id: \.self) { Text(FestDays.label($0)).tag($0) }
-                    }
-                }
-                EditorTextField("Title", text: $draft.value.title, placeholder: "e.g. Lake Day", limit: 80, required: true)
-                EditorEmojiField("Emoji (optional)", emoji: $draft.value.emoji)
-                if !draft.value.anytime {
-                    EditorTimeField("Time (optional)", time: $draft.value.startTime)
-                }
-                EditorTextField("Location", text: $draft.value.location, placeholder: "Blank = TBD", limit: 120)
-            }
-            Section("Who's in charge") {
-                EditorTextField("Name", text: $draft.value.leadName, limit: 80)
-                Button {
-                    showMemberPicker = true
-                } label: {
-                    Label(draft.value.leadUserId == nil ? "Link a member" : "Linked ✓", systemImage: "person.crop.circle.badge.plus")
-                }
-                EditorTextField("Phone (optional)", text: $draft.value.leadPhone, keyboard: .phonePad)
-            }
-            Section("Details") {
-                EditorLongText("Description", text: $draft.value.description, lines: 2...5)
-                EditorLongText("What to bring (optional)", text: $draft.value.bring, lines: 1...3)
-                EditorToggle("Private (members only)", isOn: $draft.value.isPrivate)
-                EditorToggle("🏆 Tournament", isOn: $draft.value.tournamentEnabled)
-            }
-        }
-        .sheet(isPresented: $showMemberPicker) {
-            FestMemberPicker { profile in
-                draft.value.leadUserId = profile.id
-                draft.value.leadName = profile.name
-            }
-        }
-    }
+    let draft: FestScheduleDraft
+    var body: some View { FestScheduleFullEditor(draft: draft) }
 }
 
 // MARK: - Dinner editor
@@ -445,63 +393,11 @@ private struct FestDinnerEditor: View {
     private func load() async { model.replace(await service.editableDinners()); loading = false }
 }
 
-/// Not `private` — the full day/title/chef/houses/crew editor for
-/// `can_edit_fest()` viewers, reused outside the Planner on the Weekly Menu
-/// tab and dinner detail page (see FestDinnersView/FestDinnersDetailView).
+/// Not `private` — the full dinner editor (FestDinnerEditSheet.swift) for
+/// `can_edit_fest()` viewers; the Planner and the Dinners screens share it.
 struct DinnerEditSheet: View {
-    @Environment(AppEnvironment.self) private var env
-    @State private var draft: EditorDraft<FestDinnerDraft>
-    @State private var houses: EditorDraft<String>
-    @State private var showMemberPicker = false
-
-    // A stored `private var` forces the synthesized memberwise init to be
-    // file-private — add an explicit one for the cross-file call sites above.
-    init(draft: FestDinnerDraft) {
-        _draft = State(initialValue: EditorDraft(draft))
-        _houses = State(initialValue: EditorDraft(draft.houses.joined(separator: ", ")))
-    }
-
-    var body: some View {
-        EditorSheet(
-            title: draft.value.id == nil ? "Add dinner" : "Edit dinner",
-            isDirty: draft.isDirty || houses.isDirty,
-            canSave: !draft.value.title.trimmingCharacters(in: .whitespaces).isEmpty,
-            save: {
-                var d = draft.value
-                d.title = d.title.trimmingCharacters(in: .whitespaces)
-                d.houses = houses.value.split(separator: ",").map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
-                try await env.festContentService.saveDinner(d)
-                await env.festContentService.reload()
-            }
-        ) {
-            Section("Dinner") {
-                Picker("Day", selection: $draft.value.day) {
-                    ForEach(FestDays.options(env.festContentService.config), id: \.self) { Text(FestDays.label($0)).tag($0) }
-                }
-                EditorTextField("Title", text: $draft.value.title, placeholder: "e.g. Monday Dinner", limit: 80, required: true)
-            }
-            Section("Chef") {
-                EditorTextField("Chef name(s)", text: $draft.value.chefName, limit: 120)
-                Button { showMemberPicker = true } label: {
-                    Label(draft.value.chefUserId == nil ? "Link a member" : "Linked ✓", systemImage: "person.crop.circle.badge.plus")
-                }
-                EditorTextField("Phone (optional)", text: $draft.value.chefPhone, keyboard: .phonePad)
-                EditorTextField("Houses / crew", text: $houses.value, placeholder: "Comma-separated")
-            }
-            Section("Served") {
-                EditorTimeField("Time", time: $draft.value.servedTime)
-                EditorTextField("Location", text: $draft.value.servedLocation, limit: 120)
-            }
-            Section("Prep") {
-                EditorTimeField("Prep time", time: $draft.value.prepTime)
-                EditorTextField("Prep location", text: $draft.value.prepLocation, limit: 120)
-            }
-            Section { EditorLongText("Menu", text: $draft.value.menu, lines: 2...6) }
-        }
-        .sheet(isPresented: $showMemberPicker) {
-            FestMemberPicker { p in draft.value.chefUserId = p.id; draft.value.chefName = p.name }
-        }
-    }
+    let draft: FestDinnerDraft
+    var body: some View { FestDinnerFullEditor(draft: draft) }
 }
 
 // MARK: - Pay editor (dues tiers + payees)
@@ -659,6 +555,8 @@ struct FestMemberPicker: View {
 
     @State private var members: [Profile] = []
     @State private var query = ""
+    @State private var errorMessage: String?
+    @State private var loading = false
 
     private var shown: [Profile] {
         let q = query.trimmingCharacters(in: .whitespaces).lowercased()
@@ -674,15 +572,24 @@ struct FestMemberPicker: View {
                 }
             }
             .searchable(text: $query)
+            .safeAreaInset(edge: .top, spacing: 0) {
+                if let errorMessage {
+                    EditorErrorBanner(message: "Couldn\u{2019}t load members. \(errorMessage)") { Task { await load() } }
+                }
+            }
+            .overlay { if loading && members.isEmpty { ProgressView() } }
             .navigationTitle("Link a member")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-            .task {
-                members = (try? await supabase.from("profiles")
-                    .select("id, display_name, avatar_url, is_admin, beta_tester, willing_to_help, intro_seen, email_alerts, push_level, push_types, notif_types, push_prompted, contact_email, created_at")
-                    .order("display_name", ascending: true).execute().value) ?? []
-            }
+            .task { await load() }
         }
+    }
+
+    private func load() async {
+        loading = true; errorMessage = nil
+        defer { loading = false }
+        do { members = try await FestMemberDirectory.all() }
+        catch { errorMessage = EditorError.message(error) }
     }
 }
 

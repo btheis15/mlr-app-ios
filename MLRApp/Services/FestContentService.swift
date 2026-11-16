@@ -167,6 +167,42 @@ struct FestScheduleDraft: Identifiable, Equatable {
     var position: Int
     /// Migration 0147 — gates the "🏆 Tournament" section on this activity.
     var tournamentEnabled: Bool = false
+    /// Migration 0110 — crew who may self-edit location/description/bring.
+    var crewUserIds: [UUID] = []
+    var imageUrl: String?
+    /// Migration 0142 — ordered link buttons (blank rows are dropped on save).
+    var links: [EditorLink] = []
+    var signup = FestSignupDraft()
+}
+
+/// The sign-up configuration the full editor authors (migrations 0135/0143/0167).
+/// Mirrors web's `SignupDraft`/`signupPayload`; `signup_fields` and the reminder
+/// columns are not edited on iOS and are never written, so they stay as web set them.
+struct FestSignupDraft: Equatable {
+    var enabled = false
+    var mode = "interval"          // interval | slots | headcount
+    var capacity: Int? = 4
+    var slotMinutes = 60
+    var startTime: String? = "12:00"
+    var endTime: String? = "16:00"
+    var instructions: String?
+    var teamSize = 1               // 1 = individual; >= 2 = fixed teams
+    var hideNames = false
+
+    /// Same rules as web's `signupIsValid`.
+    var isValid: Bool {
+        guard enabled else { return true }
+        if teamSize < 1 { return false }
+        switch mode {
+        case "headcount": return capacity == nil || (capacity ?? 0) > 0
+        case "slots": return true
+        default:
+            guard (capacity ?? 0) > 0, slotMinutes > 0,
+                  let s = startTime, let e = endTime,
+                  let sp = EditorTimeField.parts(s), let ep = EditorTimeField.parts(e) else { return false }
+            return sp.h * 60 + sp.m < ep.h * 60 + ep.m
+        }
+    }
 }
 
 struct FestDinnerDraft: Identifiable, Equatable {
@@ -588,20 +624,13 @@ final class FestContentService {
         prepTime: String?,
         prepLocation: String?
     ) async throws {
-        struct Payload: Encodable {
-            let menu: String?
-            let served_time: String?
-            let served_location: String?
-            let prep_time: String?
-            let prep_location: String?
-        }
-        try await supabase
-            .from("fest_dinners")
-            .update(Payload(menu: menu, served_time: servedTime,
-                            served_location: servedLocation,
-                            prep_time: prepTime, prep_location: prepLocation))
-            .eq("id", value: dinnerId)
-            .execute()
+        var payload: [String: AnyJSON] = [
+            "menu": j(menu), "served_time": j(servedTime), "served_location": j(servedLocation),
+            "prep_time": j(prepTime), "prep_location": j(prepLocation),
+            "updated_at": .string(ISO8601DateFormatter().string(from: Date())),
+        ]
+        if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
+        try await supabase.from("fest_dinners").update(payload).eq("id", value: dinnerId).execute()
     }
 
     // MARK: - Editing (admin / fest committee; RLS enforces can_edit_fest)
@@ -675,7 +704,22 @@ final class FestContentService {
             "is_private": .bool(d.isPrivate), "lead_name": j(d.leadName), "lead_phone": j(d.leadPhone),
             "lead_user_id": d.leadUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
             "position": .integer(d.position), "tournament_enabled": .bool(d.tournamentEnabled),
+            "crew_user_ids": .array(d.crewUserIds.map { AnyJSON.string($0.uuidString) }),
+            "image_url": j(d.imageUrl),
+            "links": Self.linksJSON(d.links),
         ]
+        // Sign-up columns exactly as web's `signupPayload` (interval-only fields null otherwise).
+        let g = d.signup
+        let interval = g.enabled && g.mode == "interval"
+        p["signup_enabled"]      = .bool(g.enabled)
+        p["signup_mode"]         = .string(g.mode)
+        p["signup_capacity"]     = g.enabled ? j(g.capacity) : .null
+        p["signup_slot_minutes"] = interval ? .integer(g.slotMinutes) : .null
+        p["signup_start_time"]   = interval ? j(g.startTime) : .null
+        p["signup_end_time"]     = interval ? j(g.endTime) : .null
+        p["signup_instructions"] = g.enabled ? j(g.instructions) : .null
+        p["signup_team_size"]    = g.enabled && g.teamSize > 1 ? .integer(g.teamSize) : .null
+        p["signup_hide_names"]   = .bool(g.enabled && g.hideNames)
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_schedule_items", id: d.id, payload: p)
     }
@@ -983,6 +1027,44 @@ final class FestContentService {
         var instructions: String?
         var teamSize: Int?
         var hideNames: Bool = false   // migration 0167 — schedule events only
+    }
+
+    /// Links as the jsonb array web writes: only rows with a URL, label null when blank.
+    static func linksJSON(_ links: [EditorLink]) -> AnyJSON {
+        .array(links.compactMap { l in
+            let href = l.url.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !href.isEmpty else { return nil }
+            let label = l.label.trimmingCharacters(in: .whitespacesAndNewlines)
+            return .object(["href": .string(href), "label": label.isEmpty ? .null : .string(label)])
+        })
+    }
+
+    /// The narrow update web gives an event's lead/crew (`updateScheduleDetails`):
+    /// location, description, bring, links. Nothing else is written.
+    func updateScheduleDetails(itemId: UUID, location: String?, description: String?,
+                               bring: String?, links: [EditorLink]) async throws {
+        var payload: [String: AnyJSON] = [
+            "location": j(location), "description": j(description), "bring": j(bring),
+            "links": Self.linksJSON(links),
+            "updated_at": .string(ISO8601DateFormatter().string(from: Date())),
+        ]
+        if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
+        try await supabase.from("fest_schedule_items").update(payload).eq("id", value: itemId.uuidString).execute()
+    }
+
+    /// One schedule row as a full editor draft. Throws on a network/decoding error;
+    /// nil when the row no longer exists.
+    func scheduleDraft(id: UUID) async throws -> FestScheduleDraft? {
+        let rows: [ScheduleRowFull] = try await supabase.from("fest_schedule_items").select("*")
+            .eq("id", value: id.uuidString).limit(1).execute().value
+        return rows.first?.draft
+    }
+
+    /// One dinner row as a draft (carries prep time/location, which the display model lacks).
+    func dinnerDraft(id: UUID) async throws -> FestDinnerDraft? {
+        let rows: [DinnerRowFull] = try await supabase.from("fest_dinners").select("*")
+            .eq("id", value: id.uuidString).limit(1).execute().value
+        return rows.first?.draft
     }
 
     /// Updates only the crew_user_ids on a dinner (admin / canEditFest / chef only).
@@ -1356,11 +1438,35 @@ private struct ScheduleRowFull: Decodable {
     let lead_phone: String?
     let position: Int
     let tournament_enabled: Bool?   // migration 0147
+    let crew_user_ids: [UUID]?      // migration 0110
+    let image_url: String?
+    let links: [ScheduleLink]?      // migration 0142
+    let signup_enabled: Bool?
+    let signup_mode: String?
+    let signup_capacity: Int?
+    let signup_slot_minutes: Int?
+    let signup_start_time: String?
+    let signup_end_time: String?
+    let signup_instructions: String?
+    let signup_team_size: Int?
+    let signup_hide_names: Bool?
     var draft: FestScheduleDraft {
         FestScheduleDraft(id: id, day: day, anytime: anytime ?? false, startTime: start_time, endTime: end_time, title: title,
                           emoji: emoji, location: location, description: description, bring: bring,
                           isPrivate: is_private, leadUserId: lead_user_id, leadName: lead_name,
-                          leadPhone: lead_phone, position: position, tournamentEnabled: tournament_enabled ?? false)
+                          leadPhone: lead_phone, position: position, tournamentEnabled: tournament_enabled ?? false,
+                          crewUserIds: crew_user_ids ?? [], imageUrl: image_url?.nilIfBlank,
+                          links: (links ?? []).map { EditorLink(label: $0.label ?? "", url: $0.href) },
+                          signup: FestSignupDraft(
+                              enabled: signup_enabled ?? false,
+                              mode: signup_mode ?? "interval",
+                              capacity: signup_capacity,
+                              slotMinutes: signup_slot_minutes ?? 60,
+                              startTime: signup_start_time?.nilIfBlank ?? "12:00",
+                              endTime: signup_end_time?.nilIfBlank ?? "16:00",
+                              instructions: signup_instructions,
+                              teamSize: max(signup_team_size ?? 1, 1),
+                              hideNames: signup_hide_names ?? false))
     }
 }
 

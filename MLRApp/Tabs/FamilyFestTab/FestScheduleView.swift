@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 // MARK: - FestScheduleView
 
@@ -42,10 +43,7 @@ struct FestScheduleView: View {
                     Section {
                         VStack(spacing: 1) {
                             ForEach(group.items) { item in
-                                NavigationLink(destination: FestScheduleDetailView(item: item)) {
-                                    ScheduleRow(item: item, isSignedIn: env.isSignedIn)
-                                }
-                                .buttonStyle(.pressable)
+                                ScheduleListRow(item: item)
                             }
                         }
                         .background(Color.mlrFestParchment)
@@ -66,10 +64,7 @@ struct FestScheduleView: View {
                     Section {
                         VStack(spacing: 1) {
                             ForEach(thingsToDo) { item in
-                                NavigationLink(destination: FestScheduleDetailView(item: item)) {
-                                    ScheduleRow(item: item, isSignedIn: env.isSignedIn)
-                                }
-                                .buttonStyle(.pressable)
+                                ScheduleListRow(item: item)
                             }
                         }
                         .background(Color.mlrFestParchment)
@@ -88,6 +83,36 @@ struct FestScheduleView: View {
             .padding(.top, 8)
         }
         .background(Color.mlrFestParchment)
+        .task { if env.isSignedIn && !env.isPreviewing { _ = await env.festContentService.canEditFest() } }
+    }
+}
+
+// MARK: - Row + pencil
+// The pencil sits beside the link (not inside it) so tapping it never navigates.
+// Shown to exactly the people web shows an Edit button to: a full editor, or
+// this event's lead/crew. This list is always the current year; Past Years has
+// its own read-only rows.
+
+private struct ScheduleListRow: View {
+    let item: ScheduleItem
+    @Environment(AppEnvironment.self) private var env
+    @State private var showEdit = false
+
+    var body: some View {
+        HStack(spacing: 0) {
+            NavigationLink(destination: FestScheduleDetailView(item: item)) {
+                ScheduleRow(item: item, isSignedIn: env.isSignedIn)
+            }
+            .buttonStyle(.pressable)
+            if env.canEditFestEvent(item) {
+                FestEditPencil(label: "event") { showEdit = true }
+                    .padding(.trailing, 4)
+                    .background(Color.mlrFestParchment)
+            }
+        }
+        .sheet(isPresented: $showEdit) {
+            FestScheduleEditSheet(item: item) { await env.festContentService.reload() }
+        }
     }
 }
 
@@ -152,6 +177,16 @@ private struct ScheduleRow: View {
             }
 
             Spacer()
+
+            // Event photo thumbnail (the full photo, with zoom, is on the detail screen).
+            if let url = item.imageUrl.flatMap(URL.init(string:)) {
+                KFImage(url)
+                    .resizable()
+                    .scaledToFill()
+                    .frame(width: 48, height: 48)
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .accessibilityHidden(true)
+            }
 
             Image(systemName: "chevron.right")
                 .font(.mlrScaled(13, weight: .semibold))
