@@ -152,6 +152,38 @@ final class MediaService {
         return DropBoxUploadResult(url: json.url, thumbnailUrl: json.thumbnailUrl)
     }
 
+    // MARK: - House request photos (category "work", same as web)
+
+    /// Resize to max 1920 px and upload to the mini under the existing `work`
+    /// category — the same one web's house-request upload uses, so the mini needs
+    /// no change. No Supabase Storage fallback (mini-only, like other work media).
+    func uploadWorkImage(image: UIImage) async throws -> DropBoxUploadResult {
+        guard let session = try? await supabase.auth.session else { throw MediaError.miniServerError }
+        let resized = resize(image: image, maxDimension: 1920)
+        guard let data = resized.jpegData(compressionQuality: 0.8) else { throw MediaError.encodingFailed }
+        guard let url = URL(string: "\(Self.miniServerURL)/upload?category=work") else { throw MediaError.invalidURL }
+
+        var request = URLRequest(url: url, timeoutInterval: 120)
+        request.httpMethod = "POST"
+        request.setValue("Bearer \(session.accessToken)", forHTTPHeaderField: "Authorization")
+        let boundary = UUID().uuidString
+        request.setValue("multipart/form-data; boundary=\(boundary)", forHTTPHeaderField: "Content-Type")
+        var body = Data()
+        body.append("--\(boundary)\r\n")
+        body.append("Content-Disposition: form-data; name=\"file\"; filename=\"upload.jpg\"\r\n")
+        body.append("Content-Type: image/jpeg\r\n\r\n")
+        body.append(data)
+        body.append("\r\n--\(boundary)--\r\n")
+        request.httpBody = body
+
+        let (responseData, response) = try await URLSession.shared.data(for: request)
+        guard let http = response as? HTTPURLResponse, http.statusCode == 200 else {
+            throw MediaError.miniServerError
+        }
+        let json = try JSONDecoder().decode(MiniUploadResponse.self, from: responseData)
+        return DropBoxUploadResult(url: json.url, thumbnailUrl: json.thumbnailUrl)
+    }
+
     // MARK: - Chat attachments
 
     /// Result of a chat upload: the stored URL, the server-classified media type

@@ -89,6 +89,16 @@ struct NotifPrefsView: View {
                 toggle(for: .houseStayCreated, label: "New stays at your house", icon: "house.fill")
             }
 
+            // House requests. Deliberately NOT admin-only: a House Admin is not an
+            // app admin, so gating on isAdmin would hide these from the people who
+            // receive them. A member who isn't an approver just never gets one.
+            Section("House requests") {
+                toggle(for: .houseRequestSubmitted, label: "New requests to decide", icon: "tray.and.arrow.down.fill")
+                toggle(for: .houseRequestDecision, label: "My requests", icon: "checkmark.seal.fill")
+                toggle(for: .houseRequestHandled, label: "What the other House Admins did", icon: "shippingbox.fill")
+                toggle(for: .houseRequestReminder, label: "Order it in time", icon: "bell.badge.fill")
+            }
+
             // Work Checklist
             Section("Work Checklist") {
                 toggle(for: .workItemCreated, label: "New work items",        icon: "wrench.and.screwdriver.fill")

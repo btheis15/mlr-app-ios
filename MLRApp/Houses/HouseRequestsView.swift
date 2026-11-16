@@ -1,4 +1,6 @@
 import SwiftUI
+import PhotosUI
+import Kingfisher
 
 // MARK: - House requests board (migrations 0194–0208)
 //
@@ -297,6 +299,43 @@ private struct HouseRequestRow: View {
     }
 }
 
+// MARK: - Shared helpers
+
+/// Money text -> amount, the way web reads it: strip everything but digits and
+/// the point, so "$1,240.50" works. nil when it isn't a non-negative number.
+private func parseMoney(_ text: String) -> Double? {
+    let cleaned = text.filter { $0.isNumber || $0 == "." }
+    guard let n = Double(cleaned), n >= 0 else { return nil }
+    return n
+}
+
+/// Uploads picked photos (mini, category "work" — web's category) then attaches
+/// each through `add_house_request_media`. Returns how many failed; the request
+/// itself is already saved by then, so a failure means "this photo didn't attach".
+@MainActor
+private func attachPhotos(_ items: [PhotosPickerItem], to requestId: UUID,
+                          startingAt position: Int, env: AppEnvironment) async -> Int {
+    var failed = 0
+    var pos = position
+    for item in items {
+        guard let data = try? await item.loadTransferable(type: Data.self),
+              let image = UIImage(data: data) else { failed += 1; continue }
+        do {
+            let res = try await env.mediaService.uploadWorkImage(image: image)
+            try await env.houseRequestsService.addMedia(requestId: requestId, url: res.url, type: "image",
+                                                        thumbnailUrl: res.thumbnailUrl, position: pos)
+            pos += 1
+        } catch {
+            failed += 1
+        }
+    }
+    return failed
+}
+
+private func photoFailureMessage(_ failed: Int) -> String {
+    "Saved, but \(failed == 1 ? "1 photo didn't" : "\(failed) photos didn't") attach. You can add \(failed == 1 ? "it" : "them") from the request itself."
+}
+
 // MARK: - Composer
 
 /// ⚠️ THERE IS NO DEFAULT KIND. Picking one is its own step and the form does
@@ -313,10 +352,20 @@ struct HouseRequestComposer: View {
     @State private var cost = ""
     @State private var quantity = ""
     @State private var testOnly = false
+    @State private var pickedPhotos: [PhotosPickerItem] = []
     @State private var saving = false
     @State private var error: String?
 
     private var service: HouseRequestsService { env.houseRequestsService }
+
+    /// A reimbursement without an amount can't be acted on (0195 rejects it
+    /// server-side too) — the friendly version of the same rule. It's the TOTAL
+    /// of the receipt, not a per-item price.
+    private var canSend: Bool {
+        guard !title.trimmingCharacters(in: .whitespaces).isEmpty, !saving else { return false }
+        if kind == .reimbursement { return (parseMoney(cost) ?? 0) > 0 }
+        return true
+    }
 
     var body: some View {
         Group {
@@ -339,7 +388,7 @@ struct HouseRequestComposer: View {
                     } label: {
                         if saving { ProgressView() } else { Text("Send").fontWeight(.semibold) }
                     }
-                    .disabled(title.trimmingCharacters(in: .whitespaces).isEmpty || saving)
+                    .disabled(!canSend)
                 }
             }
         }
@@ -415,9 +464,24 @@ struct HouseRequestComposer: View {
             }
 
             Section {
-                Toggle("Just testing — only notify me", isOn: $testOnly)
+                PhotosPicker(selection: $pickedPhotos, maxSelectionCount: 10, matching: .images) {
+                    Label(pickedPhotos.isEmpty
+                          ? (k == .reimbursement ? "Add a photo of the receipt" : "Add photos")
+                          : "\(pickedPhotos.count) photo\(pickedPhotos.count == 1 ? "" : "s") selected",
+                          systemImage: "photo.on.rectangle.angled")
+                }
+            } header: {
+                Text("Photos (optional)")
+            }
+
+            // Only people who can review see the testing switch, as on web (0200).
+            // Everyone still sees who a real send will reach.
+            Section {
+                if service.canReview {
+                    Toggle("Just testing — only notify me", isOn: $testOnly)
+                }
             } footer: {
-                Text(testOnly
+                Text(service.canReview && testOnly
                      ? "Nobody else is notified, and only you can see this one."
                      : "Sends a notice to: \(service.approverNames.isEmpty ? "nobody — this house has no House Admin yet" : service.approverNames.joined(separator: ", "))")
             }
@@ -438,16 +502,24 @@ struct HouseRequestComposer: View {
         error = nil
         defer { saving = false }
         do {
-            try await service.create(
+            let id = try await service.create(
                 houseId: house.id,
                 kind: kind,
                 title: title.trimmingCharacters(in: .whitespaces),
                 reason: reason.trimmingCharacters(in: .whitespaces),
-                estCost: Double(cost.trimmingCharacters(in: .whitespaces)),
+                estCost: parseMoney(cost),
                 quantity: Int(quantity.trimmingCharacters(in: .whitespaces)),
-                testOnly: testOnly
+                // The switch is hidden from non-reviewers; never send a stale true.
+                testOnly: service.canReview && testOnly
             )
+            let failed = await attachPhotos(pickedPhotos, to: id, startingAt: 0, env: env)
             await service.load(houseId: house.id, force: true)
+            if failed > 0 {
+                // The request exists; stay open so the message is read, not lost.
+                pickedPhotos = []
+                error = photoFailureMessage(failed)
+                return
+            }
             Haptics.success()
             dismiss()
         } catch {
@@ -461,10 +533,23 @@ struct HouseRequestComposer: View {
 struct HouseRequestDetailView: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
-    let request: HouseRequest
+    private let seed: HouseRequest
     let house: House
 
+    init(request: HouseRequest, house: House) {
+        self.seed = request
+        self.house = house
+    }
+
+    /// Live copy from the board, so an edit or a new photo shows without leaving.
+    private var request: HouseRequest {
+        env.houseRequestsService.requests.first { $0.id == seed.id } ?? seed
+    }
+
     @State private var note = ""
+    @State private var notifyDecision = true
+    @State private var editing = false
+    @State private var pickedPhotos: [PhotosPickerItem] = []
     @State private var working = false
     @State private var error: String?
     @State private var converting = false
@@ -539,6 +624,8 @@ struct HouseRequestDetailView: View {
                 }
             }
 
+            photosSection
+
             decisionSection
             progressSection
             requesterSection
@@ -553,7 +640,106 @@ struct HouseRequestDetailView: View {
         }
         .navigationTitle(request.kind.meta.label)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if canEdit {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Change it") { editing = true }
+                }
+            }
+        }
+        .sheet(isPresented: $editing) {
+            NavigationStack { HouseRequestEditSheet(request: request, house: house, asReviewer: service.canReview && !isMine) }
+        }
+        .onChange(of: pickedPhotos) { _, items in
+            guard !items.isEmpty else { return }
+            Task { await addPhotos(items) }
+        }
         .disabled(working)
+    }
+
+    /// Web (`update_house_request`, 0207): a House Admin may change any request
+    /// at any status; the requester only while it's pending or approved. App
+    /// admins who aren't this house's House Admin get nothing.
+    private var canEdit: Bool {
+        guard canAct, !request.isDeleted else { return false }
+        if service.canReview { return true }
+        return isMine && (request.status == .pending || request.status == .approved)
+    }
+
+    /// Requester or a reviewer may attach (add_house_request_media).
+    private var canAttach: Bool { canAct && !request.isDeleted && (isMine || service.canReview) }
+
+    @ViewBuilder
+    private var photosSection: some View {
+        let visible = request.media.filter { $0.status != "hidden" }
+        if !visible.isEmpty || canAttach {
+            Section("Photos & receipts") {
+                if !visible.isEmpty {
+                    LazyVGrid(columns: [GridItem(.adaptive(minimum: 96), spacing: 8)], spacing: 8) {
+                        ForEach(visible) { m in
+                            photoTile(m)
+                        }
+                    }
+                    .padding(.vertical, 4)
+                }
+                if canAttach {
+                    PhotosPicker(selection: $pickedPhotos, maxSelectionCount: 10, matching: .images) {
+                        Label("Add photos", systemImage: "photo.badge.plus")
+                    }
+                }
+            }
+        }
+    }
+
+    private func photoTile(_ m: HouseRequestMedia) -> some View {
+        let canRemove = canAct && (m.uploadedBy == env.effectiveUserId || isMine || service.canReview)
+        return ZStack(alignment: .topTrailing) {
+            Group {
+                if let url = env.mediaTokenService.url(m.thumbnailUrl ?? m.storagePath) {
+                    KFImage(url).resizable().scaledToFill()
+                } else {
+                    Color.mlrTextMuted.opacity(0.15)
+                }
+            }
+            .frame(height: 96)
+            .frame(maxWidth: .infinity)
+            .clipShape(RoundedRectangle(cornerRadius: 8))
+            .overlay(alignment: .bottomLeading) {
+                if m.isHeld {
+                    Text("Held")
+                        .font(.mlrScaled(9, weight: .bold))
+                        .padding(.horizontal, 5).padding(.vertical, 2)
+                        .background(.ultraThinMaterial, in: Capsule())
+                        .padding(4)
+                }
+            }
+            if canRemove {
+                Button {
+                    Task { await run { try await service.removeMedia(mediaId: m.id) } }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(.white, .black.opacity(0.55))
+                        .font(.system(size: 20))
+                }
+                .buttonStyle(.borderless)
+                .padding(4)
+                .accessibilityLabel("Remove photo")
+            }
+        }
+    }
+
+    private func addPhotos(_ items: [PhotosPickerItem]) async {
+        working = true
+        error = nil
+        defer { working = false; pickedPhotos = [] }
+        let failed = await attachPhotos(items, to: request.id, startingAt: request.media.count, env: env)
+        await service.load(houseId: house.id, force: true)
+        if failed > 0 {
+            error = failed == 1 ? "1 photo didn't attach." : "\(failed) photos didn't attach."
+        } else {
+            Haptics.success()
+        }
     }
 
     /// House Admins only. ⚠️ App admins deliberately have no authority here —
@@ -564,6 +750,11 @@ struct HouseRequestDetailView: View {
             Section("Your decision") {
                 TextField("Add a note (optional)", text: $note, axis: .vertical)
                     .lineLimit(1...4)
+                Toggle("Email \(request.createdByName ?? "them") the decision", isOn: $notifyDecision)
+                    .tint(Color.mlrPrimary)
+                Text(tellsLine)
+                    .font(.mlrScaled(11))
+                    .foregroundStyle(Color.mlrTextMuted)
                 Button(request.kind.decideLabels.approve) {
                     Task { await decide(approve: true) }
                 }
@@ -573,6 +764,21 @@ struct HouseRequestDetailView: View {
                 }
             }
         }
+    }
+
+    /// "Tells: …" — who hears about a decision, BEFORE it is sent. Same source as
+    /// the composer footer (the house's House Admins), leaving out the requester
+    /// and the person deciding, as web's TellsLine does.
+    private var tellsLine: String {
+        let who = request.createdByName ?? "the requester"
+        let others = service.approvers
+            .filter { $0.id != env.effectiveUserId && $0.id != request.createdBy }
+            .map(\.name)
+        if service.approvers.isEmpty {
+            return "Tells: \(who). This house has no House Admin, so nobody else will be told."
+        }
+        if others.isEmpty { return "Tells: \(who) — nobody else." }
+        return "Tells: \(who), and \(others.joined(separator: ", ")) (\(others.count == 1 ? "the other House Admin" : "the other House Admins"))."
     }
 
     /// ⚠️ The ladder is per kind. A purchase goes `approved → ordered`, which is
@@ -610,11 +816,16 @@ struct HouseRequestDetailView: View {
                 if converting {
                     TextField("What you actually paid", text: $paidAmount)
                         .keyboardType(.decimalPad)
+                    if let paid = parseMoney(paidAmount), conversionNeedsReapproval(paid) {
+                        Label(reapprovalText, systemImage: "exclamationmark.triangle.fill")
+                            .font(.mlrScaled(12))
+                            .foregroundStyle(.orange)
+                    }
                     Button("Ask to be paid back") {
                         Task { await convert() }
                     }
                     .fontWeight(.semibold)
-                    .disabled(Double(paidAmount) == nil)
+                    .disabled((parseMoney(paidAmount) ?? 0) <= 0)
                 } else {
                     Button("I already bought this — pay me back") {
                         withAnimation { converting = true }
@@ -631,7 +842,10 @@ struct HouseRequestDetailView: View {
             }
         }
 
-        if service.canReview, canAct {
+        // Mirrors web's `canDeleteRequest` / 0208's `delete_house_request`: the
+        // requester may remove their own at ANY status, a House Admin any in the
+        // house, and nobody else (app admins included). Soft delete, 7-day tombstone.
+        if (isMine || service.canReview), canAct, !request.isDeleted {
             Section {
                 Button("Remove from the board", role: .destructive) {
                     Task { await run { try await service.delete(id: request.id) } }
@@ -642,10 +856,28 @@ struct HouseRequestDetailView: View {
         }
     }
 
+    /// Mirrors web's `conversionNeedsReapproval` and 0207's
+    /// `_house_request_overspend_grace()` ($25) — only used to TELL the requester
+    /// before they submit; the server decides.
+    private static let overspendGrace = 25.0
+
+    private func conversionNeedsReapproval(_ actual: Double) -> Bool {
+        if request.status != .approved { return true }   // nothing approved yet
+        guard let est = request.estCost else { return false }  // no ceiling to breach
+        return actual > est + Self.overspendGrace
+    }
+
+    private var reapprovalText: String {
+        if request.status != .approved {
+            return "This hasn't been approved yet, so it goes back to a House Admin to decide."
+        }
+        return "That's more than $\(Int(Self.overspendGrace)) over the approved estimate, so it goes back to a House Admin for another look before it's paid."
+    }
+
     private func decide(approve: Bool) async {
         await run {
             try await service.review(id: request.id, approve: approve,
-                                     note: note.isEmpty ? nil : note)
+                                     note: note.isEmpty ? nil : note, notify: notifyDecision)
         }
     }
 
@@ -654,7 +886,7 @@ struct HouseRequestDetailView: View {
     }
 
     private func convert() async {
-        guard let amount = Double(paidAmount) else { return }
+        guard let amount = parseMoney(paidAmount), amount > 0 else { return }
         await run { try await service.convertToReimbursement(id: request.id, actualCost: amount) }
     }
 
@@ -664,6 +896,168 @@ struct HouseRequestDetailView: View {
         defer { working = false }
         do {
             try await work()
+            await service.load(houseId: house.id, force: true)
+            Haptics.success()
+            dismiss()
+        } catch {
+            self.error = error.localizedDescription
+        }
+    }
+}
+
+// MARK: - Edit ("Change it")
+
+/// Web's edit sheet (`update_house_request`). A House Admin can correct any
+/// request ("yes, but two of them") and may leave a note and choose whether the
+/// requester is emailed; the requester can fix their own while pending/approved.
+/// The kind is fixed — reclassifying would invalidate the fields already filled.
+struct HouseRequestEditSheet: View {
+    @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
+    let request: HouseRequest
+    let house: House
+    /// A reviewer editing SOMEONE ELSE'S request: the note + notify controls show.
+    let asReviewer: Bool
+
+    @State private var title: String
+    @State private var reason: String
+    @State private var links: [EditLink]
+    @State private var cost: String
+    @State private var quantity: String
+    @State private var changeNote = ""
+    @State private var notify = true
+    @State private var saving = false
+    @State private var error: String?
+
+    struct EditLink: Identifiable {
+        let id = UUID()
+        var href: String
+        var label: String
+    }
+
+    init(request: HouseRequest, house: House, asReviewer: Bool) {
+        self.request = request
+        self.house = house
+        self.asReviewer = asReviewer
+        _title = State(initialValue: request.title)
+        _reason = State(initialValue: request.reason)
+        _links = State(initialValue: request.links.map { EditLink(href: $0.href, label: $0.label ?? "") })
+        _cost = State(initialValue: request.estCost.map { String($0) } ?? "")
+        _quantity = State(initialValue: request.quantity.map(String.init) ?? "")
+    }
+
+    private var service: HouseRequestsService { env.houseRequestsService }
+
+    private var canSave: Bool {
+        guard !title.trimmingCharacters(in: .whitespaces).isEmpty, !saving else { return false }
+        if request.kind == .reimbursement { return (parseMoney(cost) ?? 0) > 0 }
+        return true
+    }
+
+    var body: some View {
+        Form {
+            Section {
+                TextField("What is it?", text: $title)
+                TextField("Why", text: $reason, axis: .vertical)
+                    .lineLimit(2...5)
+            }
+
+            if request.kind.hasMoney {
+                Section {
+                    TextField(request.kind == .reimbursement ? "What you paid" : "Rough cost", text: $cost)
+                        .keyboardType(.decimalPad)
+                    if request.kind == .purchase {
+                        TextField("How many (optional)", text: $quantity)
+                            .keyboardType(.numberPad)
+                    }
+                } header: {
+                    Text(request.kind == .reimbursement ? "The amount" : "The estimate")
+                }
+            }
+
+            Section("Links") {
+                ForEach($links) { $link in
+                    VStack(alignment: .leading, spacing: 4) {
+                        TextField("https://…", text: $link.href)
+                            .keyboardType(.URL)
+                            .textInputAutocapitalization(.never)
+                            .autocorrectionDisabled()
+                        TextField("Button text (optional)", text: $link.label)
+                            .font(.mlrScaled(13))
+                    }
+                }
+                .onDelete { links.remove(atOffsets: $0) }
+                Button { links.append(EditLink(href: "", label: "")) } label: {
+                    Label("Add a link", systemImage: "plus.circle")
+                }
+            }
+
+            if asReviewer {
+                Section {
+                    TextField("Why you changed it (optional)", text: $changeNote, axis: .vertical)
+                        .lineLimit(1...4)
+                    Toggle("Email \(request.createdByName ?? "them") the change", isOn: $notify)
+                        .tint(Color.mlrPrimary)
+                } footer: {
+                    Text("They get an in-app notice and a push either way.")
+                }
+            }
+
+            if let error {
+                Section {
+                    Label(error, systemImage: "exclamationmark.triangle.fill")
+                        .font(.mlrScaled(13))
+                        .foregroundStyle(.red)
+                }
+            }
+        }
+        .navigationTitle("Change it")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
+            ToolbarItem(placement: .confirmationAction) {
+                Button {
+                    Task { await save() }
+                } label: {
+                    if saving { ProgressView() } else { Text("Save").fontWeight(.semibold) }
+                }
+                .disabled(!canSave)
+            }
+        }
+    }
+
+    private func save() async {
+        saving = true
+        error = nil
+        defer { saving = false }
+
+        let cleaned: [CalloutLink] = links.compactMap { l in
+            var href = l.href.trimmingCharacters(in: .whitespaces)
+            guard !href.isEmpty else { return nil }
+            if !href.contains(":") { href = "https://" + href }
+            let label = l.label.trimmingCharacters(in: .whitespaces)
+            return CalloutLink(href: href, label: label.isEmpty ? nil : label)
+        }
+
+        // An idea carries no cost; clear one only when the field was emptied.
+        let newCost = request.kind.hasMoney ? parseMoney(cost) : nil
+        let newQty = request.kind == .purchase ? Int(quantity.trimmingCharacters(in: .whitespaces)) : nil
+        let clearCost = request.kind.hasMoney && newCost == nil && request.estCost != nil
+        let clearQty = request.kind == .purchase && (newQty ?? 0) < 1 && request.quantity != nil
+
+        do {
+            try await service.update(
+                id: request.id,
+                title: title.trimmingCharacters(in: .whitespaces),
+                reason: reason.trimmingCharacters(in: .whitespaces),
+                links: cleaned,
+                estCost: newCost,
+                quantity: (newQty ?? 0) >= 1 ? newQty : nil,
+                clearCost: clearCost,
+                clearQuantity: clearQty,
+                note: asReviewer ? (changeNote.trimmingCharacters(in: .whitespaces).isEmpty ? nil : changeNote) : nil,
+                notify: asReviewer ? notify : true
+            )
             await service.load(houseId: house.id, force: true)
             Haptics.success()
             dismiss()
