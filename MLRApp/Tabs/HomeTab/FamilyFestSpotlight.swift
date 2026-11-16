@@ -114,6 +114,7 @@ struct FamilyFestSpotlight: View {
     }
 
     var body: some View {
+        MLRCard(.fest, padding: 0) {
         VStack(spacing: 0) {
             if season.phase == .live {
                 liveDayCard
@@ -130,13 +131,7 @@ struct FamilyFestSpotlight: View {
                 joinCTA
             }
         }
-        .background(Color.mlrFestParchment)
-        .clipShape(RoundedRectangle(cornerRadius: 16))
-        .overlay(
-            RoundedRectangle(cornerRadius: 16)
-                .strokeBorder(Color.mlrFestGold.opacity(0.4), lineWidth: 1.25)
-        )
-        .shadow(color: .mlrFest.opacity(0.12), radius: 10, x: 0, y: 4)
+        }
         .task {
             // Make sure committee membership is known so the shortcut points the
             // right way. Cheap + guarded so it doesn't refetch on every appearance.
@@ -285,35 +280,54 @@ struct FamilyFestSpotlight: View {
 
     // MARK: - Compact card (off-season / planning)
 
+    private var showsCountdown: Bool {
+        season.phase == .offSeason || season.phase == .planning
+    }
+
     private var compactCard: some View {
         NavigationLink(destination: FestOverviewView()) {
-            HStack(spacing: 12) {
+            HStack(spacing: 14) {
                 ZStack {
-                    RoundedRectangle(cornerRadius: 12)
-                        .fill(Color.mlrFest.opacity(0.12))
-                        .frame(width: 46, height: 46)
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(LinearGradient(colors: [Color.mlrFest.opacity(0.9), Color.mlrFestGold],
+                                             startPoint: .topLeading, endPoint: .bottomTrailing))
+                        .frame(width: 60, height: 60)
                     Image(systemName: iconName)
-                        .font(.mlrScaled(20))
-                        .foregroundStyle(Color.mlrFestReadable)
+                        .font(.system(size: 24, weight: .semibold))
+                        .foregroundStyle(.white)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
+                    Eyebrow("Family Fest", color: .mlrFestReadable)
                     Text(verbatim: "Family Fest \(FamilyFestConfig.year)")
-                        .font(.festSerif(16, weight: .bold))
-                        .foregroundStyle(Color.mlrFestReadable)
+                        .font(.system(.title3, design: .serif, weight: .bold))
+                        .foregroundStyle(Color.mlrFestInkReadable)
                     Text(statusLine)
-                        .font(.mlrScaled(12))
-                        .foregroundStyle(Color.mlrFestInkReadable.opacity(0.85))
-                        .lineLimit(1)
+                        .font(.footnote)
+                        .foregroundStyle(Color.mlrFestInkReadable.opacity(0.8))
+                        .lineLimit(2)
                 }
 
-                Spacer()
+                Spacer(minLength: 4)
 
-                Image(systemName: "chevron.right")
-                    .font(.mlrScaled(13, weight: .semibold))
-                    .foregroundStyle(Color.mlrFestReadable.opacity(0.6))
+                if showsCountdown {
+                    VStack(spacing: 0) {
+                        Text("\(season.daysUntilStart)")
+                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                        Text("days")
+                            .font(.caption.weight(.semibold))
+                    }
+                    .foregroundStyle(Color.mlrFestReadable)
+                    .accessibilityLabel("\(season.daysUntilStart) days to go")
+                } else {
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.mlrFestReadable.opacity(0.6))
+                }
             }
-            .padding(14)
+            .padding(16)
             .contentShape(Rectangle())
         }
         .buttonStyle(.pressable)

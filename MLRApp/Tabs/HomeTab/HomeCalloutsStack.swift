@@ -2,16 +2,6 @@ import SwiftUI
 import Kingfisher
 import TipKit
 
-// MARK: - Callout swipe hint (TipKit)
-// Mirrors the web's one-time `.callout-wiggle` nudge — teaches that a callout
-// card can be swiped away. Shows once, then never again (TipKit persists this).
-
-struct CalloutSwipeTip: Tip {
-    var title: Text { Text("Swipe to dismiss") }
-    var message: Text? { Text("Swipe a card away when you're done with it.") }
-    var image: Image? { Image(systemName: "hand.draw") }
-}
-
 // MARK: - HomeCalloutsStack
 // Swipeable admin-managed callout cards stacked above FamilyFestSpotlight on
 // Home. Mirrors the web's HomeSpotlight + CalloutStack + CalloutCard pattern
@@ -26,13 +16,10 @@ struct CalloutSwipeTip: Tip {
 // Up to 3 cards stack visually (deck-of-cards effect). Only the top card is
 // interactive; the ones behind it peek out below with slight scale and offset.
 
-private let SWIPE_THRESHOLD: CGFloat = 120
-private let FLY_DISTANCE:    CGFloat = 500
-
 struct HomeCalloutsStack: View {
     @Environment(AppEnvironment.self) private var env
 
-    let season: FestSeason
+    var season: FestSeason? = nil
     /// When set by the admin date-preview mode, overrides the real calendar date
     /// for callout visibility filtering. Format: `yyyy-MM-dd`.
     var previewDate: String? = nil
@@ -41,6 +28,7 @@ struct HomeCalloutsStack: View {
     @State private var dismissed: Set<String> = []
     // Callout being marked done (optimistic spinner state).
     @State private var markingDoneId: String? = nil
+    @State private var pageId: String? = nil
     // Composer target for edit-in-place / add (nil = closed).
     @State private var composer: CalloutComposerTarget? = nil
 
@@ -82,44 +70,43 @@ struct HomeCalloutsStack: View {
 
     var body: some View {
         let visible = visibleCallouts
-        let maxDepth = min(visible.count, 3)
-        // All callout cards are in one ForEach so they form a single ZStack layer
-        // group, guaranteed to render in front of FestSpotlight. Cards are iterated
-        // deepest-first so ZStack's back-to-front order puts card 0 on top.
-        let deckCards = Array(visible.prefix(maxDepth).reversed())
         VStack(spacing: 10) {
-        ZStack(alignment: .top) {
-            // FestSpotlight is always declared first = always at the back.
-            FamilyFestSpotlight(season: season)
-                .offset(y: CGFloat(maxDepth) * 10)
-                .scaleEffect(max(1.0 - CGFloat(maxDepth) * 0.04, 0.88), anchor: .top)
-
-            ForEach(deckCards, id: \.id) { callout in
-                if let idx = visible.firstIndex(where: { $0.id == callout.id }) {
-                    if idx == 0 {
-                        SwipeableCalloutCard(
-                            callout: callout,
-                            isMarkingDone: markingDoneId == callout.id,
-                            onDismiss: {
-                                withAnimation(.easeInOut(duration: 0.22)) {
-                                    dismissed.insert(callout.dismissId)
-                                }
-                            },
-                            onMarkDone: { markDone(callout) },
-                            onEdit: canEdit ? { composer = CalloutComposerTarget(callout: callout) } : nil
-                        )
-                        .popoverTip(CalloutSwipeTip())
-                    } else {
-                        HomeCalloutCard(callout: callout)
-                            .offset(y: CGFloat(idx) * 10)
-                            .scaleEffect(1.0 - CGFloat(idx) * 0.04, anchor: .top)
-                            .allowsHitTesting(false)
-                            .accessibilityHidden(true)
+            if !visible.isEmpty {
+                // Paged carousel with page dots (a single callout is just one page).
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(alignment: .top, spacing: 12) {
+                        ForEach(visible, id: \.id) { callout in
+                            HomeCalloutCard(
+                                callout: callout,
+                                isMarkingDone: markingDoneId == callout.id,
+                                onDismiss: {
+                                    withAnimation(.easeInOut(duration: 0.22)) {
+                                        dismissed.insert(callout.dismissId)
+                                    }
+                                },
+                                onMarkDone: { markDone(callout) },
+                                onEdit: canEdit ? { composer = CalloutComposerTarget(callout: callout) } : nil
+                            )
+                            .containerRelativeFrame(.horizontal)
+                            .id(callout.id)
+                        }
                     }
+                    .scrollTargetLayout()
+                }
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $pageId)
+                .scrollClipDisabled()
+                if visible.count > 1 {
+                    HStack(spacing: 6) {
+                        ForEach(visible, id: \.id) { c in
+                            Circle()
+                                .fill(c.id == (pageId ?? visible.first?.id) ? Color.mlrPrimary : Color.mlrBorder)
+                                .frame(width: 7, height: 7)
+                        }
+                    }
+                    .accessibilityHidden(true)
                 }
             }
-        }
-        .padding(.bottom, CGFloat(maxDepth) * 10)
             if canEdit {
                 Button { Haptics.tap(); composer = CalloutComposerTarget(callout: nil) } label: {
                     Label("Add a call-out", systemImage: "plus.circle.fill")
@@ -173,94 +160,6 @@ struct HomeCalloutsStack: View {
 private struct CalloutComposerTarget: Identifiable {
     let id = UUID()
     let callout: HomeCallout?
-}
-
-// MARK: - SwipeableCalloutCard
-
-private struct SwipeableCalloutCard: View {
-    let callout: HomeCallout
-    let isMarkingDone: Bool
-    let onDismiss: () -> Void
-    let onMarkDone: () -> Void
-    var onEdit: (() -> Void)? = nil
-
-    @State private var dragX: CGFloat = 0
-    @State private var flying = false
-    // Plays once per card so the swipe gesture reads as more discoverable than
-    // the one-time-ever CalloutSwipeTip alone (which won't resurface after a
-    // user has seen it a single time on any card, ever). Resets automatically
-    // whenever a *new* callout becomes the front card (fresh SwiftUI identity
-    // via ForEach's `id: \.id`), so each new card gets its own nudge.
-    @State private var hasWiggled = false
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
-    var body: some View {
-        HomeCalloutCard(callout: callout, isMarkingDone: isMarkingDone,
-                        onDismiss: dismiss, onMarkDone: onMarkDone, onEdit: onEdit)
-            .offset(x: dragX)
-            .rotationEffect(.degrees(dragX / 20))
-            .opacity(flying ? 0 : 1)
-            // simultaneousGesture + a horizontal-dominance guard so vertical
-            // drags stay with the page ScrollView (an exclusive, unconstrained
-            // DragGesture here was swallowing Home's scroll when the finger
-            // started on the callout deck).
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 12)
-                    .onChanged { v in
-                        guard abs(v.translation.width) > abs(v.translation.height) else { return }
-                        dragX = v.translation.width
-                    }
-                    .onEnded { v in
-                        guard abs(v.translation.width) > abs(v.translation.height) else {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) { dragX = 0 }
-                            return
-                        }
-                        if abs(v.translation.width) > SWIPE_THRESHOLD
-                            || abs(v.predictedEndTranslation.width) > SWIPE_THRESHOLD * 1.5 {
-                            fling(direction: v.translation.width > 0 ? 1 : -1)
-                        } else {
-                            withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
-                                dragX = 0
-                            }
-                        }
-                    }
-            )
-            .animation(.interactiveSpring(), value: dragX)
-            .onAppear { wiggleHint() }
-    }
-
-    /// A brief, self-playing "rock left, rock right, settle" nudge — a visual
-    /// hint that the card is draggable, independent of the one-time TipKit
-    /// popover. Skipped when the user has Reduce Motion on.
-    private func wiggleHint() {
-        guard !hasWiggled, !reduceMotion else { return }
-        hasWiggled = true
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.6) {
-            withAnimation(.easeInOut(duration: 0.32)) { dragX = -14 }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.32) {
-                withAnimation(.easeInOut(duration: 0.28)) { dragX = 8 }
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.28) {
-                    withAnimation(.spring(response: 0.35, dampingFraction: 0.6)) { dragX = 0 }
-                }
-            }
-        }
-    }
-
-    private func dismiss() {
-        fling(direction: 1)
-    }
-
-    private func fling(direction: CGFloat) {
-        withAnimation(.easeIn(duration: 0.22)) {
-            dragX = direction * FLY_DISTANCE
-            flying = true
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
-            onDismiss()
-            dragX = 0
-            flying = false
-        }
-    }
 }
 
 // MARK: - HomeCalloutCard
@@ -332,20 +231,16 @@ struct HomeCalloutCard: View {
                 VStack(alignment: .leading, spacing: 0) {
                     // Eyebrow row — only text-only cards get this branded label
                     if !hasImage {
-                        HStack(spacing: 5) {
-                            Image(systemName: "megaphone.fill")
-                                .font(.system(size: 10, weight: .semibold))
-                            Text("ANNOUNCEMENT")
-                                .font(.system(size: 10, weight: .black))
-                                .tracking(1.3)
+                        HStack(spacing: 12) {
+                            IconTile(symbol: "megaphone.fill", accent: .mlrPrimary, size: 40)
+                            Eyebrow("Announcement", color: .mlrPrimary)
                         }
-                        .foregroundStyle(Color.mlrPrimary.opacity(0.8))
                         .padding(.bottom, 10)
                     }
 
                     if let title = callout.title?.nilIfEmpty {
                         Text(title)
-                            .font(.mlrScaled(18, weight: .bold))
+                            .font(.system(.title3, design: .serif, weight: .semibold))
                             .foregroundStyle(Color.mlrText)
                             .padding(.trailing, onDismiss != nil ? 30 : 0)
                             .padding(.bottom, callout.body?.nilIfEmpty != nil ? 8 : 0)
@@ -353,7 +248,7 @@ struct HomeCalloutCard: View {
 
                     if let body = callout.body?.nilIfEmpty {
                         Text(body)
-                            .font(.mlrScaled(14))
+                            .font(.subheadline)
                             .foregroundStyle(Color.mlrTextMuted)
                             .lineSpacing(3)
                             .fixedSize(horizontal: false, vertical: true)
@@ -430,34 +325,10 @@ struct HomeCalloutCard: View {
                 .disabled(isMarkingDone)
             }
         }
-        // Rich gradient background for text-only cards; plain for image cards.
-        .background {
-            ZStack {
-                Color.mlrCard
-                if !hasImage {
-                    LinearGradient(
-                        colors: [Color.mlrPrimary.opacity(0.11), Color.mlrPrimary.opacity(0)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    )
-                }
-            }
-        }
-        .clipShape(RoundedRectangle(cornerRadius: 18))
-        .overlay {
-            RoundedRectangle(cornerRadius: 18)
-                .stroke(
-                    LinearGradient(
-                        colors: hasImage
-                            ? [Color.mlrBorder, Color.mlrBorder]
-                            : [Color.mlrPrimary.opacity(0.5), Color.mlrPrimary.opacity(0.12)],
-                        startPoint: .topLeading, endPoint: .bottomTrailing
-                    ),
-                    lineWidth: 1.5
-                )
-        }
-        .shadow(color: hasImage ? .black.opacity(0.09) : Color.mlrPrimary.opacity(0.15),
-                radius: 18, x: 0, y: 7)
-        .shadow(color: .black.opacity(0.04), radius: 4, x: 0, y: 2)
+        .background { Color.mlrCard }
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .overlay { RoundedRectangle(cornerRadius: 22, style: .continuous).strokeBorder(Color.mlrBorder, lineWidth: 1) }
+        .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 2)
         // Floating dismiss — pill button in the top-right corner
         .overlay(alignment: .topTrailing) {
             if let dismiss = onDismiss {

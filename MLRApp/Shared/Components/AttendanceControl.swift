@@ -31,7 +31,7 @@ struct AttendanceControl: View {
     @State private var confettiTrigger = 0
 
     var body: some View {
-        HStack(spacing: 6) {
+        HStack(spacing: 8) {
             ForEach(statuses, id: \.self) { status in
                 AttendanceSegment(
                     status: status,
@@ -52,7 +52,7 @@ struct AttendanceControl: View {
         }
         .overlay {
             if isLoading {
-                RoundedRectangle(cornerRadius: 12)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.mlrSurface.opacity(0.6))
                 ProgressView()
                     .tint(Color.mlrPrimary)
@@ -75,26 +75,25 @@ private struct AttendanceSegment: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Text(status.emoji)
-                    .font(.mlrScaled(14))
+                    .font(.mlrScaled(15))
                     .fixedSize()
                 // Web's segment reads "Can't make" (full "Can't make it" stays
                 // as the accessibility label). One line, never mid-word.
                 Text(status == .notGoing ? "Can't make" : status.label)
-                    .font(.mlrScaled(13, weight: isSelected ? .semibold : .regular))
+                    .font(.mlrScaled(15, weight: .semibold))
                     .lineLimit(1)
-                    .minimumScaleFactor(0.8)
+                    .minimumScaleFactor(0.7)
                     .allowsTightening(true)
             }
             .foregroundStyle(isSelected ? .white : labelColor)
-            .padding(.vertical, 9)
-            .padding(.horizontal, 6)
-            .frame(maxWidth: .infinity)
+            .padding(.horizontal, 4)
+            .frame(maxWidth: .infinity, minHeight: 46)
             .background(backgroundColor)
-            .clipShape(RoundedRectangle(cornerRadius: 10))
+            .clipShape(RoundedRectangle(cornerRadius: 14, style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: 10)
+                RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .stroke(borderColor, lineWidth: 1)
             )
         }

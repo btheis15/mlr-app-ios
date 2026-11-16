@@ -47,14 +47,13 @@ struct HomeView: View {
                 ScrollView {
                     LazyVStack(alignment: .leading, spacing: 0) {
 
-                        // ── Weather strip — the very top of Home, as on the web app.
-                        // Self-hides until a source answers, so it never leaves a gap.
-                        HomeWeatherCard(style: .compact)
-                            .padding(.horizontal, 16)
-                            .padding(.top, 4)
-
                         // ── 1. MLR logo hero ──────────────────────────────
                         logoHero(geometry: geometry)
+
+                        // ── 2. Weather: one slim card (self-hides until a source answers).
+                        HomeWeatherCard(style: .compact)
+                            .padding(.horizontal, 16)
+                            .padding(.bottom, 12)
 
                         // Admin preview banner — shown when viewing Home as a future date.
                         if let pd = previewDate {
@@ -98,6 +97,10 @@ struct HomeView: View {
                                 .scrollEntrance()
                             }
 
+                            // ── 5a. Family Fest card (countdown, committee link inside)
+                            FamilyFestSpotlight(season: festSeason)
+                                .scrollEntrance()
+
                             // ── 5. Your house — hub for calendar, chat & to-do ──
                             // Self-hides for guests and anyone not in a house.
                             // Promoted above checklist to match web layout (Jul 2026).
@@ -120,6 +123,7 @@ struct HomeView: View {
                             // ── 7. Quick actions — every destination, always visible ──
                             // Replaces the two collapsed accordions (Communication /
                             // Around the Resort) — nothing buried behind a tap.
+                            SectionHeader("Around the resort")
                             quickActionsGrid
 
                             // ── 8. Delight cards — birthdays, who's up north, memory ─
@@ -143,7 +147,26 @@ struct HomeView: View {
                     }
                 }
             }
-            .navigationBarHidden(true)
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    if env.isAdmin {
+                        Button { showDatePicker = true } label: {
+                            Image(systemName: previewDate == nil
+                                  ? "calendar.badge.clock"
+                                  : "calendar.badge.exclamationmark")
+                                .foregroundStyle(previewDate == nil ? Color.mlrPrimary : .orange)
+                        }
+                        .accessibilityLabel("View Home as a date")
+                    }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button { showSearch = true } label: {
+                        Image(systemName: "magnifyingglass").foregroundStyle(Color.mlrPrimary)
+                    }
+                    .accessibilityLabel("Search Up North")
+                }
+            }
         }
         .mlrBackdrop()
         .sheet(isPresented: $showSearch) {
@@ -228,91 +251,68 @@ struct HomeView: View {
     // ordering): Events · Committees / People · Ask for Help / Local Places ·
     // Cabin Stay, plus Drop Box (migration 0171 — not yet on web's own
     // quick-actions grid either; web reaches it from a dedicated tile there).
+    private func quickLink<D: View>(_ dest: D, _ icon: String, _ title: String,
+                                  _ tint: Color, _ i: Int) -> some View {
+        NavigationLink(destination: dest) {
+            MLRCard(.tinted(tint), padding: 14) {
+                HStack(spacing: 12) {
+                    IconTile(symbol: icon, accent: tint, size: 40)
+                    Text(title)
+                        .font(.system(.body, weight: .semibold))
+                        .foregroundStyle(Color.mlrText)
+                        .lineLimit(2)
+                        .minimumScaleFactor(0.85)
+                    Spacer(minLength: 0)
+                }
+            }
+        }
+        .cardEntrance(index: i)
+    }
+
     private var quickActionsGrid: some View {
         let cols = [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)]
         return LazyVGrid(columns: cols, spacing: 12) {
-            NavigationLink(destination: EventsView()) {
-                HomeTile(icon: "calendar", title: "Events",
-                         subtitle: "RSVP — gatherings & work weekends.", tint: Color.mlrPrimary)
-            }
-            .cardEntrance(index: 0)
-            NavigationLink(destination: CommitteesView()) {
-                HomeTile(icon: "person.3.fill", title: "Committees",
-                         subtitle: "Join a crew — there's a spot for you.", tint: Color.mlrAccent)
-            }
-            .cardEntrance(index: 1)
-            NavigationLink(destination: PeopleDirectoryView()) {
-                HomeTile(icon: "person.2.fill", title: "People",
-                         subtitle: "Find & contact everyone.", tint: Color.mlrInfo)
-            }
-            .cardEntrance(index: 2)
-            NavigationLink(destination: HelpRequestsView()) {
-                HomeTile(icon: "hand.raised.fill", title: "Ask for Help",
-                         subtitle: "Request a hand at the resort.", tint: Color.mlrPrimary)
-            }
-            .cardEntrance(index: 3)
-            NavigationLink(destination: LocalPlacesView()) {
-                HomeTile(icon: "mappin.and.ellipse", title: "Local Places",
-                         subtitle: "Tee times, food & favorites.", tint: Color.mlrInfo)
-            }
-            .cardEntrance(index: 4)
-            NavigationLink(destination: CabinBookingsView()) {
-                HomeTile(icon: "house.lodge.fill", title: "Cabin Stay",
-                         subtitle: "Reserve a room for any week.", tint: Color.mlrPrimary)
-            }
-            .cardEntrance(index: 5)
-            NavigationLink(destination: DropBoxesView()) {
-                HomeTile(icon: "photo.stack.fill", title: "Drop Box",
-                         subtitle: "Dump & browse shared photos.", tint: Color.mlrAccent)
-            }
-            .cardEntrance(index: 6)
+            quickLink(EventsView(), "calendar", "Events", .mlrPrimary, 0)
+            quickLink(CommitteesView(), "person.3.fill", "Committees", .mlrCampfire, 1)
+            quickLink(PeopleDirectoryView(), "person.2.fill", "People", .mlrLake, 2)
+            quickLink(HelpRequestsView(), "hand.raised.fill", "Ask for Help", .mlrPrimary, 3)
+            quickLink(LocalPlacesView(), "mappin.and.ellipse", "Local Places", .mlrLake, 4)
+            quickLink(CabinBookingsView(), "house.lodge.fill", "Cabin Stay", .mlrSun, 5)
+            quickLink(DropBoxesView(), "photo.stack.fill", "Drop Box", .mlrDusk, 6)
         }
         .buttonStyle(.pressable)
     }
 
+    private var greeting: String {
+        let base: String
+        switch Calendar.current.component(.hour, from: Date()) {
+        case 5..<12:  base = "Good morning"
+        case 12..<17: base = "Good afternoon"
+        case 17..<22: base = "Good evening"
+        default:      base = "Good night"
+        }
+        guard env.isSignedIn, let full = env.currentProfile?.name,
+              let first = full.split(separator: " ").first else { return base }
+        return "\(base), \(first)"
+    }
+
     @ViewBuilder
     private func logoHero(geometry: GeometryProxy) -> some View {
-        let logoWidth = min(geometry.size.width * 0.46, 180.0)
-        HStack {
-            Spacer()
+        VStack(spacing: 10) {
             SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
                 .scaledToFit()
                 // The season's still scene (the splash's final frame), as on web.
                 .overlay { SeasonalLogoFX(season: .current(), progress: 1).allowsHitTesting(false) }
-                .frame(maxWidth: logoWidth)
-                .padding(.top, 10)
-                .padding(.bottom, 4)
-            Spacer()
+                .frame(width: min(geometry.size.width * 0.4, 150))
+                .padding(.top, 8)
+                .homeLogoEditPencil()
+            Text(greeting)
+                .font(.system(.title, design: .serif, weight: .semibold))
+                .foregroundStyle(Color.mlrText)
+                .multilineTextAlignment(.center)
         }
-        .homeLogoEditPencil()
-        // Search everything up north — people, events, committees, work, chats.
-        .overlay(alignment: .trailing) {
-            Button { showSearch = true } label: {
-                Image(systemName: "magnifyingglass")
-                    .font(.mlrScaled(18, weight: .semibold))
-                    .foregroundStyle(Color.mlrPrimary)
-                    .padding(10)
-                    .contentShape(Rectangle())
-            }
-            .accessibilityLabel("Search Up North")
-            .padding(.trailing, 4)
-        }
-        // Admin-only: date preview button (leading).
-        .overlay(alignment: .leading) {
-            if env.isAdmin {
-                Button { showDatePicker = true } label: {
-                    Image(systemName: previewDate == nil
-                          ? "calendar.badge.clock"
-                          : "calendar.badge.exclamationmark")
-                        .font(.mlrScaled(18, weight: .semibold))
-                        .foregroundStyle(previewDate == nil ? Color.mlrPrimary : .orange)
-                        .padding(10)
-                        .contentShape(Rectangle())
-                }
-                .accessibilityLabel("View Home as a date")
-                .padding(.leading, 4)
-            }
-        }
+        .frame(maxWidth: .infinity)
+        .padding(.bottom, 16)
     }
 
     @ViewBuilder

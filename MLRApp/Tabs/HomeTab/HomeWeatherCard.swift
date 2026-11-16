@@ -132,39 +132,42 @@ struct HomeWeatherCard: View {
     // MARK: - Compact layout
 
     private func compact(snap: HomeWeatherSnapshot) -> some View {
-        VStack(spacing: 0) {
-            Button { toggle(snap) } label: {
-                HStack(spacing: 8) {
-                    symbolView(snap, size: 18, width: 24)
-                    Text("\(snap.temp)°")
-                        .font(.mlrScaled(15, weight: .semibold))
-                        .foregroundStyle(Color.mlrText)
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                    Text("H \(snap.hi)° L \(snap.lo)°")
-                        .font(.mlrScaled(12))
-                        .foregroundStyle(Color.mlrTextMuted)
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                    Text("Up North")
-                        .font(.mlrScaled(12))
-                        .italic()
-                        .foregroundStyle(Color.mlrTextSubtle)
-                    Spacer(minLength: 4)
-                    if snap.fromWeatherKit { attributionLink.lineLimit(1) }
-                    if !snap.forecast.isEmpty { chevron }
+        MLRCard(padding: 0) {
+            VStack(spacing: 0) {
+                Button { toggle(snap) } label: {
+                    HStack(spacing: 12) {
+                        symbolView(snap, size: 26, width: 34)
+                        Text("\(snap.temp)°")
+                            .font(.system(size: 30, weight: .semibold, design: .rounded))
+                            .foregroundStyle(Color.mlrText)
+                            .monospacedDigit()
+                            .contentTransition(.numericText())
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text("Up North")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundStyle(Color.mlrText)
+                            Text("H \(snap.hi)°  L \(snap.lo)°")
+                                .font(.footnote)
+                                .foregroundStyle(Color.mlrTextMuted)
+                                .monospacedDigit()
+                                .contentTransition(.numericText())
+                        }
+                        Spacer(minLength: 4)
+                        if snap.fromWeatherKit { attributionLink.lineLimit(1) }
+                        if !snap.forecast.isEmpty { chevron }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 10)
+                    .contentShape(Rectangle())
                 }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-            }
-            .buttonStyle(.pressable)
-            .disabled(snap.forecast.isEmpty)
-            .accessibilityLabel(a11yLabel(snap))
-            .accessibilityHint(snap.forecast.isEmpty ? "" : (isExpanded ? "Collapses the five day forecast" : "Shows the five day forecast"))
+                .buttonStyle(.pressable)
+                .disabled(snap.forecast.isEmpty)
+                .accessibilityLabel(a11yLabel(snap))
+                .accessibilityHint(snap.forecast.isEmpty ? "" : (isExpanded ? "Collapses the five day forecast" : "Shows the five day forecast"))
 
-            strip(snap)
+                strip(snap)
+            }
         }
-        .cardStyle()
     }
 
     private var chevron: some View {
