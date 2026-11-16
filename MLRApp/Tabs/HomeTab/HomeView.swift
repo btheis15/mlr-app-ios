@@ -282,6 +282,7 @@ struct HomeView: View {
                 .padding(.bottom, 4)
             Spacer()
         }
+        .homeLogoEditPencil()
         // Search everything up north — people, events, committees, work, chats.
         .overlay(alignment: .trailing) {
             Button { showSearch = true } label: {
