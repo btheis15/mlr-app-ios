@@ -1,128 +1,170 @@
 import SwiftUI
 
-// MARK: - FestDinnerEditSheet
-// Lets a dinner's head chef or an assigned crew member (migration 0099) edit
-// the operational details for their night: menu, when it's served, where it's
-// served, and when/where the crew should prep. Deliberately narrower than the
-// Planner's full dinner editor — day, title, chef, houses, and crew assignment
-// stay admin/committee-managed there; this is just "the stuff you fill in the
-// week-of." RLS on the server authorises the update (chef_user_id or any
-// crew_user_ids match auth.uid()).
+// MARK: - FestDinnerEditSheet (entry point from a dinner's own screen)
+//
+// Mirrors web's two dinner editors (migration 0099):
+//   • full editors (admin / can_edit_fest) get everything in one sheet: day,
+//     emoji, title, chef, crew members, houses, served + prep, menu;
+//   • the dinner's head chef or a crew member gets only the operational details:
+//     menu, served time/location, prep time/location (`updateDinnerDetails`).
+// The row is fetched first so the narrow editor starts from the real prep
+// time/location (the display model does not carry them) instead of blanking them.
 
 struct FestDinnerEditSheet: View {
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.dismiss) private var dismiss
 
     let dinner: FestDinner
     /// Called after a successful save so the caller can refresh content.
     let onSaved: () async -> Void
 
-    @State private var menu: String = ""
-    @State private var servedTime: String = ""
-    @State private var servedLocation: String = ""
-    @State private var prepTime: String = ""
-    @State private var prepLocation: String = ""
-    @State private var isSaving = false
-    @State private var saveError: String? = nil
-
     var body: some View {
-        Form {
-            Section("Menu") {
-                TextField("What's cooking (blank = TBD)", text: $menu, axis: .vertical)
-                    .lineLimit(3...6)
+        FestDraftLoader(title: "Edit dinner", load: {
+            guard let uid = UUID(uuidString: dinner.id) else { throw FestEditError.badId }
+            return try await env.festContentService.dinnerDraft(id: uid)
+        }) { d in
+            if env.isFullFestEditor {
+                FestDinnerFullEditor(draft: d, onSaved: onSaved)
+            } else {
+                FestDinnerDetailsEditor(draft: d, onSaved: onSaved)
             }
-
-            Section("Served") {
-                LabeledContent("Time") {
-                    TextField("e.g. 6:00 PM", text: $servedTime)
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                }
-                LabeledContent("Location") {
-                    TextField("e.g. Pavilion", text: $servedLocation)
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                }
-            }
-
-            Section {
-                LabeledContent("Time") {
-                    TextField("e.g. 4:30 PM", text: $prepTime)
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                }
-                LabeledContent("Location") {
-                    TextField("Same as served if blank", text: $prepLocation)
-                        .multilineTextAlignment(.trailing)
-                        .autocorrectionDisabled()
-                }
-            } header: {
-                Text("Crew Prep")
-            } footer: {
-                Text("Leave Prep Location blank if the crew meets at the same spot as dinner.")
-                    .font(.caption)
-            }
-
-            if let error = saveError {
-                Section {
-                    Text(error)
-                        .font(.mlrScaled(13))
-                        .foregroundStyle(Color.mlrDanger)
-                }
-            }
-        }
-        .navigationTitle("🍽️ Edit \(dinner.title)")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") { dismiss() }
-            }
-            ToolbarItem(placement: .confirmationAction) {
-                if isSaving {
-                    ProgressView()
-                } else {
-                    Button("Save") { Task { await save() } }
-                        .fontWeight(.semibold)
-                }
-            }
-        }
-        .onAppear { seed() }
-    }
-
-    private func seed() {
-        menu         = dinner.menu == "TBD" ? "" : dinner.menu
-        servedTime   = dinner.time == "TBD" ? "" : dinner.time
-        servedLocation = dinner.location ?? ""
-        // prepTime / prepLocation aren't on the display FestDinner model — start blank
-        // so the user can fill them in. They'll be in the DB after saving once.
-        prepTime     = ""
-        prepLocation = ""
-    }
-
-    private func save() async {
-        isSaving = true
-        saveError = nil
-        defer { isSaving = false }
-        do {
-            try await env.festContentService.updateDinnerDetails(
-                dinnerId: dinner.id,
-                menu: menu.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank,
-                servedTime: servedTime.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank,
-                servedLocation: servedLocation.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank,
-                prepTime: prepTime.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank,
-                prepLocation: prepLocation.trimmingCharacters(in: .whitespacesAndNewlines).nilIfBlank
-            )
-            await onSaved()
-            dismiss()
-        } catch {
-            saveError = "Save failed. Check your connection and try again."
         }
     }
 }
 
-private extension String {
-    var nilIfBlank: String? {
-        let t = trimmingCharacters(in: .whitespacesAndNewlines)
-        return t.isEmpty ? nil : t
+// MARK: - Narrow editor (chef / crew)
+
+struct FestDinnerDetailsEditor: View {
+    @Environment(AppEnvironment.self) private var env
+
+    let onSaved: () async -> Void
+    @State private var draft: EditorDraft<FestDinnerDraft>
+
+    init(draft: FestDinnerDraft, onSaved: @escaping () async -> Void) {
+        _draft = State(initialValue: EditorDraft(draft)); self.onSaved = onSaved
+    }
+
+    var body: some View {
+        EditorSheet(
+            title: "Edit \(draft.original.title)",
+            isDirty: draft.isDirty,
+            canSave: true,
+            save: {
+                guard let id = draft.value.id else { throw FestEditError.badId }
+                let v = draft.value
+                try await env.festContentService.updateDinnerDetails(
+                    dinnerId: id.uuidString, menu: v.menu?.trimBlank,
+                    servedTime: v.servedTime, servedLocation: v.servedLocation?.trimBlank,
+                    prepTime: v.prepTime, prepLocation: v.prepLocation?.trimBlank)
+                await env.festContentService.reload()
+                await onSaved()
+            }
+        ) {
+            Section("Menu") {
+                EditorLongText("What\u{2019}s cooking (blank = TBD)", text: $draft.value.menu, lines: 3...6)
+            }
+            Section("Served") {
+                EditorTimeField("Time", time: $draft.value.servedTime)
+                FestLegacyTimeNote(value: draft.value.servedTime)
+                EditorTextField("Location", text: $draft.value.servedLocation, placeholder: "e.g. Pavilion", limit: 120)
+            }
+            Section {
+                EditorTimeField("Prep time", time: $draft.value.prepTime)
+                FestLegacyTimeNote(value: draft.value.prepTime)
+                EditorTextField("Prep location", text: $draft.value.prepLocation,
+                                placeholder: "Same as served if blank", limit: 120)
+            } header: {
+                Text("Crew prep")
+            } footer: {
+                Text("Leave Prep Location blank if the crew meets at the same spot as dinner.")
+            }
+        }
+    }
+}
+
+// MARK: - Full editor (fest editors) — used in place AND by the Planner
+
+struct FestDinnerFullEditor: View {
+    @Environment(AppEnvironment.self) private var env
+
+    var onSaved: (() async -> Void)?
+    @State private var draft: EditorDraft<FestDinnerDraft>
+    @State private var houses: EditorDraft<String>
+    @State private var showChefPicker = false
+
+    init(draft: FestDinnerDraft, onSaved: (() async -> Void)? = nil) {
+        _draft = State(initialValue: EditorDraft(draft))
+        _houses = State(initialValue: EditorDraft(draft.houses.joined(separator: ", ")))
+        self.onSaved = onSaved
+    }
+
+    private var dayOptions: [String] {
+        var days = FestDays.options(env.festContentService.config)
+        if !days.contains(draft.value.day) { days.insert(draft.value.day, at: 0) }
+        return days
+    }
+
+    var body: some View {
+        EditorSheet(
+            title: draft.value.id == nil ? "Add dinner" : "Edit dinner",
+            isDirty: draft.isDirty || houses.isDirty,
+            canSave: !draft.value.title.trimmingCharacters(in: .whitespaces).isEmpty,
+            save: {
+                var d = draft.value
+                d.title = d.title.trimmingCharacters(in: .whitespaces)
+                d.houses = houses.value.split(separator: ",")
+                    .map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }
+                try await env.festContentService.saveDinner(d)
+                await env.festContentService.reload()
+                await onSaved?()
+            }
+        ) {
+            Section("Dinner") {
+                Picker("Day", selection: $draft.value.day) {
+                    ForEach(dayOptions, id: \.self) { Text(FestDays.label($0)).tag($0) }
+                }
+                EditorEmojiField("Emoji (optional)", emoji: $draft.value.emoji)
+                EditorTextField("Title", text: $draft.value.title, placeholder: "e.g. Monday Dinner", limit: 80, required: true)
+            }
+            Section("Chef") {
+                EditorTextField("Chef name(s)", text: $draft.value.chefName, limit: 120)
+                if draft.value.chefUserId != nil {
+                    HStack {
+                        Label("Linked to an app member", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(Color.mlrSuccess)
+                        Spacer()
+                        Button("Unlink", role: .destructive) { draft.value.chefUserId = nil }
+                            .buttonStyle(.borderless)
+                    }
+                    .font(.mlrScaled(13))
+                } else {
+                    Button { showChefPicker = true } label: {
+                        Label("Link a member", systemImage: "person.crop.circle.badge.plus")
+                    }
+                    .buttonStyle(.borderless)
+                }
+                EditorTextField("Phone (optional)", text: $draft.value.chefPhone, keyboard: .phonePad)
+            }
+            FestCrewField(ids: $draft.value.crewUserIds,
+                          footer: "Crew members can update the menu, serving time, and location from the Fest tab.")
+            Section {
+                EditorTextField("Houses on crew", text: $houses.value, placeholder: "Comma-separated")
+            } footer: {
+                Text("House names say which families are teaming up. Crew members above are who get editing rights.")
+            }
+            Section("Served") {
+                EditorTimeField("Time", time: $draft.value.servedTime)
+                FestLegacyTimeNote(value: draft.value.servedTime)
+                EditorTextField("Location", text: $draft.value.servedLocation, limit: 120)
+            }
+            Section("Prep") {
+                EditorTimeField("Prep time", time: $draft.value.prepTime)
+                FestLegacyTimeNote(value: draft.value.prepTime)
+                EditorTextField("Prep location", text: $draft.value.prepLocation, limit: 120)
+            }
+            Section("Menu") { EditorLongText("Menu", text: $draft.value.menu, lines: 2...6) }
+        }
+        .sheet(isPresented: $showChefPicker) {
+            InlineMemberPickerSheet { p in draft.value.chefUserId = p.id; draft.value.chefName = p.name }
+        }
     }
 }
