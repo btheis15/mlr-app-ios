@@ -31,9 +31,15 @@ struct TournamentContainerView: View {
     @State private var busy = false
     @State private var pendingSwap: PendingSwap?
     @State private var subscribedId: UUID?
-    // Celebration + bracket presentation (overhaul Phase 2).
-    @State private var confettiTrigger = 0
+    // Bracket presentation + live feel.
     @State private var bracketMode: BracketMode = .diagram
+    // Games that were ready at the last fetch (to spot "a new game just opened").
+    @State private var prevReadyIds: Set<UUID> = []
+    @State private var hasLoadedOnce = false
+    // Set when this device just saved a result, so the "Next game" offer only
+    // follows our own scoring (not someone else's realtime update).
+    @State private var justScored = false
+    @State private var nextOffer: TournamentMatch?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     struct PendingSwap: Identifiable {
@@ -50,7 +56,7 @@ struct TournamentContainerView: View {
     var body: some View {
         Group {
             if loading {
-                ProgressView().frame(maxWidth: .infinity, maxHeight: .infinity)
+                TournamentLoadingView()
             } else if let t = tournament {
                 live(t)
             } else if !fetchedOK {
@@ -76,6 +82,9 @@ struct TournamentContainerView: View {
         .navigationTitle(tournament?.title ?? "Tournament")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            if let t = tournament, t.status != .setup {
+                ToolbarItem(placement: .topBarTrailing) { TournamentShareButton(tournament: t) }
+            }
             if let t = tournament, manage {
                 ToolbarItem(placement: .topBarTrailing) {
                     Menu {
@@ -96,8 +105,22 @@ struct TournamentContainerView: View {
         }
         .sheet(item: $resultMatch) { m in
             MatchResultSheet(tournament: tournament, match: m,
-                             latest: tournament?.matches.first { $0.id == m.id }) { Task { await reload() } }
+                             latest: tournament?.matches.first { $0.id == m.id },
+                             onSaved: { justScored = true; nextOffer = nil }) { Task { await reload() } }
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
         }
+        .safeAreaInset(edge: .bottom) {
+            if let t = tournament, let offer = nextOffer, manage {
+                NextGameBanner(
+                    title: "\(t.entrantName(offer.slot1EntrantId)) vs \(t.entrantName(offer.slot2EntrantId))",
+                    canScore: manage,
+                    onOpen: { nextOffer = nil; resultMatch = offer },
+                    onDismiss: { nextOffer = nil })
+                .transition(reduceMotion ? .opacity : .move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .animation(reduceMotion ? nil : MLRMotion.spring, value: nextOffer?.id)
         .task { await reload() }
         .onDisappear { if let id = subscribedId { env.tournamentsService.unsubscribe(tournamentId: id); subscribedId = nil } }
         .onChange(of: tournament?.format) { _, _ in tab = defaultTab }
@@ -132,8 +155,9 @@ struct TournamentContainerView: View {
                         Button("Retry") { Task { await reload() } }.font(.mlrScaled(12, weight: .semibold))
                     }
                 }
-                if let champ = t.winnerEntrantId {
-                    ChampionBanner(name: t.entrantName(champ))
+                if t.status != .setup {
+                    TournamentNowCard(tournament: t, viewerEntrantId: t.entrantId(forUser: env.effectiveUserId),
+                                      canScore: manage, onOpen: { resultMatch = $0 })
                 }
 
                 if rearranging {
@@ -160,14 +184,7 @@ struct TournamentContainerView: View {
             }
             .padding(16)
         }
-        .overlay(ConfettiView(trigger: confettiTrigger).allowsHitTesting(false))
-        .onChange(of: t.winnerEntrantId) { old, new in
-            // Fire the celebration exactly once, when a champion is first crowned.
-            if old == nil, new != nil {
-                confettiTrigger += 1
-                Haptics.success()
-            }
-        }
+        .refreshable { await reload() }
     }
 
     private func setupPrompt(_ t: Tournament) -> some View {
@@ -194,7 +211,7 @@ struct TournamentContainerView: View {
         case .standings:
             StandingsTable(rows: t.standings(), showScores: t.hasAnyScores, leaderId: t.winnerEntrantId)
         case .games:
-            matchList(t, t.matches.filter { $0.stage != .bracket })
+            gamesList(t)
         case .pools:
             poolsContent(t)
         case .bracket:
@@ -212,22 +229,20 @@ struct TournamentContainerView: View {
     @ViewBuilder
     private func bracketArea(_ t: Tournament) -> some View {
         let stage: MatchStage? = t.format == .pools_bracket ? .bracket : nil
-        let diagramAvailable = !reduceMotion && t.maxRound <= 5
-        let useDiagram = diagramAvailable && bracketMode == .diagram
+        let useDiagram = bracketMode == .diagram
 
         VStack(spacing: 12) {
-            if diagramAvailable {
-                Picker("Bracket view", selection: $bracketMode) {
-                    ForEach(BracketMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
-                }
-                .pickerStyle(.segmented)
+            Picker("Bracket view", selection: $bracketMode) {
+                ForEach(BracketMode.allCases, id: \.self) { Text($0.rawValue).tag($0) }
             }
+            .pickerStyle(.segmented)
             if useDiagram {
                 BracketDiagram(
                     tournament: t, stageFilter: stage,
                     canManage: manage, rearranging: rearranging, pickedUp: pickedUp,
+                    viewerEntrantId: t.entrantId(forUser: env.effectiveUserId),
                     onOpen: { resultMatch = $0 }, onSlotTap: { m, s in handleSlotTap(t, m, s) })
-                .frame(height: 460)
+                .frame(height: 520)
                 .cardStyle(cornerRadius: MLRRadius.card, elevation: .low)
             } else {
                 TournamentBracketView(
@@ -259,8 +274,20 @@ struct TournamentContainerView: View {
     }
 
     private func knockoutPending(_ t: Tournament) -> some View {
-        Text("The knockout bracket seeds once every pool game is played.")
-            .font(.mlrScaled(13)).foregroundStyle(.secondary).padding(.vertical, 12)
+        ContentUnavailableView("Knockout bracket to come", systemImage: "square.grid.2x2",
+                               description: Text("It seeds itself once every pool game is played."))
+    }
+
+    /// Plain tournament-order list of every real game (byes are not games).
+    @ViewBuilder
+    private func gamesList(_ t: Tournament) -> some View {
+        let games = t.matches.filter { !t.isBye($0) }
+        if games.isEmpty {
+            ContentUnavailableView("No games yet", systemImage: "list.bullet",
+                                   description: Text("Games show up here once the tournament starts."))
+        } else {
+            matchList(t, games)
+        }
     }
 
     private func matchList(_ t: Tournament, _ matches: [TournamentMatch]) -> some View {
@@ -307,9 +334,9 @@ struct TournamentContainerView: View {
     }
     private func availableTabs(_ t: Tournament) -> [LiveTab] {
         switch t.format {
-        case .single_elim:   return [.bracket]
+        case .single_elim:   return [.bracket, .games]
         case .round_robin:   return [.standings, .games]
-        case .pools_bracket: return [.pools, .bracket]
+        case .pools_bracket: return [.pools, .bracket, .games]
         }
     }
 
@@ -318,7 +345,10 @@ struct TournamentContainerView: View {
     private func reload() async {
         do {
             let list = try await env.tournamentsService.fetchChecked(host: host)
-            tournament = list.first
+            let fresh = list.first
+            // Results from another phone glide in rather than jump.
+            if reduceMotion { tournament = fresh } else { withAnimation(MLRMotion.spring) { tournament = fresh } }
+            noteReadyChanges(fresh)
             fetchedOK = true
             refreshFailed = false
             if let t = tournament, !availableTabs(t).contains(tab) { tab = defaultTab }
@@ -332,6 +362,25 @@ struct TournamentContainerView: View {
             refreshFailed = true
         }
         loading = false
+    }
+
+    /// A light haptic when a game the viewer is in opens up, and the "Next game"
+    /// offer after we score something that makes a new game ready.
+    private func noteReadyChanges(_ t: Tournament?) {
+        let ready = t?.readyMatches ?? []
+        let ids = Set(ready.map(\.id))
+        defer { prevReadyIds = ids; hasLoadedOnce = true }
+        guard let t else { return }
+        let fresh = ready.filter { !prevReadyIds.contains($0.id) }
+        if hasLoadedOnce {
+            let me = t.entrantId(forUser: env.effectiveUserId)
+            if fresh.contains(where: { t.involves($0, entrant: me) }) { Haptics.tap() }
+        }
+        if justScored {
+            justScored = false
+            let me = t.entrantId(forUser: env.effectiveUserId)
+            nextOffer = fresh.first(where: { t.involves($0, entrant: me) }) ?? fresh.first
+        }
     }
 
     private func run(_ work: @escaping () async throws -> Void) {
@@ -375,7 +424,8 @@ private struct TournamentBracketView: View {
 
     var body: some View {
         if rounds.isEmpty {
-            Text("No matches yet.").font(.mlrScaled(13)).foregroundStyle(.secondary)
+            ContentUnavailableView("No games yet", systemImage: "trophy",
+                                   description: Text("The bracket appears once the tournament starts."))
         } else {
             VStack(spacing: 12) {
                 if rounds.count > 1 {
@@ -438,6 +488,10 @@ private struct MatchCard: View {
         .opacity(bye ? 0.7 : 1)
         .contentShape(Rectangle())
         .onTapGesture { if tappable { Haptics.tap(); onOpen() } }
+        .accessibilityElement(children: rearranging ? .contain : .ignore)
+        .accessibilityLabel(tournament.a11yDescription(match))
+        .accessibilityAddTraits(tappable ? .isButton : [])
+        .accessibilityAction { if tappable { onOpen() } }
     }
 
     @ViewBuilder
@@ -574,43 +628,5 @@ private struct StandingsTable: View {
     private func winPct(_ r: Standing) -> CGFloat {
         guard r.played > 0 else { return 0 }
         return CGFloat(Double(r.wins) + 0.5 * Double(r.ties)) / CGFloat(r.played)
-    }
-}
-
-// MARK: - Champion banner (Phase 2.4)
-
-/// The gold champion reveal — confetti + success haptic fire from the container
-/// when `winnerEntrantId` first becomes non-nil.
-private struct ChampionBanner: View {
-    let name: String
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var bounce = 0
-
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "trophy.fill")
-                .font(.mlrScaled(28, weight: .bold))
-                .symbolEffect(.bounce, value: bounce)
-            VStack(alignment: .leading, spacing: 1) {
-                Text("CHAMPION")
-                    .font(.mlrScaled(11, weight: .bold))
-                    .tracking(1.2)
-                    .opacity(0.85)
-                Text(name)
-                    .font(.mlrScaled(24, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
-            }
-            Spacer()
-        }
-        .foregroundStyle(.white)
-        .padding(.horizontal, 16).padding(.vertical, 14)
-        .gradientCard(
-            LinearGradient(colors: [.mlrFestGold, .mlrSun, .mlrFestGold],
-                           startPoint: .topLeading, endPoint: .bottomTrailing),
-            cornerRadius: MLRRadius.lg, elevation: .high)
-        .onAppear { if !reduceMotion { bounce += 1 } }
-        .accessibilityElement(children: .combine)
-        .accessibilityLabel("Champion: \(name)")
     }
 }

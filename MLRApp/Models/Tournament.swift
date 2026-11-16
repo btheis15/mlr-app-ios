@@ -325,3 +325,182 @@ extension Tournament {
         return sorted
     }
 }
+
+// MARK: - Derived helpers for the live screen (presentation only; no new data)
+
+/// Optional scoring rules a tournament may carry (target score / win by).
+struct ScoreRules {
+    let target: Int?
+    let winBy: Int?
+
+    /// Loser-score quick presets for a game played to `target` (e.g. 21: 19, 15, 10, 5, 0).
+    var loserPresets: [Int] {
+        guard let target, target > 1 else { return [] }
+        let margin = max(winBy ?? 1, 1)
+        var out: [Int] = [target - margin, (target * 3) / 4, target / 2, target / 4, 0]
+        out = out.filter { $0 >= 0 && $0 <= target - margin }
+        var seen = Set<Int>()
+        return out.filter { seen.insert($0).inserted }.sorted(by: >)
+    }
+
+    /// A gentle, non-blocking note when the entered scores don't fit the rules
+    /// (a game called early at the lake is still a result). nil = fits or no rules.
+    func note(winnerScore w: Int, loserScore l: Int) -> String? {
+        guard w != l else { return "The scores are tied but a winner is picked." }
+        let hi = max(w, l), lo = min(w, l)
+        if let target, hi < target { return "Usually played to \(target). The top score here is \(hi)." }
+        if let winBy, winBy > 1, hi - lo < winBy { return "Usually win by \(winBy). This margin is \(hi - lo)." }
+        return nil
+    }
+}
+
+extension Tournament {
+    var scoreRules: ScoreRules { ScoreRules(target: targetScore, winBy: winBy) }
+
+    var isFinished: Bool { winnerEntrantId != nil || status == .complete }
+
+    /// An auto-resolved bye: one side known, nothing to play.
+    func isBye(_ m: TournamentMatch) -> Bool {
+        (m.slot1EntrantId != nil) != (m.slot2EntrantId != nil) && m.status == .complete
+    }
+
+    /// Both sides known and no result yet: playable right now.
+    func isReady(_ m: TournamentMatch) -> Bool {
+        m.slot1EntrantId != nil && m.slot2EntrantId != nil && m.winnerEntrantId == nil && m.status != .complete
+    }
+
+    /// Games to play right now, in tournament order.
+    var readyMatches: [TournamentMatch] {
+        guard status == .live else { return [] }
+        return matches.filter(isReady).sorted(by: TournamentMatch.inOrder)
+    }
+
+    /// Games feeding `m` (bracket tree).
+    func feeders(of m: TournamentMatch) -> [TournamentMatch] {
+        matches.filter { $0.nextMatchId == m.id }
+    }
+
+    /// Games waiting on exactly one result before they can be played.
+    var upNextMatches: [TournamentMatch] {
+        guard status == .live else { return [] }
+        return matches.filter { m in
+            guard m.status != .complete, !isReady(m) else { return false }
+            return feeders(of: m).filter { $0.status != .complete }.count == 1
+        }.sorted(by: TournamentMatch.inOrder)
+    }
+
+    /// Most recent real results, newest round first.
+    func recentResults(limit: Int = 6) -> [TournamentMatch] {
+        Array(matches.filter(\.isPlayed).sorted(by: { TournamentMatch.inOrder($1, $0) }).prefix(limit))
+    }
+
+    /// The entrant a signed-in member plays as (through participants' user ids).
+    func entrantId(forUser userId: UUID?) -> UUID? {
+        guard let userId else { return nil }
+        return entrants.first { e in e.withdrawnAt == nil && e.members.contains { $0.userId == userId } }?.id
+    }
+
+    func involves(_ m: TournamentMatch, entrant id: UUID?) -> Bool {
+        guard let id else { return false }
+        return m.slot1EntrantId == id || m.slot2EntrantId == id
+    }
+
+    /// The champion's games in order (the road to the title).
+    func path(of entrant: UUID) -> [TournamentMatch] {
+        matches.filter { $0.isPlayed && involves($0, entrant: entrant) }.sorted(by: TournamentMatch.inOrder)
+    }
+
+    /// Opponent name from `entrant`'s point of view.
+    func opponentName(in m: TournamentMatch, of entrant: UUID) -> String {
+        entrantName(m.slot1EntrantId == entrant ? m.slot2EntrantId : m.slot1EntrantId)
+    }
+
+    private var namesRounds: Bool { bracketMatches.contains { $0.nextMatchId != nil } }
+
+    /// "Quarterfinals", "Semifinals", "Final"; "Round n" otherwise.
+    func roundTitle(_ m: TournamentMatch) -> String {
+        if m.stage == .pool { return m.pool.map { "Pool \($0) · Round \(m.round)" } ?? "Round \(m.round)" }
+        if namesRounds {
+            switch maxRound - m.round {
+            case 0: return "Final"
+            case 1: return "Semifinals"
+            case 2: return "Quarterfinals"
+            default: break
+            }
+        }
+        return "Round \(m.round)"
+    }
+
+    func roundTitle(round: Int) -> String {
+        if namesRounds {
+            switch maxRound - round {
+            case 0: return "Final"
+            case 1: return "Semifinals"
+            case 2: return "Quarterfinals"
+            default: break
+            }
+        }
+        return "Round \(round)"
+    }
+
+    /// "Semifinal 2" / "Final" / "Round 3 · game 4" — singular, numbered when the round has several games.
+    func gameLabel(_ m: TournamentMatch) -> String {
+        let peers = matches.filter { $0.stage == m.stage && $0.pool == m.pool && $0.round == m.round && !isBye($0) }
+            .sorted(by: TournamentMatch.inOrder)
+        let n = (peers.firstIndex { $0.id == m.id } ?? 0) + 1
+        let base: String
+        if m.stage == .bracket, namesRounds {
+            switch maxRound - m.round {
+            case 0: base = "Final"
+            case 1: base = "Semifinal"
+            case 2: base = "Quarterfinal"
+            default: base = "Round \(m.round) game"
+            }
+        } else if m.stage == .pool {
+            base = m.pool.map { "Pool \($0) game" } ?? "Game"
+        } else {
+            base = "Round \(m.round) game"
+        }
+        return peers.count > 1 ? "\(base) \(n)" : base
+    }
+
+    /// Short tag for bracket placeholders ("SF 1").
+    func shortGameLabel(_ m: TournamentMatch) -> String {
+        gameLabel(m)
+            .replacingOccurrences(of: "Quarterfinal", with: "QF")
+            .replacingOccurrences(of: "Semifinal", with: "SF")
+    }
+
+    /// Placeholder for an empty slot: "Winner of SF 1", or nil when unknown.
+    func slotPlaceholder(_ m: TournamentMatch, slot: Int) -> String? {
+        let fed = feeders(of: m).filter { ($0.nextSlot ?? slot) == slot }
+        guard fed.count == 1, let f = fed.first else { return nil }
+        return "Winner of \(shortGameLabel(f))"
+    }
+
+    /// Full VoiceOver sentence: "Semifinal 1: Sam and Jo versus Pat and Lee, Sam and Jo won 21 to 15".
+    func a11yDescription(_ m: TournamentMatch) -> String {
+        let label = gameLabel(m)
+        if isBye(m) {
+            let id = m.slot1EntrantId ?? m.slot2EntrantId
+            return "\(label): \(entrantName(id)) has a bye"
+        }
+        let n1 = m.slot1EntrantId != nil ? entrantName(m.slot1EntrantId).replacingOccurrences(of: " & ", with: " and ") : "to be decided"
+        let n2 = m.slot2EntrantId != nil ? entrantName(m.slot2EntrantId).replacingOccurrences(of: " & ", with: " and ") : "to be decided"
+        var s = "\(label): \(n1) versus \(n2)"
+        if let w = m.winnerEntrantId {
+            let wn = entrantName(w).replacingOccurrences(of: " & ", with: " and ")
+            if let a = m.slot1Score, let b = m.slot2Score {
+                let ws = w == m.slot1EntrantId ? a : b, ls = w == m.slot1EntrantId ? b : a
+                s += ", \(wn) won \(ws) to \(ls)"
+            } else {
+                s += ", \(wn) won"
+            }
+        } else if isReady(m) {
+            s += ", ready to play"
+        } else {
+            s += ", waiting"
+        }
+        return s
+    }
+}
