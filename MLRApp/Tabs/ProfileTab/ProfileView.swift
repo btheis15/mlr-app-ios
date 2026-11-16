@@ -67,6 +67,7 @@ struct ProfileView: View {
                     guestContent
                 }
             }
+            .mlrBackdrop()
             .navigationTitle("Profile")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -144,6 +145,8 @@ struct ProfileView: View {
             appInfoSection
         }
         .scrollContentBackground(.hidden)
+        .environment(\.defaultMinListRowHeight, 40)
+        .listSectionSpacing(14)
     }
 
     // MARK: - Avatar section

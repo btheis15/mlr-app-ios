@@ -131,7 +131,7 @@ private struct CoverFit: ViewModifier {
         if let h = fillHeight {
             content.scaledToFill().frame(maxWidth: .infinity).frame(height: h).clipped()
         } else {
-            Color.clear.aspectRatio(1 / 0.62, contentMode: .fit).frame(maxWidth: .infinity)
+            Color.clear.aspectRatio(1 / 0.68, contentMode: .fit).frame(maxWidth: .infinity)
                 .overlay { content.scaledToFill() }.clipped()
         }
     }

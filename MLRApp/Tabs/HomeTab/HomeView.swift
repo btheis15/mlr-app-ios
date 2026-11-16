@@ -144,11 +144,12 @@ struct HomeView: View {
 
                             // ── 8. Heritage footer ────────────────────────
                             heritageFooter
-                                .padding(.bottom, 32)
+                                .padding(.bottom, 110)
                         }
                         .padding(.horizontal, 16)
                     }
                 }
+                .debugStartScroll()
             }
             .navigationBarTitleDisplayMode(.inline)
             .mlrEditToggle(canEdit: (env.isAdmin || appImagesCanEdit) && !env.isPreviewing)
@@ -266,10 +267,10 @@ struct HomeView: View {
                 HStack(spacing: MLRSpacing.stack) {
                     IconTile(symbol: icon, accent: tint, size: 34)
                     Text(title)
-                        .font(.system(.body, weight: .semibold))
+                        .font(.system(.subheadline, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
                         .lineLimit(2)
-                        .minimumScaleFactor(0.85)
+                        .minimumScaleFactor(0.8)
                     Spacer(minLength: 0)
                 }
             }

@@ -216,7 +216,9 @@ struct EventsView: View {
                     }
                     Button { showActivityComposer = true } label: {
                         Label("Create an activity", systemImage: "gamecontroller")
-                            .font(.system(.body, weight: .semibold))
+                            .font(.system(.subheadline, weight: .semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
                             .foregroundStyle(Color.mlrCampfire)
                             .frame(maxWidth: .infinity, minHeight: 52)
                             .background(Color.mlrCampfire.opacity(0.10))

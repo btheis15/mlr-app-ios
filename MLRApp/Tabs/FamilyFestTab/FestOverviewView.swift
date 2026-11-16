@@ -142,6 +142,7 @@ struct FestOverviewView: View {
                     .padding(.top, 12)
                     .padding(.bottom, 32)
                 }
+                .debugStartScroll()
             }
             .mlrEditToggle(canEdit: showsEditToggle, tint: .mlrFestInkReadable)
             .navigationTitle("Family Fest")

@@ -300,7 +300,7 @@ struct FamilyFestSpotlight: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Eyebrow("Family Fest", color: .mlrFestReadable)
                     Text(verbatim: "Family Fest \(FamilyFestConfig.year)")
-                        .font(.system(.title3, design: .serif, weight: .bold))
+                        .font(.mlrScaled(17, weight: .semibold, design: .serif, relativeTo: .title3))
                         .foregroundStyle(Color.mlrFestInkReadable)
                     Text(statusLine)
                         .font(.footnote)
@@ -313,7 +313,7 @@ struct FamilyFestSpotlight: View {
                 if showsCountdown {
                     VStack(spacing: 0) {
                         Text("\(season.daysUntilStart)")
-                            .font(.system(size: 30, weight: .bold, design: .rounded))
+                            .font(.system(size: 22, weight: .bold, design: .rounded))
                             .monospacedDigit()
                             .contentTransition(.numericText())
                         Text("days")

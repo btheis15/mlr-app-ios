@@ -31,6 +31,9 @@ struct RootView: View {
     @State private var showHelpRequests = false
     @State private var showCabinBookings = false
     @State private var searchRequest: GlobalSearchRequest?
+    #if DEBUG
+    @State private var debugScreen: String?
+    #endif
 
     // Siri / Shortcuts → in-app navigation bridge.
     private var router = IntentRouter.shared
@@ -162,6 +165,35 @@ struct RootView: View {
         )) {
             SignInView()
         }
+        #if DEBUG
+        .sheet(item: Binding(get: { debugScreen.map { DebugScreenID(id: $0) } },
+                             set: { debugScreen = $0?.id })) { d in
+            NavigationStack {
+                switch d.id {
+                case "events": EventsView()
+                case "local-places": LocalPlacesView()
+                default: AdminView()
+                }
+            }
+            .mlrBackdrop()
+        }
+        .task {
+            // DEBUG screenshot hooks (no taps): -startRoute activity|profile|
+            // events|local-places|admin|house-chat|feed ; -startEditMode.
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("-startEditMode") { MLREditModeStore.shared.isOn = true }
+            guard let i = args.firstIndex(of: "-startRoute"), i + 1 < args.count else { return }
+            let v = args[i + 1]
+            try? await Task.sleep(for: .seconds(3))
+            switch v {
+            case "activity": selectedTab = .activity
+            case "profile": selectedTab = .profile
+            case "events", "local-places", "admin": debugScreen = v
+            case "house-chat": router.requestRoute(.houseChat)
+            default: break
+            }
+        }
+        #endif
         // Drive navigation when an App Intent opens the app.
         .onChange(of: router.pendingRoute) { _, _ in
             handlePendingRoute()
@@ -717,3 +749,31 @@ private extension View {
         }
     }
 }
+
+#if DEBUG
+private struct DebugScreenID: Identifiable { let id: String }
+#endif
+
+extension View {
+    /// DEBUG screenshot hook: `-startScroll <points>` scrolls this ScrollView after load.
+    @ViewBuilder func debugStartScroll() -> some View {
+        #if DEBUG
+        modifier(DebugStartScroll())
+        #else
+        self
+        #endif
+    }
+}
+#if DEBUG
+private struct DebugStartScroll: ViewModifier {
+    @State private var pos = ScrollPosition()
+    func body(content: Content) -> some View {
+        content.scrollPosition($pos).task {
+            let a = ProcessInfo.processInfo.arguments
+            guard let i = a.firstIndex(of: "-startScroll"), i + 1 < a.count, let y = Double(a[i + 1]) else { return }
+            try? await Task.sleep(for: .seconds(6))
+            pos.scrollTo(y: y)
+        }
+    }
+}
+#endif
