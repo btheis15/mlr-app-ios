@@ -130,11 +130,13 @@ final class AppEnvironment {
         await committeeService.fetchMyMemberships(userId: uid)
     }
 
-    // Help contact — loaded from resort_config (migration 0082), falls back to
-    // the HelpContact enum so the Help page always shows something.
-    var helpContactName:  String = HelpContact.name
-    var helpContactPhone: String = HelpContact.phone
-    var helpContactEmail: String = HelpContact.email
+    // Help contact — loaded from resort_config (migration 0082). No personal
+    // details are compiled into the app: until the live value is read (or when
+    // it is blank / unreadable) these stay empty and the Help page shows a
+    // neutral "Ask a family admin" state.
+    var helpContactName:  String = ""
+    var helpContactPhone: String = ""
+    var helpContactEmail: String = ""
 
     @MainActor
     func loadHelpContact() async {
@@ -143,9 +145,10 @@ final class AppEnvironment {
             .limit(1).single().execute().data,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return }
-        if let v = json["help_contact_name"]  as? String, !v.isEmpty { helpContactName  = v }
-        if let v = json["help_contact_phone"] as? String, !v.isEmpty { helpContactPhone = v }
-        if let v = json["help_contact_email"] as? String, !v.isEmpty { helpContactEmail = v }
+        // Assign even when blank, so an admin clearing the contact is respected.
+        helpContactName  = (json["help_contact_name"]  as? String) ?? ""
+        helpContactPhone = (json["help_contact_phone"] as? String) ?? ""
+        helpContactEmail = (json["help_contact_email"] as? String) ?? ""
     }
 
     // Dismissed announcement IDs (persisted in UserDefaults)
