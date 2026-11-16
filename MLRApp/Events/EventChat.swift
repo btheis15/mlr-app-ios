@@ -794,6 +794,7 @@ struct EventChatView: View {
                 VStack(alignment: .trailing, spacing: 2) {
                     MentionText(
                         text,
+                        baseFont: .mlrScaled(16), mentionSize: 16,
                         baseColor: mine ? .white : Color.mlrText,
                         mentionColor: mine ? Color.mlrPrimaryLight : Color.mlrPrimary
                     )

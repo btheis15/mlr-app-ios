@@ -145,22 +145,33 @@ struct ProfileView: View {
             appInfoSection
         }
         .scrollContentBackground(.hidden)
-        .environment(\.defaultMinListRowHeight, 40)
+        .font(.mlrScaled(16))
+        .environment(\.defaultMinListRowHeight, 44)
         .listSectionSpacing(14)
+        .contentMargins(.bottom, 96, for: .scrollContent)
+    }
+
+    /// Section with an `Eyebrow` header and white card rows (hairline separators).
+    private func eyebrowSection<C: View>(_ title: String, @ViewBuilder content: () -> C) -> some View {
+        Section {
+            content().listRowBackground(Color.mlrCard)
+        } header: {
+            Eyebrow(title, color: .mlrPineText)
+        }
     }
 
     // MARK: - Avatar section
 
     private var avatarSection: some View {
         Section {
-            MLRCard(.hero, padding: 20) {
+            Group {
               HStack {
                 Spacer()
-                VStack(spacing: 12) {
+                VStack(spacing: 8) {
                     ZStack(alignment: .bottomTrailing) {
                         AvatarView(
                             url: profile?.avatarUrl,
-                            size: .xlarge,
+                            size: .profile,
                             isAdmin: profile?.isAdmin ?? false
                         )
                         .overlay {
@@ -178,7 +189,7 @@ struct ProfileView: View {
                             Image(systemName: "camera.fill")
                                 .font(.mlrScaled(13, weight: .semibold))
                                 .foregroundStyle(.white)
-                                .frame(width: 28, height: 28)
+                                .frame(width: 24, height: 24)
                                 .background(Color.mlrPrimary)
                                 .clipShape(Circle())
                                 .overlay(
@@ -189,7 +200,7 @@ struct ProfileView: View {
                     }
 
                     Text(profile?.name ?? "")
-                        .font(.system(size: 26, weight: .semibold, design: .serif))
+                        .font(.mlrScaled(20, weight: .semibold, design: .serif, relativeTo: .title3))
                         .foregroundStyle(Color.mlrText)
 
                     Text(profile?.email ?? "")
@@ -199,9 +210,12 @@ struct ProfileView: View {
                 Spacer()
               }
             }
-            .padding(.vertical, 8)
-            .listRowBackground(Color.clear)
-            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+            .padding(.vertical, 4)
+            .listRowBackground(
+                RoundedRectangle(cornerRadius: 18, style: .continuous)
+                    .fill(Color.mlrCard)
+                    .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous).stroke(Color.mlrBorder, lineWidth: 1))
+            )
         }
     }
 
@@ -277,9 +291,10 @@ struct ProfileView: View {
                 }
             } label: {
                 Text("Profile")
-                    .font(.mlrScaled(15, weight: .semibold))
+                    .font(.mlrScaled(16, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
             }
+            .listRowBackground(Color.mlrCard)
         }
     }
 
@@ -349,9 +364,10 @@ struct ProfileView: View {
                 .tint(Color.mlrPrimary)
             } label: {
                 Text("Payment Handles")
-                    .font(.mlrScaled(15, weight: .semibold))
+                    .font(.mlrScaled(16, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
             }
+            .listRowBackground(Color.mlrCard)
         } footer: {
             if isPaymentExpanded {
                 Text("Zelle & Apple Cash use a phone or email — tap ⌄ to reuse yours. Your Preferred method shows first when others pay you.")
@@ -396,7 +412,7 @@ struct ProfileView: View {
     // MARK: - Notifications section
 
     private var notificationsSection: some View {
-        Section("Notifications") {
+        eyebrowSection("Notifications") {
             NavigationLink {
                 NotifPrefsView()
             } label: {
@@ -432,7 +448,7 @@ struct ProfileView: View {
     // MARK: - Account section
 
     private var accountSection: some View {
-        Section("Account") {
+        eyebrowSection("Account") {
             Button {
                 showEmailChange = true
             } label: {
@@ -448,7 +464,7 @@ struct ProfileView: View {
     // MARK: - Appearance section
 
     private var appearanceSection: some View {
-        Section("Appearance") {
+        eyebrowSection("Appearance") {
             Picker(selection: Binding(
                 get: { appearance.appearance },
                 set: { appearance.appearance = $0 }
@@ -467,7 +483,7 @@ struct ProfileView: View {
     // MARK: - Ask for Help section
 
     private var askForHelpSection: some View {
-        Section("Ask for Help") {
+        eyebrowSection("Ask for Help") {
             WillingToHelpRow()
             NavigationLink {
                 HelpRequestsView()
@@ -481,7 +497,7 @@ struct ProfileView: View {
     // MARK: - Features section
 
     private var featuresSection: some View {
-        Section("Features") {
+        eyebrowSection("Features") {
             VStack(alignment: .leading, spacing: 4) {
                 Toggle(isOn: $spotlightEnabled) {
                     Label("Siri & Spotlight search", systemImage: "magnifyingglass")
@@ -501,7 +517,7 @@ struct ProfileView: View {
     // MARK: - Admin section
 
     private var adminSection: some View {
-        Section("Admin") {
+        eyebrowSection("Admin") {
             NavigationLink {
                 AdminView()
             } label: {
@@ -531,6 +547,7 @@ struct ProfileView: View {
                     Spacer()
                 }
             }
+            .listRowBackground(Color.mlrCard)
         }
     }
 

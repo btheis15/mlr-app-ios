@@ -56,6 +56,5 @@ extension View {
             .scrollContentBackground(.hidden)
             .background { MLRBackdrop(kind).ignoresSafeArea() }
             .containerBackground(for: .navigation) { MLRBackdrop(kind).ignoresSafeArea() }
-            .toolbarBackground(.hidden, for: .navigationBar)
     }
 }

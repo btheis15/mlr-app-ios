@@ -146,7 +146,7 @@ struct EventsView: View {
 
     private var eventList: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 24) {
+            LazyVStack(alignment: .leading, spacing: 18) {
                 headerBlock
                 activitiesSection
                 if filteredEvents.isEmpty {
@@ -159,7 +159,7 @@ struct EventsView: View {
                 }
                 ForEach(grouped, id: \.month) { group in
                     Section {
-                        VStack(spacing: 12) {
+                        VStack(spacing: 8) {
                             ForEach(group.events) { event in
                                 EventCard(
                                     event: event,
@@ -190,6 +190,7 @@ struct EventsView: View {
             }
             .padding(.vertical, 12)
         }
+        .contentMargins(.bottom, 96, for: .scrollContent)
         .refreshable {
             await env.eventsService.fetchEvents()
             if let userId = await env.authService.userId {
@@ -253,18 +254,21 @@ struct EventsView: View {
                 // from its own sheet) under a quiet collapsed disclosure —
                 // mirrors the Feed tab's "Archived chats" line.
                 if !archivedActivities.isEmpty {
-                    DisclosureGroup(isExpanded: $showArchivedActivities) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(archivedActivities) { activity in
-                                Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
-                                    .buttonStyle(.pressable)
+                    MLRCard(.plain, padding: 12) {
+                        DisclosureGroup(isExpanded: $showArchivedActivities) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(archivedActivities) { activity in
+                                    Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
+                                        .buttonStyle(.pressable)
+                                }
                             }
+                            .padding(.top, 8)
+                        } label: {
+                            Text("🗄️ Finished & archived (\(archivedActivities.count))")
+                                .font(.mlrRowTitle)
+                                .foregroundStyle(Color.mlrTextMuted)
                         }
-                        .padding(.top, 8)
-                    } label: {
-                        Text("🗄️ Finished & archived (\(archivedActivities.count))")
-                            .font(.mlrScaled(13, weight: .semibold))
-                            .foregroundStyle(Color.mlrTextMuted)
+                        .tint(Color.mlrTextMuted)
                     }
                 }
             }

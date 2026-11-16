@@ -10,9 +10,36 @@ struct MLRApp: App {
     @State private var appearance = AppearanceManager.shared
 
     init() {
+        Self.configureNavigationBarTypography()
         // Make the in-app navigation router available to App Intents (Siri /
         // Shortcuts) so an opened intent can drive tab selection + sheets.
         AppDependencyManager.shared.add(dependency: IntentRouter.shared)
+    }
+
+    /// Every large navigation title is the serif screen-title token (New York
+    /// bold 26); inline titles are serif semibold 17. Set once, globally.
+    private static func configureNavigationBarTypography() {
+        func serif(_ size: CGFloat, _ weight: UIFont.Weight) -> UIFont {
+            let base = UIFont.systemFont(ofSize: size, weight: weight)
+            guard let d = base.fontDescriptor.withDesign(.serif) else { return base }
+            return UIFont(descriptor: d, size: size)
+        }
+        let ink = UIColor(Color.mlrText)
+        let large: [NSAttributedString.Key: Any] = [.font: serif(26, .bold), .foregroundColor: ink]
+        let inline: [NSAttributedString.Key: Any] = [.font: serif(17, .semibold), .foregroundColor: ink]
+        let standard = UINavigationBarAppearance()
+        standard.configureWithTransparentBackground()
+        standard.largeTitleTextAttributes = large
+        standard.titleTextAttributes = inline
+        let edge = UINavigationBarAppearance()
+        edge.configureWithTransparentBackground()
+        edge.largeTitleTextAttributes = large
+        edge.titleTextAttributes = inline
+        let bar = UINavigationBar.appearance()
+        bar.standardAppearance = standard
+        bar.compactAppearance = standard
+        bar.scrollEdgeAppearance = edge
+        bar.compactScrollEdgeAppearance = edge
     }
 
     var body: some Scene {

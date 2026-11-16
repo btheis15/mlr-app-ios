@@ -248,6 +248,7 @@ private struct ConversationsList: View {
             }
         }
         .listStyle(.plain)
+        .contentMargins(.bottom, 96, for: .scrollContent)
         .scrollContentBackground(.hidden)
         .listRowSpacing(8)
         .mlrBackdrop()
@@ -729,6 +730,7 @@ struct MainFeedView: View {
                 }
                 .padding(.top, 8)
             }
+            .contentMargins(.bottom, 96, for: .scrollContent)
             .onScrollGeometryChange(for: Bool.self) { geo in
                 geo.contentOffset.y + geo.contentInsets.top <= 40
             } action: { _, atTop in

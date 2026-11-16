@@ -180,15 +180,16 @@ struct AdminView: View {
         List {
             ForEach(visibleGroups) { group in
                 Section {
-                    ForEach(group.tools) { tool in row(for: tool) }
+                    ForEach(group.tools) { tool in row(for: tool).listRowBackground(Color.mlrCard) }
                 } header: {
                     VStack(alignment: .leading, spacing: 2) {
                         Label(group.title, systemImage: group.icon)
-                            .font(.system(.title3, design: .serif, weight: .semibold))
+                            .font(.mlrSectionTitle)
                             .foregroundStyle(Color.mlrText)
                             .textCase(nil)
                         Text(group.blurb)
-                            .font(.caption)
+                            .font(.mlrCaption13)
+                            .foregroundStyle(Color.mlrTextMuted)
                             .textCase(nil)
                     }
                 }
@@ -199,6 +200,9 @@ struct AdminView: View {
                     .foregroundStyle(Color.mlrTextMuted)
             }
         }
+        .environment(\.defaultMinListRowHeight, 46)
+        .listSectionSpacing(10)
+        .contentMargins(.bottom, 96, for: .scrollContent)
         .mlrBackdrop()
         .navigationTitle("Admin")
         .navigationBarTitleDisplayMode(.large)
@@ -243,20 +247,15 @@ struct AdminView: View {
         description: String,
         badge: Int = 0
     ) -> some View {
-        HStack(spacing: 14) {
-            Image(systemName: icon)
-                .font(.mlrScaled(18, weight: .semibold))
-                .foregroundStyle(iconColor)
-                .frame(width: 36, height: 36)
-                .background(iconColor.opacity(0.12))
-                .clipShape(RoundedRectangle(cornerRadius: 8))
+        HStack(spacing: 12) {
+            IconTile(symbol: icon, accent: iconColor, size: 34)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.mlrScaled(15, weight: .semibold))
+                    .font(.mlrScaled(16, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                 Text(description)
-                    .font(.caption)
+                    .font(.mlrCaption13)
                     .foregroundStyle(Color.mlrTextMuted)
             }
             Spacer(minLength: 0)
@@ -269,7 +268,7 @@ struct AdminView: View {
                     .accessibilityLabel("\(badge) waiting")
             }
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, 2)
     }
 }
 

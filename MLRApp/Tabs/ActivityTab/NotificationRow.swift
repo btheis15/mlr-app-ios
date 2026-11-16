@@ -47,19 +47,17 @@ struct NotificationRow: View {
             actorAvatar
 
             // Text content
-            VStack(alignment: .leading, spacing: 3) {
+            VStack(alignment: .leading, spacing: 2) {
                 // Title — bold when unread
                 Text(notification.title)
-                    .font(isUnread
-                          ? .mlrScaled(17, weight: .bold)
-                          : .mlrScaled(17, weight: .regular))
+                    .font(.mlrScaled(15, weight: isUnread ? .semibold : .regular))
                     .foregroundStyle(Color.mlrText)
                     .fixedSize(horizontal: false, vertical: true)
 
                 // Optional body preview
                 if let body = notification.body, !body.isEmpty {
                     Text(body)
-                        .font(.mlrSecondary)
+                        .font(.mlrScaled(14))
                         .foregroundStyle(Color.mlrTextMuted)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)
@@ -68,12 +66,12 @@ struct NotificationRow: View {
                 // Relative timestamp + kind badge
                 HStack(spacing: 6) {
                     Text(MLRFormat.relativeTime(notification.createdAt))
-                        .font(.mlrCaption13)
+                        .font(.mlrScaled(12))
                         .foregroundStyle(Color.mlrTextSubtle)
 
                     kindBadge
                 }
-                .padding(.top, 2)
+                .padding(.top, 1)
             }
 
             Spacer(minLength: 0)
@@ -87,8 +85,8 @@ struct NotificationRow: View {
                     .padding(.leading, 8)
             }
         }
-        .padding(.vertical, 10)
-        .padding(.trailing, 16)
+        .padding(.vertical, 6)
+        .padding(.trailing, 12)
         .contentShape(Rectangle())
     }
 
@@ -98,7 +96,7 @@ struct NotificationRow: View {
     private var actorAvatar: some View {
         if notification.actorAvatarUrl != nil {
             // AvatarView: Kingfisher caching + consistent AvatarSize (Phase 7A).
-            AvatarView(url: notification.actorAvatarUrl, size: .small)
+            MLRAvatar(name: notification.actorName ?? "?", url: notification.actorAvatarUrl, size: 34, ring: false)
                 .padding(.trailing, 10)
         } else if notification.actorName != nil {
             placeholderAvatar
@@ -112,7 +110,7 @@ struct NotificationRow: View {
     private var placeholderAvatar: some View {
         Circle()
             .fill(accentColor.opacity(0.15))
-            .frame(width: 36, height: 36)
+            .frame(width: 34, height: 34)
             .overlay {
                 Text(notification.actorName?.prefix(1).uppercased() ?? "?")
                     .font(.mlrScaled(14, weight: .semibold))
@@ -123,7 +121,7 @@ struct NotificationRow: View {
     private var kindIconAvatar: some View {
         Circle()
             .fill(accentColor.opacity(0.12))
-            .frame(width: 36, height: 36)
+            .frame(width: 34, height: 34)
             .overlay {
                 Image(systemName: kindIcon)
                     .font(.mlrScaled(16, weight: .medium))
@@ -179,7 +177,7 @@ struct NotificationRow: View {
         let label = kindLabel
         if !label.isEmpty {
             Text(label)
-                .font(.mlrScaled(11, weight: .medium))
+                .font(.mlrScaled(12, weight: .medium))
                 .foregroundStyle(accentColor)
                 .padding(.horizontal, 6)
                 .padding(.vertical, 2)

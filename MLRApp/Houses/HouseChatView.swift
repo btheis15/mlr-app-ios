@@ -759,6 +759,7 @@ private struct HouseMessageBubble: View {
                     VStack(alignment: .trailing, spacing: 2) {
                         MentionText(
                             message.text,
+                            baseFont: .mlrScaled(16), mentionSize: 16,
                             baseColor: isOwn ? .white : Color.mlrText,
                             mentionColor: isOwn ? Color.mlrPrimaryLight : Color.mlrPrimary
                         )

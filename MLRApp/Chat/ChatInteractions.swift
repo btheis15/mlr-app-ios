@@ -433,7 +433,7 @@ struct ChatMessageRow<Content: View>: View {
     @State private var revealTime = false
     @State private var showFailedDialog = false
 
-    private let avatarSize = AvatarSize.small
+    private let avatarSize = AvatarSize.chat
 
     var body: some View {
         VStack(spacing: 0) {
@@ -484,7 +484,7 @@ struct ChatMessageRow<Content: View>: View {
     private var avatarColumn: some View {
         Group {
             if meta.startsGroup && !isDeleted {
-                AvatarView(url: avatarUrl, size: .small)
+                AvatarView(url: avatarUrl, size: .chat)
             } else {
                 Color.clear
             }
@@ -512,7 +512,7 @@ struct ChatMessageRow<Content: View>: View {
                     Text(revealTime
                          ? createdAt.formatted(date: .abbreviated, time: .shortened)
                          : createdAt.formatted(date: .omitted, time: .shortened))
-                        .font(.mlrScaled(10))
+                        .font(.mlrScaled(11))
                         .foregroundStyle(Color.mlrTextSubtle)
                         .contentTransition(.numericText())
                 }

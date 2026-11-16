@@ -8,6 +8,8 @@ enum AvatarSize {
     case medium   // 44pt — list rows, chat bubbles
     case large    // 80pt — member sheets, profile headers
     case xlarge   // 120pt — full profile page top
+    case profile  // 72pt — Profile tab header
+    case chat     // 30pt — chat sender avatar
 
     var points: CGFloat {
         switch self {
@@ -15,6 +17,8 @@ enum AvatarSize {
         case .medium:  return 44
         case .large:   return 80
         case .xlarge:  return 120
+        case .profile: return 72
+        case .chat:    return 30
         }
     }
 
@@ -24,6 +28,8 @@ enum AvatarSize {
         case .medium:  return 20
         case .large:   return 36
         case .xlarge:  return 54
+        case .profile: return 32
+        case .chat:    return 14
         }
     }
 

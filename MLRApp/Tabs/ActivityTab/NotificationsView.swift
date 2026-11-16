@@ -85,8 +85,8 @@ struct NotificationsView: View {
                         NotificationRow(notification: notif)
                             .contentShape(Rectangle())
                             .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: notif.isUnread)
-                            .mlrCard(notif.isUnread ? .tinted(Color.mlrPrimary) : .plain, padding: 4)
-                            .listRowInsets(EdgeInsets(top: 5, leading: 16, bottom: 5, trailing: 16))
+                            .mlrCard(.plain, padding: 6)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
                             .listRowSeparator(.hidden)
                             .listRowBackground(Color.clear)
                             .onTapGesture {
@@ -113,6 +113,7 @@ struct NotificationsView: View {
             }
         }
         .listStyle(.plain)
+        .contentMargins(.bottom, 96, for: .scrollContent)
         .refreshable {
             await loadAndMarkSeen()
         }

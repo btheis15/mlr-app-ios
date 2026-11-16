@@ -172,6 +172,7 @@ struct RootView: View {
                 switch d.id {
                 case "events": EventsView()
                 case "local-places": LocalPlacesView()
+                case "main-feed": MainFeedView(title: "Main Feed")
                 default: AdminView()
                 }
             }
@@ -188,7 +189,7 @@ struct RootView: View {
             switch v {
             case "activity": selectedTab = .activity
             case "profile": selectedTab = .profile
-            case "events", "local-places", "admin": debugScreen = v
+            case "events", "local-places", "admin", "main-feed": debugScreen = v
             case "house-chat": router.requestRoute(.houseChat)
             default: break
             }

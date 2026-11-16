@@ -118,9 +118,11 @@ struct LocalPlacesView: View {
             }
             .padding(16)
         }
+        .contentMargins(.bottom, 96, for: .scrollContent)
         .mlrBackdrop()
         .navigationTitle("Local Places")
         .navigationBarTitleDisplayMode(.large)
+        .mlrEditToggle(canEdit: canEdit)
         .searchable(text: $search, prompt: "Search places")
         .task { await service.load(env: env) }
         .refreshable { await service.load(env: env) }
@@ -160,7 +162,7 @@ struct LocalPlaceCard: View {
             VStack(alignment: .leading, spacing: 10) {
                 HStack(alignment: .top, spacing: 12) {
                     if url(place.imageUrl) == nil {
-                        IconTile(emoji: place.displayEmoji, accent: accent, size: 48)
+                        IconTile(emoji: place.displayEmoji, accent: accent, size: 40)
                             .accessibilityHidden(true)
                     }
                     VStack(alignment: .leading, spacing: 3) {
@@ -169,8 +171,9 @@ struct LocalPlaceCard: View {
                         }
                         HStack(spacing: 6) {
                             Text(place.name.isEmpty ? "Name" : place.name)
-                                .font(.system(.title3, weight: .semibold))
+                                .font(.mlrCardTitle)
                                 .foregroundStyle(Color.mlrText)
+                                .lineLimit(2)
                             if !place.isActive {
                                 Text("Hidden")
                                     .font(.mlrScaled(10, weight: .bold))
@@ -186,7 +189,7 @@ struct LocalPlaceCard: View {
                         }
                     }
                     Spacer(minLength: 0)
-                    if let onEdit {
+                    if let onEdit, MLREditModeStore.shared.isOn {
                         Button(action: onEdit) {
                             Image(systemName: "pencil.circle.fill")
                                 .font(.mlrScaled(24))
@@ -277,7 +280,15 @@ struct LocalPlaceCard: View {
                         .buttonStyle(.pressable)
                     }
                 }
+                .padding(.trailing, 24)
             }
+            .mask(
+                HStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: 28)
+                }
+            )
         }
     }
 
@@ -311,11 +322,11 @@ private struct PlaceChip: View {
             Image(systemName: icon)
                 .font(.mlrScaled(13, weight: .semibold))
             Text(label)
-                .font(.mlrScaled(14, weight: .semibold))
+                .font(.mlrScaled(13, weight: .semibold))
         }
         .foregroundStyle(Color.mlrPrimary)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 9)
+        .padding(.horizontal, 12)
+        .frame(height: 32)
         .background(Color.mlrPrimary.opacity(0.10))
         .clipShape(Capsule())
     }

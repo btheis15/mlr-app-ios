@@ -26,17 +26,18 @@ struct EventCard: View {
 
     var body: some View {
         Button(action: onTap) {
-            MLRCard(event.isFamilyFest ? .tinted(accent) : .plain, padding: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(alignment: .top, spacing: 14) {
+            MLRCard(event.isFamilyFest ? .tinted(accent) : .plain, padding: 12) {
+                VStack(alignment: .leading, spacing: 8) {
+                    HStack(alignment: .top, spacing: 12) {
                         IconTile(symbol: symbol, accent: accent, size: 40)
-                        VStack(alignment: .leading, spacing: 4) {
+                        VStack(alignment: .leading, spacing: 2) {
                             Eyebrow(EventKindStyle.label(for: event.kind), color: accent)
                             Text(event.title)
                                 .font(event.isFamilyFest
-                                      ? .festSerif(20, weight: .bold)
-                                      : .system(.title3, weight: .semibold))
-                                .foregroundStyle(event.isFamilyFest ? Color.mlrFest : Color.mlrText)
+                                      ? .system(size: UIFontMetrics(forTextStyle: .title3).scaledValue(for: 16), weight: .bold, design: .serif)
+                                      : .mlrCardTitle)
+                                .foregroundStyle(event.isFamilyFest ? Color.mlrFestReadable : Color.mlrText)
+                                .lineLimit(2)
                                 .multilineTextAlignment(.leading)
                             HStack(spacing: 8) {
                                 Text(MLRFormat.dateRange(start: event.startDate, end: event.endDate))
@@ -115,7 +116,7 @@ struct KindBadge: View {
 enum EventKindStyle {
     static func color(for kind: EventKind) -> Color {
         switch kind {
-        case .familyFest:  return .mlrFest
+        case .familyFest:  return .mlrFestReadable
         case .workWeekend: return .mlrPrimary
         case .holiday:     return .mlrInfo
         case .custom:      return .mlrTextMuted

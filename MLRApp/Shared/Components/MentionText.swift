@@ -18,8 +18,10 @@ struct MentionText: View {
     var baseFont: Font = .mlrBody
     var baseColor: Color = Color.mlrText
     var mentionColor: Color = Color.mlrPrimary
+    var mentionSize: CGFloat? = nil
 
-    init(_ text: String, baseFont: Font = .mlrBody, baseColor: Color = Color.mlrText, mentionColor: Color = Color.mlrPrimary) {
+    init(_ text: String, baseFont: Font = .mlrBody, mentionSize: CGFloat? = nil, baseColor: Color = Color.mlrText, mentionColor: Color = Color.mlrPrimary) {
+        self.mentionSize = mentionSize
         self.text = text
         self.baseFont = baseFont
         self.baseColor = baseColor
@@ -47,7 +49,7 @@ struct MentionText: View {
                 part.foregroundColor = UIColor(mentionColor)
                 // Semi-bold weight for mentions
                 part.font = UIFont.systemFont(
-                    ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize,
+                    ofSize: mentionSize ?? UIFont.preferredFont(forTextStyle: .body).pointSize,
                     weight: .semibold
                 )
                 result.append(part)
