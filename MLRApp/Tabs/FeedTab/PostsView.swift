@@ -311,6 +311,7 @@ struct MainFeedView: View {
     @State private var showComposer = false
     @State private var showSignIn = false
     @State private var showTaggedOnly = false
+    @State private var adminRemoveError: String? = nil
     @State private var reactionMap: [UUID: [PostReaction]] = [:]
 
     private var displayedPosts: [Post] {
@@ -327,6 +328,14 @@ struct MainFeedView: View {
         }
         .navigationTitle(title)
         .navigationBarTitleDisplayMode(.inline)
+        .alert("Couldn't remove post", isPresented: Binding(
+            get: { adminRemoveError != nil },
+            set: { if !$0 { adminRemoveError = nil } }
+        )) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(adminRemoveError ?? "")
+        }
         .toolbar {
             ToolbarItem(placement: .navigationBarLeading) {
                 if env.isSignedIn {
@@ -566,17 +575,22 @@ struct MainFeedView: View {
 
     private func adminRemove(_ post: Post) async {
         struct StatusParams: Encodable {
-            let p_target_type: String
-            let p_target_id: String
+            let p_entity_type: String
+            let p_entity_id: String
             let p_status: String
         }
-        try? await supabase
-            .rpc("set_content_status", params: StatusParams(
-                p_target_type: "post",
-                p_target_id: post.id.uuidString,
-                p_status: "hidden"
-            ))
-            .execute()
+        do {
+            try await supabase
+                .rpc("set_content_status", params: StatusParams(
+                    p_entity_type: "post",
+                    p_entity_id: post.id.uuidString,
+                    p_status: "hidden"
+                ))
+                .execute()
+        } catch {
+            adminRemoveError = "The post wasn't removed. Please try again."
+            return
+        }
         await env.postsService.fetchPosts(userId: env.currentProfile?.id)
     }
 }
