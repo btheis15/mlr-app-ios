@@ -65,7 +65,6 @@ struct TournamentSetupSheet: View {
             newTitle = "Tournament"
             if let t = tournament { syncFrom(t) }
         }
-        .task { if let t = tournament, !t.pool.isEmpty { await refresh() } }
         .task { await loadSnapshots() }
         // Someone else started or changed the tournament while this sheet is open.
         .onChange(of: tournament?.status) { _, _ in Task { await refresh() } }
@@ -111,7 +110,7 @@ struct TournamentSetupSheet: View {
             List {
                 Section {
                     TournamentSetupPreview(
-                        names: order.compactMap { id in t.entrants.first { $0.id == id }?.displayName },
+                        names: order.compactMap { seedName($0, t) },
                         format: t.format, strategy: byeStrategy, poolCount: poolCount, advance: advance)
                         .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: order)
                 } header: {
@@ -249,12 +248,7 @@ struct TournamentSetupSheet: View {
                 let name = addName.trimmingCharacters(in: .whitespaces)
                 guard !name.isEmpty, !busy else { return }
                 addName = ""
-                if t.entrantType == .individual {
-                    // A solo entrant, so the person joins the one reorderable seed list.
-                    run { _ = try await env.tournamentsService.addEntrant(tournamentId: t.id, teamName: nil, members: [(forUser: nil, name: name)]) }
-                } else {
-                    run { _ = try await env.tournamentsService.addParticipant(id: t.id, forUser: nil, name: name) }
-                }
+                run { _ = try await env.tournamentsService.addParticipant(id: t.id, forUser: nil, name: name) }
             }.disabled(addName.trimmingCharacters(in: .whitespaces).isEmpty || busy)
         }
     }
@@ -294,7 +288,7 @@ struct TournamentSetupSheet: View {
                 ForEach(Array(order.enumerated()), id: \.element) { idx, id in
                     HStack {
                         Text("\(idx + 1)").font(.mlrScaled(12, weight: .bold)).foregroundStyle(Color.mlrTextMuted).frame(width: 22, alignment: .leading)
-                        Text(t.entrants.first { $0.id == id }?.displayName ?? "—").font(.mlrScaled(15))
+                        Text(seedName(id, t) ?? "—").font(.mlrScaled(15))
                     }
                 }
                 .onMove { from, to in Haptics.select(); order.move(fromOffsets: from, toOffset: to) }
@@ -302,7 +296,12 @@ struct TournamentSetupSheet: View {
                     guard !busy else { return }
                     let ids = offsets.map { order[$0] }
                     order.remove(atOffsets: offsets)
-                    run { for id in ids { try await env.tournamentsService.removeEntrant(entrantId: id) } }
+                    run {
+                        for id in ids {
+                            if t.entrants.contains(where: { $0.id == id }) { try await env.tournamentsService.removeEntrant(entrantId: id) }
+                            else { try await env.tournamentsService.removeParticipant(participantId: id) }
+                        }
+                    }
                 }
             } header: {
                 Text("Seed order — top seeds first")
@@ -311,8 +310,8 @@ struct TournamentSetupSheet: View {
             }
         }
 
-        if !t.pool.isEmpty {
-            Section(t.entrantType == .team ? "Not yet on a team" : "Not yet seeded") {
+        if t.entrantType == .team && !t.pool.isEmpty {
+            Section("Not yet on a team") {
                 ForEach(t.pool) { p in
                     Text(p.name).font(.mlrScaled(14))
                         .swipeActions {
@@ -347,7 +346,7 @@ struct TournamentSetupSheet: View {
         if order.count >= 2 {
             Section {
                 TournamentSetupPreview(
-                    names: order.compactMap { id in t.entrants.first { $0.id == id }?.displayName },
+                    names: order.compactMap { seedName($0, t) },
                     format: t.format, strategy: byeStrategy, poolCount: poolCount, advance: advance)
             } header: {
                 Text("Preview: how it will play")
@@ -442,8 +441,36 @@ struct TournamentSetupSheet: View {
     private func doGenerate(_ t: Tournament) async {
         guard !busy, t.status == .setup else { return }
         busy = true; errorText = nil; defer { busy = false }
-        let seed = order.count >= 2 ? order : nil
+        var seed: [UUID]? = order.count >= 2 ? order : nil
         do {
+            // Individual tournaments: pool sign-ups become solo entrants only now.
+            // A failed add puts the person back, then everything stops (nothing generated).
+            if t.entrantType == .individual, !t.pool.isEmpty {
+                var map: [UUID: UUID] = [:]
+                for p in t.pool where order.contains(p.id) {
+                    try await env.tournamentsService.removeParticipant(participantId: p.id)
+                    do {
+                        map[p.id] = try await env.tournamentsService.addEntrant(
+                            tournamentId: t.id, teamName: nil,
+                            members: [(forUser: p.userId, name: p.userId == nil ? p.name : nil)])
+                    } catch {
+                        _ = try? await env.tournamentsService.addParticipant(id: t.id, forUser: p.userId, name: p.userId == nil ? p.name : nil)
+                        await refresh()
+                        throw error
+                    }
+                }
+                guard let fresh = try await env.tournamentsService.fetchChecked(host: host).first else { return }
+                current = fresh
+                let mapped = order.map { map[$0] ?? $0 }
+                let active = Set(fresh.entrants.filter { $0.withdrawnAt == nil }.map(\.id))
+                guard Set(mapped) == active, mapped.count == active.count else {
+                    syncFrom(fresh)
+                    errorText = "The player list changed while starting. Check the order and start again."
+                    return
+                }
+                order = mapped
+                seed = mapped
+            }
             // Scoring rules ride along (set-only: the server keeps the old value for nulls).
             if targetEdit > 0, targetEdit != (t.targetScore ?? 0) || winByEdit != (t.winBy ?? 1) {
                 try await env.tournamentsService.setScoring(id: t.id, targetScore: targetEdit, winBy: winByEdit)
@@ -478,28 +505,13 @@ struct TournamentSetupSheet: View {
             if errorText == nil { errorText = "Couldn't refresh. Pull the latest by closing and reopening this." }
             return
         }
-        if var t = list.first {
-            if await promotePool(t), let again = try? await env.tournamentsService.fetchChecked(host: host), let a = again.first { t = a }
-            current = t; syncFrom(t)
-        }
+        if let t = list.first { current = t; syncFrom(t) }
     }
 
-    /// Individual tournaments: sign-ups sitting in the pool become solo entrants now,
-    /// so every player is in the one reorderable seed list (the server only honours
-    /// a seed order that covers every entrant). Returns true if anything moved.
-    private func promotePool(_ t: Tournament) async -> Bool {
-        guard t.status == .setup, t.entrantType == .individual, !t.pool.isEmpty else { return false }
-        var moved = false
-        for p in t.pool {
-            do {
-                try await env.tournamentsService.removeParticipant(participantId: p.id)
-                _ = try await env.tournamentsService.addEntrant(
-                    tournamentId: t.id, teamName: nil,
-                    members: [(forUser: p.userId, name: p.userId == nil ? p.name : nil)])
-                moved = true
-            } catch { break }
-        }
-        return moved
+    /// Display name for a seed-list id: an entrant, or (individual tournaments) a
+    /// sign-up still in the pool.
+    private func seedName(_ id: UUID, _ t: Tournament) -> String? {
+        t.entrants.first { $0.id == id }?.displayName ?? t.pool.first { $0.id == id }?.name
     }
 
     private func loadSnapshots() async {
@@ -510,7 +522,7 @@ struct TournamentSetupSheet: View {
 
     private func syncFrom(_ t: Tournament) {
         // Keep the organiser's local order for players still here; new ones go last.
-        let ids = t.entrants.map(\.id)
+        let ids = t.entrants.map(\.id) + (t.entrantType == .individual ? t.pool.map(\.id) : [])
         order = order.filter(ids.contains) + ids.filter { !order.contains($0) }
         byeStrategy = t.byeStrategy
         poolCount = t.poolCount ?? 2
@@ -535,7 +547,7 @@ struct TournamentSetupSheet: View {
         return false
     }
     private func readyCount(_ t: Tournament) -> Int {
-        t.entrantType == .individual ? order.count + t.pool.count : order.count
+        order.count
     }
     private func generateLabel(_ t: Tournament) -> String {
         if readyCount(t) < 2 { return "Add at least 2 players" }
