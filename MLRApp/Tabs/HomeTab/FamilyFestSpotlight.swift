@@ -141,12 +141,12 @@ struct FamilyFestSpotlight: View {
             // Make sure committee membership is known so the shortcut points the
             // right way. Cheap + guarded so it doesn't refetch on every appearance.
             if env.committeeService.committees.isEmpty {
-                await env.committeeService.fetchCommittees()
+                await env.committeeService.fetchCommittees(cacheUser: env.isPreviewing ? nil : env.currentProfile?.id)
             }
             if env.isSignedIn,
                env.committeeService.myMemberships.isEmpty,
                let uid = env.effectiveUserId {
-                await env.committeeService.fetchMyMemberships(userId: uid)
+                await env.committeeService.fetchMyMemberships(userId: uid, cache: !env.isPreviewing)
             }
         }
         .sheet(isPresented: $showJoinSheet) {

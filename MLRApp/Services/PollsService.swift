@@ -10,10 +10,15 @@ import Supabase
 final class PollsService {
     var polls: [Poll] = []
     var isLoading = false
+    private var freshness = FreshnessWindow()
 
     // MARK: - Fetch
 
-    func fetchPolls(userId: UUID?) async {
+    /// `ifStale: true` skips the network when polls were fetched in the last 30s.
+    func fetchPolls(userId: UUID?, ifStale: Bool = false) async {
+        let cacheKey = DiskCache.key("polls", user: userId)
+        if polls.isEmpty, let cached = DiskCache.load([Poll].self, key: cacheKey) { polls = cached }
+        if ifStale && freshness.isFresh() { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -38,7 +43,7 @@ final class PollsService {
                 if let uid = userId, v.userId == uid { myVotes[v.pollId] = v.optionId }
             }
 
-            polls = rows.map { row in
+            let fresh = rows.map { row in
                 Poll(
                     id: row.id,
                     question: row.question,
@@ -59,6 +64,9 @@ final class PollsService {
                     myVoteOptionId: myVotes[row.id]
                 )
             }
+            applyRefreshed { polls = fresh }
+            freshness.touch()
+            DiskCache.save(fresh, key: cacheKey)
         } catch {
             print("[PollsService] fetchPolls error: \(error)")
         }

@@ -20,7 +20,13 @@ final class CommitteeService {
 
     // MARK: - Fetch committees
 
-    func fetchCommittees() async {
+    /// `cacheUser`: when set, paints the viewer's last snapshot first and saves the
+    /// fresh list. Pass nil (the default) while an admin is previewing as someone
+    /// else, and from admin tools — nothing is read from or written to disk.
+    func fetchCommittees(cacheUser: UUID? = nil) async {
+        let cacheKey = cacheUser.map { DiskCache.key("committees", user: $0) }
+        if committees.isEmpty, let cacheKey,
+           let cached = DiskCache.load([Committee].self, key: cacheKey) { committees = cached }
         isLoading = true
         error = nil
         defer { isLoading = false }
@@ -32,7 +38,8 @@ final class CommitteeService {
                 .order("name", ascending: true)
                 .execute()
                 .value
-            committees = rows
+            applyRefreshed { committees = rows }
+            if let cacheKey { DiskCache.save(rows, key: cacheKey) }
         } catch {
             self.error = "Couldn't load committees."
             print("[CommitteeService] fetchCommittees error: \(error)")
@@ -142,7 +149,12 @@ final class CommitteeService {
         try await supabase.from("committee_roster").delete().eq("id", value: id.uuidString).execute()
     }
 
-    func fetchMyMemberships(userId: UUID) async {
+    /// `cache: true` (real viewer only, never while previewing) paints the last
+    /// snapshot first and saves the fresh rows.
+    func fetchMyMemberships(userId: UUID, cache: Bool = false) async {
+        let cacheKey = DiskCache.key("my-committee-memberships", user: userId)
+        if cache, myMemberships.isEmpty,
+           let cached = DiskCache.load([CommitteeMember].self, key: cacheKey) { myMemberships = cached }
         do {
             let rows: [CommitteeMember] = try await supabase
                 .from("committee_members")
@@ -150,7 +162,8 @@ final class CommitteeService {
                 .eq("user_id", value: userId.uuidString)
                 .execute()
                 .value
-            myMemberships = rows
+            applyRefreshed { myMemberships = rows }
+            if cache { DiskCache.save(rows, key: cacheKey) }
         } catch {
             print("[CommitteeService] fetchMyMemberships error: \(error)")
         }

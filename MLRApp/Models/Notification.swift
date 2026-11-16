@@ -27,6 +27,7 @@ struct AppNotification: Codable, Identifiable, Equatable {
         case title, body
         case targetType = "entity_type"
         case targetId = "entity_id"
+        case url
         case actorName = "actor_name"       // unused by synthesized decode; see NotifRow
         case actorAvatarUrl = "actor_avatar_url"
         case seenAt = "seen_at"

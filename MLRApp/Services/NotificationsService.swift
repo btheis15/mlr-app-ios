@@ -16,7 +16,19 @@ final class NotificationsService {
 
     // MARK: - Fetch
 
-    func fetchNotifications(userId: UUID) async {
+    /// Paint the viewer's last notifications snapshot (no network) when the list
+    /// is empty. Never call this for a previewed member.
+    func hydrateFromCache(userId: UUID) {
+        guard notifications.isEmpty,
+              let cached = DiskCache.load([AppNotification].self,
+                                          key: DiskCache.key("notifications", user: userId)) else { return }
+        notifications = cached
+    }
+
+    /// `cache: true` (real viewer only, never while previewing) paints the last
+    /// snapshot first and saves the fresh list.
+    func fetchNotifications(userId: UUID, cache: Bool = false) async {
+        if cache { hydrateFromCache(userId: userId) }
         isLoading = true
         error = nil
         defer { isLoading = false }
@@ -33,7 +45,9 @@ final class NotificationsService {
                 .limit(100)
                 .execute()
                 .value
-            notifications = rows.map(\.toNotification)
+            let fresh = rows.map(\.toNotification)
+            applyRefreshed { notifications = fresh }
+            if cache { DiskCache.save(fresh, key: DiskCache.key("notifications", user: userId)) }
             updateUnreadCount()
         } catch {
             self.error = "Couldn't load notifications."
