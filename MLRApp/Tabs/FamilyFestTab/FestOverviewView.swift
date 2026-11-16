@@ -167,7 +167,7 @@ struct FestOverviewView: View {
                 }
             }
             .sheet(isPresented: $showPlanner, onDismiss: { Task { await env.festContentService.reload() } }) {
-                NavigationStack { FamilyFestPlannerView() }
+                NavigationStack { FamilyFestPlannerView().sheetDoneButton() }
             }
             .sheet(isPresented: $showDatePicker) { datePreviewSheet }
             .sheet(isPresented: $showLookEditor) { FestYearLookSheet() }

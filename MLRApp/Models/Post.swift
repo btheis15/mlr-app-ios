@@ -132,8 +132,9 @@ struct ContentReport: Codable, Identifiable {
 
 // MARK: - Comment reactions (migration 0223)
 
-/// Palette for comment reactions (matches web + chat order).
-let commentReactionEmojis = ["👍", "❤️", "😂", "😮", "😢", "🎉"]
+/// One reaction palette for posts AND comments (the post set).
+let postReactionEmojis = ["❤️", "👍", "😂", "🙌", "🎉"]
+let commentReactionEmojis = postReactionEmojis
 
 /// One row of `comment_reactions`; PK (comment_id, user_id) — one emoji per
 /// member per comment. `name` comes from the joined profile (may be nil).

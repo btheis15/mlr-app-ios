@@ -24,7 +24,7 @@ struct AdminHelpContactView: View {
 
     private var phoneValid: Bool {
         let p = draft.value.phone.trimmingCharacters(in: .whitespaces)
-        return p.isEmpty || p.range(of: #"^\+[1-9][0-9]{7,14}$"#, options: .regularExpression) != nil
+        return p.isEmpty || PhoneFormat.normalize(p) != nil
     }
     private var emailValid: Bool {
         let e = draft.value.email.trimmingCharacters(in: .whitespaces)
@@ -35,10 +35,10 @@ struct AdminHelpContactView: View {
         Form {
             Section {
                 EditorTextField("Name", text: $draft.value.name, placeholder: "e.g. Pat", limit: 60)
-                EditorTextField("Phone", text: $draft.value.phone, placeholder: "+17155551234",
+                EditorTextField("Phone", text: $draft.value.phone, placeholder: "Any format, e.g. 715 453 3130",
                                 keyboard: .phonePad, autocapitalize: false)
                 if !phoneValid {
-                    Text("Use international format, e.g. +17155551234.")
+                    Text("That doesn\u{2019}t look like a real phone number.")
                         .font(.caption).foregroundStyle(Color.mlrDanger)
                 }
                 EditorTextField("Email", text: $draft.value.email, placeholder: "you@email.com",
@@ -50,7 +50,7 @@ struct AdminHelpContactView: View {
             } header: {
                 Text("Help page contact")
             } footer: {
-                Text("Phone in E.164 format (+1…). Who the Help page says to text or call when someone is stuck. Leave all blank and the Help page just says to ask a family admin.")
+                Text("Phone in any format; it is saved in international form. Who the Help page says to text or call when someone is stuck. Leave all blank and the Help page just says to ask a family admin.")
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -87,7 +87,8 @@ struct AdminHelpContactView: View {
         defer { saving = false }
         let v = draft.value
         let name = v.name.trimmingCharacters(in: .whitespaces)
-        let phone = v.phone.trimmingCharacters(in: .whitespaces)
+        let rawPhone = v.phone.trimmingCharacters(in: .whitespaces)
+        let phone = rawPhone.isEmpty ? "" : (PhoneFormat.normalize(rawPhone)?.e164 ?? rawPhone)
         let email = v.email.trimmingCharacters(in: .whitespaces)
         do {
             // The columns are NOT NULL DEFAULT '' (migration 0082): blank is "",

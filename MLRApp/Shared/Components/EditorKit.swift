@@ -143,6 +143,8 @@ struct EditorSheet<Content: View>: View {
     var body: some View {
         NavigationStack {
             Form { content() }
+                .scrollContentBackground(.hidden)
+                .background(Color.mlrSurface)
                 .disabled(isSaving)
                 .scrollDismissesKeyboard(.interactively)
                 .safeAreaInset(edge: .top, spacing: 0) {
@@ -292,7 +294,19 @@ private struct EditorUnsavedGuard: ViewModifier {
     }
 }
 
+/// Leading "Done" for a pushed screen presented inside a sheet's NavigationStack.
+private struct SheetDoneButton: ViewModifier {
+    @Environment(\.dismiss) private var dismiss
+    func body(content: Content) -> some View {
+        content.toolbar {
+            ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
+        }
+    }
+}
+
 extension View {
+    /// Adds a "Done" close button (for sheets that wrap a screen in a NavigationStack).
+    func sheetDoneButton() -> some View { modifier(SheetDoneButton()) }
     /// Unsaved-changes guard for pushed editor screens (see EditorUnsavedGuard).
     func editorUnsavedGuard(isDirty: Bool) -> some View { modifier(EditorUnsavedGuard(isDirty: isDirty)) }
 }
@@ -813,7 +827,7 @@ struct EditorColorField: View {
         EditorFieldRow(label: label) {
             VStack(alignment: .leading, spacing: MLRSpacing.sm) {
                 HStack {
-                    ColorPicker(hex ?? "Default", selection: colorBinding, supportsOpacity: false)
+                    ColorPicker(hex ?? "Default \u{00B7} \(Self.hexString(defaultColor))", selection: colorBinding, supportsOpacity: false)
                     if hex != nil {
                         Button("Default") { hex = nil; Haptics.select() }.buttonStyle(.borderless)
                     }

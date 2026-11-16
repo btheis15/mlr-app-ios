@@ -159,7 +159,7 @@ private struct HomeLogoEditPencil: ViewModifier {
             }
             // A sheet, not a navigationDestination: this sits inside Home's lazy stack.
             .sheet(isPresented: $open) {
-                NavigationStack { AppImagesAdminView() }
+                NavigationStack { AppImagesAdminView().sheetDoneButton() }
             }
             .task(id: env.currentProfile?.id) {
                 guard env.isSignedIn, !env.isAdmin else { return }
