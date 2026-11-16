@@ -127,6 +127,10 @@ struct AdminView: View {
                  description: "Edit cabins, rooms, beds, and availability",
                  icon: "house.lodge", color: Color.mlrPrimary, keywords: "rooms beds",
                  action: push { AdminCabinDetails() }),
+            Tool(id: "local-places", title: "Local Places",
+                 description: "Add, edit, reorder or hide the nearby spots members see",
+                 icon: "mappin.and.ellipse", color: Color.mlrInfo, keywords: "restaurants golf coffee phone menu",
+                 action: push { AdminLocalPlacesView() }),
         ]
 
         var system: [Tool] = [
@@ -156,7 +160,7 @@ struct AdminView: View {
             ToolGroup(id: "content", title: "Content", icon: "square.and.pencil",
                   blurb: "What members see and hear from the resort", tools: content),
             ToolGroup(id: "places", title: "Places & things", icon: "house.lodge.fill",
-                  blurb: "Cabins and stays", tools: places),
+                  blurb: "Cabins, stays and nearby places", tools: places),
             ToolGroup(id: "system", title: "System", icon: "gearshape.fill",
                   blurb: "Contact details, tests and server controls", tools: system),
         ]
