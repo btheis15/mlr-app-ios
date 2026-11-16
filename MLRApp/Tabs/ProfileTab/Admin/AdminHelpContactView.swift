@@ -10,90 +10,106 @@ import Supabase
 
 struct AdminHelpContactView: View {
     @Environment(AppEnvironment.self) private var env
-    @State private var name:  String = ""
-    @State private var phone: String = ""
-    @State private var email: String = ""
-    @State private var saving = false
-    @State private var saveMessage: String? = nil
 
-    private var isDirty: Bool {
-        name  != env.helpContactName ||
-        phone != env.helpContactPhone ||
-        email != env.helpContactEmail
+    struct Values: Equatable {
+        var name = ""
+        var phone = ""
+        var email = ""
+    }
+
+    @State private var draft = EditorDraft(Values())
+    @State private var seeded = false
+    @State private var saving = false
+    @State private var errorMessage: String?
+
+    private var phoneValid: Bool {
+        let p = draft.value.phone.trimmingCharacters(in: .whitespaces)
+        return p.isEmpty || PhoneFormat.normalize(p) != nil
+    }
+    private var emailValid: Bool {
+        let e = draft.value.email.trimmingCharacters(in: .whitespaces)
+        return e.isEmpty || e.range(of: #"^[^@\s]+@[^@\s]+\.[^@\s]+$"#, options: .regularExpression) != nil
     }
 
     var body: some View {
         Form {
             Section {
-                LabeledContent("Name") {
-                    TextField("Brian", text: $name)
-                        .multilineTextAlignment(.trailing)
+                EditorTextField("Name", text: $draft.value.name, placeholder: "e.g. Pat", limit: 60)
+                EditorTextField("Phone", text: $draft.value.phone, placeholder: "Any format, e.g. 715 453 3130",
+                                keyboard: .phonePad, autocapitalize: false)
+                if !phoneValid {
+                    Text("That doesn\u{2019}t look like a real phone number.")
+                        .font(.caption).foregroundStyle(Color.mlrDanger)
                 }
-                LabeledContent("Phone") {
-                    TextField("+17155551234", text: $phone)
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.phonePad)
-                }
-                LabeledContent("Email") {
-                    TextField("you@email.com", text: $email)
-                        .multilineTextAlignment(.trailing)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                EditorTextField("Email", text: $draft.value.email, placeholder: "you@email.com",
+                                keyboard: .emailAddress, autocapitalize: false)
+                if !emailValid {
+                    Text("That doesn\u{2019}t look like an email address.")
+                        .font(.caption).foregroundStyle(Color.mlrDanger)
                 }
             } header: {
                 Text("Help page contact")
             } footer: {
-                Text("Phone in E.164 format (+1…). Who the Help page says to text or call when someone is stuck.")
+                Text("Phone in any format; it is saved in international form. Who the Help page says to text or call when someone is stuck. Leave all blank and the Help page just says to ask a family admin.")
             }
-
-            if let msg = saveMessage {
-                Section {
-                    Text(msg)
-                        .font(.footnote)
-                        .foregroundStyle(msg.hasPrefix("Saved") ? Color.mlrPrimary : Color.mlrDanger)
-                }
+        }
+        .safeAreaInset(edge: .top, spacing: 0) {
+            if let errorMessage {
+                EditorErrorBanner(message: errorMessage) { Task { await save() } }
             }
         }
         .navigationTitle("Help Contact")
         .navigationBarTitleDisplayMode(.large)
+        .editorUnsavedGuard(isDirty: draft.isDirty)
         .toolbar {
             ToolbarItem(placement: .confirmationAction) {
-                Button(saving ? "Saving…" : "Save") {
-                    Task { await save() }
+                if saving {
+                    ProgressView()
+                } else {
+                    Button("Save") { Task { await save() } }
+                        .fontWeight(.semibold)
+                        .disabled(!draft.isDirty || !phoneValid || !emailValid)
                 }
-                .disabled(!isDirty || saving)
             }
         }
         .onAppear {
-            name  = env.helpContactName
-            phone = env.helpContactPhone
-            email = env.helpContactEmail
+            guard !seeded else { return }
+            seeded = true
+            draft = EditorDraft(Values(name: env.helpContactName, phone: env.helpContactPhone,
+                                       email: env.helpContactEmail))
         }
     }
 
     private func save() async {
+        guard !saving, draft.isDirty, phoneValid, emailValid else { return }
         saving = true
-        saveMessage = nil
+        errorMessage = nil
         defer { saving = false }
+        let v = draft.value
+        let name = v.name.trimmingCharacters(in: .whitespaces)
+        let rawPhone = v.phone.trimmingCharacters(in: .whitespaces)
+        let phone = rawPhone.isEmpty ? "" : (PhoneFormat.normalize(rawPhone)?.e164 ?? rawPhone)
+        let email = v.email.trimmingCharacters(in: .whitespaces)
         do {
+            // The columns are NOT NULL DEFAULT '' (migration 0082): blank is "",
+            // never null. resort_config has a single row (boolean id, default true).
             let params: [String: AnyJSON] = [
-                "help_contact_name":  name.isEmpty  ? .null : .string(name),
-                "help_contact_phone": phone.isEmpty ? .null : .string(phone),
-                "help_contact_email": email.isEmpty ? .null : .string(email),
+                "help_contact_name":  .string(name),
+                "help_contact_phone": .string(phone),
+                "help_contact_email": .string(email),
             ]
-            // resort_config has a single row — upsert on id=1 (or the first row).
             try await supabase
                 .from("resort_config")
                 .upsert(params, onConflict: "id")
                 .execute()
-            env.helpContactName  = name.isEmpty  ? HelpContact.name  : name
-            env.helpContactPhone = phone.isEmpty ? HelpContact.phone : phone
-            env.helpContactEmail = email.isEmpty ? HelpContact.email : email
-            saveMessage = "Saved."
+            env.helpContactName  = name
+            env.helpContactPhone = phone
+            env.helpContactEmail = email
+            draft = EditorDraft(Values(name: name, phone: phone, email: email))
+            Haptics.success()
         } catch {
-            saveMessage = "Couldn't save — check your connection."
-            print("[AdminHelpContactView] save error: \(error)")
+            errorMessage = "Couldn\u{2019}t save. \(EditorError.message(error))"
+            Haptics.error()
         }
     }
 }

@@ -194,12 +194,16 @@ struct EventWeatherForecastSection: View {
 
 // MARK: - Attribution (required by Apple's WeatherKit terms)
 
+// Only shown when WeatherKit actually supplied data on screen; Open-Meteo
+// fallback forecasts carry no Apple branding.
+
 struct WeatherAttributionView: View {
     @State private var attribution: WeatherAttribution?
+    private var service = WeatherService.shared
 
     var body: some View {
         Group {
-            if let attribution {
+            if let attribution, service.hasWeatherKitData {
                 HStack(spacing: 4) {
                     AsyncImage(url: attribution.combinedMarkLightURL) { image in
                         image.resizable().scaledToFit()
@@ -214,7 +218,9 @@ struct WeatherAttributionView: View {
             }
         }
         .task {
-            attribution = try? await WeatherKit.WeatherService.shared.attribution
+            attribution = try? await withWeatherTimeout(seconds: 8) {
+                try await WeatherKit.WeatherService.shared.attribution
+            }
         }
     }
 }

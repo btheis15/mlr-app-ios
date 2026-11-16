@@ -1,151 +1,313 @@
 import SwiftUI
+import MapKit
+import CoreLocation
+import Kingfisher
 
 // MARK: - LocalPlacesView
-// Nearby golf, food & drink, and coffee. Mirrors /local-places on the web:
-// collapsible category sections (each a tappable "card"), with per-place quick
-// actions — tee-time booking / rates, menu, online order, call, website, and
-// Apple Maps directions.
+// Nearby golf, food & drink, coffee and anything else the admins add. Backed by
+// the `local_places` table (LocalPlacesService); falls back to the in-code list
+// when the table cannot be read. These are third-party businesses near the
+// resort: nothing here is the resort's own address, wifi or check-in info.
+
+extension LocalPlace {
+    var accentColor: Color { Self.color(forAccent: accent) }
+    static func color(forAccent accent: String) -> Color {
+        switch accent {
+        case "lake": return .mlrLake
+        case "campfire": return .mlrCampfire
+        case "sun": return .mlrSun
+        case "dusk": return .mlrDusk
+        default: return .mlrPrimary
+        }
+    }
+    static let accentNames = ["primary", "lake", "campfire", "sun", "dusk"]
+}
 
 struct LocalPlacesView: View {
+    @Environment(AppEnvironment.self) private var env
+    @State private var search = ""
+    @State private var editing: LocalPlace?
+    @State private var adding = false
 
-    private var golfPlaces: [LocalPlace]   { LocalPlace.all.filter { $0.category == .golf } }
-    private var diningPlaces: [LocalPlace] { LocalPlace.all.filter { $0.category == .dining } }
-    private var coffeePlaces: [LocalPlace] { LocalPlace.all.filter { $0.category == .coffee } }
+    private var service: LocalPlacesService { env.localPlacesService }
+    private var canEdit: Bool { env.isAdmin && service.isEditable }
+
+    private var filtered: [LocalPlace] {
+        let q = search.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !q.isEmpty else { return service.visiblePlaces }
+        return service.visiblePlaces.filter {
+            $0.name.localizedCaseInsensitiveContains(q)
+                || ($0.category ?? "").localizedCaseInsensitiveContains(q)
+                || ($0.blurb ?? "").localizedCaseInsensitiveContains(q)
+        }
+    }
+
+    /// Golf, food, coffee first (in that order), then other groups A to Z.
+    private var sections: [(group: String, places: [LocalPlace])] {
+        let grouped = Dictionary(grouping: filtered, by: \.placeGroup)
+        let known = LocalPlace.knownGroups.filter { grouped[$0] != nil }
+        let others = grouped.keys.filter { !LocalPlace.knownGroups.contains($0) }.sorted()
+        return (known + others).map { g in
+            (g, (grouped[g] ?? []).sorted { $0.position < $1.position })
+        }
+    }
 
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if !golfPlaces.isEmpty {
-                    PlacesSection(title: "Golf", emoji: "⛳", places: golfPlaces)
+            LazyVStack(alignment: .leading, spacing: 12) {
+                if env.isAdmin && service.hasLoaded && !service.isEditable {
+                    Label("Editing becomes available once the database update is applied. Showing the built-in list for now.",
+                          systemImage: "info.circle")
+                        .font(.mlrScaled(13))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .cardStyle()
                 }
-                if !diningPlaces.isEmpty {
-                    PlacesSection(title: "Food & Drink", emoji: "🍽️", places: diningPlaces)
+
+                if !service.hasLoaded {
+                    ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
+                } else if service.visiblePlaces.isEmpty {
+                    VStack(spacing: 8) {
+                        Image(systemName: "mappin.slash").font(.mlrScaled(30)).foregroundStyle(Color.mlrTextSubtle)
+                        Text("No local places yet").font(.mlrScaled(16, weight: .semibold)).foregroundStyle(Color.mlrText)
+                        Text("Nearby spots will show up here once they are added.")
+                            .font(.mlrScaled(13)).foregroundStyle(Color.mlrTextMuted)
+                            .multilineTextAlignment(.center)
+                    }
+                    .frame(maxWidth: .infinity).padding(.top, 40)
+                } else if filtered.isEmpty {
+                    ContentUnavailableView.search(text: search)
                 }
-                if !coffeePlaces.isEmpty {
-                    PlacesSection(title: "Coffee", emoji: "☕", places: coffeePlaces)
+
+                ForEach(sections, id: \.group) { section in
+                    VStack(alignment: .leading, spacing: 10) {
+                        HStack(spacing: 8) {
+                            Text(LocalPlace.groupEmoji(section.group)).font(.mlrScaled(20))
+                            Text(LocalPlace.groupTitle(section.group))
+                                .font(.mlrSectionTitle)
+                                .foregroundStyle(Color.mlrText)
+                            Text("\(section.places.count)")
+                                .font(.mlrScaled(12, weight: .semibold))
+                                .foregroundStyle(Color.mlrTextMuted)
+                                .contentTransition(.numericText())
+                                .padding(.horizontal, 8).padding(.vertical, 2)
+                                .background(Color.mlrPrimaryLight, in: Capsule())
+                        }
+                        .accessibilityAddTraits(.isHeader)
+                        .padding(.top, 6)
+
+                        ForEach(section.places) { place in
+                            LocalPlaceCard(place: place,
+                                           onEdit: canEdit ? { editing = place } : nil)
+                        }
+                    }
+                }
+
+                if canEdit {
+                    Button { adding = true; Haptics.tap() } label: {
+                        Label("Add a place", systemImage: "plus.circle.fill")
+                            .font(.mlrScaled(15, weight: .semibold))
+                            .frame(maxWidth: .infinity, minHeight: 44)
+                    }
+                    .buttonStyle(.pressable)
+                    .foregroundStyle(Color.mlrPrimary)
+                    .cardStyle()
+                    .padding(.top, 4)
                 }
             }
             .padding(16)
         }
-        .background(Color.mlrSurface)
+        .contentMargins(.bottom, 96, for: .scrollContent)
+        .mlrBackdrop()
         .navigationTitle("Local Places")
         .navigationBarTitleDisplayMode(.large)
-    }
-}
-
-// MARK: - Collapsible section (a tappable category card)
-
-private struct PlacesSection: View {
-    let title: String
-    let emoji: String
-    let places: [LocalPlace]
-
-    @State private var expanded = false
-
-    var body: some View {
-        VStack(spacing: 10) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.22)) { expanded.toggle() }
-            } label: {
-                HStack(spacing: 10) {
-                    Text(emoji).font(.mlrScaled(20))
-                    Text(title)
-                        .font(.mlrScaled(17, weight: .bold))
-                        .foregroundStyle(Color.mlrText)
-                    Text("\(places.count)")
-                        .font(.mlrScaled(12, weight: .semibold))
-                        .foregroundStyle(Color.mlrTextMuted)
-                        .padding(.horizontal, 8).padding(.vertical, 2)
-                        .background(Color.mlrPrimaryLight)
-                        .clipShape(Capsule())
-                    Spacer()
-                    Image(systemName: "chevron.right")
-                        .font(.mlrScaled(13, weight: .semibold))
-                        .foregroundStyle(Color.mlrTextSubtle)
-                        .rotationEffect(.degrees(expanded ? 90 : 0))
-                }
-                .padding(16)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.pressable)
-            .cardStyle()
-
-            if expanded {
-                ForEach(places) { place in
-                    LocalPlaceCard(place: place)
-                }
-            }
+        .mlrEditToggle(canEdit: canEdit)
+        .searchable(text: $search, prompt: "Search places")
+        .task { await service.load(env: env) }
+        .refreshable { await service.load(env: env) }
+        .sheet(item: $editing) { place in
+            LocalPlaceEditor(place: place, isNew: false)
+        }
+        .sheet(isPresented: $adding) {
+            LocalPlaceEditor(place: .blank(group: LocalPlace.knownGroups[1]), isNew: true)
         }
     }
 }
 
 // MARK: - Card
 
-private struct LocalPlaceCard: View {
+struct LocalPlaceCard: View {
     let place: LocalPlace
+    var onEdit: (() -> Void)? = nil
+
+    private var accent: Color { place.accentColor }
+
+    private func nonEmpty(_ s: String?) -> String? {
+        let t = s?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return t.isEmpty ? nil : t
+    }
+
+    private func url(_ s: String?) -> URL? { nonEmpty(s).flatMap { URL(string: $0) } }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            VStack(alignment: .leading, spacing: 2) {
-                Text(place.name)
-                    .font(.mlrScaled(16, weight: .semibold))
-                    .foregroundStyle(Color.mlrText)
-                if let locality = place.address {
-                    Text(locality)
-                        .font(.mlrScaled(12))
+        VStack(alignment: .leading, spacing: 0) {
+            if let photo = url(place.imageUrl) {
+                KFImage(photo)
+                    .resizable().scaledToFill()
+                    .frame(height: 150).frame(maxWidth: .infinity)
+                    .clipped()
+                    .accessibilityHidden(true)
+            }
+            VStack(alignment: .leading, spacing: 10) {
+                HStack(alignment: .top, spacing: 12) {
+                    if url(place.imageUrl) == nil {
+                        IconTile(emoji: place.displayEmoji, accent: accent, size: 40)
+                            .accessibilityHidden(true)
+                    }
+                    VStack(alignment: .leading, spacing: 3) {
+                        if let cat = nonEmpty(place.category) {
+                            Eyebrow(cat, color: accent)
+                        }
+                        HStack(spacing: 6) {
+                            Text(place.name.isEmpty ? "Name" : place.name)
+                                .font(.mlrCardTitle)
+                                .foregroundStyle(Color.mlrText)
+                                .lineLimit(2)
+                            if !place.isActive {
+                                Text("Hidden")
+                                    .font(.mlrScaled(10, weight: .bold))
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(Color.mlrWarning.opacity(0.18), in: Capsule())
+                                    .foregroundStyle(Color.mlrWarning)
+                            }
+                        }
+                        if let loc = nonEmpty(place.locality) {
+                            Label(loc, systemImage: "mappin.and.ellipse")
+                                .font(.mlrSecondary)
+                                .foregroundStyle(Color.mlrTextMuted)
+                        }
+                    }
+                    Spacer(minLength: 0)
+                    if let onEdit, MLREditModeStore.shared.isOn {
+                        Button(action: onEdit) {
+                            Image(systemName: "pencil.circle.fill")
+                                .font(.mlrScaled(24))
+                                .foregroundStyle(Color.mlrPrimary)
+                                .frame(width: 44, height: 44)
+                        }
+                        .buttonStyle(.pressable)
+                        .accessibilityLabel("Edit \(place.name)")
+                        .padding(.top, -8).padding(.trailing, -8)
+                    }
+                }
+
+                if let blurb = nonEmpty(place.blurb) {
+                    Text(blurb)
+                        .font(.mlrSecondary)
                         .foregroundStyle(Color.mlrTextMuted)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+
+                actions
+            }
+            .padding(14)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .mlrCard(.plain, padding: 0)
+        .opacity(place.isActive ? 1 : 0.7)
+        .contextMenu {
+            if let phone = nonEmpty(place.phoneDisplay) ?? nonEmpty(place.phoneTel) {
+                Button { UIPasteboard.general.string = phone; Haptics.success() } label: {
+                    Label("Copy phone", systemImage: "phone")
                 }
             }
-
-            if let blurb = place.description {
-                Text(blurb)
-                    .font(.mlrScaled(14))
-                    .foregroundStyle(Color.mlrTextMuted)
-                    .fixedSize(horizontal: false, vertical: true)
+            if let addr = nonEmpty(place.address) {
+                Button { UIPasteboard.general.string = addr; Haptics.success() } label: {
+                    Label("Copy address", systemImage: "mappin")
+                }
             }
+            ShareLink(item: shareText) { Label("Share", systemImage: "square.and.arrow.up") }
+        }
+    }
 
-            // Quick-action chips
+    private var shareText: String {
+        [place.name, nonEmpty(place.address) ?? nonEmpty(place.locality),
+         nonEmpty(place.phoneDisplay), nonEmpty(place.website)]
+            .compactMap { $0 }.joined(separator: "\n")
+    }
+
+    @ViewBuilder private var actions: some View {
+        let hasAny = nonEmpty(place.internalHref) == "/tee-times" || url(place.bookingUrl) != nil
+            || url(place.ratesUrl) != nil || url(place.orderUrl) != nil || url(place.menuUrl) != nil
+            || nonEmpty(place.phoneTel) != nil || url(place.website) != nil
+            || nonEmpty(place.address) != nil || nonEmpty(place.locality) != nil
+        if hasAny {
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
-                    let isGolf = place.category == .golf
-                    if place.id == "inshalla" {
-                        // Inshalla gets the in-app Tee Times page (quick-book day
-                        // chips + call + Daily Deals) — web parity.
+                    if nonEmpty(place.internalHref) == "/tee-times" {
+                        // In-app hand-off to the Tee Times page.
                         NavigationLink(destination: TeeTimesView()) {
-                            PlaceChip(label: "Tee Times", icon: "calendar")
-                        }
-                    } else if let raw = place.orderUrl, let url = URL(string: raw) {
-                        Link(destination: url) {
-                            PlaceChip(label: isGolf ? "Tee Times" : "Order",
-                                      icon:  isGolf ? "calendar"  : "cart")
+                            PlaceChip(label: nonEmpty(place.internalCta) ?? "Tee Times", icon: "calendar")
                         }
                     }
-                    if let raw = place.ratesUrl, let url = URL(string: raw) {
-                        Link(destination: url) { PlaceChip(label: "See Rates", icon: "dollarsign.circle") }
+                    if let u = url(place.bookingUrl) {
+                        Link(destination: u) {
+                            PlaceChip(label: nonEmpty(place.bookingCta) ?? "Book tee time", icon: "calendar")
+                        }
                     }
-                    if let raw = place.menuUrl, let url = URL(string: raw) {
-                        Link(destination: url) { PlaceChip(label: "Menu", icon: "list.bullet") }
+                    if let u = url(place.ratesUrl) {
+                        Link(destination: u) {
+                            PlaceChip(label: nonEmpty(place.ratesCta) ?? "See rates", icon: "dollarsign.circle")
+                        }
                     }
-                    if let phone = place.phone, let url = URL(string: "tel:\(phone)") {
-                        Link(destination: url) { PlaceChip(label: "Call", icon: "phone") }
+                    if let u = url(place.orderUrl) {
+                        Link(destination: u) { PlaceChip(label: "Order", icon: "cart") }
                     }
-                    if let raw = place.website, let url = URL(string: raw) {
-                        Link(destination: url) { PlaceChip(label: "Website", icon: "safari") }
+                    if let u = url(place.menuUrl) {
+                        Link(destination: u) { PlaceChip(label: "Menu", icon: "list.bullet") }
                     }
-                    if let address = place.address {
-                        Button {
-                            MapsHelper.directions(toAddress: "\(place.name), \(address)")
-                        } label: {
+                    if let tel = nonEmpty(place.phoneTel), let u = URL(string: "tel:\(tel)") {
+                        Link(destination: u) { PlaceChip(label: "Call", icon: "phone") }
+                    }
+                    if let u = url(place.website) {
+                        Link(destination: u) { PlaceChip(label: "Website", icon: "safari") }
+                    }
+                    if nonEmpty(place.address) != nil || nonEmpty(place.locality) != nil {
+                        Button { Self.openDirections(place) } label: {
                             PlaceChip(label: "Directions", icon: "map")
                         }
                         .buttonStyle(.pressable)
                     }
                 }
+                .padding(.trailing, 24)
+            }
+            .mask(
+                HStack(spacing: 0) {
+                    Color.black
+                    LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                        .frame(width: 28)
+                }
+            )
+        }
+    }
+
+    /// Apple Maps via MKMapItem from the address; a name + locality query when
+    /// there is no address (or it cannot be resolved).
+    static func openDirections(_ place: LocalPlace) {
+        let addr = place.address?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let loc = place.locality?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        let fallback = [place.name, loc.isEmpty ? nil : loc].compactMap { $0 }.joined(separator: ", ")
+        guard !addr.isEmpty else { MapsHelper.directions(toAddress: fallback); return }
+        Task { @MainActor in
+            if let mark = try? await CLGeocoder().geocodeAddressString(addr).first {
+                let item = MKMapItem(placemark: MKPlacemark(placemark: mark))
+                item.name = place.name
+                item.openInMaps(launchOptions: [MKLaunchOptionsDirectionsModeKey: MKLaunchOptionsDirectionsModeDriving])
+            } else {
+                MapsHelper.directions(toAddress: "\(place.name), \(addr)")
             }
         }
-        .padding(14)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .cardStyle()
     }
 }
 
@@ -158,14 +320,14 @@ private struct PlaceChip: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: icon)
-                .font(.mlrScaled(11, weight: .semibold))
+                .font(.mlrScaled(13, weight: .semibold))
             Text(label)
                 .font(.mlrScaled(13, weight: .semibold))
         }
         .foregroundStyle(Color.mlrPrimary)
         .padding(.horizontal, 12)
-        .padding(.vertical, 7)
-        .background(Color.mlrPrimaryLight)
+        .frame(height: 32)
+        .background(Color.mlrPrimary.opacity(0.10))
         .clipShape(Capsule())
     }
 }

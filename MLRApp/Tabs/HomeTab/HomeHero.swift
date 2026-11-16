@@ -56,6 +56,7 @@ struct HomeHero: View {
                     SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
                         .scaledToFit()
                         .frame(maxWidth: 150)
+                        .overlay { SeasonalLogoFX(season: .current(), progress: 1) }
                         .shadow(.medium)
                     Text("Muskellunge Lake Resort")
                         .font(.script(30))

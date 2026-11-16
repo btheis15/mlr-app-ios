@@ -10,10 +10,15 @@ import Supabase
 final class PollsService {
     var polls: [Poll] = []
     var isLoading = false
+    private var freshness = FreshnessWindow()
 
     // MARK: - Fetch
 
-    func fetchPolls(userId: UUID?) async {
+    /// `ifStale: true` skips the network when polls were fetched in the last 30s.
+    func fetchPolls(userId: UUID?, ifStale: Bool = false) async {
+        let cacheKey = DiskCache.key("polls", user: userId)
+        if polls.isEmpty, let cached = DiskCache.load([Poll].self, key: cacheKey) { polls = cached }
+        if ifStale && freshness.isFresh() { return }
         isLoading = true
         defer { isLoading = false }
         do {
@@ -38,7 +43,7 @@ final class PollsService {
                 if let uid = userId, v.userId == uid { myVotes[v.pollId] = v.optionId }
             }
 
-            polls = rows.map { row in
+            let fresh = rows.map { row in
                 Poll(
                     id: row.id,
                     question: row.question,
@@ -59,6 +64,9 @@ final class PollsService {
                     myVoteOptionId: myVotes[row.id]
                 )
             }
+            applyRefreshed { polls = fresh }
+            freshness.touch()
+            DiskCache.save(fresh, key: cacheKey)
         } catch {
             print("[PollsService] fetchPolls error: \(error)")
         }
@@ -66,21 +74,29 @@ final class PollsService {
 
     // MARK: - Vote
 
+    /// Optimistic: the tally moves at once and is restored if the server refuses.
     func vote(pollId: UUID, optionId: UUID) async throws {
         struct VoteParams: Encodable { let p_poll: String; let p_option: String }
-        try await supabase
-            .rpc("cast_poll_vote", params: VoteParams(p_poll: pollId.uuidString, p_option: optionId.uuidString))
-            .execute()
-        // Optimistic update
-        guard let idx = polls.firstIndex(where: { $0.id == pollId }) else { return }
-        let prev = polls[idx].myVoteOptionId
-        if let prev, let prevIdx = polls[idx].options.firstIndex(where: { $0.id == prev }) {
-            polls[idx].options[prevIdx].voteCount = max(0, polls[idx].options[prevIdx].voteCount - 1)
+        let snapshot = polls
+        if let idx = polls.firstIndex(where: { $0.id == pollId }) {
+            let prev = polls[idx].myVoteOptionId
+            guard prev != optionId else { return }   // already my vote
+            if let prev, let prevIdx = polls[idx].options.firstIndex(where: { $0.id == prev }) {
+                polls[idx].options[prevIdx].voteCount = max(0, polls[idx].options[prevIdx].voteCount - 1)
+            }
+            if let newIdx = polls[idx].options.firstIndex(where: { $0.id == optionId }) {
+                polls[idx].options[newIdx].voteCount += 1
+            }
+            polls[idx].myVoteOptionId = optionId
         }
-        if let newIdx = polls[idx].options.firstIndex(where: { $0.id == optionId }) {
-            polls[idx].options[newIdx].voteCount += 1
+        do {
+            try await supabase
+                .rpc("cast_poll_vote", params: VoteParams(p_poll: pollId.uuidString, p_option: optionId.uuidString))
+                .execute()
+        } catch {
+            polls = snapshot
+            throw error
         }
-        polls[idx].myVoteOptionId = optionId
     }
 
     // MARK: - Create

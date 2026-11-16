@@ -54,7 +54,7 @@ struct MemberSheetView: View {
                 }
                 .padding(20)
             }
-            .background(Color.mlrSurface)
+            .mlrBackdrop()
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
@@ -526,7 +526,7 @@ private struct EditProfilePlaceholder: View {
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
         .navigationTitle("Edit Profile")
         .navigationBarTitleDisplayMode(.inline)
     }

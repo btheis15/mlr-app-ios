@@ -120,7 +120,8 @@ private struct AppImageRow: View {
             let url = try await env.mediaService.uploadSiteImage(image: uiImage, key: key)
             try await env.appImagesService.save(key: key, url: url)
         } catch {
-            self.error = "Upload failed. \(error.localizedDescription)"
+            self.error = "Upload failed. \(EditorError.message(error))"
+            Haptics.error()
         }
     }
 
@@ -129,7 +130,45 @@ private struct AppImageRow: View {
         do {
             try await env.appImagesService.reset(key: key)
         } catch {
-            self.error = "Couldn't reset to default."
+            self.error = "Couldn\u{2019}t reset to default. \(EditorError.message(error))"
+            Haptics.error()
         }
     }
+}
+
+// MARK: - In-place pencil on the Home logo
+
+/// Puts a small pencil on the Home logo for whoever may edit app images
+/// (admins, plus fest editors via `can_edit_fest`, the same rule
+/// `AppImagesService.canEdit()` documents). Hidden while previewing as someone
+/// else. Opens the App Images screen as a sheet.
+private struct HomeLogoEditPencil: ViewModifier {
+    @Environment(AppEnvironment.self) private var env
+    @State private var canEdit = false
+    @State private var open = false
+
+    func body(content: Content) -> some View {
+        content
+            // Bottom-trailing: the leading edge holds the admin date preview and
+            // the trailing centre holds Search.
+            .overlay(alignment: .bottomTrailing) {
+                if (env.isAdmin || canEdit) && !env.isPreviewing {
+                    EditPencil("app images") { open = true }
+                        .padding(.trailing, 8)
+                }
+            }
+            // A sheet, not a navigationDestination: this sits inside Home's lazy stack.
+            .sheet(isPresented: $open) {
+                NavigationStack { AppImagesAdminView().sheetDoneButton() }
+            }
+            .task(id: env.currentProfile?.id) {
+                guard env.isSignedIn, !env.isAdmin else { return }
+                canEdit = await env.appImagesService.canEdit()
+            }
+    }
+}
+
+extension View {
+    /// See `HomeLogoEditPencil`.
+    func homeLogoEditPencil() -> some View { modifier(HomeLogoEditPencil()) }
 }

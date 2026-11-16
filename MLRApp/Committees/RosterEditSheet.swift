@@ -20,144 +20,167 @@ struct RosterEditSheet: View {
     let roleBased: Bool
     let onSaved: () -> Void
 
-    @State private var name = ""
-    @State private var email = ""
-    @State private var phone = ""
-    @State private var linkedUserId: UUID?
-    @State private var linkedName: String?
-    @State private var selectedAreas: Set<String> = []
-    @State private var leadAreas: Set<String> = []
-    @State private var isCommitteeLead = false
+    struct Values: Equatable {
+        var name = ""
+        var email = ""
+        var phone = ""
+        var linkedUserId: UUID?
+        var linkedName: String?
+        var selectedAreas: Set<String> = []
+        var leadAreas: Set<String> = []
+        var isCommitteeLead = false
+    }
 
+    @State private var draft: EditorDraft<Values>
     @State private var showPicker = false
-    @State private var saving = false
-    @State private var error: String?
+    @State private var removing = false
+    @State private var confirmRemove = false
+    @State private var removeError: String?
+
+    init(committee: Committee, entry: CommitteeRosterEntry?, areas: [String], roleBased: Bool,
+         onSaved: @escaping () -> Void) {
+        self.committee = committee; self.entry = entry; self.areas = areas
+        self.roleBased = roleBased; self.onSaved = onSaved
+        var v = Values()
+        if let entry {
+            v.name = entry.name
+            v.email = entry.email ?? ""
+            v.phone = entry.phone ?? ""
+            v.linkedUserId = entry.linkedUserId
+            v.linkedName = entry.profile?.displayName
+            v.isCommitteeLead = entry.isCommitteeLead
+            for role in entry.roles {
+                if role.hasSuffix(" \u{00B7} Lead") {
+                    let area = String(role.dropLast(" \u{00B7} Lead".count))
+                    v.selectedAreas.insert(area); v.leadAreas.insert(area)
+                } else {
+                    v.selectedAreas.insert(role)
+                }
+            }
+        }
+        _draft = State(initialValue: EditorDraft(v))
+    }
 
     private var isNew: Bool { entry == nil }
-    private var canSave: Bool { !name.trimmingCharacters(in: .whitespaces).isEmpty && !saving }
+    private var canSave: Bool { !draft.value.name.trimmingCharacters(in: .whitespaces).isEmpty && !removing }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                // Primary path: pick someone who already has an app account.
-                Section {
-                    if linkedUserId != nil {
-                        HStack {
-                            Label(linkedName ?? "Linked account", systemImage: "checkmark.circle.fill")
-                                .foregroundStyle(Color.mlrPrimary)
-                            Spacer()
-                            Button("Change") {
-                                linkedUserId = nil
-                                linkedName = nil
-                            }
+        EditorSheet(title: isNew ? "Add member" : "Edit member",
+                    isDirty: draft.isDirty,
+                    canSave: canSave,
+                    save: { try await save() }) {
+            // Primary path: pick someone who already has an app account.
+            Section {
+                if draft.value.linkedUserId != nil {
+                    HStack {
+                        Label(draft.value.linkedName ?? "Linked account", systemImage: "checkmark.circle.fill")
+                            .foregroundStyle(Color.mlrPrimary)
+                        Spacer()
+                        Button("Change") {
+                            draft.value.linkedUserId = nil
+                            draft.value.linkedName = nil
                         }
-                    } else {
-                        Button {
-                            showPicker = true
-                        } label: {
-                            Label("Choose a member", systemImage: "person.crop.circle.badge.checkmark")
-                                .font(.mlrScaled(16, weight: .semibold))
-                                .foregroundStyle(Color.mlrPrimary)
+                    }
+                } else {
+                    Button {
+                        showPicker = true
+                    } label: {
+                        Label("Choose a member", systemImage: "person.crop.circle.badge.checkmark")
+                            .font(.mlrScaled(16, weight: .semibold))
+                            .foregroundStyle(Color.mlrPrimary)
+                    }
+                }
+            } header: {
+                Text("Member")
+            } footer: {
+                Text("Pick someone who has an account — their name, photo, and chat access come with it. Only type the fields below for someone not in the app yet (a one-off).")
+            }
+
+            Section("Details") {
+                TextField("Name", text: $draft.value.name)
+                    .autocorrectionDisabled()
+                TextField("Email (for invite / contact)", text: $draft.value.email)
+                    .keyboardType(.emailAddress)
+                    .textInputAutocapitalization(.never)
+                    .autocorrectionDisabled()
+                TextField("Phone (optional)", text: $draft.value.phone)
+                    .keyboardType(.phonePad)
+            }
+
+            Section {
+                Toggle("Committee lead", isOn: $draft.value.isCommitteeLead)
+                    .tint(Color.mlrPrimary)
+            } footer: {
+                Text("A lead of the whole committee — no subcommittee required. Gets the private Leads chat and can manage this committee's roster.")
+            }
+
+            if roleBased {
+                Section {
+                    ForEach(areas, id: \.self) { area in
+                        HStack(spacing: 10) {
+                            Text(area)
+                            Spacer(minLength: 8)
+                            // The ★ Lead pill only appears once the area is on;
+                            // tap to toggle lead (a role can have many leads).
+                            if draft.value.selectedAreas.contains(area) {
+                                leadPill(for: area)
+                            }
+                            Toggle("", isOn: Binding(
+                                get: { draft.value.selectedAreas.contains(area) },
+                                set: { on in
+                                    if on { draft.value.selectedAreas.insert(area) }
+                                    else { draft.value.selectedAreas.remove(area); draft.value.leadAreas.remove(area) }
+                                }
+                            ))
+                            .labelsHidden()
+                            .tint(Color.mlrPrimary)
                         }
                     }
                 } header: {
-                    Text("Member")
+                    Text("Roles")
                 } footer: {
-                    Text("Pick someone who has an account — their name, photo, and chat access come with it. Only type the fields below for someone not in the app yet (a one-off).")
+                    Text("Turn on the areas this person helps with. Tap ★ Lead to make them a lead of that area (a role can have more than one lead); everyone else is a volunteer.")
                 }
+            }
 
-                Section("Details") {
-                    TextField("Name", text: $name)
-                        .autocorrectionDisabled()
-                    TextField("Email (for invite / contact)", text: $email)
-                        .keyboardType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                    TextField("Phone (optional)", text: $phone)
-                        .keyboardType(.phonePad)
-                }
+            if let removeError {
+                Text(removeError).foregroundStyle(Color.mlrDanger).font(.footnote)
+            }
 
+            if !isNew {
                 Section {
-                    Toggle("Committee lead", isOn: $isCommitteeLead)
-                        .tint(Color.mlrPrimary)
-                } footer: {
-                    Text("A lead of the whole committee — no subcommittee required. Gets the private Leads chat and can manage this committee's roster.")
-                }
-
-                if roleBased {
-                    Section {
-                        ForEach(areas, id: \.self) { area in
-                            HStack(spacing: 10) {
-                                Text(area)
-                                Spacer(minLength: 8)
-                                // The ★ Lead pill only appears once the area is on;
-                                // tap to toggle lead (a role can have many leads).
-                                if selectedAreas.contains(area) {
-                                    leadPill(for: area)
-                                }
-                                Toggle("", isOn: Binding(
-                                    get: { selectedAreas.contains(area) },
-                                    set: { on in
-                                        if on { selectedAreas.insert(area) }
-                                        else { selectedAreas.remove(area); leadAreas.remove(area) }
-                                    }
-                                ))
-                                .labelsHidden()
-                                .tint(Color.mlrPrimary)
-                            }
-                        }
-                    } header: {
-                        Text("Roles")
-                    } footer: {
-                        Text("Turn on the areas this person helps with. Tap ★ Lead to make them a lead of that area (a role can have more than one lead); everyone else is a volunteer.")
+                    Button(role: .destructive) {
+                        confirmRemove = true
+                    } label: {
+                        Label("Remove from committee", systemImage: "person.badge.minus")
                     }
-                }
-
-                if let error {
-                    Text(error).foregroundStyle(Color.mlrDanger).font(.footnote)
-                }
-
-                if !isNew {
-                    Section {
-                        Button(role: .destructive) {
-                            Task { await remove() }
-                        } label: {
-                            Label("Remove from committee", systemImage: "person.badge.minus")
-                        }
-                        .disabled(saving)
-                    }
+                    .disabled(removing)
                 }
             }
-            .navigationTitle(isNew ? "Add member" : "Edit member")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(saving ? "Saving…" : "Save") { Task { await save() } }
-                        .disabled(!canSave)
-                }
-            }
-            .sheet(isPresented: $showPicker) {
-                FestMemberPicker { profile in
-                    linkedUserId = profile.id
-                    linkedName = profile.name
-                    if name.trimmingCharacters(in: .whitespaces).isEmpty { name = profile.name }
-                    if email.trimmingCharacters(in: .whitespaces).isEmpty, !profile.email.isEmpty {
-                        email = profile.email
-                    }
+        }
+        .sheet(isPresented: $showPicker) {
+            FestMemberPicker { profile in
+                draft.value.linkedUserId = profile.id
+                draft.value.linkedName = profile.name
+                if draft.value.name.trimmingCharacters(in: .whitespaces).isEmpty { draft.value.name = profile.name }
+                if draft.value.email.trimmingCharacters(in: .whitespaces).isEmpty, !profile.email.isEmpty {
+                    draft.value.email = profile.email
                 }
             }
-            .onAppear(perform: seed)
+        }
+        .confirmationDialog("Remove from committee?", isPresented: $confirmRemove, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) { Task { await remove() } }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This deletes their roster entry and committee membership.")
         }
     }
 
     /// Compact "★ Lead" toggle pill shown beside an active area.
     private func leadPill(for area: String) -> some View {
-        let isLead = leadAreas.contains(area)
+        let isLead = draft.value.leadAreas.contains(area)
         return Button {
-            if isLead { leadAreas.remove(area) } else { leadAreas.insert(area) }
+            if isLead { draft.value.leadAreas.remove(area) } else { draft.value.leadAreas.insert(area) }
         } label: {
             HStack(spacing: 3) {
                 Image(systemName: isLead ? "star.fill" : "star")
@@ -173,64 +196,42 @@ struct RosterEditSheet: View {
         .buttonStyle(.pressable)
     }
 
-    private func seed() {
-        guard let entry, name.isEmpty, selectedAreas.isEmpty else { return }
-        name = entry.name
-        email = entry.email ?? ""
-        phone = entry.phone ?? ""
-        linkedUserId = entry.linkedUserId
-        linkedName = entry.profile?.displayName
-        isCommitteeLead = entry.isCommitteeLead
-        for role in entry.roles {
-            if role.hasSuffix(" · Lead") {
-                let area = String(role.dropLast(" · Lead".count))
-                selectedAreas.insert(area); leadAreas.insert(area)
-            } else {
-                selectedAreas.insert(role)
-            }
-        }
-    }
-
     private func roles() -> [String] {
         areas.compactMap { area in
-            guard selectedAreas.contains(area) else { return nil }
-            return leadAreas.contains(area) ? "\(area) · Lead" : area
+            guard draft.value.selectedAreas.contains(area) else { return nil }
+            return draft.value.leadAreas.contains(area) ? "\(area) · Lead" : area
         }
     }
 
-    private func save() async {
-        saving = true; error = nil
-        defer { saving = false }
-        let trimmedEmail = email.trimmingCharacters(in: .whitespaces)
-        let trimmedPhone = phone.trimmingCharacters(in: .whitespaces)
-        do {
-            try await env.committeeService.saveRosterEntry(
-                id: entry?.id,
-                committeeSlug: committee.slug,
-                name: name.trimmingCharacters(in: .whitespaces),
-                email: trimmedEmail.isEmpty ? nil : trimmedEmail,
-                phone: trimmedPhone.isEmpty ? nil : trimmedPhone,
-                roles: roles(),
-                linkedUserId: linkedUserId,
-                isCommitteeLead: isCommitteeLead
-            )
-            onSaved()
-            dismiss()
-        } catch {
-            self.error = "Couldn't save. \(error.localizedDescription)"
-        }
+    private func save() async throws {
+        let v = draft.value
+        let trimmedEmail = v.email.trimmingCharacters(in: .whitespaces)
+        let trimmedPhone = v.phone.trimmingCharacters(in: .whitespaces)
+        try await env.committeeService.saveRosterEntry(
+            id: entry?.id,
+            committeeSlug: committee.slug,
+            name: v.name.trimmingCharacters(in: .whitespaces),
+            email: trimmedEmail.isEmpty ? nil : trimmedEmail,
+            phone: trimmedPhone.isEmpty ? nil : trimmedPhone,
+            roles: roles(),
+            linkedUserId: v.linkedUserId,
+            isCommitteeLead: v.isCommitteeLead
+        )
+        onSaved()
     }
 
     private func remove() async {
-        guard let entry else { return }
-        saving = true; error = nil
-        defer { saving = false }
+        guard let entry, !removing else { return }
+        removing = true; removeError = nil
+        defer { removing = false }
         do {
             try await env.committeeService.deleteRosterEntry(id: entry.id)
             onSaved()
+            Haptics.success()
             dismiss()
         } catch {
-            self.error = "Couldn't remove. \(error.localizedDescription)"
+            removeError = "Couldn\u{2019}t remove. \(EditorError.message(error))"
+            Haptics.error()
         }
     }
 }

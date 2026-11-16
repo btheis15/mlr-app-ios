@@ -24,7 +24,7 @@ struct GuideView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
         }
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
         .navigationTitle("Guided tour")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

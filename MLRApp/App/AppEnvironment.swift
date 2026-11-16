@@ -36,6 +36,7 @@ final class AppEnvironment {
     var eventMessageService: EventMessageService
     var feedMuteService: FeedMuteService
     var eventChatService: EventChatService
+    var localPlacesService: LocalPlacesService
 
     // Resolved once per session
     var currentProfile: Profile?
@@ -101,6 +102,7 @@ final class AppEnvironment {
         if mode != .off && !realIsAdmin { return }
         previewMode = mode
         previewMember = nil
+        if mode != .off { MLREditModeStore.shared.isOn = false }
         let defaults = UserDefaults.standard
         if mode == .off { defaults.removeObject(forKey: Self.previewKey) }
         else { defaults.set(mode.rawValue, forKey: Self.previewKey) }
@@ -112,6 +114,7 @@ final class AppEnvironment {
     func setPreviewMember(_ member: Profile?) {
         if member != nil && !realIsAdmin { return }
         previewMember = member
+        if member != nil { MLREditModeStore.shared.isOn = false }
         if member != nil { previewMode = .member }
         else if previewMode == .member { previewMode = .off }
         UserDefaults.standard.removeObject(forKey: Self.previewKey)   // specific person isn't persisted
@@ -122,16 +125,21 @@ final class AppEnvironment {
     /// committee memberships) for whoever the UI is currently scoped to.
     @MainActor
     func reloadPreviewScopedData() async {
+        // Event chats list per previewed member (preview_event_chats) and never write.
+        eventChatService.previewUserId = previewMember?.id
+        await eventChatService.loadChats()
         guard let uid = effectiveUserId else { return }
         await festContentService.fetchMyCalloutCompletions(userId: uid, useLocal: previewMember == nil)
         await committeeService.fetchMyMemberships(userId: uid)
     }
 
-    // Help contact — loaded from resort_config (migration 0082), falls back to
-    // the HelpContact enum so the Help page always shows something.
-    var helpContactName:  String = HelpContact.name
-    var helpContactPhone: String = HelpContact.phone
-    var helpContactEmail: String = HelpContact.email
+    // Help contact — loaded from resort_config (migration 0082). No personal
+    // details are compiled into the app: until the live value is read (or when
+    // it is blank / unreadable) these stay empty and the Help page shows a
+    // neutral "Ask a family admin" state.
+    var helpContactName:  String = ""
+    var helpContactPhone: String = ""
+    var helpContactEmail: String = ""
 
     @MainActor
     func loadHelpContact() async {
@@ -140,9 +148,10 @@ final class AppEnvironment {
             .limit(1).single().execute().data,
               let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { return }
-        if let v = json["help_contact_name"]  as? String, !v.isEmpty { helpContactName  = v }
-        if let v = json["help_contact_phone"] as? String, !v.isEmpty { helpContactPhone = v }
-        if let v = json["help_contact_email"] as? String, !v.isEmpty { helpContactEmail = v }
+        // Assign even when blank, so an admin clearing the contact is respected.
+        helpContactName  = (json["help_contact_name"]  as? String) ?? ""
+        helpContactPhone = (json["help_contact_phone"] as? String) ?? ""
+        helpContactEmail = (json["help_contact_email"] as? String) ?? ""
     }
 
     // Dismissed announcement IDs (persisted in UserDefaults)
@@ -162,6 +171,8 @@ final class AppEnvironment {
     static weak var activeHelpService: HelpService?
     static weak var activeCommitteeService: CommitteeService?
     static weak var activeWorkItemsService: WorkItemsService?
+    static weak var activeHousesService: HousesService?
+    static weak var activeEventChatService: EventChatService?
 
     init() {
         authService          = AuthService()
@@ -191,11 +202,14 @@ final class AppEnvironment {
         eventMessageService  = EventMessageService()
         feedMuteService      = FeedMuteService()
         eventChatService     = EventChatService()
+        localPlacesService   = LocalPlacesService()
 
         AppEnvironment.activeEventsService    = eventsService
         AppEnvironment.activeHelpService      = helpService
         AppEnvironment.activeCommitteeService = committeeService
         AppEnvironment.activeWorkItemsService = workItemsService
+        AppEnvironment.activeHousesService    = housesService
+        AppEnvironment.activeEventChatService = eventChatService
     }
 
     // Load the signed-in profile after auth.
@@ -245,7 +259,14 @@ final class AppEnvironment {
             housesService.myHouse = nil
             return
         }
-        housesService.myHouse = await housesService.house(withId: hid)
+        // Instant paint: resolve from the last houses snapshot, then refresh.
+        housesService.hydrateFromCache()
+        if housesService.myHouse == nil,
+           let cached = housesService.houses.first(where: { $0.id == hid }) {
+            housesService.myHouse = cached
+        }
+        let fresh = await housesService.house(withId: hid)
+        if fresh != nil || housesService.myHouse == nil { housesService.myHouse = fresh }
     }
 
     private func fetchProfile(id: UUID) async -> Profile? {
@@ -295,15 +316,18 @@ final class AppEnvironment {
     @MainActor
     func startNotificationsRealtime() async {
         guard let uid = currentProfile?.id else { return }
+        if !isPreviewing { notificationsService.hydrateFromCache(userId: uid) }
         notificationsService.subscribeToRealtime(userId: uid)
         await notificationsService.fetchUnreadCount(userId: uid)
     }
 
     @MainActor
     func signOut() async {
+        MLREditModeStore.shared.isOn = false
         notificationsService.unsubscribeFromRealtime()
         notificationsService.notifications = []
         notificationsService.unreadCount = 0
+        DiskCache.removeAll()
         await authService.signOut()
         currentProfile = nil
         housesService.myHouse = nil

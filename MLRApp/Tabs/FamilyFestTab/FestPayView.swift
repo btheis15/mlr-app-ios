@@ -47,10 +47,10 @@ struct FestPayView: View {
             HStack(spacing: 8) {
                 Image(systemName: "dollarsign.circle.fill")
                     .font(.mlrScaled(20))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                 Text("Household Dues")
                     .font(.festSerif(16, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
             }
 
             if dues.isEmpty {
@@ -81,7 +81,7 @@ struct FestPayView: View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Who to pay")
                 .font(.festSerif(15, weight: .bold))
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(Color.mlrFestReadable)
             ForEach(payees) { payee in
                 PayeeCard(payee: payee, calcAmount: calcAmount, calcNote: calcNote)
             }
@@ -137,7 +137,7 @@ private struct PayeeCard: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(payee.name)
                     .font(.mlrScaled(15, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                 if let role = payee.role, !role.isEmpty {
                     Text(role)
                         .font(.mlrScaled(12))
@@ -146,7 +146,7 @@ private struct PayeeCard: View {
                 if let amount = payee.amount {
                     Text("$\(amount)")
                         .font(.festSerif(15, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                 }
             }
 

@@ -15,10 +15,14 @@ struct FestOverviewView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var canEdit = false
     @State private var showPlanner = false
+    @State private var showLookEditor = false
     @State private var previewDate: Date? = nil      // admin "see as this day" preview
     @State private var showDatePicker = false
 
     private var content: FestContentService { env.festContentService }
+
+    /// Same permission as the Planner button; hidden while an admin previews as someone else.
+    private var showsEditPencils: Bool { canEdit && !env.isPreviewing }
 
     /// The fest season for the previewed day (or the real today) — drives the
     /// FestStatus phase + "Day N of N".
@@ -64,26 +68,40 @@ struct FestOverviewView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.mlrFestParchment.ignoresSafeArea()
+                FestThemedBackground()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
 
                         if previewDate != nil { previewBanner }
 
+                        pillRow
+
                         FestStatus(season: festSeason, previewDate: previewDate)
 
                         // Identity: cover art + theme/dates/venue caption.
                         VStack(spacing: 10) {
-                            FestCoverImage()
+                            FestYearCover(coverUrl: content.config?.coverUrl,
+                                          accessibilityText: "Family Fest \(String(content.year)) cover")
+                                .background { FestHeroGlow() }
+                                .overlay(alignment: .topTrailing) {
+                                    if showsEditPencils {
+                                        EditPencil("cover and theme", tint: .mlrFest) { showLookEditor = true }
+                                            .padding(6)
+                                    }
+                                }
                             FestCoverCaption()
+                                .overlay(alignment: .topTrailing) {
+                                    if showsEditPencils {
+                                        // Opens the Planner, where "Fest details & dates" lives.
+                                        EditPencil("fest title and dates", tint: .mlrFest) { showPlanner = true }
+                                    }
+                                }
                         }
 
                         if content.usingSeedFallback {
                             seedFallbackNote
                         }
-
-                        GoldOrnamentDivider()
 
                         // Once the fest is concluded the week itself moves to
                         // Past Years and the hub drops to Overview + Past Years.
@@ -108,7 +126,7 @@ struct FestOverviewView: View {
                             // All-week, no-set-time activities (scavenger hunt, etc.)
                             FestAnytimeCard()
 
-                            GoldOrnamentDivider()
+                            if !dayGroups.isEmpty { GoldOrnamentDivider() }
                         }
 
                         // Secondary sections.
@@ -116,25 +134,26 @@ struct FestOverviewView: View {
 
                         Text("Leo & Dorothy Theis · Est. 1987 · Tomahawk, WI")
                             .font(.festSerif(11))
-                            .foregroundStyle(Color.mlrFestInk.opacity(0.65))
+                            .foregroundStyle(Color.mlrFestInkReadable.opacity(0.65))
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.top, 4)
                     }
                     .padding(.horizontal, 16)
                     .padding(.top, 12)
-                    .padding(.bottom, 32)
+                    .padding(.bottom, 110)
                 }
+                .debugStartScroll()
             }
+            .mlrEditToggle(canEdit: showsEditToggle, tint: .mlrFestInkReadable)
             .navigationTitle("Family Fest")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
-            .toolbarColorScheme(.light, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 if env.isAdmin {
                     ToolbarItem(placement: .topBarLeading) {
                         Button { showDatePicker = true } label: {
                             Image(systemName: previewDate == nil ? "calendar.badge.clock" : "calendar.badge.exclamationmark")
-                                .foregroundStyle(previewDate == nil ? Color.mlrFest : .orange)
+                                .foregroundStyle(previewDate == nil ? Color.mlrFestInkReadable : .orange)
                         }
                         .accessibilityLabel("Preview Fest as a date")
                     }
@@ -143,16 +162,18 @@ struct FestOverviewView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { showPlanner = true } label: {
                             Label("Planner", systemImage: "slider.horizontal.3")
-                                .foregroundStyle(Color.mlrFest)
                         }
+                        .tint(Color.mlrFestInkReadable)
                     }
                 }
             }
             .sheet(isPresented: $showPlanner, onDismiss: { Task { await env.festContentService.reload() } }) {
-                NavigationStack { FamilyFestPlannerView() }
+                NavigationStack { FamilyFestPlannerView().sheetDoneButton() }
             }
             .sheet(isPresented: $showDatePicker) { datePreviewSheet }
+            .sheet(isPresented: $showLookEditor) { FestYearLookSheet() }
         }
+        .mlrBackdrop(.fest)
         .task {
             await env.appImagesService.load()
             await env.festContentService.load()
@@ -160,6 +181,7 @@ struct FestOverviewView: View {
             env.festContentService.subscribeToRealtime()
         }
         .onDisappear { env.festContentService.unsubscribeFromRealtime() }
+        .festThemeScope()
     }
 
     // MARK: - Admin date preview ("see as Day N")
@@ -217,22 +239,104 @@ struct FestOverviewView: View {
 
     // MARK: - Secondary sections
 
-    private var moreSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("More")
-                .festHeadingStyle(size: 15)
-                .padding(.horizontal, 4)
-                .padding(.top, 4)
+    /// Edit toggle for fest editors, or anyone who is chef/crew on a dinner (same rules as the pencils).
+    private var showsEditToggle: Bool {
+        guard !env.isPreviewing else { return false }
+        return canEdit || content.dinners.contains { env.canEditFestDinner(chefUserId: $0.chefUserId, crewUserIds: $0.crewUserIds) }
+    }
 
-            // A concluded fest drops to Overview + Past Years. "Who's coming"
-            // and "Dues & payments" are about a week that already happened —
-            // they'd read as things still to do.
-            if !festSeason.isConcluded {
-                FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
-                FestUtilityLink(label: "Weekly dinner menu", icon: "fork.knife") { FestDinnersView() }
-                FestUtilityLink(label: "Dues & payments", icon: "dollarsign.circle.fill") { FestPayView() }
+    /// Overview (selected) plus the existing sub-screens, which simply push.
+    private var pillRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                Text("Overview")
+                    .font(.system(.subheadline, weight: .semibold))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 16).frame(height: 36)
+                    .background(Color.mlrFest, in: Capsule())
+                if !festSeason.isConcluded {
+                    pill("Dinners") { FestDinnersView() }
+                    pill("Pay") { FestPayView() }
+                    pill("Who's coming") { FestCrewView() }
+                }
+                pill("Past Years") { FestPastYearsView() }
             }
-            FestUtilityLink(label: "Past years", icon: "clock.arrow.circlepath") { FestPastYearsView() }
+            .padding(.trailing, 40)
+        }
+        // Fade the trailing edge so a clipped pill clearly reads as scrollable.
+        .mask {
+            HStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 28)
+            }
+        }
+    }
+
+    private func pill<D: View>(_ title: String, @ViewBuilder _ dest: @escaping () -> D) -> some View {
+        NavigationLink {
+            dest().navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        } label: {
+            Text(title)
+                .font(.system(.subheadline, weight: .semibold))
+                .foregroundStyle(Color.mlrFestInkReadable)
+                .padding(.horizontal, 16).frame(height: 36)
+                .background(Color.mlrFestCard, in: Capsule())
+                .overlay(Capsule().stroke(Color.mlrFestBorder, lineWidth: 1))
+        }
+        .buttonStyle(.pressable)
+    }
+
+    private var moreSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            // Day chips + entry to the RSVP flow (Who's coming owns the RSVP sheet).
+            if !festSeason.isConcluded {
+                NavigationLink {
+                    FestCrewView()
+                        .navigationTitle("Who's coming")
+                        .navigationBarTitleDisplayMode(.inline)
+                } label: {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Are you coming?")
+                            .font(.festDisplay(19))
+                            .foregroundStyle(Color.mlrFestInkReadable)
+                        ScrollView(.horizontal, showsIndicators: false) {
+                            HStack(spacing: 8) {
+                                ForEach(dayGroups, id: \.day) { g in
+                                    VStack(spacing: 0) {
+                                        Text(String(g.day.prefix(3)).uppercased())
+                                            .font(.system(size: 12, weight: .semibold)).tracking(1.0)
+                                        if let d = g.isoDate?.suffix(2) {
+                                            Text(String(Int(d) ?? 0)).font(.system(.headline, design: .rounded))
+                                        }
+                                    }
+                                    .foregroundStyle(Color.mlrFestReadable)
+                                    .frame(minWidth: 52).padding(.vertical, 8)
+                                    .background(Color.mlrFest.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                }
+                            }
+                        }
+                        Text("Tap to RSVP your days")
+                            .font(.subheadline).foregroundStyle(Color.mlrFestInkReadable.opacity(0.75))
+                    }
+                    .padding(18)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .festCardStyle(cornerRadius: 22)
+                }
+                .buttonStyle(.pressable)
+            }
+
+            Text("More").festHeadingStyle(size: 17).padding(.top, 4)
+
+            // A concluded fest drops to Overview + Past Years.
+            LazyVGrid(columns: [GridItem(.flexible(), spacing: MLRSpacing.stack), GridItem(.flexible(), spacing: MLRSpacing.stack)], spacing: MLRSpacing.stack) {
+                if !festSeason.isConcluded {
+                    FestUtilityLink(label: "Who's coming", icon: "person.3.fill") { FestCrewView() }
+                    FestUtilityLink(label: "Weekly dinner menu", icon: "fork.knife") { FestDinnersView() }
+                    FestUtilityLink(label: "Dues & payments", icon: "dollarsign.circle.fill") { FestPayView() }
+                }
+                FestUtilityLink(label: "Past years", icon: "clock.arrow.circlepath") { FestPastYearsView() }
+            }
             // Photos live on the Main Feed now — no separate Fest photo gallery.
         }
     }
@@ -279,8 +383,8 @@ private struct FestDaySection: View {
         VStack(alignment: .leading, spacing: 8) {
             HStack {
                 Text(day.uppercased())
-                    .font(.mlrScaled(14, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.75))
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.mlrFestInkReadable.opacity(0.8))
                     .tracking(1.2)
                 Spacer()
                 // Self-hides when WeatherKit has no forecast for the date.
@@ -346,69 +450,93 @@ private struct FestUtilityLink<Destination: View>: View {
                 .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
                 .toolbarColorScheme(.light, for: .navigationBar)
         } label: {
-            HStack(spacing: 10) {
-                Image(systemName: icon)
-                    .font(.mlrScaled(14, weight: .semibold))
-                    .frame(width: 22)
+            VStack(alignment: .leading, spacing: 10) {
+                IconTile(symbol: icon, accent: .mlrFest, size: 34)
                 Text(label)
-                    .font(.festSerif(15, weight: .bold))
-                Spacer()
-                Image(systemName: "chevron.right")
-                    .font(.mlrScaled(12, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.35))
+                    .font(.system(.headline, weight: .semibold))
+                    .foregroundStyle(Color.mlrFestInkReadable)
+                    .multilineTextAlignment(.leading)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .foregroundStyle(Color.mlrFest)
-            .padding(.horizontal, 14)
-            .padding(.vertical, 13)
-            .festCardStyle(cornerRadius: 12)
+            .padding(16)
+            .frame(maxWidth: .infinity, minHeight: 112, alignment: .topLeading)
+            .festCardStyle(cornerRadius: 22)
         }
         .buttonStyle(.pressable)
     }
 }
 
-// MARK: - Cover Art
-
-/// The Family Fest 2026 "Renaissance / Fantasy" cover, bundled in the asset
-/// catalog so it shows offline. Mirrors the web fest page's FestCover header.
-private struct FestCoverImage: View {
-    var body: some View {
-        SiteImage(key: SiteImageKey.festCover, fallback: "family-fest-cover")
-            .scaledToFit()
-            .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(LinearGradient.festHeraldic, lineWidth: 1.5)
-            )
-            .background { FestHeroGlow() }
-            .shadow(color: .mlrFest.opacity(0.18), radius: 16, x: 0, y: 8)
-            .accessibilityLabel("Family Fest 2026 — Ye Olde Family Feste")
-    }
-}
+// MARK: - Edit pencil
 
 // MARK: - Cover Caption
 
-/// The festive title block under the cover art — the ⚜ "Ye Olde Family Feste"
-/// theme line, then the dates and venue.
+/// Title block under the cover: the year's theme line (from config, in the
+/// display font), one divider, the dates, then countdown tiles. No hardcoded
+/// heraldic strings: a missing theme falls back to the fest name.
 private struct FestCoverCaption: View {
+    @Environment(AppEnvironment.self) private var env
+    private var config: FestConfig? { env.festContentService.config }
+    private var title: String {
+        let t = config?.theme?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+        return t.isEmpty ? (config?.name ?? "Family Fest") : t
+    }
+    private var dates: String {
+        "\(config?.dateRangeLabel ?? FamilyFestConfig.dateRangeLabel), \(String(config?.year ?? FamilyFestConfig.year))"
+    }
+    private var startISO: String { config?.startDate ?? FamilyFestConfig.startDate }
+
     var body: some View {
-        VStack(spacing: 6) {
-            Text("⚜ Ye Olde Family Feste ⚜")
-                .font(.festSerif(17, weight: .bold))
-                .tracking(2)
-                .textCase(.uppercase)
-                .foregroundStyle(Color.mlrFest)
-
-            Text("\(FamilyFestConfig.dateRangeLabel), \(String(FamilyFestConfig.year))")
-                .font(.festSerif(19, weight: .bold))
-                .foregroundStyle(Color.mlrFest)
-
-            Text("Muskellunge Lake Resort · Tomahawk, WI")
-                .font(.mlrScaled(12))
-                .foregroundStyle(Color.mlrFestInk.opacity(0.7))
+        VStack(spacing: 10) {
+            Text(title)
+                .font(.festDisplay(21))
+                .foregroundStyle(Color.mlrFestInkReadable)
+            GoldOrnamentDivider()
+            Text(dates)
+                .font(.mlrScaled(16, weight: .semibold, relativeTo: .title3))
+                .foregroundStyle(Color.mlrFestReadable)
+            Text("Muskellunge Lake Resort \u{00B7} Tomahawk, WI")
+                .font(.system(.footnote))
+                .foregroundStyle(Color.mlrFestInkReadable.opacity(0.7))
+            FestCountdownTiles(startISO: startISO)
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
+    }
+}
+
+/// Days / hrs / min until the fest starts; hidden once it has begun.
+private struct FestCountdownTiles: View {
+    let startISO: String
+    private var start: Date? {
+        let f = DateFormatter(); f.dateFormat = "yyyy-MM-dd"; f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "America/Chicago")
+        return f.date(from: startISO)
+    }
+    var body: some View {
+        if let start {
+            TimelineView(.periodic(from: .now, by: 30)) { ctx in
+                let secs = Int(start.timeIntervalSince(ctx.date))
+                if secs > 0 {
+                    HStack(spacing: 10) {
+                        tile(secs / 86_400, "days")
+                        tile((secs % 86_400) / 3_600, "hrs")
+                        tile((secs % 3_600) / 60, "min")
+                    }
+                    .padding(.top, 4)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel("\(secs / 86_400) days until Family Fest")
+                }
+            }
+        }
+    }
+    private func tile(_ n: Int, _ label: String) -> some View {
+        VStack(spacing: 2) {
+            Text("\(n)").font(.festDisplay(22)).foregroundStyle(Color.mlrFestReadable).monospacedDigit()
+            Text(label.uppercased()).font(.system(size: 11, weight: .semibold)).tracking(1.2)
+                .foregroundStyle(Color.mlrFestInkReadable.opacity(0.7))
+        }
+        .frame(maxWidth: .infinity, minHeight: 56)
+        .festCardStyle(cornerRadius: 20)
     }
 }
 
@@ -422,8 +550,8 @@ private struct FestInfoCard<Content: View>: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
-                .font(.festSerif(19, weight: .bold))
-                .foregroundStyle(Color.mlrFest)
+                .font(.festDisplay(22))
+                .foregroundStyle(Color.mlrFestInkReadable)
             content
         }
         .padding(16)
@@ -447,8 +575,8 @@ private struct FestAnytimeCard: View {
             VStack(alignment: .leading, spacing: 8) {
                 HStack {
                     Text("ALL WEEK — ANYTIME")
-                        .font(.mlrScaled(14, weight: .semibold))
-                        .foregroundStyle(Color.mlrFest.opacity(0.75))
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(Color.mlrFestInkReadable.opacity(0.8))
                         .tracking(1.2)
                     Spacer()
                 }

@@ -41,7 +41,7 @@ struct HelpRequestsView: View {
                     content
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .mlrBackdrop()
             .navigationTitle("Ask for Help")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -298,7 +298,7 @@ private struct HelpRequestCard: View {
             }
         }
         .padding(10)
-        .background(Color.mlrSurface)
+        .mlrBackdrop()
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 

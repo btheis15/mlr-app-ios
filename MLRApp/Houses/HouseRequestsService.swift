@@ -27,6 +27,9 @@ final class HouseRequestsService {
     /// ⚠️ Shown BEFORE anything sends. A house with no House Admin notifies
     /// NOBODY, and that has to be said loudly rather than discovered later.
     var approverNames: [String] = []
+    /// Same rows as `approverNames`, with ids, so a panel can leave out the
+    /// signed-in reviewer and the requester ("who ELSE gets told").
+    var approvers: [(id: UUID, name: String)] = []
     var loading = false
     var loadError: String?
 
@@ -108,12 +111,15 @@ final class HouseRequestsService {
             }
             let rows: [Row] = try await query.execute().value
             approverNames = rows.compactMap { $0.displayName }.sorted()
+            approvers = rows.compactMap { r in r.displayName.map { (id: r.id, name: $0) } }
+                .sorted { $0.name < $1.name }
             let me = supabase.auth.currentUser?.id
             canReview = me.map { uid in rows.contains { $0.id == uid } } ?? false
         } catch {
             // `house_admin` may not exist on a partly-migrated DB. Treat as "no
             // approvers known" rather than failing the whole board.
             approverNames = []
+            approvers = []
             canReview = false
         }
     }

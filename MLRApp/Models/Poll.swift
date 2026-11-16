@@ -5,7 +5,7 @@ import Foundation
 // all members. Mirrors the polls / poll_options / poll_votes tables and the
 // create_poll / cast_poll_vote / close_poll / delete_poll RPCs.
 
-struct Poll: Identifiable, Equatable {
+struct Poll: Identifiable, Equatable, Codable {
     let id: UUID
     var question: String
     var createdBy: UUID
@@ -38,7 +38,7 @@ struct Poll: Identifiable, Equatable {
     }
 }
 
-struct PollOption: Identifiable, Equatable {
+struct PollOption: Identifiable, Equatable, Codable {
     let id: UUID
     var label: String
     var position: Int

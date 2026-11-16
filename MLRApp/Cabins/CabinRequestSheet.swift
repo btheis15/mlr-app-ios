@@ -73,7 +73,7 @@ struct CabinRequestSheet: View {
                     form
                 }
             }
-            .background(Color(.systemGroupedBackground))
+            .mlrBackdrop()
             .navigationTitle(didSubmit ? "Request sent" : "Request a Cabin")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

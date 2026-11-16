@@ -21,6 +21,8 @@ struct RootView: View {
     @State private var pendingHouseHub: House?
     @State private var pendingCommitteeChat: PendingCommitteeChat?
     @State private var pendingPost: Post?
+    /// An event-chat push (`/posts?event=<id>`) → that event's room.
+    @State private var pendingEventChat: EventChatSummary?
     /// A specific comment to scroll to + flash within `pendingPost`'s thread
     /// (migration 0164) — set alongside pendingPost, read once by CommentsView.
     @State private var pendingCommentId: UUID?
@@ -29,6 +31,9 @@ struct RootView: View {
     @State private var showHelpRequests = false
     @State private var showCabinBookings = false
     @State private var searchRequest: GlobalSearchRequest?
+    #if DEBUG
+    @State private var debugScreen: String?
+    #endif
 
     // Siri / Shortcuts → in-app navigation bridge.
     private var router = IntentRouter.shared
@@ -50,8 +55,7 @@ struct RootView: View {
             if showSplash {
                 SplashView(
                     onBeginExit: {
-                        // Fade main content in while the logo flies to the header —
-                        // the overlap is what makes it read as "landing in place."
+                        // Fade main content in as the splash fades out.
                         withAnimation(.easeOut(duration: 0.45)) { mainVisible = true }
                     },
                     onComplete: {
@@ -123,6 +127,11 @@ struct RootView: View {
                 )
             }
         }
+        // An event-chat message push → the room, as a sheet like every other chat
+        // deep link here. Chats are admin-blind: an unknown id just stays on Feed.
+        .sheet(item: $pendingEventChat) { chat in
+            NavigationStack { EventChatView(chat: chat) }
+        }
         // Tapping a post notification (new post, comment, reply, @mention, tag,
         // reaction) opens that one post's thread — the same sheet the comment
         // button on a PostCard opens, which leads with a recap of the post itself.
@@ -156,6 +165,36 @@ struct RootView: View {
         )) {
             SignInView()
         }
+        #if DEBUG
+        .sheet(item: Binding(get: { debugScreen.map { DebugScreenID(id: $0) } },
+                             set: { debugScreen = $0?.id })) { d in
+            NavigationStack {
+                switch d.id {
+                case "events": EventsView()
+                case "local-places": LocalPlacesView()
+                case "main-feed": MainFeedView(title: "Main Feed")
+                default: AdminView()
+                }
+            }
+            .mlrBackdrop()
+        }
+        .task {
+            // DEBUG screenshot hooks (no taps): -startRoute activity|profile|
+            // events|local-places|admin|house-chat|feed ; -startEditMode.
+            let args = ProcessInfo.processInfo.arguments
+            if args.contains("-startEditMode") { MLREditModeStore.shared.isOn = true }
+            guard let i = args.firstIndex(of: "-startRoute"), i + 1 < args.count else { return }
+            let v = args[i + 1]
+            try? await Task.sleep(for: .seconds(3))
+            switch v {
+            case "activity": selectedTab = .activity
+            case "profile": selectedTab = .profile
+            case "events", "local-places", "admin", "main-feed": debugScreen = v
+            case "house-chat": router.requestRoute(.houseChat)
+            default: break
+            }
+        }
+        #endif
         // Drive navigation when an App Intent opens the app.
         .onChange(of: router.pendingRoute) { _, _ in
             handlePendingRoute()
@@ -211,6 +250,12 @@ struct RootView: View {
     private func handleNotificationTap(_ info: [AnyHashable: Any]?) {
         guard let info else { return }
         PendingNotificationTap.shared.clear()
+        // Event chats have no NotificationDeepLink case; route them first.
+        if let eventId = NotificationDeepLink.eventChatId(userInfo: info) {
+            selectedTab = .feed
+            resolveEventChat(eventId.uuidString)
+            return
+        }
         switch NotificationDeepLink(userInfo: info) {
         case .post(let id, let commentId):
             selectedTab = .feed
@@ -266,6 +311,17 @@ struct RootView: View {
         Task { @MainActor in
             pendingCommentId = commentId
             pendingPost = await env.postsService.fetchPost(id: id)
+        }
+    }
+
+    /// Find the member's event chat by id (loading the list if it isn't there
+    /// yet, e.g. a cold launch) and open it. Not in the list → stay on Feed.
+    private func resolveEventChat(_ eventId: String) {
+        Task { @MainActor in
+            let service = env.eventChatService
+            let matches: (EventChatSummary) -> Bool = { $0.eventId.caseInsensitiveCompare(eventId) == .orderedSame }
+            if !service.chats.contains(where: matches) { await service.loadChats() }
+            pendingEventChat = service.chats.first(where: matches)
         }
     }
 
@@ -410,6 +466,11 @@ enum Tab: String, CaseIterable {
     case home, feed, fest, activity, profile
 }
 
+extension Notification.Name {
+    /// Posted (object: the `Tab`) when the already-selected tab is tapped again.
+    static let tabReselected = Notification.Name("tabReselected")
+}
+
 // MARK: - Pending sheets (notification taps / Siri / Shortcuts opens)
 
 struct PendingCommitteeChat: Identifiable {
@@ -437,6 +498,46 @@ struct PendingPrivateActivity: Identifiable {
 
 // MARK: - Main Tab View
 
+private struct TabBarUnselectedTint: UIViewControllerRepresentable {
+    let color: UIColor
+    func makeUIViewController(context: Context) -> Probe { Probe() }
+    func updateUIViewController(_ vc: Probe, context: Context) { vc.color = color; vc.apply() }
+    final class Probe: UIViewController {
+        var color: UIColor = .secondaryLabel
+        override func didMove(toParent parent: UIViewController?) { super.didMove(toParent: parent); apply() }
+        override func viewDidAppear(_ animated: Bool) { super.viewDidAppear(animated); apply() }
+        static func findTabBar() -> UITabBar? {
+            func walk(_ v: UIView) -> UITabBar? {
+                if let b = v as? UITabBar { return b }
+                for c in v.subviews { if let b = walk(c) { return b } }
+                return nil
+            }
+            for scene in UIApplication.shared.connectedScenes {
+                guard let ws = scene as? UIWindowScene else { continue }
+                for w in ws.windows { if let b = walk(w) { return b } }
+            }
+            return nil
+        }
+        func apply() {
+            guard let bar = Self.findTabBar() else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.apply() }
+                return
+            }
+            bar.unselectedItemTintColor = color
+            let item = UITabBarItemAppearance()
+            item.normal.iconColor = color
+            item.normal.titleTextAttributes = [.foregroundColor: color]
+            let a = UITabBarAppearance()
+            a.configureWithDefaultBackground()
+            a.stackedLayoutAppearance = item
+            a.inlineLayoutAppearance = item
+            a.compactInlineLayoutAppearance = item
+            bar.standardAppearance = a
+            bar.scrollEdgeAppearance = a
+        }
+    }
+}
+
 struct MainTabView: View {
     @Binding var selectedTab: Tab
     @Environment(AppEnvironment.self) private var env
@@ -449,43 +550,54 @@ struct MainTabView: View {
         FestSeason.current()
     }
 
-    /// The Family Fest tab icon — the ⚔️ emoji rendered to a full-colour image.
-    /// A tab item's icon has to be an `Image`; drawing the emoji ourselves and
-    /// flagging it `.alwaysOriginal` keeps its colour (UITabBar would otherwise
-    /// tint a template image to a flat silhouette).
-    static let emojiTabIcon: UIImage = {
-        let size: CGFloat = 27
-        let font = UIFont.systemFont(ofSize: size)
-        let string = "⚔️" as NSString
-        let bounds = string.size(withAttributes: [.font: font])
-        let renderer = UIGraphicsImageRenderer(size: bounds)
-        return renderer.image { _ in
-            string.draw(at: .zero, withAttributes: [.font: font])
-        }.withRenderingMode(.alwaysOriginal)
-    }()
+    /// Selection binding that also notices a tap on the already-selected tab, so
+    /// lists can scroll back to top (`.tabReselected`).
+    private var tabSelection: Binding<Tab> {
+        Binding(
+            get: { selectedTab },
+            set: { newValue in
+                if newValue == selectedTab {
+                    NotificationCenter.default.post(name: .tabReselected, object: newValue)
+                }
+                selectedTab = newValue
+            }
+        )
+    }
+
+    /// Unselected tab icons + labels take the muted text tone (selected uses the
+    /// SwiftUI tint: pine, or the fest primary on the Fest tab).
+    private static func applyTabBarColors() {
+        let muted = UIColor(Color.mlrTextMuted)
+        let item = UITabBarItemAppearance()
+        item.normal.iconColor = muted
+        item.normal.titleTextAttributes = [.foregroundColor: muted]
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.stackedLayoutAppearance = item
+        appearance.inlineLayoutAppearance = item
+        appearance.compactInlineLayoutAppearance = item
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+        UITabBar.appearance().unselectedItemTintColor = muted
+    }
+
+    init(selectedTab: Binding<Tab>) {
+        _selectedTab = selectedTab
+        Self.applyTabBarColors()
+    }
 
     var body: some View {
-        TabView(selection: $selectedTab) {
+        TabView(selection: tabSelection) {
             HomeView()
                 .tabItem { Label("Home", systemImage: "house.fill") }
                 .tag(Tab.home)
 
             PostsView()
-                .tabItem { Label("Feed", systemImage: "rectangle.stack.fill") }
+                .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right.fill") }
                 .tag(Tab.feed)
 
             FestOverviewView()
-                .tabItem {
-                    Label {
-                        Text("Family Fest")
-                    } icon: {
-                        // A tab-bar icon must be an Image; SwiftUI ignores a Text
-                        // icon. Render the ⚔️ emoji to an image so it shows in full
-                        // colour (matching the Fest's medieval theme).
-                        Image(uiImage: Self.emojiTabIcon)
-                            .renderingMode(.original)
-                    }
-                }
+                .tabItem { Label("Family Fest", systemImage: "tent.fill") }
                 .tag(Tab.fest)
                 .badge(festSeason.isLive || festSeason.isWrap ? "●" : nil)
 
@@ -498,7 +610,12 @@ struct MainTabView: View {
                 .tabItem { Label("Profile", systemImage: "person.fill") }
                 .tag(Tab.profile)
         }
-        .tint(Color.mlrPrimary)
+        // The live UITabBar ignores the global appearance proxy on the floating
+        // bar, so also set the muted unselected tone on the real controller.
+        .background(TabBarUnselectedTint(color: UIColor(Color.mlrTextMuted)).frame(width: 0, height: 0))
+        // Pine tint; the Family Fest tab takes the active fest theme primary when selected.
+        .tint(selectedTab == .fest ? Color.mlrFest : Color.mlrPrimary)
+        .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: unreadCount)
         // A light selection tick on every tab switch — the kind of small,
         // native-feeling touch that makes the bar feel considered rather than
         // stock. Skipped on the very first appearance (no real "switch" yet).
@@ -533,9 +650,10 @@ struct SplashView: View {
     @State private var logoOpacity: Double = 0
     @State private var wordmarkOpacity: Double = 0
     @State private var wordmarkOffset: CGFloat = 8
-    // Exit states — logo flies toward the HomeHero header position.
-    @State private var logoExitOffset: CGFloat = 0
-    @State private var logoExitOpacity: Double = 1
+    // Exit: clean fade + slight scale-down hand-off (no fly-to-header).
+    @State private var exitOpacity: Double = 1
+    @State private var exitScale: CGFloat = 1
+    private let season = Season.current()
 
     var body: some View {
         ZStack {
@@ -554,11 +672,13 @@ struct SplashView: View {
                     .frame(width: 140)
                     .shadow(.medium)
                     .scaleEffect(logoScale)
-                    // logoExitOpacity multiplied so the logo fades as it flies up;
-                    // logoOpacity is the entrance fade-in (kept separate).
-                    .opacity(logoOpacity * logoExitOpacity)
-                    // Flies upward independently of the wordmark during exit.
-                    .offset(y: logoExitOffset)
+                    .opacity(logoOpacity)
+                    // Seasonal effect layered exactly over the artwork; ends still.
+                    .overlay {
+                        SeasonalLogoAnimatedFX(season: season, onSettle: { Haptics.tap() })
+                            .scaleEffect(logoScale)
+                            .opacity(logoOpacity)
+                    }
 
                 Text("Muskellunge Lake Resort")
                     .font(.script(26))
@@ -566,6 +686,8 @@ struct SplashView: View {
                     .opacity(wordmarkOpacity)
                     .offset(y: wordmarkOffset)
             }
+            .scaleEffect(exitScale)
+            .opacity(exitOpacity)
         }
         .onAppear { animateIn() }
         // Respect reduce motion — skip animation entirely.
@@ -586,32 +708,19 @@ struct SplashView: View {
             wordmarkOpacity = 1
             wordmarkOffset = 0
         }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
-            Haptics.tap()
-        }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1.05) {
-            // Signal parent to fade the main content in — the cross-fade with
-            // the upward logo flight creates the "lands in header" impression.
+        // Effect runs ~0.25s + 2.4s and settles (haptic fires there); hold a
+        // beat on the still, then fade/scale out while main fades in.
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             onBeginExit()
-
-            // Glow and wordmark fade out first.
             withAnimation(.easeOut(duration: 0.25)) {
                 glowOpacity = 0
                 wordmarkOpacity = 0
             }
-
-            // Logo springs upward toward the HomeHero header position and fades
-            // as it arrives. The exact distance is proportional to screen height
-            // so it clears the header on both compact and large devices.
-            let flyDistance = max(200, UIScreen.main.bounds.height * 0.27)
-            withAnimation(.spring(response: 0.48, dampingFraction: 0.86)) {
-                logoExitOffset = -flyDistance
+            withAnimation(.easeInOut(duration: 0.4)) {
+                exitOpacity = 0
+                exitScale = 1.06
             }
-            withAnimation(.easeIn(duration: 0.42)) {
-                logoExitOpacity = 0
-            }
-
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.52) {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.45) {
                 onComplete()
             }
         }
@@ -641,3 +750,31 @@ private extension View {
         }
     }
 }
+
+#if DEBUG
+private struct DebugScreenID: Identifiable { let id: String }
+#endif
+
+extension View {
+    /// DEBUG screenshot hook: `-startScroll <points>` scrolls this ScrollView after load.
+    @ViewBuilder func debugStartScroll() -> some View {
+        #if DEBUG
+        modifier(DebugStartScroll())
+        #else
+        self
+        #endif
+    }
+}
+#if DEBUG
+private struct DebugStartScroll: ViewModifier {
+    @State private var pos = ScrollPosition()
+    func body(content: Content) -> some View {
+        content.scrollPosition($pos).task {
+            let a = ProcessInfo.processInfo.arguments
+            guard let i = a.firstIndex(of: "-startScroll"), i + 1 < a.count, let y = Double(a[i + 1]) else { return }
+            try? await Task.sleep(for: .seconds(6))
+            pos.scrollTo(y: y)
+        }
+    }
+}
+#endif

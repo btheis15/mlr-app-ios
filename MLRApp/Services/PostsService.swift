@@ -1,7 +1,8 @@
 import Foundation
+import SwiftUI
 import Supabase
 
-private let postStorageBase = "https://vrksrpzlslrcjvbzchfg.supabase.co/storage/v1/object/public/post-photos"
+private let postStorageBase = MLRBackend.current.publicStorageBase("post-photos")
 
 // MARK: - PostsService
 
@@ -12,7 +13,24 @@ final class PostsService {
     var isLoading: Bool = false
     var error: String? = nil
 
+    /// Posts per page of the main feed.
+    static let pageSize = 20
+    /// More (older) pages may exist on the server.
+    private(set) var hasMore: Bool = true
+    private(set) var isLoadingMore: Bool = false
+    /// When the first page last loaded successfully (nil = never this launch).
+    private(set) var lastRefreshAt: Date? = nil
+    /// Bumped after every completed fetch/page so the view can refresh reactions.
+    private(set) var dataVersion: Int = 0
+    /// Set by the feed view while the reader is scrolled away from the top: new
+    /// posts from other people then wait in `pendingNewPosts` instead of
+    /// shoving the list down.
+    var holdNewPosts: Bool = false
+    private(set) var pendingNewPosts: [Post] = []
+
     private var realtimeChannel: RealtimeChannelV2? = nil
+    private var inFlight = 0
+    private var refreshDebounce: Task<Void, Never>? = nil
 
     /// Posts select with author, media, and tags joins (matches web PostsView).
     static let postSelect = """
@@ -24,24 +42,111 @@ final class PostsService {
 
     // MARK: - Fetch
 
-    /// Load posts joined with author name/avatar.
-    /// Returns visible posts, plus the current user's own pending/hidden posts.
-    func fetchPosts(userId: UUID?) async {
+    /// Load page one (newest posts) joined with author name/avatar and merge it
+    /// into `posts` in place: changed posts update, vanished ones drop, already
+    /// loaded older pages stay. RLS decides visibility (visible posts, plus the
+    /// current user's own pending/hidden ones).
+    /// `holdNew`: park genuinely new posts in `pendingNewPosts` (realtime
+    /// refreshes while the reader is mid-scroll) instead of inserting them.
+    func fetchPosts(userId: UUID?, holdNew: Bool = false) async {
+        inFlight += 1
         isLoading = true
         error = nil
-        defer { isLoading = false }
+        defer { inFlight -= 1; isLoading = inFlight > 0 }
         do {
             let rows: [PostRow] = try await supabase
                 .from("posts")
                 .select(Self.postSelect)
                 .order("occurred_at", ascending: false)
+                .order("id", ascending: false)
+                .range(from: 0, to: Self.pageSize - 1)
                 .execute()
                 .value
-            posts = rows.map(\.toPost)
+            applyFirstPage(rows.map(\.toPost), holdNew: holdNew)
+            lastRefreshAt = .now
+            dataVersion += 1
         } catch {
+            if Task.isCancelled || (error as? URLError)?.code == .cancelled { return }
             self.error = "Couldn't load posts."
             print("[PostsService] fetchPosts error: \(error)")
         }
+    }
+
+    /// Load the next (older) page. Guarded against duplicate requests; stops
+    /// for good when a short page comes back.
+    func loadMore() async {
+        guard hasMore, !isLoadingMore, !isLoading, !posts.isEmpty else { return }
+        isLoadingMore = true
+        defer { isLoadingMore = false }
+        // Pending posts sort above everything loaded, so they shift the server
+        // offset even though they aren't in `posts` yet.
+        let from = posts.count + pendingNewPosts.count
+        do {
+            let rows: [PostRow] = try await supabase
+                .from("posts")
+                .select(Self.postSelect)
+                .order("occurred_at", ascending: false)
+                .order("id", ascending: false)
+                .range(from: from, to: from + Self.pageSize - 1)
+                .execute()
+                .value
+            let known = Set(posts.map(\.id)).union(pendingNewPosts.map(\.id))
+            let fresh = rows.map(\.toPost).filter { !known.contains($0.id) }
+            if !fresh.isEmpty { posts.append(contentsOf: fresh) }
+            if rows.count < Self.pageSize { hasMore = false }
+            dataVersion += 1
+        } catch {
+            if Task.isCancelled || (error as? URLError)?.code == .cancelled { return }
+            print("[PostsService] loadMore error: \(error)")
+        }
+    }
+
+    /// Seed from a disk snapshot (instant paint). Only when nothing is loaded.
+    func seed(from snapshot: [Post]) {
+        guard posts.isEmpty, !snapshot.isEmpty else { return }
+        posts = snapshot
+        hasMore = snapshot.count >= Self.pageSize
+    }
+
+    /// Merge a fresh page one into the loaded list without replacing it wholesale.
+    private func applyFirstPage(_ page: [Post], holdNew: Bool) {
+        let pageIds = Set(page.map(\.id))
+        let existingIds = Set(posts.map(\.id))
+        let short = page.count < Self.pageSize
+
+        // A deliberate refresh shows everything, including what was waiting.
+        if !holdNew { pendingNewPosts = [] }
+        // Genuinely new posts (not loaded, not already waiting).
+        var visiblePage = page
+        if holdNew {
+            let waiting = Set(pendingNewPosts.map(\.id))
+            let held = page.filter { !existingIds.contains($0.id) && !waiting.contains($0.id) }
+            if !held.isEmpty, !posts.isEmpty {
+                visiblePage.removeAll { p in held.contains { $0.id == p.id } }
+                pendingNewPosts = (held + pendingNewPosts).sorted { $0.timelineDate > $1.timelineDate }
+            }
+        }
+
+        // Older, already-loaded posts beyond the page stay put.
+        var tail: [Post] = []
+        if !short, let boundary = page.last?.timelineDate {
+            tail = posts.filter { !pageIds.contains($0.id) && $0.timelineDate < boundary }
+        }
+        let merged = visiblePage.filter { p in !pendingNewPosts.contains { $0.id == p.id } } + tail
+        let hadMore = hasMore
+        hasMore = short ? false : (tail.isEmpty ? true : hadMore)
+        if merged != posts {
+            posts = merged
+        }
+    }
+
+    /// Reveal posts that arrived while the reader was scrolled away.
+    func revealPending() {
+        guard !pendingNewPosts.isEmpty else { return }
+        let known = Set(posts.map(\.id))
+        let add = pendingNewPosts.filter { !known.contains($0.id) }
+        pendingNewPosts = []
+        posts.insert(contentsOf: add, at: 0)
     }
 
     /// One post by id, joined the same way the feed is. Used by the notification
@@ -291,6 +396,26 @@ final class PostsService {
         }
     }
 
+    /// Reactions for many posts in ONE query per chunk (not one request per post).
+    /// Every requested id is present in the result, empty when nobody reacted.
+    func fetchReactions(postIds: [UUID]) async throws -> [UUID: [PostReaction]] {
+        var out: [UUID: [PostReaction]] = Dictionary(uniqueKeysWithValues: postIds.map { ($0, []) })
+        let chunkSize = 50
+        var start = 0
+        while start < postIds.count {
+            let chunk = Array(postIds[start..<min(start + chunkSize, postIds.count)])
+            let rows: [PostReaction] = try await supabase
+                .from("post_reactions")
+                .select("*")
+                .in("post_id", values: chunk.map(\.uuidString))
+                .execute()
+                .value
+            for r in rows { out[r.postId, default: []].append(r) }
+            start += chunkSize
+        }
+        return out
+    }
+
     func fetchReactions(postId: UUID) async throws -> [PostReaction] {
         let reactions: [PostReaction] = try await supabase
             .from("post_reactions")
@@ -329,34 +454,97 @@ final class PostsService {
             channel.onPostgresChange(InsertAction.self, schema: "public", table: "posts") { [weak self] action in
                 guard let self else { return }
                 Task { @MainActor in
-                    let record = action.record
-                    guard let idStr = record["id"]?.stringValue,
-                          let id = UUID(uuidString: idStr)
+                    guard let idStr = action.record["id"]?.stringValue,
+                          let id = UUID(uuidString: idStr),
+                          let post = try? await self.fetchPostRow(id: id)
                     else { return }
-                    if let row: PostRow = try? await supabase
-                        .from("posts")
-                        .select(Self.postSelect)
-                        .eq("id", value: id.uuidString)
-                        .single()
-                        .execute()
-                        .value
-                    {
-                        let post = row.toPost
-                        if !self.posts.contains(where: { $0.id == post.id }) {
-                            self.posts.insert(post, at: 0)
-                        }
-                    }
+                    self.receiveInserted(post)
                 }
             }
-            // Comments and reactions change the counts shown on each card — reload
-            // the feed when they change, matching the web `posts-feed` channel.
+            channel.onPostgresChange(UpdateAction.self, schema: "public", table: "posts") { [weak self] action in
+                guard let self else { return }
+                Task { @MainActor in
+                    guard let idStr = action.record["id"]?.stringValue,
+                          let id = UUID(uuidString: idStr)
+                    else { return }
+                    await self.receiveUpdated(id: id)
+                }
+            }
+            channel.onPostgresChange(DeleteAction.self, schema: "public", table: "posts") { [weak self] action in
+                guard let self else { return }
+                Task { @MainActor in
+                    guard let idStr = action.oldRecord["id"]?.stringValue,
+                          let id = UUID(uuidString: idStr)
+                    else { return }
+                    self.removeLocally(id: id)
+                }
+            }
+            // Comments and reactions change the counts shown on each card — refresh
+            // page one when they change (debounced; matches the web `posts-feed`
+            // channel). New posts found this way respect `holdNewPosts`.
             for table in ["post_comments", "post_reactions", "post_media", "post_tags"] {
                 channel.onPostgresChange(AnyAction.self, schema: "public", table: table) { [weak self] _ in
                     guard let self else { return }
-                    Task { @MainActor in await self.fetchPosts(userId: nil) }
+                    Task { @MainActor in self.scheduleQuietRefresh() }
                 }
             }
             await channel.subscribe()
+        }
+    }
+
+    /// Coalesce bursts of realtime events into one quiet page-one refresh.
+    private func scheduleQuietRefresh() {
+        refreshDebounce?.cancel()
+        refreshDebounce = Task { [weak self] in
+            try? await Task.sleep(for: .milliseconds(700))
+            guard !Task.isCancelled, let self else { return }
+            await self.fetchPosts(userId: nil, holdNew: self.holdNewPosts)
+        }
+    }
+
+    /// One post's joined row, or nil when it is not visible to this member.
+    /// Throws on network failure so callers can tell "gone" from "offline".
+    private func fetchPostRow(id: UUID) async throws -> Post? {
+        let rows: [PostRow] = try await supabase
+            .from("posts")
+            .select(Self.postSelect)
+            .eq("id", value: id.uuidString)
+            .execute()
+            .value
+        return rows.first?.toPost
+    }
+
+    private func receiveInserted(_ post: Post) {
+        guard !posts.contains(where: { $0.id == post.id }),
+              !pendingNewPosts.contains(where: { $0.id == post.id })
+        else { return }
+        let idx = posts.firstIndex { $0.timelineDate <= post.timelineDate } ?? posts.count
+        // Belongs below the loaded pages: it arrives with paging.
+        if idx == posts.count, hasMore, !posts.isEmpty { return }
+        if idx == 0, holdNewPosts, !posts.isEmpty {
+            pendingNewPosts = ([post] + pendingNewPosts).sorted { $0.timelineDate > $1.timelineDate }
+            return
+        }
+        withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) {
+            posts.insert(post, at: idx)
+        }
+    }
+
+    private func receiveUpdated(id: UUID) async {
+        guard posts.contains(where: { $0.id == id }) || pendingNewPosts.contains(where: { $0.id == id })
+        else { return }
+        let fresh: Post?
+        do { fresh = try await fetchPostRow(id: id) } catch { return }  // offline: keep what we have
+        guard let fresh else { removeLocally(id: id); return }          // hidden / no longer visible
+        if let i = posts.firstIndex(where: { $0.id == id }), posts[i] != fresh { posts[i] = fresh }
+        if let i = pendingNewPosts.firstIndex(where: { $0.id == id }) { pendingNewPosts[i] = fresh }
+    }
+
+    private func removeLocally(id: UUID) {
+        pendingNewPosts.removeAll { $0.id == id }
+        guard posts.contains(where: { $0.id == id }) else { return }
+        withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) {
+            posts.removeAll { $0.id == id }
         }
     }
 
@@ -498,5 +686,66 @@ private struct PostRow: Decodable {
             occurredAt: occurredAt,
             createdAt: createdAt
         )
+    }
+
+}
+
+// MARK: - Comment reactions (migration 0223)
+
+extension PostsService {
+
+    /// All reactions for a set of comments in ONE query, with reactor names.
+    func fetchCommentReactions(commentIds: [UUID]) async -> [CommentReaction] {
+        guard !commentIds.isEmpty else { return [] }
+        struct Row: Decodable {
+            let commentId: UUID
+            let userId: UUID
+            let emoji: String
+            let profiles: P?
+            struct P: Decodable {
+                let name: String?
+                enum CodingKeys: String, CodingKey { case name = "display_name" }
+            }
+            enum CodingKeys: String, CodingKey {
+                case commentId = "comment_id"
+                case userId = "user_id"
+                case emoji, profiles
+            }
+        }
+        do {
+            let rows: [Row] = try await supabase
+                .from("comment_reactions")
+                .select("comment_id, user_id, emoji, profiles!user_id(display_name)")
+                .in("comment_id", values: commentIds.map(\.uuidString))
+                .execute()
+                .value
+            return rows.map { CommentReaction(commentId: $0.commentId, userId: $0.userId, emoji: $0.emoji, name: $0.profiles?.name) }
+        } catch {
+            print("[PostsService] fetchCommentReactions error: \(error)")
+            return []
+        }
+    }
+
+    /// Set (or switch to) my emoji on a comment — one row per member per comment.
+    func setCommentReaction(commentId: UUID, emoji: String, userId: UUID) async throws {
+        let params: [String: AnyJSON] = [
+            "comment_id": .string(commentId.uuidString),
+            "user_id":    .string(userId.uuidString),
+            "emoji":      .string(emoji)
+        ]
+        try await supabase
+            .from("comment_reactions")
+            .upsert(params, onConflict: "comment_id,user_id")
+            .execute()
+    }
+
+    /// Remove my reaction (tapping the emoji I already have).
+    func removeCommentReaction(commentId: UUID, userId: UUID) async throws {
+        try await supabase
+            .from("comment_reactions")
+            .delete()
+            .eq("comment_id", value: commentId.uuidString)
+            .eq("user_id", value: userId.uuidString)
+            .execute()
     }
 }

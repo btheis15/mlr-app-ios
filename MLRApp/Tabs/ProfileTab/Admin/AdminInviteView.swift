@@ -81,7 +81,7 @@ struct AdminInviteView: View {
                 .padding(16)
                 .padding(.bottom, 32)
             }
-            .background(Color.mlrSurface)
+            .mlrBackdrop()
             .navigationTitle("Invite People")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

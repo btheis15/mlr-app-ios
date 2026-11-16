@@ -19,7 +19,8 @@ struct FestStatus: View {
     var body: some View {
         switch season.phase {
         case .offSeason:
-            OffSeasonCard()
+            // The name/dates already show in the nav title and the cover caption.
+            EmptyView()
         case .planning:
             PlanningCard(season: season)
         case .live:
@@ -58,30 +59,6 @@ private extension View {
                             .strokeBorder(Color.mlrFestGold.opacity(0.4), lineWidth: 1.25))
             )
             .shadow(color: .black.opacity(0.08), radius: 10, x: 0, y: 4)
-    }
-}
-
-// MARK: - Off-Season
-
-private struct OffSeasonCard: View {
-    var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: "crown.fill")
-                .font(.mlrScaled(18))
-                .foregroundStyle(Color.mlrFestGold)
-
-            VStack(alignment: .leading, spacing: 2) {
-                // Year comes from the resolved fest window, not a literal — a
-                // hardcoded 2026 here outlives the fest it names.
-                Text("Family Fest \(String(FamilyFestConfig.year))")
-                    .festHeadingStyle(size: 15)
-                Text("\(FamilyFestConfig.dateRangeLabel) · Tomahawk, WI")
-                    .font(.mlrScaled(12))
-                    .foregroundStyle(Color.mlrFestInk.opacity(0.7))
-            }
-            Spacer()
-        }
-        .festStatusCard()
     }
 }
 

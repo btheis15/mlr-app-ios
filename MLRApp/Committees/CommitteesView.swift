@@ -20,6 +20,8 @@ struct CommitteesView: View {
     // Live committees only — archived ones drop out; admin-created ones appear.
     private var committees: [Committee] { env.committeeService.liveCommittees }
     private var myMemberships: [CommitteeMember] { env.committeeService.myMemberships }
+    /// Snapshot owner for the committee list: the real viewer, never while previewing.
+    private var cacheUser: UUID? { env.isPreviewing ? nil : env.currentProfile?.id }
 
     private var myCommitteeIds: Set<UUID> {
         Set(myMemberships.map(\.committeeId))
@@ -36,7 +38,7 @@ struct CommitteesView: View {
     var body: some View {
         NavigationStack {
             Group {
-                if env.committeeService.isLoading && !hasLoaded {
+                if env.committeeService.isLoading && committees.isEmpty {
                     ScrollView {
                         VStack(spacing: 12) {
                             ForEach(0..<5, id: \.self) { _ in SkeletonCard(height: 90) }
@@ -66,9 +68,9 @@ struct CommitteesView: View {
             .task {
                 guard !hasLoaded else { return }
                 async let areas = env.committeeService.fetchAreasByCommittee()
-                await env.committeeService.fetchCommittees()
+                await env.committeeService.fetchCommittees(cacheUser: cacheUser)
                 if let userId = await env.authService.userId {
-                    await env.committeeService.fetchMyMemberships(userId: userId)
+                    await env.committeeService.fetchMyMemberships(userId: userId, cache: !env.isPreviewing)
                 }
                 areasBySlug = await areas
                 hasLoaded = true
@@ -93,9 +95,9 @@ struct CommitteesView: View {
             .padding(.vertical, 16)
         }
         .refreshable {
-            await env.committeeService.fetchCommittees()
+            await env.committeeService.fetchCommittees(cacheUser: cacheUser)
             if let userId = await env.authService.userId {
-                await env.committeeService.fetchMyMemberships(userId: userId)
+                await env.committeeService.fetchMyMemberships(userId: userId, cache: !env.isPreviewing)
             }
         }
     }

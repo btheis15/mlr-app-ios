@@ -20,6 +20,10 @@ struct AdminScheduledBroadcasts: View {
     @State private var editBody = ""
     @State private var editExcludeCalloutDone = true
     @State private var newDate = Date.now.addingTimeInterval(3600)
+    /// Values as the edit sheet opened, for the kit's dirty tracking.
+    @State private var editOriginalDate = Date.now
+    @State private var cancelTarget: ScheduledBroadcast?
+    @State private var cancelling = false
     @State private var channel: RealtimeChannelV2?
     @State private var showHistory = false
 
@@ -63,6 +67,15 @@ struct AdminScheduledBroadcasts: View {
         .sheet(item: $editing) { item in
             editSheet(item)
         }
+        .confirmationDialog("Cancel this scheduled send?", isPresented: Binding(get: { cancelTarget != nil },
+                                                                                set: { if !$0 { cancelTarget = nil } }),
+                            titleVisibility: .visible) {
+            Button("Cancel the send", role: .destructive) {
+                if let t = cancelTarget { Task { await cancel(t) } }
+                cancelTarget = nil
+            }
+            Button("Keep it scheduled", role: .cancel) { cancelTarget = nil }
+        } message: { Text("It will not go out. This can\u{2019}t be undone.") }
     }
 
     // MARK: - Row
@@ -99,12 +112,14 @@ struct AdminScheduledBroadcasts: View {
                         editBody = item.payload.body ?? ""
                         editExcludeCalloutDone = item.payload.excludeCalloutDone ?? true
                         newDate = max(item.scheduledAt, Date.now.addingTimeInterval(120))
+                        editOriginalDate = newDate
                         editing = item
                     }
                     .font(.mlrScaled(12, weight: .medium))
                     .foregroundStyle(Color.mlrPrimary)
-                    Button("Cancel", role: .destructive) { Task { await cancel(item) } }
+                    Button("Cancel", role: .destructive) { cancelTarget = item }
                         .font(.mlrScaled(12, weight: .medium))
+                        .disabled(cancelling)
                 }
                 .padding(.top, 2)
             }
@@ -148,40 +163,39 @@ struct AdminScheduledBroadcasts: View {
     private var trimmedEditTitle: String { editTitle.trimmingCharacters(in: .whitespacesAndNewlines) }
 
     private func editSheet(_ item: ScheduledBroadcast) -> some View {
-        NavigationStack {
-            Form {
-                if let label = item.payload.sourceLabel {
-                    Section { Label("Reminder for: \(label)", systemImage: "link").foregroundStyle(Color.mlrInfo) }
-                }
-                Section("Title") {
-                    TextField("Title", text: $editTitle)
-                }
-                Section("Body (optional)") {
-                    TextField("Body", text: $editBody, axis: .vertical)
-                        .lineLimit(2...5)
-                }
-                if item.payload.sourceType == "callout" {
-                    Section {
-                        Toggle("Skip anyone who already marked this callout \"done\"", isOn: $editExcludeCalloutDone)
-                            .tint(Color.mlrPrimary)
-                    }
-                }
-                Section("Send at") {
-                    DatePicker("Send at", selection: $newDate,
-                               in: Date.now.addingTimeInterval(120)...,
-                               displayedComponents: [.date, .hourAndMinute])
-                        .labelsHidden()
+        let origBody = item.payload.body ?? ""
+        let trimmedBody = editBody.trimmingCharacters(in: .whitespacesAndNewlines)
+        let dirty = trimmedEditTitle != item.payload.title
+            || trimmedBody != origBody.trimmingCharacters(in: .whitespacesAndNewlines)
+            || (item.payload.sourceType == "callout" && editExcludeCalloutDone != (item.payload.excludeCalloutDone ?? true))
+            || abs(newDate.timeIntervalSince(editOriginalDate)) > 30
+        return EditorSheet(
+            title: "Edit scheduled \(item.kind == .announcement ? "announcement" : "notification")",
+            isDirty: dirty,
+            canSave: !trimmedEditTitle.isEmpty,
+            save: { try await saveEdit(item) }
+        ) {
+            if let label = item.payload.sourceLabel {
+                Section { Label("Reminder for: \(label)", systemImage: "link").foregroundStyle(Color.mlrInfo) }
+            }
+            Section("Title") {
+                TextField("Title", text: $editTitle)
+            }
+            Section("Body (optional)") {
+                TextField("Body", text: $editBody, axis: .vertical)
+                    .lineLimit(2...5)
+            }
+            if item.payload.sourceType == "callout" {
+                Section {
+                    Toggle("Skip anyone who already marked this callout \"done\"", isOn: $editExcludeCalloutDone)
+                        .tint(Color.mlrPrimary)
                 }
             }
-            .navigationTitle("Edit scheduled \(item.kind == .announcement ? "announcement" : "notification")")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { editing = nil } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await saveEdit(item) } }
-                        .fontWeight(.semibold)
-                        .disabled(trimmedEditTitle.isEmpty)
-                }
+            Section("Send at") {
+                DatePicker("Send at", selection: $newDate,
+                           in: Date.now.addingTimeInterval(120)...,
+                           displayedComponents: [.date, .hourAndMinute])
+                    .labelsHidden()
             }
         }
         .presentationDetents([.medium, .large])
@@ -203,16 +217,22 @@ struct AdminScheduledBroadcasts: View {
     }
 
     private func cancel(_ item: ScheduledBroadcast) async {
-        actionError = nil
+        guard !cancelling else { return }
+        cancelling = true; actionError = nil
+        defer { cancelling = false }
         do {
             try await env.notificationsService.cancelScheduledBroadcast(id: item.id)
+            Haptics.warning()
             await load()
-        } catch { actionError = "Couldn't cancel." }
+        } catch {
+            actionError = "Couldn\u{2019}t cancel. \(EditorError.message(error))"
+            Haptics.error()
+        }
     }
 
-    private func saveEdit(_ item: ScheduledBroadcast) async {
+    /// Throws on failure so the edit sheet stays open and shows the real reason.
+    private func saveEdit(_ item: ScheduledBroadcast) async throws {
         guard !trimmedEditTitle.isEmpty else { return }
-        actionError = nil
         var payload = item.payload
         payload.title = trimmedEditTitle
         let trimmedBody = editBody.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -220,12 +240,10 @@ struct AdminScheduledBroadcasts: View {
         if item.payload.sourceType == "callout" {
             payload.excludeCalloutDone = editExcludeCalloutDone
         }
-        do {
-            try await env.notificationsService.updateScheduledBroadcast(
-                id: item.id, payload: payload, scheduledAt: newDate)
-            editing = nil
-            await load()
-        } catch { actionError = "Couldn't save changes." }
+        try await env.notificationsService.updateScheduledBroadcast(
+            id: item.id, payload: payload, scheduledAt: newDate)
+        actionError = nil
+        await load()
     }
 
     private func subscribe() {

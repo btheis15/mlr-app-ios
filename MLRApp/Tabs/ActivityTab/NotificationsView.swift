@@ -15,31 +15,24 @@ struct NotificationsView: View {
 
     // MARK: - Grouping
 
+    /// One section per calendar day, newest first ("Today", "Yesterday", then
+    /// "Monday, Nov 9"). The list is `.plain`, so section headers pin (stick).
     private var grouped: [(label: String, items: [AppNotification])] {
         let cal = Calendar.current
-        let now = Date.now
-        let startOfToday = cal.startOfDay(for: now)
-        let startOfWeek  = cal.date(byAdding: .day, value: -7, to: startOfToday)!
-
-        var today: [AppNotification]     = []
-        var thisWeek: [AppNotification]  = []
-        var earlier: [AppNotification]   = []
-
+        var order: [Date] = []
+        var map: [Date: [AppNotification]] = [:]
         for n in notifications {
-            if n.createdAt >= startOfToday {
-                today.append(n)
-            } else if n.createdAt >= startOfWeek {
-                thisWeek.append(n)
-            } else {
-                earlier.append(n)
-            }
+            let day = cal.startOfDay(for: n.createdAt)
+            if map[day] == nil { order.append(day) }
+            map[day, default: []].append(n)
         }
-
-        var groups: [(label: String, items: [AppNotification])] = []
-        if !today.isEmpty    { groups.append((label: "Today",     items: today)) }
-        if !thisWeek.isEmpty { groups.append((label: "This Week", items: thisWeek)) }
-        if !earlier.isEmpty  { groups.append((label: "Earlier",   items: earlier)) }
-        return groups
+        return order.sorted(by: >).map { day in
+            let label: String
+            if cal.isDateInToday(day) { label = "Today" }
+            else if cal.isDateInYesterday(day) { label = "Yesterday" }
+            else { label = day.formatted(.dateTime.weekday(.wide).month(.abbreviated).day()) }
+            return (label, map[day] ?? [])
+        }
     }
 
     // MARK: - Body
@@ -67,6 +60,7 @@ struct NotificationsView: View {
                 }
             }
         }
+        .mlrBackdrop()
         .task {
             await loadAndMarkSeen()
         }
@@ -75,6 +69,7 @@ struct NotificationsView: View {
     // MARK: - Feed list
 
     private var feedList: some View {
+        ScrollViewReader { proxy in
         List {
             if let error {
                 Section {
@@ -88,25 +83,48 @@ struct NotificationsView: View {
                 Section {
                     ForEach(group.items) { notif in
                         NotificationRow(notification: notif)
-                            .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 0))
-                            .listRowBackground(notif.isUnread
-                                               ? Color.mlrPrimaryLight.opacity(0.35)
-                                               : Color.mlrSurface)
+                            .contentShape(Rectangle())
+                            .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: notif.isUnread)
+                            .mlrCard(.plain, padding: 6)
+                            .listRowInsets(EdgeInsets(top: 4, leading: 16, bottom: 4, trailing: 16))
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
                             .onTapGesture {
                                 Task { await handleTap(notif) }
+                            }
+                            .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                                if notif.isUnread {
+                                    Button {
+                                        Haptics.tap()
+                                        Task { await markRead(notif) }
+                                    } label: {
+                                        Label("Mark read", systemImage: "envelope.open")
+                                    }
+                                    .tint(Color.mlrPrimary)
+                                }
                             }
                     }
                 } header: {
                     Text(group.label)
-                        .font(.mlrScaled(12, weight: .semibold))
-                        .foregroundStyle(Color.mlrTextMuted)
+                        .font(.mlrSectionTitle)
+                        .foregroundStyle(Color.mlrText)
                         .textCase(nil)
                 }
             }
         }
         .listStyle(.plain)
+        .contentMargins(.bottom, 96, for: .scrollContent)
         .refreshable {
             await loadAndMarkSeen()
+        }
+        // Tapping the Activity tab again scrolls back to the newest row.
+        .onReceive(NotificationCenter.default.publisher(for: .tabReselected)) { note in
+            guard (note.object as? Tab) == .activity,
+                  let first = grouped.first?.items.first else { return }
+            withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) {
+                proxy.scrollTo(first.id, anchor: .top)
+            }
+        }
         }
     }
 
@@ -140,7 +158,6 @@ struct NotificationsView: View {
                 .padding(.horizontal, 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.mlrSurface)
     }
 
     // MARK: - Loading state
@@ -231,7 +248,7 @@ struct NotificationsView: View {
         defer { isLoading = false }
 
         // fetchNotifications is non-throwing; it sets .error and returns via .notifications
-        await env.notificationsService.fetchNotifications(userId: userId)
+        await env.notificationsService.fetchNotifications(userId: userId, cache: !env.isPreviewing)
         if env.notificationsService.error != nil {
             self.error = "Couldn't load notifications. Pull to retry."
             return
@@ -250,6 +267,15 @@ struct NotificationsView: View {
             await env.notificationsService.fetchUnreadCount(userId: userId)
         } catch {
             self.error = "Couldn't mark notifications as read."
+        }
+    }
+
+    @MainActor
+    private func markRead(_ notification: AppNotification) async {
+        // Own notifications only; nothing here writes as another member.
+        await env.notificationsService.markRead(notificationId: notification.id)
+        if let uid = env.currentProfile?.id {
+            await env.notificationsService.fetchUnreadCount(userId: uid)
         }
     }
 
@@ -320,12 +346,9 @@ extension NotificationsService {
     /// Stamp `read_at` on all unread rows for `userId`. The notifications table
     /// keys the recipient as `recipient_id` (there is no `user_id` column).
     func markAllRead(userId: UUID) async throws {
-        try await supabase
-            .from("notifications")
-            .update(["read_at": ISO8601DateFormatter().string(from: .now)])
-            .eq("recipient_id", value: userId.uuidString)
-            .is("read_at", value: nil)
-            .execute()
+        // Web parity: mark_all_notifications_read() takes no args; it resolves the
+        // caller via auth.uid() (migration 0030).
+        try await supabase.rpc("mark_all_notifications_read").execute()
 
         // Optimistically stamp the in-memory rows so the list updates immediately.
         let now = Date.now

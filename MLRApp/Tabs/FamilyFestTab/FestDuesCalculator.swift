@@ -56,7 +56,7 @@ struct FestDuesCalculator: View {
                     .fixedSize(horizontal: false, vertical: true)
                     .padding(.bottom, 6)
                 HStack {
-                    Text("Number of days").font(.mlrScaled(14, weight: .medium)).foregroundStyle(Color.mlrFest)
+                    Text("Number of days").font(.mlrScaled(14, weight: .medium)).foregroundStyle(Color.mlrFestReadable)
                     Spacer()
                     stepper(count: days, min: 1,
                             dec: { setDays(days - 1) }, inc: { setDays(days + 1) })
@@ -75,7 +75,7 @@ struct FestDuesCalculator: View {
                 HStack {
                     Text("Your total").font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrFestInk.opacity(0.8))
                     Spacer()
-                    Text("$\(total)").font(.festSerif(18, weight: .bold)).foregroundStyle(Color.mlrFest)
+                    Text("$\(total)").font(.festSerif(18, weight: .bold)).foregroundStyle(Color.mlrFestReadable)
                 }
                 .padding(.horizontal, 10).padding(.vertical, 10)
                 .background(Color.mlrFestParchment)
@@ -98,7 +98,7 @@ struct FestDuesCalculator: View {
     private func duesRow(_ tier: FestDuesTier, perDaySuffix: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline) {
             VStack(alignment: .leading, spacing: 1) {
-                Text(tier.label).font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrFest)
+                Text(tier.label).font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrFestReadable)
                 if let note = tier.note, !note.isEmpty {
                     Text(note).font(.mlrScaled(11)).foregroundStyle(Color.mlrFestInk.opacity(0.6))
                 }
@@ -130,7 +130,7 @@ struct FestDuesCalculator: View {
             .disabled(count <= min)
             .opacity(count <= min ? 0.3 : 1)
 
-            Text("\(count)").font(.mlrScaled(15, weight: .bold)).foregroundStyle(Color.mlrFest)
+            Text("\(count)").font(.mlrScaled(15, weight: .bold)).foregroundStyle(Color.mlrFestReadable)
                 .frame(minWidth: 16)
 
             Button(action: inc) {

@@ -14,6 +14,15 @@ extension Font {
 
     // Family Fest serif (Cinzel)
     static func festSerif(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        // Per-year look (migration 0219). Playfair isn't bundled, so it maps to
+        // the system serif design; "sans" to the system default.
+        switch FestThemeStore.active.font {
+        case "playfair":
+            return .system(size: size, weight: weight, design: .serif)
+        case "sans":
+            return .system(size: size, weight: weight)
+        default: break
+        }
         switch weight {
         case .bold, .heavy, .black:
             return .custom("Cinzel-Bold", size: size)
@@ -27,8 +36,45 @@ extension Font {
     static let mlrHeadline = Font.system(.headline, design: .rounded, weight: .semibold)
     static let mlrBody     = Font.system(.body)
     static let mlrCaption  = Font.system(.caption)
-    static let mlrFootnote = Font.system(.footnote)
+    static let mlrFootnote = Font.mlrScaled(12, relativeTo: .footnote)
 
+    // MARK: Revamp type scale (Northwoods lodge). Text styles, so Dynamic Type works.
+    /// Destination screen title: New York serif bold, ~34pt.
+    static let mlrScreenTitle  = Font.mlrScaled(26, weight: .bold, design: .serif, relativeTo: .largeTitle)
+    /// Section header: serif semibold, ~22pt.
+    static let mlrSectionTitle = Font.mlrScaled(18, weight: .semibold, design: .serif, relativeTo: .title2)
+    /// Hero card title: serif ~22pt semibold.
+    static let mlrHeroTitle    = Font.mlrScaled(17, weight: .semibold, design: .serif, relativeTo: .title3)
+    /// Card title: SF ~20pt semibold.
+    static let mlrCardTitle    = Font.mlrScaled(16, weight: .semibold, relativeTo: .title3)
+    /// Row title: SF 17 semibold.
+    static let mlrRowTitle     = Font.mlrScaled(15, weight: .semibold)
+    /// Secondary text: SF 15.
+    static let mlrSecondary    = Font.mlrScaled(13, relativeTo: .subheadline)
+    /// Caption: SF 13.
+    static let mlrCaption13    = Font.mlrScaled(12, relativeTo: .footnote)
+    /// Eyebrow: 12 semibold (apply with `.mlrEyebrow(color)` for case + tracking).
+    static let mlrEyebrow      = Font.mlrScaled(11, weight: .semibold, relativeTo: .caption1)
+    /// Fest display: theme heading font when the theme sets one, else serif.
+    static func festDisplay(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        FestThemeStore.active.font == nil
+            ? .system(size: UIFontMetrics(forTextStyle: .title1).scaledValue(for: size), weight: weight, design: .serif)
+            : .festSerif(UIFontMetrics(forTextStyle: .title1).scaledValue(for: size), weight: weight)
+    }
+}
+
+extension View {
+    /// Eyebrow label look: 12 semibold, uppercase, tracking 1.2, coloured.
+    func mlrEyebrow(_ color: Color = .mlrCampfire) -> some View {
+        self.font(.mlrEyebrow).textCase(.uppercase).tracking(1.2).foregroundStyle(color)
+    }
+    func mlrScreenTitle() -> some View { font(.mlrScreenTitle).foregroundStyle(Color.mlrText) }
+    func mlrSectionTitle() -> some View { font(.mlrSectionTitle).foregroundStyle(Color.mlrText) }
+    func mlrCardTitle() -> some View { font(.mlrCardTitle).foregroundStyle(Color.mlrText) }
+    func mlrSecondaryText() -> some View { font(.mlrSecondary).foregroundStyle(Color.mlrTextMuted) }
+}
+
+extension Font {
     /// A system font at a fixed base `size` that still scales with Dynamic Type
     /// (via UIFontMetrics) — preserves the app's exact visual sizing at the
     /// default text size while honoring the user's preferred content size.
@@ -64,7 +110,7 @@ extension Text {
 extension View {
     func primaryButton() -> some View {
         self
-            .font(.mlrScaled(16, weight: .semibold))
+            .font(.mlrScaled(15, weight: .semibold))
             .foregroundStyle(.white)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
@@ -74,7 +120,7 @@ extension View {
 
     func secondaryButton() -> some View {
         self
-            .font(.mlrScaled(16, weight: .semibold))
+            .font(.mlrScaled(15, weight: .semibold))
             .foregroundStyle(Color.mlrPrimary)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
@@ -97,12 +143,18 @@ extension View {
     func cardStyle(cornerRadius: CGFloat = 16, elevation: MLRElevation) -> some View {
         self
             .background(Color.mlrCard)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: Self.mlrCardRadius(cornerRadius), style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
+                RoundedRectangle(cornerRadius: Self.mlrCardRadius(cornerRadius), style: .continuous)
                     .stroke(Color.mlrBorder, lineWidth: 1)
             )
             .shadow(elevation)
+    }
+
+    /// Revamp: card-sized radii (>= 16) upgrade to the spec's 22 so every
+    /// existing `cardStyle` card matches `MLRCard`; small radii (chips, thumbs) stay.
+    static func mlrCardRadius(_ requested: CGFloat) -> CGFloat {
+        requested >= 16 && requested < 18 ? 18 : requested
     }
 
     /// Accent-washed card: tinted hairline + a faint top-edge gradient wash of
@@ -117,10 +169,10 @@ extension View {
                                    startPoint: .top, endPoint: .center)
                 }
             )
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: Self.mlrCardRadius(cornerRadius), style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(tint.opacity(0.35), lineWidth: 1)
+                RoundedRectangle(cornerRadius: Self.mlrCardRadius(cornerRadius), style: .continuous)
+                    .stroke(tint.opacity(0.20), lineWidth: 1)
             )
             .shadow(elevation)
     }
@@ -164,20 +216,13 @@ extension View {
     /// rather than flat tiles.
     func festCardStyle(cornerRadius: CGFloat = 16) -> some View {
         self
-            .background(
-                ZStack {
-                    Color.mlrFestCard
-                    // Low-opacity heraldic wash along the top edge — gilded panel.
-                    LinearGradient(colors: [Color.mlrFestGold.opacity(0.12), .clear],
-                                   startPoint: .top, endPoint: .center)
-                }
-            )
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .background(Color.mlrFestCard)
+            .clipShape(RoundedRectangle(cornerRadius: max(cornerRadius, 20), style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.mlrFestGold.opacity(0.6), lineWidth: 1)
+                RoundedRectangle(cornerRadius: max(cornerRadius, 20), style: .continuous)
+                    .stroke(Color.mlrFestBorder, lineWidth: 1)
             )
-            .shadow(.medium)
+            .shadow(color: .black.opacity(0.06), radius: 10, x: 0, y: 2)
     }
 }
 

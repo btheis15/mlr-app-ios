@@ -30,7 +30,19 @@ final class HousesService {
 
     // MARK: - Houses
 
+    /// The houses list is the same for every viewer, so its snapshot uses the
+    /// shared "guest" key.
+    private static let housesCacheKey = DiskCache.key("houses", user: nil)
+
+    /// Paint the last houses snapshot (no network) when nothing is loaded yet.
+    func hydrateFromCache() {
+        guard houses.isEmpty,
+              let cached = DiskCache.load([House].self, key: Self.housesCacheKey) else { return }
+        houses = cached
+    }
+
     func fetchHouses() async {
+        hydrateFromCache()
         isLoading = true
         error = nil
         defer { isLoading = false }
@@ -41,7 +53,8 @@ final class HousesService {
                 .order("position", ascending: true)
                 .execute()
                 .value
-            houses = rows
+            applyRefreshed { houses = rows }
+            DiskCache.save(rows, key: Self.housesCacheKey)
         } catch {
             self.error = "Couldn't load houses."
             print("[HousesService] fetchHouses error: \(error)")
@@ -492,6 +505,36 @@ final class HousesService {
             try await supabase.from("houses").insert(row).execute()
         }
         await fetchHouses()
+    }
+
+    /// Write the new order as `houses.position` = index (web: saveHouse position).
+    /// On a partial failure the list is refetched so the screen shows what the
+    /// server really holds, and the error is rethrown for the caller's rollback.
+    func saveHouseOrder(ids: [UUID]) async throws {
+        do {
+            for (i, id) in ids.enumerated() {
+                try await supabase.from("houses")
+                    .update(["position": AnyJSON.double(Double(i))])
+                    .eq("id", value: id.uuidString)
+                    .execute()
+            }
+        } catch {
+            await fetchHouses()
+            throw error
+        }
+        await fetchHouses()
+    }
+
+    /// How many members are assigned to each house (profiles.house_id), for the
+    /// delete confirmation. One read, counted client-side.
+    func memberCounts() async -> [UUID: Int] {
+        struct Row: Decodable { let house_id: UUID? }
+        let rows: [Row] = (try? await supabase.from("profiles")
+            .select("house_id")
+            .execute().value) ?? []
+        var out: [UUID: Int] = [:]
+        for r in rows { if let h = r.house_id { out[h, default: 0] += 1 } }
+        return out
     }
 
     func deleteHouse(id: UUID) async throws {

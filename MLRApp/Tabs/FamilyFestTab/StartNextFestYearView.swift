@@ -11,25 +11,46 @@ import SwiftUI
 // describe a week that never happened, and the app would count down to it all
 // over again.
 
-struct StartNextFestYearView: View {
-    @Environment(AppEnvironment.self) private var env
+/// Pushed from the Planner, which can't be edited here. EditorSheet owns its own
+/// NavigationStack, so this just presents the sheet at once and pops itself when
+/// it closes. (Once the Planner presents the sheet directly, this can go.)
+private struct SheetLaunchPad<Sheet: View>: View {
     @Environment(\.dismiss) private var dismiss
+    @State private var showing = false
+    @State private var launched = false
+    @ViewBuilder let sheet: () -> Sheet
 
-    @State private var name = ""
-    @State private var tagline = ""
-    // ⚠️ Both dates start EMPTY and are typed in by hand. The fest week is
+    var body: some View {
+        Color.clear
+            .onAppear {
+                guard !launched else { return }
+                launched = true
+                showing = true
+            }
+            .sheet(isPresented: $showing, onDismiss: { dismiss() }) { sheet() }
+    }
+}
+
+struct StartNextFestYearView: View {
+    var body: some View { SheetLaunchPad { StartNextFestYearSheet() } }
+}
+
+struct StartNextFestYearSheet: View {
+    @Environment(AppEnvironment.self) private var env
+
+    // ⚠️ Both dates start EMPTY (nil) and are picked by hand. The fest week is
     // different every year and the family decides it by poll, so there is
     // nothing correct to default to — the web shipped a "+52 weeks" default and
-    // it was wrong. `hasStart`/`hasEnd` keep "not yet chosen" distinguishable
-    // from "happens to be today", which a bare `Date` cannot express.
-    @State private var hasStart = false
-    @State private var hasEnd = false
-    @State private var startDate = Date()
-    @State private var endDate = Date()
-    @State private var copyFrom: Int?
-    @State private var saving = false
-    @State private var error: String?
-    @State private var result: String?
+    // it was wrong. nil keeps "not yet chosen" distinguishable from "today".
+    struct Values: Equatable {
+        var name = ""
+        var tagline = ""
+        var startISO: String?
+        var endISO: String?
+        var copyFrom: Int?
+    }
+
+    @State private var draft = EditorDraft(Values())
 
     private var service: FestContentService { env.festContentService }
 
@@ -37,20 +58,26 @@ struct StartNextFestYearView: View {
     /// disagree — a row labelled 2027 whose week is in 2028 would file itself
     /// under the wrong year forever.
     private var derivedYear: Int? {
-        hasStart ? Calendar.current.component(.year, from: startDate) : nil
+        draft.value.startISO.flatMap { Int($0.prefix(4)) }
+    }
+
+    private var endBeforeStart: Bool {
+        guard let s = draft.value.startISO, let e = draft.value.endISO else { return false }
+        return e < s   // ISO yyyy-MM-dd compares chronologically
     }
 
     private var canSave: Bool {
-        !name.trimmingCharacters(in: .whitespaces).isEmpty
-            && hasStart && hasEnd && endDate >= startDate && !saving
+        let v = draft.value
+        return !v.name.trimmingCharacters(in: .whitespaces).isEmpty
+            && v.startISO != nil && v.endISO != nil && !endBeforeStart
     }
 
     var body: some View {
-        Form {
+        EditorSheet(title: "Start next year", isDirty: draft.isDirty, canSave: canSave,
+                    save: { try await create() }) {
             Section {
-                TextField("Name", text: $name)
-                    .textInputAutocapitalization(.words)
-                TextField("Tagline (optional)", text: $tagline)
+                EditorTextField("Name", text: $draft.value.name, required: true)
+                EditorTextField("Tagline (optional)", text: $draft.value.tagline)
             } header: {
                 Text(derivedYear.map { "Family Fest \(String($0))" } ?? "The new fest")
             } footer: {
@@ -58,15 +85,9 @@ struct StartNextFestYearView: View {
             }
 
             Section {
-                Toggle("Start date chosen", isOn: $hasStart.animation())
-                if hasStart {
-                    DatePicker("Starts", selection: $startDate, displayedComponents: .date)
-                }
-                Toggle("End date chosen", isOn: $hasEnd.animation())
-                if hasEnd {
-                    DatePicker("Ends", selection: $endDate, displayedComponents: .date)
-                }
-                if hasStart, hasEnd, endDate < startDate {
+                EditorDateField("Starts", iso: $draft.value.startISO, isOptional: true)
+                EditorDateField("Ends", iso: $draft.value.endISO, isOptional: true)
+                if endBeforeStart {
                     Label("The end date is before the start.", systemImage: "exclamationmark.triangle.fill")
                         .font(.mlrScaled(12))
                         .foregroundStyle(.orange)
@@ -79,7 +100,7 @@ struct StartNextFestYearView: View {
 
             if !service.allYears.isEmpty {
                 Section {
-                    Picker("Copy the plan from", selection: $copyFrom) {
+                    Picker("Copy the plan from", selection: $draft.value.copyFrom) {
                         Text("Start empty").tag(Int?.none)
                         ForEach(service.allYears) { y in
                             Text(String(y.year)).tag(Int?.some(y.year))
@@ -89,149 +110,233 @@ struct StartNextFestYearView: View {
                     Text("Copies the schedule, dinners, dues and payees forward, shifting each day by however far the new week moved. You can edit everything afterwards.")
                 }
             }
-
-            if let error {
-                Section {
-                    Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .font(.mlrScaled(13))
-                        .foregroundStyle(.red)
-                }
-            }
-            if let result {
-                Section {
-                    Label(result, systemImage: "checkmark.circle.fill")
-                        .font(.mlrScaled(13))
-                        .foregroundStyle(Color.mlrSuccess)
-                }
-            }
-        }
-        .navigationTitle("Start next year")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button {
-                    Task { await save() }
-                } label: {
-                    if saving { ProgressView() } else { Text("Create").fontWeight(.semibold) }
-                }
-                .disabled(!canSave)
-            }
         }
         .task { await service.load() }
     }
 
-    private func save() async {
-        saving = true
-        error = nil
-        result = nil
-        defer { saving = false }
-
-        do {
-            let out = try await service.startFestYear(
-                name: name.trimmingCharacters(in: .whitespaces),
-                tagline: tagline.trimmingCharacters(in: .whitespaces).isEmpty
-                    ? nil : tagline.trimmingCharacters(in: .whitespaces),
-                startDate: festISOFormatter.string(from: startDate),
-                endDate: festISOFormatter.string(from: endDate),
-                copyFromYear: copyFrom
-            )
-            // ⚠️ A partial copy reports itself. The year EXISTS either way — the
-            // important part succeeded — but silently reporting plain success
-            // after a table failed to copy is how a half-copied fest looks
-            // finished.
-            if let warning = out.warning {
-                error = warning
-            } else {
-                result = out.copied > 0
-                    ? "Created, and copied \(out.copied) items forward."
-                    : "Created. Nothing to copy — plan it from scratch."
-                Haptics.success()
-                dismiss()
-            }
-        } catch {
-            self.error = error.localizedDescription
+    private func create() async throws {
+        let v = draft.value
+        guard let start = v.startISO, let end = v.endISO else { return }
+        let tagline = v.tagline.trimmingCharacters(in: .whitespaces)
+        let out = try await service.startFestYear(
+            name: v.name.trimmingCharacters(in: .whitespaces),
+            tagline: tagline.isEmpty ? nil : tagline,
+            startDate: start, endDate: end,
+            copyFromYear: v.copyFrom)
+        // ⚠️ A partial copy reports itself. The year EXISTS either way, so the
+        // draft is marked saved (Save disables, Cancel won't ask to discard) and
+        // the warning is thrown so the sheet stays open and shows it.
+        if let warning = out.warning {
+            draft.markSaved()
+            throw FestYearError.message(warning)
         }
     }
 }
 
 // MARK: - This year's theme & cover (migration 0219)
 
-/// Every column is nullable and null means "use the built-in look", so clearing
-/// a field here is a real answer, not an empty form.
-struct FestYearLookEditor: View {
-    @Environment(AppEnvironment.self) private var env
-    @Environment(\.dismiss) private var dismiss
+/// Presets matching web's `FEST_PRESETS` (lib/festTheme.ts). nil = built-in.
+private struct FestLookPreset: Identifiable {
+    let id: String
+    let name: String
+    let look: FestTheme
+}
 
-    @State private var theme = ""
-    @State private var coverUrl = ""
-    @State private var saving = false
-    @State private var error: String?
+private let festLookPresets: [FestLookPreset] = [
+    .init(id: "parchment", name: "Parchment & Heraldry",
+          look: FestTheme(bgStyle: "default", font: "cinzel")),
+    .init(id: "northwoods", name: "Northwoods Pine",
+          look: FestTheme(primary: "#15503a", accent: "#c2410c", background: "#f4f1e8", card: "#ffffff",
+                          border: "#ddd6c4", ink: "#26301f", bgStyle: "default", font: "sans")),
+    .init(id: "lakeside", name: "Lakeside Summer",
+          look: FestTheme(primary: "#0f6d80", accent: "#b45309", background: "#eef7f8", card: "#ffffff",
+                          border: "#c9dfe3", ink: "#173038", bgStyle: "default", font: "playfair")),
+    .init(id: "campfire", name: "Campfire Dusk",
+          look: FestTheme(primary: "#5b2a86", accent: "#c2410c", background: "#f6f1fa", card: "#ffffff",
+                          border: "#ddd0e8", ink: "#2b1f38", bgStyle: "default", font: "playfair")),
+    .init(id: "carnival", name: "Carnival Stripes",
+          look: FestTheme(primary: "#b91c1c", accent: "#0f766e", background: "#fff8ec", card: "#ffffff",
+                          border: "#f0dcbb", ink: "#3b2415", bgStyle: "default", font: "cinzel")),
+]
+
+/// Pushed from the Planner (see SheetLaunchPad). Edit-in-place on the overview
+/// presents `FestYearLookSheet` directly.
+struct FestYearLookEditor: View {
+    var body: some View { SheetLaunchPad { FestYearLookSheet() } }
+}
+
+/// Every column is nullable and null means "use the built-in look", so clearing
+/// a field here is a real answer, not an empty form. One Save writes the whole
+/// look in a single upsert.
+struct FestYearLookSheet: View {
+    @Environment(AppEnvironment.self) private var env
+
+    struct Values: Equatable {
+        var theme: String?
+        var coverUrl: String?
+        var look: FestTheme = .builtIn
+    }
+
+    @State private var draft = EditorDraft(Values())
     @State private var loaded = false
+    @State private var confirmReset = false
 
     private var service: FestContentService { env.festContentService }
 
+    private func slot(_ title: String, _ s: FestTheme.Slot, _ kp: WritableKeyPath<FestTheme, String?>) -> some View {
+        EditorColorField(title,
+                         hex: Binding(get: { draft.value.look[keyPath: kp] },
+                                      set: { draft.value.look[keyPath: kp] = $0 }),
+                         presets: [],
+                         defaultColor: Color(hex: FestTheme.defaults[s]!))
+    }
+
+    private func applyPreset(_ p: FestLookPreset) {
+        var next = p.look
+        // Keep an uploaded backdrop so switching preset never discards it.
+        next.bgImageUrl = draft.value.look.bgImageUrl
+        next.bgImageMode = draft.value.look.bgImageMode
+        next.bgImageOpacity = draft.value.look.bgImageOpacity
+        draft.value.look = next
+        Haptics.select()
+    }
+
+    private func upload(_ image: UIImage) async throws -> String {
+        try await env.mediaService.uploadSiteImage(image: image, key: "fest/\(service.year)")
+    }
+
     var body: some View {
-        Form {
+        EditorSheet(title: "Theme & cover", isDirty: draft.isDirty, canSave: loaded,
+                    save: {
+            let v = draft.value
+            let t = v.theme?.trimmingCharacters(in: .whitespaces) ?? ""
+            let c = v.coverUrl?.trimmingCharacters(in: .whitespaces) ?? ""
+            try await service.saveYearLook(theme: t.isEmpty ? nil : t,
+                                           coverUrl: c.isEmpty ? nil : c,
+                                           look: v.look)
+        }) {
+            // Live preview: drawn from the draft, never written, and it never
+            // touches FestThemeStore.active.
             Section {
-                TextField("Theme", text: $theme)
+                FestLookPreview(look: draft.value.look, coverUrl: draft.value.coverUrl,
+                                themeLine: draft.value.theme)
+                    .listRowInsets(EdgeInsets())
+            } header: {
+                Text("Preview")
+            }
+
+            Section {
+                EditorTextField("Theme", text: $draft.value.theme, placeholder: "e.g. Ye Olde Family Feste")
             } header: {
                 Text("This year's theme")
             } footer: {
-                Text("The line people remember the year by — \u{201C}Ye Olde Family Feste\u{201D}. Leave it empty for no theme.")
+                Text("The line people remember the year by. Leave it empty for no theme.")
             }
 
             Section {
-                TextField("Cover image URL", text: $coverUrl)
-                    .textInputAutocapitalization(.never)
-                    .autocorrectionDisabled()
-            } header: {
-                Text("Cover photo")
+                EditorImageField("Cover photo", url: $draft.value.coverUrl, upload: upload)
             } footer: {
-                Text("This year's own cover, kept with the year — so next year's poster never replaces the one the archive shows. Empty falls back to the classic art.")
+                Text("This year's own cover, kept with the year — so next year's poster never replaces the one the archive shows. Removing it falls back to the classic art.")
             }
 
-            if let error {
-                Section {
-                    Label(error, systemImage: "exclamationmark.triangle.fill")
-                        .font(.mlrScaled(13))
-                        .foregroundStyle(.red)
+            Section {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: MLRSpacing.sm) {
+                        ForEach(festLookPresets) { p in
+                            Button { applyPreset(p) } label: {
+                                HStack(spacing: 6) {
+                                    Circle().fill(Color(hex: p.look.primary ?? FestTheme.defaults[.primary]!))
+                                        .frame(width: 14, height: 14)
+                                    Circle().fill(Color(hex: p.look.accent ?? FestTheme.defaults[.accent]!))
+                                        .frame(width: 14, height: 14)
+                                    Text(p.name).font(.mlrScaled(13, weight: .medium))
+                                }
+                                .padding(.horizontal, 12).padding(.vertical, 8)
+                                .background(Color.mlrPrimary.opacity(0.08), in: Capsule())
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    }
                 }
+            } header: {
+                Text("Presets")
+            } footer: {
+                Text("One tap sets a matching palette and font; tune any colour afterwards.")
             }
-        }
-        .navigationTitle("Theme & cover")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .confirmationAction) {
-                Button {
-                    Task { await save() }
-                } label: {
-                    if saving { ProgressView() } else { Text("Save").fontWeight(.semibold) }
+
+            Section {
+                slot("Main colour", .primary, \.primary)
+                slot("Accent", .accent, \.accent)
+                slot("Background", .background, \.background)
+                slot("Cards", .card, \.card)
+                slot("Borders", .border, \.border)
+                slot("Text", .ink, \.ink)
+                ForEach(draft.value.look.contrastWarnings(), id: \.self) { w in
+                    Label(w, systemImage: "exclamationmark.triangle.fill")
+                        .font(.mlrScaled(12))
+                        .foregroundStyle(.orange)
                 }
-                .disabled(saving)
+            } header: {
+                Text("Colours")
+            } footer: {
+                Text("Light mode only; dark mode keeps the app's fest palette and uses just the main colour and accent. Colours left on Default keep the built-in look.")
+            }
+
+            Section {
+                Picker("Background", selection: Binding(
+                    get: { draft.value.look.bgStyle ?? "default" },
+                    set: { draft.value.look.bgStyle = $0 })) {
+                    Text("Default").tag("default")
+                    Text("Flat").tag("flat")
+                    Text("Image").tag("image")
+                }
+                if draft.value.look.bgStyle == "image" {
+                    EditorImageField("Background image", url: $draft.value.look.bgImageUrl, upload: upload)
+                    Picker("Image", selection: Binding(
+                        get: { draft.value.look.bgImageMode ?? "cover" },
+                        set: { draft.value.look.bgImageMode = $0 })) {
+                        Text("Cover").tag("cover")
+                        Text("Tile").tag("tile")
+                    }
+                    VStack(alignment: .leading) {
+                        Text("Image strength \(draft.value.look.bgImageOpacity ?? 35)%")
+                            .font(.mlrScaled(13))
+                        Slider(value: Binding(
+                            get: { Double(draft.value.look.bgImageOpacity ?? 35) },
+                            set: { draft.value.look.bgImageOpacity = Int($0.rounded()) }),
+                               in: 0...100, step: 5)
+                    }
+                }
+                Picker("Heading font", selection: Binding(
+                    get: { draft.value.look.font ?? "cinzel" },
+                    set: { draft.value.look.font = $0 })) {
+                    Text("Cinzel").tag("cinzel")
+                    Text("Serif (Playfair)").tag("playfair")
+                    Text("Sans").tag("sans")
+                }
+            } header: {
+                Text("Background & font")
+            }
+
+            Section {
+                Button("Reset to built-in", role: .destructive) { confirmReset = true }
+                    .confirmationDialog("Reset this year's colours, background and font to the built-in look?",
+                                        isPresented: $confirmReset, titleVisibility: .visible) {
+                        Button("Reset to built-in", role: .destructive) {
+                            draft.value.look = .builtIn
+                            Haptics.tap()
+                        }
+                    } message: {
+                        Text("Tap Save to apply.")
+                    }
             }
         }
         .task {
             await service.load()
             guard !loaded else { return }
-            theme = service.config?.theme ?? ""
-            coverUrl = service.config?.coverUrl ?? ""
+            let cfg = service.config
+            draft = EditorDraft(Values(theme: cfg?.theme, coverUrl: cfg?.coverUrl, look: cfg?.look ?? .builtIn))
             loaded = true
-        }
-    }
-
-    private func save() async {
-        saving = true
-        error = nil
-        defer { saving = false }
-        do {
-            try await service.saveYearLook(
-                theme: theme.trimmingCharacters(in: .whitespaces).isEmpty ? nil : theme,
-                coverUrl: coverUrl.trimmingCharacters(in: .whitespaces).isEmpty ? nil : coverUrl
-            )
-            Haptics.success()
-            dismiss()
-        } catch {
-            self.error = error.localizedDescription
         }
     }
 }

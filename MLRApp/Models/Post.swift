@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Post
 
-struct Post: Identifiable, Equatable {
+struct Post: Identifiable, Equatable, Codable {
     let id: UUID
     let authorId: UUID
     var authorName: String
@@ -31,7 +31,7 @@ struct Post: Identifiable, Equatable {
 }
 
 // A member tagged in a post (post_tags).
-struct PostTag: Identifiable, Equatable {
+struct PostTag: Identifiable, Equatable, Codable {
     let id: UUID        // tagged_user_id
     let name: String
 }
@@ -128,4 +128,20 @@ struct ContentReport: Codable, Identifiable {
         case reason
         case createdAt = "created_at"
     }
+}
+
+// MARK: - Comment reactions (migration 0223)
+
+/// One reaction palette for posts AND comments (the post set).
+let postReactionEmojis = ["❤️", "👍", "😂", "🙌", "🎉"]
+let commentReactionEmojis = postReactionEmojis
+
+/// One row of `comment_reactions`; PK (comment_id, user_id) — one emoji per
+/// member per comment. `name` comes from the joined profile (may be nil).
+struct CommentReaction: Identifiable, Equatable {
+    let commentId: UUID
+    let userId: UUID
+    var emoji: String
+    var name: String?
+    var id: String { "\(commentId.uuidString)-\(userId.uuidString)" }
 }

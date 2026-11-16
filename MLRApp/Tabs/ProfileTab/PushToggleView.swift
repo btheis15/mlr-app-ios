@@ -116,6 +116,10 @@ struct PushToggleView: View {
                     pushToggle(for: .tournamentMatchReady, label: "My next match is ready", desc: "When your next game in a tournament is set", icon: "sportscourt.fill")
                     pushToggle(for: .tournamentChampion, label: "Tournament champion", desc: "When a tournament you're in crowns its winner", icon: "crown.fill")
                     pushToggle(for: .privateActivityInvite, label: "Invited to an activity", desc: "When someone adds you to a private activity or game", icon: "person.2.badge.gearshape.fill")
+                    pushToggle(for: .houseRequestSubmitted, label: "New requests to decide", desc: "When your house asks to buy something, suggests an idea, or wants paying back — House Admins get these, on by default", icon: "tray.and.arrow.down.fill")
+                    pushToggle(for: .houseRequestDecision, label: "My requests", desc: "When your own request is approved, turned down, ordered, or paid — on by default", icon: "checkmark.seal.fill")
+                    pushToggle(for: .houseRequestHandled, label: "What the other House Admins did", desc: "When another House Admin approves, changes, or orders something — on by default", icon: "shippingbox.fill")
+                    pushToggle(for: .houseRequestReminder, label: "Order it in time", desc: "When people are heading up to your house soon and something approved still isn't ordered — on by default", icon: "bell.badge.fill")
 
                     if env.isAdmin {
                         pushToggle(for: .committeeJoinRequest, label: "Committee join requests", desc: "Admins only: when a member asks to join a committee", icon: "person.badge.clock")

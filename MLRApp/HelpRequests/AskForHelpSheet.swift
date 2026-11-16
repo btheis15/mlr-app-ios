@@ -82,7 +82,7 @@ struct AskForHelpSheet: View {
                 }
                 .padding(20)
             }
-            .background(Color(.systemGroupedBackground))
+            .mlrBackdrop()
             .navigationTitle("Ask for Help")
             .navigationBarTitleDisplayMode(.inline)
             .tint(Color.mlrFest)

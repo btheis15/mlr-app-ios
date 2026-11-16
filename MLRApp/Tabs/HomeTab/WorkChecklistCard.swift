@@ -150,7 +150,8 @@ struct WorkChecklistCard: View {
         }
         .cardStyle()
         .task {
-            await env.workItemsService.fetchItems()
+            env.workItemsService.snapshotUser = env.isPreviewing ? nil : env.currentProfile?.id
+            await env.workItemsService.fetchItems(ifStale: true)
             if env.housesService.houses.isEmpty { await env.housesService.fetchHouses() }
             env.workItemsService.subscribeToRealtime()
         }

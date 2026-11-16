@@ -87,6 +87,13 @@ enum NotificationDeepLink: Equatable {
         }
     }
 
+    /// Event chat target for a `chat_mention` whose url is `/posts?event=<event_id>`.
+    /// Not a case (RootView's switch is exhaustive and off-limits for this pass);
+    /// RootView should check this before `switch NotificationDeepLink(...)`.
+    static func eventChatId(userInfo: [AnyHashable: Any]) -> UUID? {
+        WebLink(userInfo["url"] as? String).uuid("event")
+    }
+
     /// Route on the web deep link alone, so a notification kind iOS doesn't know
     /// about yet still lands on the right tab instead of dropping to Home.
     private init(path link: WebLink) {

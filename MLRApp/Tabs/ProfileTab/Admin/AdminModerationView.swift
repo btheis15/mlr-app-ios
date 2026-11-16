@@ -4,24 +4,29 @@ import SwiftUI
 // A single item in the moderation queue (returned by `moderation_queue` RPC).
 
 struct ModerationItem: Codable, Identifiable, Equatable {
-    let id: UUID
-    let contentType: String     // "post" | "post_comment"
-    let contentId: UUID
-    let preview: String
+    let entityType: String      // post | comment | committee_message | house_message | event_chat_message
+    let entityId: UUID
+    let postId: UUID?
+    let authorId: UUID?
+    let authorName: String?
+    let body: String?
+    var status: String          // "visible" | "pending" | "hidden"
     let reportCount: Int
-    var status: String          // "pending" | "visible" | "hidden"
+    let reasons: [String]?
     let createdAt: Date
-    let reportedAt: Date?
+
+    var id: String { "\(entityType)-\(entityId.uuidString)" }
 
     enum CodingKeys: String, CodingKey {
-        case id
-        case contentType  = "content_type"
-        case contentId    = "content_id"
-        case preview
-        case reportCount  = "report_count"
-        case status
-        case createdAt    = "created_at"
-        case reportedAt   = "reported_at"
+        case entityType  = "entity_type"
+        case entityId    = "entity_id"
+        case postId      = "post_id"
+        case authorId    = "author_id"
+        case authorName  = "author_name"
+        case body, status
+        case reportCount = "report_count"
+        case reasons
+        case createdAt   = "created_at"
     }
 }
 
@@ -34,17 +39,6 @@ struct AdminModerationView: View {
     @State private var isLoading = false
     @State private var error: String? = nil
     @State private var actionError: String? = nil
-
-    // Blocked words (moderation_blocklist, migration 0040) — a match auto-holds
-    // the post/comment for review. Admin-only reads/writes (RLS).
-    @State private var blocklist: [BlockTerm] = []
-    @State private var newTerm = ""
-
-    struct BlockTerm: Decodable, Identifiable, Equatable {
-        let id: UUID
-        let pattern: String
-        let note: String?
-    }
 
     // MARK: - Body
 
@@ -82,32 +76,10 @@ struct AdminModerationView: View {
                 }
             }
 
-            // Blocked words — the admin-managed "language" floor (migration 0040).
             Section {
-                HStack {
-                    TextField("Add a word or phrase…", text: $newTerm)
-                        .autocorrectionDisabled()
-                        .textInputAutocapitalization(.never)
-                        .onSubmit { Task { await addTerm() } }
-                    Button("Add") { Task { await addTerm() } }
-                        .disabled(newTerm.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-                ForEach(blocklist) { term in
-                    HStack {
-                        Text(term.pattern).font(.mlrScaled(14))
-                        Spacer()
-                        Button {
-                            Task { await removeTerm(term) }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill").foregroundStyle(Color.mlrTextSubtle)
-                        }
-                        .buttonStyle(.pressable)
-                    }
-                }
-            } header: {
-                Text("Blocked words")
-            } footer: {
-                Text("A post, comment, or chat message containing one of these is automatically held for review. Matching is case-insensitive. Nothing ships by default — add what fits your family.")
+                Text("Posts, comments and chat messages are read by Apple Intelligence on the media server, which judges the wording in context. There's no list of banned words. Anything it holds lands here with its reason, and members can still report things it missed.")
+                    .font(.caption)
+                    .foregroundStyle(Color.mlrTextMuted)
             }
         }
         .listStyle(.plain)
@@ -115,40 +87,10 @@ struct AdminModerationView: View {
         .navigationBarTitleDisplayMode(.large)
         .refreshable {
             await loadQueue()
-            await loadBlocklist()
         }
         .task {
             await loadQueue()
-            await loadBlocklist()
         }
-    }
-
-    // MARK: - Blocklist
-
-    private func loadBlocklist() async {
-        blocklist = (try? await supabase
-            .from("moderation_blocklist")
-            .select("id, pattern, note")
-            .order("pattern", ascending: true)
-            .execute().value) ?? []
-    }
-
-    private func addTerm() async {
-        let pattern = newTerm.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !pattern.isEmpty else { return }
-        newTerm = ""
-        do {
-            try await supabase.from("moderation_blocklist")
-                .insert(["pattern": AnyJSON.string(pattern)]).execute()
-            await loadBlocklist()
-        } catch {
-            actionError = "Couldn't add that term (it may already exist)."
-        }
-    }
-
-    private func removeTerm(_ term: BlockTerm) async {
-        try? await supabase.from("moderation_blocklist").delete().eq("id", value: term.id.uuidString).execute()
-        blocklist.removeAll { $0.id == term.id }
     }
 
     // MARK: - Empty state
@@ -211,8 +153,8 @@ struct AdminModerationView: View {
         do {
             try await supabase
                 .rpc("set_content_status", params: [
-                    "p_content_type": item.contentType,
-                    "p_content_id": item.contentId.uuidString,
+                    "p_entity_type": item.entityType,
+                    "p_entity_id": item.entityId.uuidString,
                     "p_status": "visible"
                 ])
                 .execute()
@@ -228,8 +170,8 @@ struct AdminModerationView: View {
         do {
             try await supabase
                 .rpc("set_content_status", params: [
-                    "p_content_type": item.contentType,
-                    "p_content_id": item.contentId.uuidString,
+                    "p_entity_type": item.entityType,
+                    "p_entity_id": item.entityId.uuidString,
                     "p_status": "hidden"
                 ])
                 .execute()
@@ -252,15 +194,19 @@ private struct ModerationItemRow: View {
             // Header: content type badge + report count + date
             HStack(spacing: 8) {
                 typeBadge
-                reportBadge
+                if item.status == "pending" { heldBadge }
+                if item.reportCount > 0 { reportBadge }
                 Spacer()
-                Text(MLRFormat.relativeTime(item.reportedAt ?? item.createdAt))
+                Text(item.authorName ?? "Member")
+                    .font(.caption2)
+                    .foregroundStyle(Color.mlrTextSubtle)
+                Text(MLRFormat.relativeTime(item.createdAt))
                     .font(.caption2)
                     .foregroundStyle(Color.mlrTextSubtle)
             }
 
-            // Content preview
-            Text(item.preview.isEmpty ? "(no content)" : item.preview)
+            // Content body
+            Text((item.body ?? "").isEmpty ? "(no text, media only)" : (item.body ?? ""))
                 .font(.mlrScaled(14))
                 .foregroundStyle(Color.mlrText)
                 .lineLimit(4)
@@ -269,6 +215,12 @@ private struct ModerationItemRow: View {
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .background(Color.mlrCard)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
+
+            if let reasons = item.reasons, !reasons.isEmpty {
+                Text("Reasons: \(reasons.joined(separator: ", "))")
+                    .font(.caption)
+                    .foregroundStyle(Color.mlrTextMuted)
+            }
 
             // Action buttons
             HStack(spacing: 10) {
@@ -297,12 +249,13 @@ private struct ModerationItemRow: View {
     private var typeBadge: some View {
         let label: String
         let color: Color
-        switch item.contentType {
-        case "post":               label = "Post";    color = Color.mlrInfo
-        case "post_comment":       label = "Comment"; color = Color.mlrAccent
-        case "committee_message",
-             "house_message":      label = "Chat";    color = Color.mlrPrimary
-        default:                   label = "Content"; color = Color.mlrTextMuted
+        switch item.entityType {
+        case "post":                label = "Post";           color = Color.mlrInfo
+        case "comment":             label = "Comment";        color = Color.mlrAccent
+        case "committee_message":   label = "Committee chat"; color = Color.mlrPrimary
+        case "house_message":       label = "House chat";     color = Color.mlrPrimary
+        case "event_chat_message":  label = "Event chat";     color = Color.mlrPrimary
+        default:                    label = "Content";        color = Color.mlrTextMuted
         }
         return Text(label)
             .font(.mlrScaled(11, weight: .semibold))
@@ -310,6 +263,16 @@ private struct ModerationItemRow: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
             .background(color.opacity(0.12))
+            .clipShape(Capsule())
+    }
+
+    private var heldBadge: some View {
+        Text("Held")
+            .font(.mlrScaled(11, weight: .semibold))
+            .foregroundStyle(Color.mlrWarning)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 3)
+            .background(Color.mlrWarning.opacity(0.12))
             .clipShape(Capsule())
     }
 

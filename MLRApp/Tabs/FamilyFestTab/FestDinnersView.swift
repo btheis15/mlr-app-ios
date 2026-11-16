@@ -11,14 +11,11 @@ import SwiftUI
 
 struct FestDinnersView: View {
     @Environment(AppEnvironment.self) private var env
-    @State private var currentUserId: UUID? = nil
-    @State private var canEditFest = false
-
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
                 ForEach(env.festContentService.dinners) { dinner in
-                    DinnerMenuCard(dinner: dinner, currentUserId: currentUserId, canEditFest: canEditFest)
+                    DinnerMenuCard(dinner: dinner)
                 }
             }
             .padding(.horizontal, 16)
@@ -26,13 +23,12 @@ struct FestDinnersView: View {
             .padding(.bottom, 32)
         }
         .background(Color.mlrFestParchment)
+        .mlrEditToggle(canEdit: env.festContentService.dinners.contains { env.canEditFestDinner(chefUserId: $0.chefUserId, crewUserIds: $0.crewUserIds) })
         .navigationTitle("Weekly Menu")
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            if env.isSignedIn {
-                currentUserId = await env.authService.userId
-                canEditFest = await env.festContentService.canEditFest()
-            }
+            // Refreshes the cached can_edit_fest flag the pencil rule reads.
+            if env.isSignedIn && !env.isPreviewing { _ = await env.festContentService.canEditFest() }
         }
     }
 }
@@ -42,16 +38,12 @@ struct FestDinnersView: View {
 private struct DinnerMenuCard: View {
     @Environment(AppEnvironment.self) private var env
     let dinner: FestDinner
-    let currentUserId: UUID?
-    let canEditFest: Bool
     @State private var showEditSheet = false
-    @State private var fullEditDraft: FestDinnerDraft?
 
-    /// Chef or an assigned crew member may edit their own operational details
-    /// (migration 0099) — separate from full admin/committee editing below.
+    /// Web's rule: a full editor, or this dinner's chef/crew (migration 0099).
+    /// Hidden while previewing as another member. Always the current year.
     private var canEdit: Bool {
-        guard env.isSignedIn, let uid = currentUserId else { return false }
-        return dinner.chefUserId == uid || dinner.crewUserIds.contains(uid)
+        env.canEditFestDinner(chefUserId: dinner.chefUserId, crewUserIds: dinner.crewUserIds)
     }
 
     var body: some View {
@@ -61,7 +53,7 @@ private struct DinnerMenuCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(dinner.title)
                         .font(.festSerif(18, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 12) {
                         Label(dinner.day, systemImage: "calendar")
@@ -71,29 +63,11 @@ private struct DinnerMenuCard: View {
                     .foregroundStyle(Color.mlrFestInk.opacity(0.7))
                 }
                 Spacer()
-                if canEditFest {
-                    // Full admin/committee editor — day, title, chef, houses,
-                    // crew, everything — right here, no trip to the Planner.
-                    Button { Task { await openFullEdit() } } label: {
-                        Text("✏️ Edit")
-                            .font(.mlrScaled(11, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(Color.mlrFest)
-                            .clipShape(Capsule())
-                    }
-                    .buttonStyle(.pressable)
-                } else if canEdit {
-                    Button { showEditSheet = true } label: {
-                        Text("✏️ Edit")
-                            .font(.mlrScaled(11, weight: .semibold))
-                            .foregroundStyle(Color.mlrFest)
-                            .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(Color.mlrFest.opacity(0.1))
-                            .clipShape(Capsule())
-                            .overlay(Capsule().strokeBorder(Color.mlrFest.opacity(0.25), lineWidth: 1))
-                    }
-                    .buttonStyle(.pressable)
+                if canEdit {
+                    // Full editors get the whole dinner editor; chef/crew get the
+                    // operational details (FestDinnerEditSheet decides).
+                    EditPencil("dinner", tint: .mlrFest) { showEditSheet = true }
+                        .padding(.top, -8).padding(.trailing, -8)
                 }
             }
 
@@ -132,22 +106,7 @@ private struct DinnerMenuCard: View {
         .clipShape(RoundedRectangle(cornerRadius: 14))
         .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1))
         .sheet(isPresented: $showEditSheet) {
-            NavigationStack {
-                FestDinnerEditSheet(dinner: dinner) {
-                    await env.festContentService.reload()
-                }
-            }
+            FestDinnerEditSheet(dinner: dinner) { await env.festContentService.reload() }
         }
-        .sheet(item: $fullEditDraft, onDismiss: { Task { await env.festContentService.reload() } }) { draft in
-            DinnerEditSheet(draft: draft)
-        }
-    }
-
-    /// Full editing needs the `FestDinnerDraft` shape (carries `position`,
-    /// which the display `FestDinner` doesn't) — fetched on open, matching
-    /// how the Planner itself resolves a draft for its own editor.
-    private func openFullEdit() async {
-        let drafts = await env.festContentService.editableDinners()
-        fullEditDraft = drafts.first { $0.id?.uuidString == dinner.id }
     }
 }

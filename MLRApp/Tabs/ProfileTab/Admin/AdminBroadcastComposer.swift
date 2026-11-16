@@ -44,10 +44,22 @@ struct AdminBroadcastComposer: View {
     @State private var isPosting = false
     @State private var error: String? = nil
     @State private var posted = false
+    @State private var showDiscard = false
+    @State private var confirmSend = false
+    /// Parts that already went out in this session ("banner/email", "activity"),
+    /// so a retry after a partial failure cannot double-send them.
+    @State private var completed: Set<String> = []
 
     private var trimmedTitle: String { title.trimmingCharacters(in: .whitespaces) }
     private var hasChannel: Bool { toBanner || toActivity || toEmail }
-    private var canPost: Bool { !trimmedTitle.isEmpty && hasChannel && !isPosting }
+    private var canPost: Bool { !trimmedTitle.isEmpty && hasChannel && !isPosting && !posted }
+    /// Unsaved-work guard: anything typed or chosen that hasn't been sent.
+    private var isDirty: Bool { hasContent && !posted }
+    private var audienceWord: String { audience == .everyone ? "everyone" : "admins only" }
+    private var channelList: String {
+        [toBanner ? "banner" : nil, toActivity ? "Activity tab" : nil, toEmail ? "email" : nil]
+            .compactMap { $0 }.joined(separator: ", ")
+    }
     private var upcomingEvents: [ResortEvent] { env.eventsService.upcomingEvents }
 
     var body: some View {
@@ -149,7 +161,7 @@ struct AdminBroadcastComposer: View {
                 }
 
                 Section {
-                    Button { Task { await send() } } label: {
+                    Button { Haptics.tap(); confirmSend = true } label: {
                         HStack { Spacer()
                             if isPosting { ProgressView().tint(.white) }
                             else {
@@ -167,6 +179,22 @@ struct AdminBroadcastComposer: View {
                 }
                 .listRowBackground(Color.clear)
             }
+            .disabled(isPosting)
+            .interactiveDismissDisabled(isDirty || isPosting)
+            .confirmationDialog(scheduleAt == nil ? "Send this now?" : "Schedule this send?",
+                                isPresented: $confirmSend, titleVisibility: .visible) {
+                Button(scheduleAt == nil ? "Send to \(audienceWord)" : "Schedule for \(audienceWord)") {
+                    Task { await send() }
+                }
+                Button("Review again", role: .cancel) {}
+            } message: {
+                // The existing RPCs return no recipient count, so say who, not how many.
+                Text("\u{201C}\(trimmedTitle)\u{201D} goes to \(audienceWord) via \(channelList).")
+            }
+            .confirmationDialog("Discard this broadcast?", isPresented: $showDiscard, titleVisibility: .visible) {
+                Button("Discard", role: .destructive) { dismiss() }
+                Button("Keep editing", role: .cancel) {}
+            } message: { Text("Your unsent message will be lost.") }
             .confirmationDialog("Clear this notification?", isPresented: $confirmReset, titleVisibility: .visible) {
                 Button("Start fresh", role: .destructive) { resetToBlank() }
                 Button("Cancel", role: .cancel) {}
@@ -178,7 +206,11 @@ struct AdminBroadcastComposer: View {
                 if env.festContentService.schedule.isEmpty { await env.festContentService.reload() }
             }
             .toolbar {
-                ToolbarItem(placement: .topBarLeading) { Button("Cancel") { dismiss() }.foregroundStyle(Color.mlrPrimary) }
+                ToolbarItem(placement: .topBarLeading) {
+                    Button("Cancel") { if isDirty { showDiscard = true } else { dismiss() } }
+                        .foregroundStyle(Color.mlrPrimary)
+                        .disabled(isPosting)
+                }
             }
             .alert("Sent!", isPresented: $posted) {
                 Button("Done") { dismiss() }
@@ -220,7 +252,7 @@ struct AdminBroadcastComposer: View {
         kind = .info; expiry = .sixHours; feedExpiry = nil; audience = .everyone
         toBanner = true; toActivity = false; toEmail = false
         selectedEventId = nil; excludeNotAttending = true
-        linkUrl = nil; scheduleAt = nil; error = nil
+        linkUrl = nil; scheduleAt = nil; error = nil; completed = []
     }
 
     private var festActivities: [ScheduleItem] {
@@ -244,52 +276,75 @@ struct AdminBroadcastComposer: View {
     // MARK: - Send
 
     private func send() async {
-        guard canPost else { return }
+        guard canPost else { return }       // also the in-flight lock (isPosting)
         isPosting = true; error = nil
         defer { isPosting = false }
         let body = messageBody.trimmingCharacters(in: .whitespaces)
         let bodyOrNil = body.isEmpty ? nil : body
         let eventId = selectedEventId
         let exclude = eventId != nil ? excludeNotAttending : true
+        let isScheduled = scheduleAt != nil
 
-        do {
-            if let scheduleAt {
-                // Queue one row per channel-group at the same send time.
-                if toBanner || toEmail {
-                    let payload = BroadcastPayload(
-                        title: trimmedTitle, body: bodyOrNil,
-                        expiryHours: expiry.hours, notifyEmail: toEmail,
-                        emailAudience: audience.emailAudience, alsoBanner: toBanner,
-                        eventId: eventId, excludeNotAttending: eventId != nil ? exclude : nil)
-                    try await env.notificationsService.scheduleBroadcast(kind: .announcement, payload: payload, scheduledAt: scheduleAt)
-                }
-                if toActivity {
-                    let payload = BroadcastPayload(
-                        title: trimmedTitle, body: bodyOrNil, audience: audience.rawValue,
-                        expiryHours: feedExpiry?.hours,
-                        eventId: eventId, excludeNotAttending: eventId != nil ? exclude : nil)
-                    try await env.notificationsService.scheduleBroadcast(kind: .notification, payload: payload, scheduledAt: scheduleAt)
-                }
-                posted = true
-                return
+        // One group at a time, remembering what went out, so a failure in the
+        // second group never re-sends the first on retry.
+        func run(_ group: String, _ label: String, _ work: () async throws -> Void) async -> String? {
+            guard !completed.contains(group) else { return nil }
+            do { try await work(); completed.insert(group); return nil }
+            catch {
+                print("[AdminBroadcastComposer] \(group) error: \(error)")
+                return "\(label): \(EditorError.message(error))"
             }
+        }
 
+        var failures: [String] = []
+        if let scheduleAt {
+            // Queue one row per channel-group at the same send time.
             if toBanner || toEmail {
-                try await env.notificationsService.postAnnouncement(
-                    title: trimmedTitle, body: bodyOrNil, severity: kind.severity,
-                    showBanner: toBanner, notifyEmail: toEmail, emailAudience: audience.emailAudience,
-                    expiresAt: expiry.expiresAt, eventId: eventId, excludeNotAttending: exclude)
+                let payload = BroadcastPayload(
+                    title: trimmedTitle, body: bodyOrNil,
+                    expiryHours: expiry.hours, notifyEmail: toEmail,
+                    emailAudience: audience.emailAudience, alsoBanner: toBanner,
+                    eventId: eventId, excludeNotAttending: eventId != nil ? exclude : nil)
+                if let f = await run("announcement", "Banner/email", {
+                    try await env.notificationsService.scheduleBroadcast(kind: .announcement, payload: payload, scheduledAt: scheduleAt)
+                }) { failures.append(f) }
             }
             if toActivity {
-                try await env.notificationsService.sendBroadcast(
-                    title: trimmedTitle, body: bodyOrNil, audience: audience.broadcast,
-                    mirrorBanner: false, url: linkUrl, expiresAt: feedExpiry?.expiresAt,
-                    eventId: eventId, excludeNotAttending: exclude)
+                let payload = BroadcastPayload(
+                    title: trimmedTitle, body: bodyOrNil, audience: audience.rawValue,
+                    expiryHours: feedExpiry?.hours,
+                    eventId: eventId, excludeNotAttending: eventId != nil ? exclude : nil)
+                if let f = await run("activity", "Activity tab", {
+                    try await env.notificationsService.scheduleBroadcast(kind: .notification, payload: payload, scheduledAt: scheduleAt)
+                }) { failures.append(f) }
             }
+        } else {
+            if toBanner || toEmail {
+                if let f = await run("announcement", "Banner/email", {
+                    try await env.notificationsService.postAnnouncement(
+                        title: trimmedTitle, body: bodyOrNil, severity: kind.severity,
+                        showBanner: toBanner, notifyEmail: toEmail, emailAudience: audience.emailAudience,
+                        expiresAt: expiry.expiresAt, eventId: eventId, excludeNotAttending: exclude)
+                }) { failures.append(f) }
+            }
+            if toActivity {
+                if let f = await run("activity", "Activity tab", {
+                    try await env.notificationsService.sendBroadcast(
+                        title: trimmedTitle, body: bodyOrNil, audience: audience.broadcast,
+                        mirrorBanner: false, url: linkUrl, expiresAt: feedExpiry?.expiresAt,
+                        eventId: eventId, excludeNotAttending: exclude)
+                }) { failures.append(f) }
+            }
+        }
+
+        if failures.isEmpty {
+            Haptics.success()
             posted = true
-        } catch {
-            self.error = "Couldn't send. Please try again."
-            print("[AdminBroadcastComposer] send error: \(error)")
+        } else {
+            let verb = isScheduled ? "scheduled" : "sent"
+            let went = completed.isEmpty ? "" : " The rest was already \(verb); sending again only retries what failed."
+            error = "Didn\u{2019}t finish. " + failures.joined(separator: " ") + went
+            Haptics.error()
         }
     }
 }

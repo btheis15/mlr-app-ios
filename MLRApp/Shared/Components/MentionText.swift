@@ -18,8 +18,10 @@ struct MentionText: View {
     var baseFont: Font = .mlrBody
     var baseColor: Color = Color.mlrText
     var mentionColor: Color = Color.mlrPrimary
+    var mentionSize: CGFloat? = nil
 
-    init(_ text: String, baseFont: Font = .mlrBody, baseColor: Color = Color.mlrText, mentionColor: Color = Color.mlrPrimary) {
+    init(_ text: String, baseFont: Font = .mlrBody, mentionSize: CGFloat? = nil, baseColor: Color = Color.mlrText, mentionColor: Color = Color.mlrPrimary) {
+        self.mentionSize = mentionSize
         self.text = text
         self.baseFont = baseFont
         self.baseColor = baseColor
@@ -47,7 +49,7 @@ struct MentionText: View {
                 part.foregroundColor = UIColor(mentionColor)
                 // Semi-bold weight for mentions
                 part.font = UIFont.systemFont(
-                    ofSize: UIFont.preferredFont(forTextStyle: .body).pointSize,
+                    ofSize: mentionSize ?? UIFont.preferredFont(forTextStyle: .body).pointSize,
                     weight: .semibold
                 )
                 result.append(part)
@@ -452,6 +454,14 @@ struct ChatComposer: View {
 
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var canSend: Bool { (!trimmed.isEmpty || !attachments.isEmpty) && !sending }
+    private var sendSymbol: String {
+        if isEditing { return canSend ? "checkmark.circle.fill" : "checkmark.circle" }
+        return canSend ? "arrow.up.circle.fill" : "arrow.up.circle"
+    }
+    /// About five lines of body text, then the field scrolls.
+    private var maxFieldHeight: CGFloat {
+        UIFont.preferredFont(forTextStyle: .body).lineHeight * 5 + 18
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -514,43 +524,51 @@ struct ChatComposer: View {
                     text: $text,
                     height: $height,
                     pendingMention: $pendingMention,
+                    maxHeight: maxFieldHeight,
                     onMentionQueryChange: { q in
                         withAnimation(.easeOut(duration: 0.16)) { mentionQuery = q }
                     },
                     onPasteMedia: { items in if allowsAttachments { attachments.append(contentsOf: items) } }
                 )
                 .frame(height: height)
+                .animation(MLRMotion.reduceMotion ? nil : .snappy(duration: 0.18), value: height)
                 .padding(.horizontal, 8)
-                .background(Color.mlrSurface)
-                .clipShape(RoundedRectangle(cornerRadius: 20))
-                .overlay(RoundedRectangle(cornerRadius: 20).stroke(Color.mlrBorder, lineWidth: 1))
+                .background(Color.mlrCard)
+                .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: 22, style: .continuous).stroke(Color.mlrBorder, lineWidth: 1))
+                .shadow(color: .black.opacity(0.06), radius: 10, y: 2)
 
+                if canSend || sending {
                 Button {
                     Haptics.tap()
                     onSend(attachments)
                     attachments = []
                 } label: {
+                    // The glyph morphs outline -> filled as the message becomes
+                    // sendable (symbol replace + a bounce), instead of a tinted disc.
                     Group {
                         if sending {
-                            ProgressView().tint(.white)
+                            ProgressView().tint(Color.mlrPrimary)
                         } else {
-                            Image(systemName: isEditing ? "checkmark" : "arrow.up")
-                                .font(.mlrScaled(16, weight: .bold))
+                            Image(systemName: "arrow.up")
+                                .font(.system(size: 17, weight: .bold))
                                 .foregroundStyle(.white)
+                                .frame(width: 38, height: 38)
+                                .background(Circle().fill(Color.mlrPrimary))
                         }
                     }
                     .frame(width: 38, height: 38)
-                    .background(canSend ? Color.mlrPrimary : Color.mlrPrimary.opacity(0.4))
-                    .clipShape(Circle())
-                    .scaleEffect(canSend ? 1 : 0.9)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: canSend)
+                    .scaleEffect(canSend ? 1 : 0.92)
+                    .animation(MLRMotion.reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: canSend)
                 }
                 .buttonStyle(.pressable)
                 .disabled(!canSend)
+                .transition(MLRMotion.reduceMotion ? .opacity : .scale(scale: 0.3).combined(with: .opacity))
+                }
             }
+            .animation(MLRMotion.reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.65), value: canSend)
             .padding(.horizontal, 12)
             .padding(.vertical, 8)
-            .background(Color.mlrSurface)
         }
         .photosPicker(isPresented: $showPhotoPicker, selection: $photoItems, maxSelectionCount: 5, matching: .any(of: [.images, .videos]))
         .onChange(of: photoItems) { _, items in

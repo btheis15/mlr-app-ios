@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Supabase
 
 // MARK: - Fest content models (DB-backed)
@@ -13,11 +14,142 @@ struct FestConfig: Equatable, Identifiable {
     /// Nil means "use the built-in look" — never backfilled with the 2026 values.
     var theme: String?
     var coverUrl: String?
+    /// Per-year look colours/background/font (migration 0219). Default = built-in.
+    var look: FestTheme = .builtIn
 
     var id: Int { year }
 
     var season: FestSeason { FestSeason.compute(startISO: startDate, endISO: endDate) }
     var dateRangeLabel: String { FamilyFestConfig.rangeLabel(start: startDate, end: endDate) }
+}
+
+// MARK: - Per-year look (migration 0219)
+
+/// A fest year's look. Every field nil = the built-in look; hex is validated
+/// (`^#[0-9A-Fa-f]{6}$`) so a bad value falls back per field, never blanks.
+struct FestTheme: Hashable {
+    enum Slot { case primary, accent, background, card, border, ink }
+
+    var primary: String?
+    var accent: String?
+    var background: String?
+    var card: String?
+    var border: String?
+    var ink: String?
+    var bgStyle: String?          // default | flat | image
+    var bgImageUrl: String?
+    var bgImageMode: String?      // cover | tile
+    var bgImageOpacity: Int?      // 0-100
+    var font: String?             // cinzel | playfair | sans
+
+    static let builtIn = FestTheme()
+
+    /// Web's built-in values, for the editor swatches and contrast check only.
+    static let defaults: [Slot: String] = [
+        .primary: "#8b2e2e", .accent: "#1e3a8a", .background: "#f4ecd8",
+        .card: "#fdfaf1", .border: "#d8c7a3", .ink: "#3a2a18",
+    ]
+
+    static func validHex(_ v: String?) -> String? {
+        guard let s = v?.trimmingCharacters(in: .whitespaces),
+              s.range(of: "^#[0-9A-Fa-f]{6}$", options: .regularExpression) != nil
+        else { return nil }
+        return s
+    }
+
+    func raw(_ slot: Slot) -> String? {
+        switch slot {
+        case .primary: return primary
+        case .accent: return accent
+        case .background: return background
+        case .card: return card
+        case .border: return border
+        case .ink: return ink
+        }
+    }
+
+    /// Override hex for a slot, or nil for the built-in. Web applies colours in
+    /// light mode only: dark mode takes just primary and accent.
+    func hex(_ slot: Slot, dark: Bool) -> String? {
+        if dark && slot != .primary && slot != .accent { return nil }
+        return Self.validHex(raw(slot))
+    }
+
+    /// http(s) only, no quote/paren/backslash/whitespace (same gate as web).
+    var safeImageURL: URL? {
+        guard let s = bgImageUrl?.trimmingCharacters(in: .whitespaces),
+              s.range(of: "^https?://[^\"'()\\\\\\s]+$", options: [.regularExpression, .caseInsensitive]) != nil
+        else { return nil }
+        return URL(string: s)
+    }
+
+    /// 0-1, default 35% like web.
+    var imageStrength: Double { Double(min(100, max(0, bgImageOpacity ?? 35))) / 100 }
+
+    /// Plain-English contrast warnings (shown, never enforced), as web.
+    func contrastWarnings() -> [String] {
+        func v(_ s: Slot) -> String { Self.validHex(raw(s)) ?? Self.defaults[s]! }
+        let pairs: [(String, String, Double, String)] = [
+            (v(.ink), v(.card), 4.5, "Body text on cards is hard to read — darken the text colour or lighten the card."),
+            (v(.ink), v(.background), 4.5, "Text on the background is hard to read — try a lighter background."),
+            (v(.primary), v(.card), 3, "Headings and buttons barely show against cards — deepen the main colour."),
+            (v(.accent), v(.card), 3, "The accent colour barely shows against cards — deepen it."),
+            ("#ffffff", v(.primary), 3, "White button text won't read on the main colour — pick a darker main colour."),
+        ]
+        return pairs.compactMap { Self.contrast($0.0, $0.1) < $0.2 ? $0.3 : nil }
+    }
+
+    private static func luminance(_ hex: String) -> Double {
+        let n = Int(hex.dropFirst(), radix: 16) ?? 0
+        func chan(_ c: Int) -> Double {
+            let s = Double(c) / 255
+            return s <= 0.03928 ? s / 12.92 : pow((s + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * chan((n >> 16) & 255) + 0.7152 * chan((n >> 8) & 255) + 0.0722 * chan(n & 255)
+    }
+
+    /// Readable text colour: `text` if it has >= 4.5:1 contrast against
+    /// `background`, else the app's dark text or white, whichever contrasts more.
+    static func readableOn(background: String, text: String, darkText: String = "#1C1C1E") -> String {
+        if contrast(text, background) >= 4.5 { return text }
+        return contrast(darkText, background) >= contrast("#FFFFFF", background) ? darkText : "#FFFFFF"
+    }
+
+    static func contrast(_ a: String, _ b: String) -> Double {
+        let (x, y) = (luminance(a), luminance(b))
+        return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+    }
+}
+
+/// The look currently on screen. The fest palette (`Color.mlrFest*`,
+/// `Font.festSerif`) resolves through this at render time, so applying a year's
+/// look needs no per-view plumbing. `.festThemeScope()` sets it; a Past Years
+/// page sets its own year's look and restores the current year's on leave.
+extension Color {
+    /// A fest-themed text colour guaranteed readable on a fest-themed background
+    /// slot. Resolves at render time (light/dark aware) like `Color(festSlot:)`;
+    /// built-in pairs are the fallbacks when the theme leaves a slot unset.
+    static func festReadable(_ slot: FestTheme.Slot, light: String, dark: String,
+                             on bg: FestTheme.Slot, bgLight: String, bgDark: String) -> Color {
+        Color(uiColor: UIColor { traits in
+            let isDark = traits.userInterfaceStyle == .dark
+            let theme = FestThemeStore.active
+            let text = theme.hex(slot, dark: isDark) ?? (isDark ? dark : light)
+            let back = theme.hex(bg, dark: isDark) ?? (isDark ? bgDark : bgLight)
+            return UIColor(Color(hex: FestTheme.readableOn(background: back, text: text)))
+        })
+    }
+
+    /// Primary (heading) colour made readable on the fest background.
+    static let mlrFestReadable = festReadable(.primary, light: "#6B0F24", dark: "#E0708A",
+                                              on: .background, bgLight: "#ECDCBE", bgDark: "#1E1712")
+    /// Ink (body) colour made readable on the fest background.
+    static let mlrFestInkReadable = festReadable(.ink, light: "#33240F", dark: "#F1E7D6",
+                                                 on: .background, bgLight: "#ECDCBE", bgDark: "#1E1712")
+}
+
+enum FestThemeStore {
+    nonisolated(unsafe) static var active: FestTheme = .builtIn
 }
 
 /// A refusal the "start next year" sheet shows verbatim. These are answers to
@@ -66,6 +198,42 @@ struct FestScheduleDraft: Identifiable, Equatable {
     var position: Int
     /// Migration 0147 — gates the "🏆 Tournament" section on this activity.
     var tournamentEnabled: Bool = false
+    /// Migration 0110 — crew who may self-edit location/description/bring.
+    var crewUserIds: [UUID] = []
+    var imageUrl: String?
+    /// Migration 0142 — ordered link buttons (blank rows are dropped on save).
+    var links: [EditorLink] = []
+    var signup = FestSignupDraft()
+}
+
+/// The sign-up configuration the full editor authors (migrations 0135/0143/0167).
+/// Mirrors web's `SignupDraft`/`signupPayload`; `signup_fields` and the reminder
+/// columns are not edited on iOS and are never written, so they stay as web set them.
+struct FestSignupDraft: Equatable {
+    var enabled = false
+    var mode = "interval"          // interval | slots | headcount
+    var capacity: Int? = 4
+    var slotMinutes = 60
+    var startTime: String? = "12:00"
+    var endTime: String? = "16:00"
+    var instructions: String?
+    var teamSize = 1               // 1 = individual; >= 2 = fixed teams
+    var hideNames = false
+
+    /// Same rules as web's `signupIsValid`.
+    var isValid: Bool {
+        guard enabled else { return true }
+        if teamSize < 1 { return false }
+        switch mode {
+        case "headcount": return capacity == nil || (capacity ?? 0) > 0
+        case "slots": return true
+        default:
+            guard (capacity ?? 0) > 0, slotMinutes > 0,
+                  let s = startTime, let e = endTime,
+                  let sp = EditorTimeField.parts(s), let ep = EditorTimeField.parts(e) else { return false }
+            return sp.h * 60 + sp.m < ep.h * 60 + ep.m
+        }
+    }
 }
 
 struct FestDinnerDraft: Identifiable, Equatable {
@@ -174,7 +342,11 @@ private let seedCallout = HomeCallout(
 @Observable
 @MainActor
 final class FestContentService {
-    var config: FestConfig?
+    var config: FestConfig? {
+        // The current year's look is app-wide (Home's fest card included), so
+        // it follows the config rather than whichever fest screen rendered last.
+        didSet { FestThemeStore.active = config?.look ?? .builtIn }
+    }
     var schedule: [ScheduleItem] = ScheduleItem.seed   // timed items + anytime
     var dinners: [FestDinner] = FestDinner.seed
     var payees: [Payee] = FestContentService.seedPayees
@@ -338,6 +510,8 @@ final class FestContentService {
     struct ArchivedYear {
         var schedule: [ScheduleItem]
         var dinners: [FestDinner]
+        /// Tournaments (not still in setup) keyed by schedule item id.
+        var tournaments: [String: Tournament] = [:]
         var isEmpty: Bool { schedule.isEmpty && dinners.isEmpty }
     }
 
@@ -350,7 +524,20 @@ final class FestContentService {
     func fetchArchivedYear(_ year: Int) async -> ArchivedYear {
         async let sched = try? fetchSchedule(year: year)
         async let dins = try? fetchDinners(year: year)
-        return await ArchivedYear(schedule: sched ?? [], dinners: dins ?? [])
+        let items = await sched ?? []
+        let dinners = await dins ?? []
+        // Brackets are history too (who won the musky tournament). Loaded for
+        // this year's tournament-enabled items only; a never-started one is not
+        // a record, so it is skipped. No seed fallback.
+        var tournaments: [String: Tournament] = [:]
+        let svc = TournamentsService()
+        for item in items where item.tournamentEnabled {
+            guard let id = UUID(uuidString: item.id),
+                  let t = await svc.fetch(host: .schedule(id: id)).first,
+                  t.status != .setup else { continue }
+            tournaments[item.id] = t
+        }
+        return ArchivedYear(schedule: items, dinners: dinners, tournaments: tournaments)
     }
 
     /// The well-known Drop Box id for a fest year's photo album. The year is a
@@ -371,12 +558,11 @@ final class FestContentService {
     /// Returns nil when the `home_callouts` table doesn't exist yet (pre-migration),
     /// so the caller can fall back to the seed. Returns [] when the table exists but
     /// has no active rows — that means "no callouts", not "show the seed".
-    private func fetchCallouts() async throws -> [HomeCallout]? {
+    private func fetchCallouts(activeOnly: Bool = true) async throws -> [HomeCallout]? {
         do {
-            let rows: [CalloutRow] = try await supabase
-                .from("home_callouts")
-                .select("*")
-                .eq("is_active", value: true)
+            var query = supabase.from("home_callouts").select("*")
+            if activeOnly { query = query.eq("is_active", value: true) }
+            let rows: [CalloutRow] = try await query
                 .order("position", ascending: true)
                 .execute().value
             return rows.map { row in
@@ -402,6 +588,17 @@ final class FestContentService {
             // Table doesn't exist yet (pre-migration 0083) → return nil so caller shows seed.
             return nil
         }
+    }
+
+    /// Every call-out row, active or not, in position order — for the admin list
+    /// and composer (the Home stack only ever sees active rows). Throws on a
+    /// read error so the editor can say so instead of showing an empty list.
+    func allCallouts() async throws -> [HomeCallout] {
+        guard let rows = try await fetchCallouts(activeOnly: false) else {
+            throw NSError(domain: "FestContentService", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Couldn\u{2019}t read the call-outs. Check your connection and try again."])
+        }
+        return rows
     }
 
     // MARK: - Callout completions (migration 0098)
@@ -468,20 +665,13 @@ final class FestContentService {
         prepTime: String?,
         prepLocation: String?
     ) async throws {
-        struct Payload: Encodable {
-            let menu: String?
-            let served_time: String?
-            let served_location: String?
-            let prep_time: String?
-            let prep_location: String?
-        }
-        try await supabase
-            .from("fest_dinners")
-            .update(Payload(menu: menu, served_time: servedTime,
-                            served_location: servedLocation,
-                            prep_time: prepTime, prep_location: prepLocation))
-            .eq("id", value: dinnerId)
-            .execute()
+        var payload: [String: AnyJSON] = [
+            "menu": j(menu), "served_time": j(servedTime), "served_location": j(servedLocation),
+            "prep_time": j(prepTime), "prep_location": j(prepLocation),
+            "updated_at": .string(ISO8601DateFormatter().string(from: Date())),
+        ]
+        if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
+        try await supabase.from("fest_dinners").update(payload).eq("id", value: dinnerId).execute()
     }
 
     // MARK: - Editing (admin / fest committee; RLS enforces can_edit_fest)
@@ -555,7 +745,22 @@ final class FestContentService {
             "is_private": .bool(d.isPrivate), "lead_name": j(d.leadName), "lead_phone": j(d.leadPhone),
             "lead_user_id": d.leadUserId.map { AnyJSON.string($0.uuidString) } ?? .null,
             "position": .integer(d.position), "tournament_enabled": .bool(d.tournamentEnabled),
+            "crew_user_ids": .array(d.crewUserIds.map { AnyJSON.string($0.uuidString) }),
+            "image_url": j(d.imageUrl),
+            "links": Self.linksJSON(d.links),
         ]
+        // Sign-up columns exactly as web's `signupPayload` (interval-only fields null otherwise).
+        let g = d.signup
+        let interval = g.enabled && g.mode == "interval"
+        p["signup_enabled"]      = .bool(g.enabled)
+        p["signup_mode"]         = .string(g.mode)
+        p["signup_capacity"]     = g.enabled ? j(g.capacity) : .null
+        p["signup_slot_minutes"] = interval ? .integer(g.slotMinutes) : .null
+        p["signup_start_time"]   = interval ? j(g.startTime) : .null
+        p["signup_end_time"]     = interval ? j(g.endTime) : .null
+        p["signup_instructions"] = g.enabled ? j(g.instructions) : .null
+        p["signup_team_size"]    = g.enabled && g.teamSize > 1 ? .integer(g.teamSize) : .null
+        p["signup_hide_names"]   = .bool(g.enabled && g.hideNames)
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_schedule_items", id: d.id, payload: p)
     }
@@ -572,39 +777,79 @@ final class FestContentService {
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_dinners", id: d.id, payload: p)
     }
-    func saveDues(_ t: FestDuesTier, position: Int, isNew: Bool) async throws {
+    /// `position` nil: a new row is appended after the current last one; an
+    /// existing row keeps its stored position (the column is simply not sent).
+    func saveDues(_ t: FestDuesTier, position: Int? = nil, isNew: Bool) async throws {
         var p: [String: AnyJSON] = [
             "fest_year": .integer(year), "label": .string(t.label),
-            "amount": j(t.amount), "note": j(t.note), "position": .integer(position),
+            "amount": j(t.amount), "note": j(t.note),
             "per_day": .bool(t.perDay),
         ]
+        if let position { p["position"] = .integer(position) }
+        else if isNew { p["position"] = .integer(await nextPosition("fest_dues")) }
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_dues", id: isNew ? nil : t.id, payload: p)
     }
-    func savePayee(_ p0: Payee, position: Int, isNew: Bool) async throws {
+    func savePayee(_ p0: Payee, position: Int? = nil, isNew: Bool) async throws {
         var p: [String: AnyJSON] = [
             "fest_year": .integer(year), "name": .string(p0.name), "role": j(p0.role),
             "venmo": j(p0.venmo), "zelle": j(p0.zelle), "applecash": j(p0.appleCash),
-            "paypal": j(p0.paypal), "amount": j(p0.amount), "note": j(p0.note), "position": .integer(position),
+            "paypal": j(p0.paypal), "amount": j(p0.amount), "note": j(p0.note),
         ]
+        if let position { p["position"] = .integer(position) }
+        else if isNew { p["position"] = .integer(await nextPosition("fest_payees")) }
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_payees", id: isNew ? nil : p0.id, payload: p)
     }
-    func saveConfig(name: String, tagline: String?, startDate: String, endDate: String) async throws {
-        var p: [String: AnyJSON] = [
-            "fest_year": .integer(year), "name": .string(name), "tagline": j(tagline),
-            "start_date": .string(startDate), "end_date": .string(endDate),
-        ]
-        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
-        try await supabase.from("fest_config").upsert(p, onConflict: "fest_year").execute()
-        await resolveYear()
+    /// What `save_fest_config` moved along with the window (migration 0220).
+    struct ConfigSaveResult {
+        var shiftDays = 0
+        var moved = 0
+        /// "Saved." or "Saved. The week moved 7 days later - 12 entries moved with it."
+        var message: String {
+            guard shiftDays != 0, moved != 0 else { return "Saved." }
+            let n = abs(shiftDays)
+            return "Saved. The week moved \(n) \(n == 1 ? "day" : "days") \(shiftDays > 0 ? "later" : "earlier") - "
+                + "\(moved) \(moved == 1 ? "entry" : "entries") moved with it."
+        }
     }
 
-    /// This year's theme line and cover photo (migration 0219).
-    /// Nil clears the override and falls back to the built-in look.
-    func saveYearLook(theme: String?, coverUrl: String?) async throws {
+    /// Saves the fest window through `save_fest_config` so the planned week
+    /// (dinners, schedule, sign-up slots, day RSVPs) shifts in the same
+    /// transaction. A bare upsert strands all of it on the old dates.
+    /// The current theme is passed through so the RPC does not blank it.
+    @discardableResult
+    func saveConfig(name: String, tagline: String?, startDate: String, endDate: String) async throws -> ConfigSaveResult {
+        struct Counts: Decodable {
+            var shift_days: Int?; var dinners: Int?; var events: Int?
+            var event_slots: Int?; var activity_slots: Int?; var rsvps: Int?
+        }
+        let params: [String: AnyJSON] = [
+            "p_year": .integer(year), "p_name": .string(name), "p_tagline": j(tagline),
+            "p_theme": j(config?.theme),
+            "p_start": .string(startDate), "p_end": .string(endDate),
+        ]
+        let c: Counts = try await supabase.rpc("save_fest_config", params: params).execute().value
+        await resolveYear()
+        return ConfigSaveResult(
+            shiftDays: c.shift_days ?? 0,
+            moved: (c.dinners ?? 0) + (c.events ?? 0) + (c.event_slots ?? 0)
+                + (c.activity_slots ?? 0) + (c.rsvps ?? 0))
+    }
+
+    /// This year's whole look in ONE upsert (migration 0219): theme line, cover
+    /// photo, colours, background and font. A single write, so a failure can never
+    /// leave half the look saved. Nil = built-in look / no override.
+    func saveYearLook(theme: String?, coverUrl: String?, look t: FestTheme) async throws {
         var p: [String: AnyJSON] = [
             "fest_year": .integer(year), "theme": j(theme), "cover_url": j(coverUrl),
+            "theme_primary": j(t.primary), "theme_accent": j(t.accent),
+            "theme_background": j(t.background), "theme_card": j(t.card),
+            "theme_border": j(t.border), "theme_ink": j(t.ink),
+            "theme_bg_style": j(t.bgStyle), "theme_bg_image_url": j(t.bgImageUrl),
+            "theme_bg_image_mode": j(t.bgImageMode),
+            "theme_bg_image_opacity": t.bgImageOpacity.map { .integer($0) } ?? .null,
+            "theme_font": j(t.font),
         ]
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await supabase.from("fest_config").upsert(p, onConflict: "fest_year").execute()
@@ -816,12 +1061,76 @@ final class FestContentService {
         var hideNames: Bool = false   // migration 0167 — schedule events only
     }
 
+    /// Links as the jsonb array web writes: only rows with a URL, label null when blank.
+    static func linksJSON(_ links: [EditorLink]) -> AnyJSON {
+        .array(links.compactMap { l in
+            let href = l.url.trimmingCharacters(in: .whitespacesAndNewlines)
+            guard !href.isEmpty else { return nil }
+            let label = l.label.trimmingCharacters(in: .whitespacesAndNewlines)
+            return .object(["href": .string(href), "label": label.isEmpty ? .null : .string(label)])
+        })
+    }
+
+    /// The narrow update web gives an event's lead/crew (`updateScheduleDetails`):
+    /// location, description, bring, links. Nothing else is written.
+    func updateScheduleDetails(itemId: UUID, location: String?, description: String?,
+                               bring: String?, links: [EditorLink]) async throws {
+        var payload: [String: AnyJSON] = [
+            "location": j(location), "description": j(description), "bring": j(bring),
+            "links": Self.linksJSON(links),
+            "updated_at": .string(ISO8601DateFormatter().string(from: Date())),
+        ]
+        if let uid = await currentUid() { payload["updated_by"] = .string(uid) }
+        try await supabase.from("fest_schedule_items").update(payload).eq("id", value: itemId.uuidString).execute()
+    }
+
+    /// One schedule row as a full editor draft. Throws on a network/decoding error;
+    /// nil when the row no longer exists.
+    func scheduleDraft(id: UUID) async throws -> FestScheduleDraft? {
+        let rows: [ScheduleRowFull] = try await supabase.from("fest_schedule_items").select("*")
+            .eq("id", value: id.uuidString).limit(1).execute().value
+        return rows.first?.draft
+    }
+
+    /// One dinner row as a draft (carries prep time/location, which the display model lacks).
+    func dinnerDraft(id: UUID) async throws -> FestDinnerDraft? {
+        let rows: [DinnerRowFull] = try await supabase.from("fest_dinners").select("*")
+            .eq("id", value: id.uuidString).limit(1).execute().value
+        return rows.first?.draft
+    }
+
     /// Updates only the crew_user_ids on a dinner (admin / canEditFest / chef only).
     func updateDinnerCrew(dinnerId: UUID, crewUserIds: [UUID]) async throws {
         let payload: [String: AnyJSON] = [
             "crew_user_ids": .array(crewUserIds.map { AnyJSON.string($0.uuidString) })
         ]
         try await supabase.from("fest_dinners").update(payload).eq("id", value: dinnerId.uuidString).execute()
+    }
+
+    /// Tables whose rows the Planner lets editors reorder.
+    enum OrderedTable: String {
+        case schedule = "fest_schedule_items", dinners = "fest_dinners", dues = "fest_dues", payees = "fest_payees"
+    }
+    /// Writes `position` = index for each id, in the given order. Throws if any write fails.
+    func saveOrder(_ table: OrderedTable, ids: [UUID]) async throws {
+        let name = table.rawValue
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for (i, id) in ids.enumerated() {
+                group.addTask {
+                    try await supabase.from(name).update(["position": i])
+                        .eq("id", value: id.uuidString).execute()
+                }
+            }
+            try await group.waitForAll()
+        }
+    }
+    private struct PositionRow: Decodable { let position: Int? }
+    /// Max `position` this year + 1 (0 when empty or unreadable).
+    private func nextPosition(_ table: String) async -> Int {
+        let rows: [PositionRow] = (try? await supabase.from(table).select("position")
+            .eq("fest_year", value: year).order("position", ascending: false).limit(1)
+            .execute().value) ?? []
+        return (rows.first?.position ?? -1) + 1
     }
 
     func deleteSchedule(id: UUID) async throws { try await delete("fest_schedule_items", id: id) }
@@ -964,18 +1273,49 @@ private struct ConfigRow: Decodable {
     // Migration 0219. Nil means "use the built-in look".
     let theme: String?
     let coverUrl: String?
+    let look: FestTheme
     enum CodingKeys: String, CodingKey {
         case name, tagline, theme
         case festYear = "fest_year"
         case startDate = "start_date"
         case endDate = "end_date"
         case coverUrl = "cover_url"
+        case primary = "theme_primary", accent = "theme_accent"
+        case background = "theme_background", card = "theme_card"
+        case border = "theme_border", ink = "theme_ink"
+        case bgStyle = "theme_bg_style", bgImageUrl = "theme_bg_image_url"
+        case bgImageMode = "theme_bg_image_mode"
+        case bgImageOpacity = "theme_bg_image_opacity", font = "theme_font"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        festYear = try c.decode(Int.self, forKey: .festYear)
+        name = try c.decode(String.self, forKey: .name)
+        tagline = try c.decodeIfPresent(String.self, forKey: .tagline)
+        startDate = try c.decode(String.self, forKey: .startDate)
+        endDate = try c.decode(String.self, forKey: .endDate)
+        theme = try? c.decodeIfPresent(String.self, forKey: .theme)
+        coverUrl = try? c.decodeIfPresent(String.self, forKey: .coverUrl)
+        // The look columns are tolerant: absent (older schema) or malformed
+        // values become nil (built-in look) and never fail the row.
+        func str(_ k: CodingKeys) -> String? { (try? c.decodeIfPresent(String.self, forKey: k)) ?? nil }
+        look = FestTheme(
+            primary: FestTheme.validHex(str(.primary)), accent: FestTheme.validHex(str(.accent)),
+            background: FestTheme.validHex(str(.background)), card: FestTheme.validHex(str(.card)),
+            border: FestTheme.validHex(str(.border)), ink: FestTheme.validHex(str(.ink)),
+            bgStyle: str(.bgStyle).flatMap { ["default", "flat", "image"].contains($0) ? $0 : nil },
+            bgImageUrl: str(.bgImageUrl),
+            bgImageMode: str(.bgImageMode).flatMap { ["cover", "tile"].contains($0) ? $0 : nil },
+            bgImageOpacity: ((try? c.decodeIfPresent(Int.self, forKey: .bgImageOpacity)) ?? nil)
+                .map { min(100, max(0, $0)) },
+            font: str(.font).flatMap { ["cinzel", "playfair", "sans"].contains($0) ? $0 : nil })
     }
 
     var config: FestConfig {
         FestConfig(year: festYear, name: name, tagline: tagline,
                    startDate: startDate, endDate: endDate,
-                   theme: theme, coverUrl: coverUrl)
+                   theme: theme, coverUrl: coverUrl, look: look)
     }
 }
 
@@ -1130,11 +1470,35 @@ private struct ScheduleRowFull: Decodable {
     let lead_phone: String?
     let position: Int
     let tournament_enabled: Bool?   // migration 0147
+    let crew_user_ids: [UUID]?      // migration 0110
+    let image_url: String?
+    let links: [ScheduleLink]?      // migration 0142
+    let signup_enabled: Bool?
+    let signup_mode: String?
+    let signup_capacity: Int?
+    let signup_slot_minutes: Int?
+    let signup_start_time: String?
+    let signup_end_time: String?
+    let signup_instructions: String?
+    let signup_team_size: Int?
+    let signup_hide_names: Bool?
     var draft: FestScheduleDraft {
         FestScheduleDraft(id: id, day: day, anytime: anytime ?? false, startTime: start_time, endTime: end_time, title: title,
                           emoji: emoji, location: location, description: description, bring: bring,
                           isPrivate: is_private, leadUserId: lead_user_id, leadName: lead_name,
-                          leadPhone: lead_phone, position: position, tournamentEnabled: tournament_enabled ?? false)
+                          leadPhone: lead_phone, position: position, tournamentEnabled: tournament_enabled ?? false,
+                          crewUserIds: crew_user_ids ?? [], imageUrl: image_url?.nilIfBlank,
+                          links: (links ?? []).map { EditorLink(label: $0.label ?? "", url: $0.href) },
+                          signup: FestSignupDraft(
+                              enabled: signup_enabled ?? false,
+                              mode: signup_mode ?? "interval",
+                              capacity: signup_capacity,
+                              slotMinutes: signup_slot_minutes ?? 60,
+                              startTime: signup_start_time?.nilIfBlank ?? "12:00",
+                              endTime: signup_end_time?.nilIfBlank ?? "16:00",
+                              instructions: signup_instructions,
+                              teamSize: max(signup_team_size ?? 1, 1),
+                              hideNames: signup_hide_names ?? false))
     }
 }
 

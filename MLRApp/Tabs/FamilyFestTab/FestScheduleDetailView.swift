@@ -4,19 +4,22 @@ import Kingfisher
 // MARK: - FestScheduleDetailView
 
 struct FestScheduleDetailView: View {
-    let item: ScheduleItem
+    private let initialItem: ScheduleItem
     @Environment(AppEnvironment.self) private var env
+    @State private var showEditSheet = false
+    @State private var showLightbox = false
 
-    /// Same predicate as ExpandableScheduleRow's canEditItem / EventSignupSection's
-    /// canManage — admin/fest-editor OR this item's own lead/crew.
-    private var canManage: Bool {
-        guard env.isSignedIn else { return false }
-        let me = env.currentProfile?.id
-        return env.isAdmin
-            || env.festContentService.userCanEditFest
-            || (item.leadUserId != nil && item.leadUserId == me)
-            || (me != nil && item.crewUserIds.contains(me!))
+    init(item: ScheduleItem) { initialItem = item }
+
+    /// The live row: after an edit the service reloads, and this screen shows the
+    /// new values at once instead of the snapshot it was pushed with.
+    private var item: ScheduleItem {
+        env.festContentService.schedule.first { $0.id == initialItem.id } ?? initialItem
     }
+
+    /// Same predicate as web's Edit button and EventSignupSection's canManage:
+    /// admin/fest-editor OR this item's own lead/crew (hidden while previewing).
+    private var canManage: Bool { env.canEditFestEvent(item) }
 
     var body: some View {
         ScrollView {
@@ -30,13 +33,18 @@ struct FestScheduleDetailView: View {
                         .frame(maxWidth: .infinity)
                         .frame(height: 200)
                         .clipped()
+                        .contentShape(Rectangle())
+                        .onTapGesture { showLightbox = true }
+                        .accessibilityLabel("\(item.title) photo")
+                        .accessibilityAddTraits(.isButton)
+                        .accessibilityHint("Opens the photo full screen")
                 }
 
                 // Header
                 VStack(alignment: .leading, spacing: 8) {
                     Text(item.title)
                         .font(.festSerif(26, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .fixedSize(horizontal: false, vertical: true)
 
                     HStack(spacing: 16) {
@@ -137,9 +145,24 @@ struct FestScheduleDetailView: View {
             }
         }
         .background(Color.mlrFestParchment.ignoresSafeArea())
+        .mlrEditToggle(canEdit: canManage)
         .navigationTitle(item.day)
         .navigationBarTitleDisplayMode(.inline)
         .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
+        .toolbar {
+            if canManage {
+                ToolbarItem(placement: .topBarTrailing) {
+                    EditPencil("event", tint: .mlrFest) { showEditSheet = true }
+                }
+            }
+        }
+        .task { if env.isSignedIn && !env.isPreviewing { _ = await env.festContentService.canEditFest() } }
+        .sheet(isPresented: $showEditSheet) {
+            FestScheduleEditSheet(item: item) { await env.festContentService.reload() }
+        }
+        .fullScreenCover(isPresented: $showLightbox) {
+            if let url = item.imageUrl { LightboxView(imageUrl: url) }
+        }
     }
 }
 
@@ -190,7 +213,7 @@ struct ScheduleLinkButtons: View {
                                 .lineLimit(1)
                             Spacer(minLength: 4)
                         }
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -217,12 +240,12 @@ struct LeadRow: View {
                 .overlay(
                     Text(String(name.prefix(1)).uppercased())
                         .font(.mlrScaled(15, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                 )
 
             Text(name)
                 .font(.mlrScaled(15, weight: .medium))
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(Color.mlrFestReadable)
 
             Spacer()
 
@@ -233,7 +256,7 @@ struct LeadRow: View {
                 } label: {
                     Image(systemName: "phone.fill")
                         .font(.mlrScaled(13))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .padding(8)
                         .background(Color.mlrFest.opacity(0.1))
                         .clipShape(Circle())
@@ -245,7 +268,7 @@ struct LeadRow: View {
                 } label: {
                     Image(systemName: "message.fill")
                         .font(.mlrScaled(13))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .padding(8)
                         .background(Color.mlrFest.opacity(0.1))
                         .clipShape(Circle())
@@ -291,14 +314,8 @@ struct ExpandableScheduleRow: View {
     @State private var isExpanded = false
     @State private var showEditSheet = false
 
-    private var canEditItem: Bool {
-        guard env.isSignedIn else { return false }
-        let me = env.currentProfile?.id
-        return env.isAdmin
-            || env.festContentService.userCanEditFest
-            || (item.leadUserId != nil && item.leadUserId == me)
-            || (me != nil && item.crewUserIds.contains(me!))   // crew self-edit (migration 0110)
-    }
+    /// Web's rule: full editor, or this event's lead/crew (migration 0110). Hidden while previewing.
+    private var canEditItem: Bool { env.canEditFestEvent(item) }
 
     private var hasDetail: Bool {
         (item.description?.isEmpty == false) || item.location != nil || !item.leads.isEmpty
@@ -319,10 +336,8 @@ struct ExpandableScheduleRow: View {
         .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
         .accessibilityHint(hasDetail ? "Double tap to \(isExpanded ? "collapse" : "expand") details" : "")
         .sheet(isPresented: $showEditSheet) {
-            NavigationStack {
-                FestScheduleEditSheet(item: item) {
-                    await env.festContentService.reload()
-                }
+            FestScheduleEditSheet(item: item) {
+                await env.festContentService.reload()
             }
         }
     }
@@ -340,7 +355,7 @@ struct ExpandableScheduleRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(item.title)
                     .font(.festSerif(18, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                     .multilineTextAlignment(.leading)
 
                 if let location = item.location, !isExpanded {
@@ -454,7 +469,7 @@ struct ExpandableScheduleRow: View {
                 Button { showEditSheet = true } label: {
                     Label("Edit event", systemImage: "pencil")
                         .font(.mlrScaled(13, weight: .medium))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                 }
                 .buttonStyle(.pressable)
                 .padding(.horizontal, 14)
@@ -483,16 +498,15 @@ struct ExpandableDinnerRow: View {
     @State private var showCrewSheet = false
 
     private var canEditDinner: Bool {
-        guard env.isSignedIn, let uid = env.currentProfile?.id else { return false }
-        return env.isAdmin
-            || env.festContentService.userCanEditFest
-            || dinner.chefUserId == uid
-            || dinner.crewUserIds.contains(uid)
+        env.canEditFestDinner(chefUserId: dinner.chefUserId, crewUserIds: dinner.crewUserIds)
     }
 
+    /// Full editors assign crew inside their editor; a head chef without full
+    /// rights keeps the separate crew sheet (existing behaviour, not widened).
     private var canManageCrew: Bool {
-        guard env.isSignedIn, let uid = env.currentProfile?.id else { return false }
-        return env.isAdmin || env.festContentService.userCanEditFest || dinner.chefUserId == uid
+        guard env.isSignedIn, !env.isPreviewing, !env.isFullFestEditor,
+              let uid = env.currentProfile?.id else { return false }
+        return dinner.chefUserId == uid
     }
 
     /// "Head chef — what's on the menu" (menu omitted while still TBD).
@@ -514,14 +528,10 @@ struct ExpandableDinnerRow: View {
         .accessibilityValue(isExpanded ? "Expanded" : "Collapsed")
         .accessibilityHint("Double tap to \(isExpanded ? "collapse" : "expand") the dinner")
         .sheet(isPresented: $showEditSheet) {
-            NavigationStack {
-                FestDinnerEditSheet(dinner: dinner, onSaved: { await env.festContentService.reload() })
-            }
+            FestDinnerEditSheet(dinner: dinner, onSaved: { await env.festContentService.reload() })
         }
         .sheet(isPresented: $showCrewSheet) {
-            NavigationStack {
-                FestCrewAssignSheet(dinner: dinner, onSaved: { await env.festContentService.reload() })
-            }
+            FestCrewAssignSheet(dinner: dinner, onSaved: { await env.festContentService.reload() })
         }
     }
 
@@ -539,7 +549,7 @@ struct ExpandableDinnerRow: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text("Dinner")
                     .font(.festSerif(18, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                 // Head chef — what's on the menu.
                 Text(chefMenuLine)
                     .font(.mlrScaled(14))
@@ -567,7 +577,7 @@ struct ExpandableDinnerRow: View {
             DetailSection(icon: "person.fill", title: "Chef") {
                 Text(dinner.chef)
                     .font(.mlrScaled(15, weight: .medium))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
             }
 
             if !dinner.menuLines.isEmpty {
@@ -607,7 +617,7 @@ struct ExpandableDinnerRow: View {
                             ForEach(dinner.crew, id: \.self) { member in
                                 Text(member)
                                     .font(.mlrScaled(14, weight: .medium))
-                                    .foregroundStyle(Color.mlrFest)
+                                    .foregroundStyle(Color.mlrFestReadable)
                             }
                         }
                     } else {
@@ -620,9 +630,9 @@ struct ExpandableDinnerRow: View {
                 Divider().background(Color.mlrFest.opacity(0.12))
                 HStack(spacing: 0) {
                     Button { showEditSheet = true } label: {
-                        Label("Edit menu & details", systemImage: "pencil")
+                        Label(env.isFullFestEditor ? "Edit dinner" : "Edit menu & details", systemImage: "pencil")
                             .font(.mlrScaled(13, weight: .medium))
-                            .foregroundStyle(Color.mlrFest)
+                            .foregroundStyle(Color.mlrFestReadable)
                     }
                     .buttonStyle(.pressable)
                     if canManageCrew {
@@ -630,7 +640,7 @@ struct ExpandableDinnerRow: View {
                         Button { showCrewSheet = true } label: {
                             Label("Manage crew", systemImage: "person.badge.plus")
                                 .font(.mlrScaled(13, weight: .medium))
-                                .foregroundStyle(Color.mlrFest)
+                                .foregroundStyle(Color.mlrFestReadable)
                         }
                         .buttonStyle(.pressable)
                     }

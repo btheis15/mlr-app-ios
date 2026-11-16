@@ -11,7 +11,6 @@ import Supabase
 // mini auth server) — this edits profile fields only.
 
 struct AdminEditMemberSheet: View {
-    @Environment(\.dismiss) private var dismiss
 
     let member: Profile
     let onSaved: () -> Void
@@ -37,6 +36,13 @@ struct AdminEditMemberSheet: View {
     @State private var loading = true
     @State private var busy = false
     @State private var status: String?
+    @State private var statusIsError = false
+    // As loaded, for dirty tracking (Save only when something changed).
+    @State private var originalValues: [String: String] = [:]
+    @State private var originalAppleCash = false
+    @State private var profileLoaded = false
+
+    private var isDirty: Bool { profileLoaded && (values != originalValues || appleCash != originalAppleCash) }
 
     private var isUnlocked: Bool {
         guard let u = unlockedUntil else { return false }
@@ -48,40 +54,33 @@ struct AdminEditMemberSheet: View {
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                if loading {
-                    Section { HStack { ProgressView(); Text("Loading…").foregroundStyle(Color.mlrTextMuted) } }
-                } else if !ready {
-                    Section {
-                        Label("The two-admin member-edit unlock isn't available yet.",
-                              systemImage: "exclamationmark.triangle")
-                            .foregroundStyle(Color.mlrWarning).font(.mlrScaled(13))
-                    }
-                } else if !isUnlocked {
-                    lockedSection
-                } else {
-                    unlockedBanner
-                    fieldsSection
+        EditorSheet(title: "Edit \(member.name)",
+                    isDirty: isDirty,
+                    canSave: isUnlocked && profileLoaded && !busy,
+                    save: { try await save() }) {
+            if loading {
+                Section { HStack { ProgressView(); Text("Loading…").foregroundStyle(Color.mlrTextMuted) } }
+            } else if !ready {
+                Section {
+                    Label("The two-admin member-edit unlock isn't available yet.",
+                          systemImage: "exclamationmark.triangle")
+                        .foregroundStyle(Color.mlrWarning).font(.mlrScaled(13))
                 }
+            } else if !isUnlocked {
+                lockedSection
+            } else {
+                unlockedBanner
+                fieldsSection
+            }
 
-                if let status {
-                    Section { Text(status).font(.mlrScaled(13)).foregroundStyle(Color.mlrPrimary) }
+            if let status {
+                Section {
+                    Text(status).font(.mlrScaled(13))
+                        .foregroundStyle(statusIsError ? Color.mlrDanger : Color.mlrPrimary)
                 }
             }
-            .navigationTitle("Edit \(member.name)")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Done") { dismiss() } }
-                if isUnlocked {
-                    ToolbarItem(placement: .confirmationAction) {
-                        if busy { ProgressView() }
-                        else { Button("Save") { Task { await save() } }.fontWeight(.semibold) }
-                    }
-                }
-            }
-            .task { await loadOverride(); await loadProfile() }
         }
+        .task { await loadOverride(); await loadProfile() }
     }
 
     private var lockedSection: some View {
@@ -163,9 +162,12 @@ struct AdminEditMemberSheet: View {
         for f in Self.fields { v[f.key] = row.data[f.key]?.stringValue ?? "" }
         values = v
         appleCash = row.data["apple_cash"]?.boolValue ?? false
+        originalValues = v
+        originalAppleCash = appleCash
+        profileLoaded = true
     }
 
-    private func save() async {
+    private func save() async throws {
         busy = true; status = nil
         defer { busy = false }
         var patch: [String: AnyJSON] = ["apple_cash": .bool(appleCash)]
@@ -173,15 +175,10 @@ struct AdminEditMemberSheet: View {
             patch[f.key] = .string((values[f.key] ?? "").trimmingCharacters(in: .whitespaces))
         }
         struct Params: Encodable { let target: String; let patch: [String: AnyJSON] }
-        do {
-            try await supabase
-                .rpc("admin_set_member_profile", params: Params(target: member.id.uuidString, patch: patch))
-                .execute()
-            status = "Saved ✓"
-            onSaved()
-        } catch {
-            status = "Couldn't save — is the unlock still active?"
-        }
+        try await supabase
+            .rpc("admin_set_member_profile", params: Params(target: member.id.uuidString, patch: patch))
+            .execute()
+        onSaved()
     }
 
     private func runOverride(_ rpc: String, note: String) async {
@@ -190,9 +187,11 @@ struct AdminEditMemberSheet: View {
         do {
             try await supabase.rpc(rpc).execute()
             await loadOverride()
-            status = note
+            status = note; statusIsError = false
         } catch {
-            status = "Couldn't update the unlock."
+            status = "Couldn\u{2019}t update the unlock. \(EditorError.message(error))"
+            statusIsError = true
+            Haptics.error()
         }
     }
 }

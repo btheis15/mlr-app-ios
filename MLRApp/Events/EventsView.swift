@@ -66,7 +66,7 @@ struct EventsView: View {
                 // Active family-wide date poll (#328) — every signed-in member sees it.
                 MeetingSectionBar(scope: .family, members: [], surface: .card, refreshID: meetingRefreshID)
                 Group {
-                    if env.eventsService.isLoading && !hasLoaded {
+                    if env.eventsService.isLoading && env.eventsService.events.isEmpty {
                         ScrollView {
                             VStack(spacing: 16) {
                                 ForEach(0..<4, id: \.self) { _ in SkeletonCard(height: 120) }
@@ -78,19 +78,10 @@ struct EventsView: View {
                     }
                 }
             }
-            .background(Color.mlrSurface)
             .navigationTitle("Events")
             .toolbar {
-                ToolbarItem(placement: .principal) {
-                    Picker("Filter", selection: $filter) {
-                        ForEach(TimeFilter.allCases, id: \.self) { f in
-                            Text(f.rawValue).tag(f)
-                        }
-                    }
-                    .pickerStyle(.segmented)
-                    .frame(width: 200)
-                }
-                if env.isSignedIn {
+                // Unverified accounts can't write (0213) — hide the create entry points.
+                if env.isSignedIn, !env.isAwaitingVerification {
                     ToolbarItem(placement: .topBarTrailing) {
                         Menu {
                             // Anyone can start an invite-only activity / game (#397).
@@ -115,6 +106,7 @@ struct EventsView: View {
                             Image(systemName: "plus")
                         }
                         .tint(Color.mlrPrimary)
+                        .accessibilityLabel("Create")
                     }
                 }
             }
@@ -154,7 +146,8 @@ struct EventsView: View {
 
     private var eventList: some View {
         ScrollView {
-            LazyVStack(alignment: .leading, spacing: 24, pinnedViews: [.sectionHeaders]) {
+            LazyVStack(alignment: .leading, spacing: 18) {
+                headerBlock
                 activitiesSection
                 if filteredEvents.isEmpty {
                     Text(filter == .upcoming ? "Nothing on the calendar yet." : "No past events.")
@@ -166,7 +159,7 @@ struct EventsView: View {
                 }
                 ForEach(grouped, id: \.month) { group in
                     Section {
-                        VStack(spacing: 12) {
+                        VStack(spacing: 8) {
                             ForEach(group.events) { event in
                                 EventCard(
                                     event: event,
@@ -182,12 +175,9 @@ struct EventsView: View {
                     } header: {
                         HStack(spacing: 10) {
                             Text(group.month)
-                                .font(.mlrScaled(20, weight: .bold, design: .rounded))
+                                .font(.mlrSectionTitle)
                                 .foregroundStyle(Color.mlrText)
-                            Rectangle()
-                                .fill(Color.mlrCampfire.opacity(0.5))
-                                .frame(height: 2)
-                                .clipShape(Capsule())
+                            Spacer()
                             Text("\(group.events.count)")
                                 .font(.mlrScaled(13, weight: .bold))
                                 .foregroundStyle(Color.mlrCampfire)
@@ -195,13 +185,12 @@ struct EventsView: View {
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(.horizontal, 16)
-                        .padding(.vertical, 8)
-                        .background(Color.mlrSurface)
                     }
                 }
             }
             .padding(.vertical, 12)
         }
+        .contentMargins(.bottom, 96, for: .scrollContent)
         .refreshable {
             await env.eventsService.fetchEvents()
             if let userId = await env.authService.userId {
@@ -209,6 +198,39 @@ struct EventsView: View {
             }
             await loadActivities()
         }
+    }
+
+    // MARK: - Header (subtitle, actions, filter pills)
+
+    private var headerBlock: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text("Gatherings, work weekends and games at the lake.")
+                .font(.mlrSecondary)
+                .foregroundStyle(Color.mlrTextMuted)
+            if env.isSignedIn, !env.isAwaitingVerification {
+                HStack(spacing: 10) {
+                    if env.isAdmin {
+                        Button { showComposer = true } label: {
+                            Label("New event", systemImage: "calendar.badge.plus")
+                        }
+                        .buttonStyle(.mlrSecondary)
+                    }
+                    Button { showActivityComposer = true } label: {
+                        Label("Create an activity", systemImage: "gamecontroller")
+                            .font(.system(.subheadline, weight: .semibold))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.8)
+                            .foregroundStyle(Color.mlrCampfire)
+                            .frame(maxWidth: .infinity, minHeight: 52)
+                            .background(Color.mlrCampfire.opacity(0.10))
+                            .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+                    }
+                    .buttonStyle(.pressable)
+                }
+            }
+            MLRPills(TimeFilter.allCases, selection: $filter) { $0.rawValue }
+        }
+        .padding(.horizontal, 16)
     }
 
     // MARK: - Private activities & games
@@ -219,8 +241,8 @@ struct EventsView: View {
             VStack(alignment: .leading, spacing: 12) {
                 if !activities.isEmpty {
                     Text("Games & activities")
-                        .font(.mlrScaled(13, weight: .bold))
-                        .foregroundStyle(Color.mlrTextMuted)
+                        .font(.mlrSectionTitle)
+                        .foregroundStyle(Color.mlrText)
                     ForEach(activities) { activity in
                         Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
                             .buttonStyle(.pressable)
@@ -232,18 +254,21 @@ struct EventsView: View {
                 // from its own sheet) under a quiet collapsed disclosure —
                 // mirrors the Feed tab's "Archived chats" line.
                 if !archivedActivities.isEmpty {
-                    DisclosureGroup(isExpanded: $showArchivedActivities) {
-                        VStack(alignment: .leading, spacing: 8) {
-                            ForEach(archivedActivities) { activity in
-                                Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
-                                    .buttonStyle(.pressable)
+                    MLRCard(.plain, padding: 12) {
+                        DisclosureGroup(isExpanded: $showArchivedActivities) {
+                            VStack(alignment: .leading, spacing: 8) {
+                                ForEach(archivedActivities) { activity in
+                                    Button { selectedActivity = activity } label: { PrivateActivityRow(activity: activity) }
+                                        .buttonStyle(.pressable)
+                                }
                             }
+                            .padding(.top, 8)
+                        } label: {
+                            Text("🗄️ Finished & archived (\(archivedActivities.count))")
+                                .font(.mlrRowTitle)
+                                .foregroundStyle(Color.mlrTextMuted)
                         }
-                        .padding(.top, 8)
-                    } label: {
-                        Text("🗄️ Finished & archived (\(archivedActivities.count))")
-                            .font(.mlrScaled(13, weight: .semibold))
-                            .foregroundStyle(Color.mlrTextMuted)
+                        .tint(Color.mlrTextMuted)
                     }
                 }
             }
@@ -268,7 +293,7 @@ struct EventsView: View {
                  ? "When events get scheduled, they'll show up here."
                  : "Past events will appear here after they wrap.")
         } actions: {
-            if env.isAdmin && filter == .upcoming {
+            if env.isSignedIn, !env.isAwaitingVerification, env.isAdmin, filter == .upcoming {
                 Button("Create Event") { showComposer = true }
                     .buttonStyle(.borderedProminent)
                     .tint(Color.mlrPrimary)

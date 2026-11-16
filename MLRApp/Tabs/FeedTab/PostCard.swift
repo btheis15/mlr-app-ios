@@ -29,17 +29,24 @@ struct PostCard: View {
     @State private var showReactors = false
     @State private var reactors: [PostReactor] = []
     @State private var showEmojiPicker = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    /// Zoom-transition source namespace: each media tile is a
+    /// `matchedTransitionSource(id: index)` and the lightbox zooms from/to the
+    /// tile for whichever photo is visible.
+    @Namespace private var zoomNS
+    /// Visible page of the multi-photo carousel (kept in sync with the lightbox).
+    @State private var carouselIndex: Int? = 0
 
     private var canEdit: Bool {
         env.isAdmin || env.currentProfile?.id == post.authorId
     }
 
     // Standard reaction emojis
-    private let reactionEmojis = ["❤️", "👍", "😂", "🙌", "🎉"]
+    private let reactionEmojis = postReactionEmojis
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            authorRow
+        VStack(alignment: .leading, spacing: 12) {
+            authorRow.padding(.horizontal, 16).padding(.top, 14)
             // Moderation banners — only the author + admins ever receive
             // non-visible rows (RLS), so this explains why it's held/hidden.
             if post.status == .pending {
@@ -52,6 +59,7 @@ struct PostCard: View {
                     .background(Color.mlrWarning.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrWarning.opacity(0.35), lineWidth: 1))
+                    .padding(.horizontal, 16)
             } else if post.status == .hidden {
                 Label("Removed by an admin — hidden from the feed.", systemImage: "nosign")
                     .font(.mlrScaled(12, weight: .medium))
@@ -61,8 +69,10 @@ struct PostCard: View {
                     .background(Color.mlrDanger.opacity(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrDanger.opacity(0.35), lineWidth: 1))
+                    .padding(.horizontal, 16)
             }
             mediaContent
+                .padding(.horizontal, post.mediaUrls.isEmpty ? 0 : 8)
                 // simultaneousGesture: TabView's horizontal page swipe fires alongside
                 // this long press rather than being blocked by it.
                 .simultaneousGesture(
@@ -77,8 +87,9 @@ struct PostCard: View {
                 )
             if let text = post.text, !text.isEmpty {
                 MentionText(text)
-                    .font(.body)
+                    .font(post.mediaUrls.isEmpty && text.count < 220 ? .mlrScaled(17 - 1) : .mlrScaled(16))
                     .foregroundStyle(Color.mlrText)
+                    .padding(.horizontal, 16)
                     .onLongPressGesture(minimumDuration: 0.4) {
                         guard env.isSignedIn else { return }
                         Haptics.tap()
@@ -91,15 +102,19 @@ struct PostCard: View {
                 Label("With \(post.tags.map(\.name).joined(separator: ", "))", systemImage: "person.2.fill")
                     .font(.mlrScaled(12))
                     .foregroundStyle(Color.mlrTextMuted)
+                    .padding(.horizontal, 16)
             }
-            reactionRow
-            actionRow
+            reactionRow.padding(.horizontal, 16)
+            commentPreviews.padding(.horizontal, 16)
+            Color.clear.frame(height: 2)
         }
         .sheet(isPresented: $showComments) {
             CommentsView(post: post)
         }
         .fullScreenCover(item: $lightbox) { pres in
-            LightboxView(urls: post.mediaUrls, isVideo: post.mediaIsVideo, startIndex: pres.startIndex)
+            LightboxView(urls: post.mediaUrls, isVideo: post.mediaIsVideo, startIndex: pres.startIndex,
+                         zoomNamespace: zoomNS,
+                         onSelectionChange: { carouselIndex = $0 })
         }
         .sheet(isPresented: $showEdit) {
             PostComposer(editing: post)
@@ -118,15 +133,15 @@ struct PostCard: View {
 
     private var authorRow: some View {
         HStack(alignment: .center, spacing: 10) {
-            AvatarView(url: post.authorAvatarUrl, size: .small)
+            MLRAvatar(name: post.authorName, url: post.authorAvatarUrl, size: 34, ring: false)
 
             VStack(alignment: .leading, spacing: 1) {
                 // PrivateName: guests see first name only
                 Text(displayName)
-                    .font(.mlrScaled(14, weight: .semibold))
+                    .font(.mlrScaled(15, weight: .semibold))
                     .foregroundStyle(Color.mlrText)
                 Text(MLRFormat.relativeTime(post.timelineDate))
-                    .font(.caption)
+                    .font(.mlrCaption13)
                     .foregroundStyle(Color.mlrTextMuted)
             }
 
@@ -179,24 +194,69 @@ struct PostCard: View {
     private var mediaContent: some View {
         let urls = post.mediaUrls
         if urls.count > 1 {
-            // Square (1:1) carousel — mirrors the web MediaGrid so portrait and
+            // Square (1:1) paged carousel — mirrors the web MediaGrid so portrait and
             // landscape items share one uniform frame instead of a wide box.
-            TabView {
-                ForEach(Array(urls.enumerated()), id: \.offset) { idx, url in
-                    PostMediaTile(url: url, isVideo: post.isVideo(at: idx)) {
-                        lightbox = LightboxPresentation(startIndex: idx)
+            // A scroll-view pager (not TabView) so it gets scrollTransition and a
+            // position binding the lightbox can drive.
+            ScrollView(.horizontal) {
+                LazyHStack(spacing: 0) {
+                    ForEach(Array(urls.enumerated()), id: \.offset) { idx, url in
+                        mediaTile(idx, url)
+                            .containerRelativeFrame(.horizontal)
+                            .scrollTransition(axis: .horizontal) { content, phase in
+                                content
+                                    .scaleEffect(reduceMotion || phase.isIdentity ? 1 : 0.92)
+                                    .opacity(reduceMotion || phase.isIdentity ? 1 : 0.55)
+                            }
+                            .id(idx)
                     }
                 }
+                .scrollTargetLayout()
             }
-            .tabViewStyle(.page(indexDisplayMode: .always))
+            .scrollIndicators(.hidden)
+            .scrollTargetBehavior(.paging)
+            .scrollPosition(id: $carouselIndex)
             .frame(maxWidth: .infinity)
-            .aspectRatio(1, contentMode: .fit)
-            .clipShape(RoundedRectangle(cornerRadius: 12))
-        } else if let first = urls.first {
-            PostMediaTile(url: first, isVideo: post.isVideo(at: 0)) {
-                lightbox = LightboxPresentation(startIndex: 0)
+            .clipShape(RoundedRectangle(cornerRadius: 18))
+            .overlay(alignment: .bottom) {
+                PageDots(count: urls.count, current: carouselIndex ?? 0)
+                    .padding(.bottom, 8)
+                    .allowsHitTesting(false)
             }
+            .sensoryFeedback(.selection, trigger: carouselIndex)
+        } else if let first = urls.first {
+            mediaTile(0, first)
         }
+    }
+
+    private func mediaTile(_ idx: Int, _ url: String) -> some View {
+        PostMediaTile(
+            url: url,
+            isVideo: post.isVideo(at: idx),
+            onTap: { lightbox = LightboxPresentation(startIndex: idx) },
+            onDoubleTap: { likeFromDoubleTap() }
+        )
+        .matchedTransitionSource(id: idx, in: zoomNS) { source in
+            source.clipShape(RoundedRectangle(cornerRadius: 18))
+        }
+    }
+
+    /// Double-tap on a photo = ❤️ through the SAME path as the reaction bar
+    /// (`onReactionToggle`). It only ever adds: if my reaction is already ❤️ we
+    /// skip the toggle (which would remove it) and just replay the heart.
+    /// Returns whether the heart should pop (signed-in members only).
+    private func likeFromDoubleTap() -> Bool {
+        guard env.isSignedIn else { return false }
+        Haptics.tap()
+        if !isMineReaction(emoji: "❤️") {
+            Task { await onReactionToggle("❤️") }
+        }
+        return true
+    }
+
+    private func openReactors() {
+        withAnimation(.easeInOut(duration: 0.2)) { showReactors = true }
+        Task { reactors = await env.postsService.fetchReactors(postId: post.id) }
     }
 
     // MARK: - Reaction row
@@ -209,24 +269,46 @@ struct PostCard: View {
                 // Used reactions — only emojis with at least one reaction
                 let used = reactionEmojis.filter { reactionCount(for: $0) > 0 }
                 ForEach(used, id: \.self) { emoji in
+                    let count = reactionCount(for: emoji)
                     Button {
                         Haptics.tap()
                         Task { await onReactionToggle(emoji) }
                     } label: {
                         HStack(spacing: 3) {
-                            Text(emoji).font(.mlrScaled(15))
-                            Text("\(reactionCount(for: emoji))")
-                                .font(.mlrScaled(12, weight: .semibold))
+                            Text(emoji).font(.mlrScaled(17))
+                                .modifier(EmojiBounce(trigger: isMineReaction(emoji: emoji)))
+                            Text("\(count)")
+                                .font(.mlrScaled(14, weight: .semibold))
+                                .monospacedDigit()
                                 .foregroundStyle(isMineReaction(emoji: emoji) ? Color.mlrPrimary : Color.mlrTextMuted)
+                                .contentTransition(.numericText())
+                                .animation(reduceMotion ? nil : MLRMotion.spring, value: count)
                         }
-                        .padding(.horizontal, 9).padding(.vertical, 5)
-                        .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.12) : Color.secondary.opacity(0.08))
+                        .padding(.horizontal, 12).frame(height: 30)
+                        .contentShape(Rectangle().inset(by: -6))
+                        .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.12) : Color.mlrCard)
                         .clipShape(Capsule())
                         .overlay(Capsule().strokeBorder(
-                            isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.35) : Color.secondary.opacity(0.18),
+                            isMineReaction(emoji: emoji) ? Color.mlrPrimary : Color.mlrBorder,
                             lineWidth: 1))
                     }
                     .buttonStyle(.pressable)
+                    .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
+                    // Long-press: who reacted. Names come from the reactor list
+                    // (fetched on demand by the card); until it's loaded the menu
+                    // offers to load it rather than firing a per-card query.
+                    .contextMenu {
+                        let group = reactors.filter { $0.emoji == emoji }
+                        if group.isEmpty {
+                            Button { openReactors() } label: {
+                                Label("See who reacted", systemImage: "person.2")
+                            }
+                        } else {
+                            ForEach(group) { r in
+                                Text(r.userId == env.currentProfile?.id ? "You" : r.name)
+                            }
+                        }
+                    }
                 }
 
                 // Add-reaction button — opens the emoji picker
@@ -249,11 +331,16 @@ struct PostCard: View {
 
                 Spacer()
 
+                commentButton
+
                 // "Who reacted" — only when there are reactions
                 if !reactions.isEmpty {
                     Button {
-                        withAnimation(.easeInOut(duration: 0.2)) { showReactors.toggle() }
-                        if showReactors { Task { reactors = await env.postsService.fetchReactors(postId: post.id) } }
+                        if showReactors {
+                            withAnimation(.easeInOut(duration: 0.2)) { showReactors = false }
+                        } else {
+                            openReactors()
+                        }
                     } label: {
                         Image(systemName: showReactors ? "chevron.up" : "person.2.fill")
                             .font(.mlrScaled(11, weight: .semibold))
@@ -264,6 +351,7 @@ struct PostCard: View {
                     .accessibilityLabel(showReactors ? "Hide who reacted" : "See who reacted")
                 }
             }
+            .animation(reduceMotion ? nil : MLRMotion.spring, value: reactions)
 
             // Floating emoji picker — appears inline below used reactions
             if showEmojiPicker {
@@ -322,22 +410,51 @@ struct PostCard: View {
         }
     }
 
-    // MARK: - Action row (comment count + open CommentsView)
+    // MARK: - Comment button + previews
 
-    private var actionRow: some View {
+    private var commentButton: some View {
         Button {
             showComments = true
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Image(systemName: comments.isEmpty ? "bubble.left" : "bubble.left.fill")
-                    .font(.mlrScaled(14))
+                    .font(.mlrScaled(15))
                     .foregroundStyle(comments.isEmpty ? Color.mlrTextMuted : Color.mlrPrimary)
-                Text(commentLabel)
-                    .font(.mlrScaled(14, weight: .medium))
-                    .foregroundStyle(Color.mlrTextMuted)
+                if !comments.isEmpty {
+                    Text("\(comments.count)")
+                        .font(.mlrScaled(14, weight: .semibold))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.mlrTextMuted)
+                }
             }
+            .padding(.horizontal, 6).frame(height: 30)
+            .contentShape(Rectangle().inset(by: -6))
         }
         .buttonStyle(.pressable)
+        .accessibilityLabel(commentLabel)
+    }
+
+    @ViewBuilder
+    private var commentPreviews: some View {
+        let visible = comments.filter { $0.status == .visible }
+        if !visible.isEmpty {
+            VStack(alignment: .leading, spacing: 4) {
+                ForEach(visible.suffix(2)) { c in
+                    (Text(c.authorName + "  ").font(.mlrScaled(15, weight: .semibold))
+                        + Text(c.text).font(.mlrScaled(15)))
+                        .foregroundStyle(Color.mlrText)
+                        .lineLimit(2)
+                }
+                if comments.count > 2 {
+                    Button { showComments = true } label: {
+                        Text("View all \(comments.count) comments")
+                            .font(.mlrScaled(14))
+                            .foregroundStyle(Color.mlrTextMuted)
+                    }
+                    .buttonStyle(.pressable)
+                }
+            }
+        }
     }
 
     // MARK: - Helpers
@@ -397,13 +514,21 @@ private struct PostMediaTile: View {
     let url: String
     let isVideo: Bool
     let onTap: () -> Void
+    /// Double-tap on a photo; returns true if a heart should pop at the tap point.
+    var onDoubleTap: (() -> Bool)? = nil
 
     @Environment(AppEnvironment.self) private var env
     @Environment(\.openURL) private var openURL
     @State private var failed = false
+    @State private var hearts: [HeartBurst] = []
+
+    private struct HeartBurst: Identifiable {
+        let id = UUID()
+        let point: CGPoint
+    }
 
     var body: some View {
-        let shape = RoundedRectangle(cornerRadius: 12)
+        let shape = RoundedRectangle(cornerRadius: 18)
         // `Color.clear` is the size anchor: full width, forced to 1:1 — so the
         // tile is ALWAYS square regardless of the image's own aspect ratio.
         // (A ZStack sized by the image let portrait photos render tall/native
@@ -413,10 +538,7 @@ private struct PostMediaTile: View {
             .aspectRatio(1, contentMode: .fit)
             .overlay {
                 if isVideo {
-                    Image(systemName: "play.circle.fill")
-                        .font(.mlrScaled(46))
-                        .foregroundStyle(.white.opacity(0.9))
-                        .shadow(radius: 4)
+                    videoAffordance
                 } else if failed {
                     failureView
                 } else if let imageURL = env.mediaTokenService.url(url) {
@@ -433,14 +555,61 @@ private struct PostMediaTile: View {
                     failureView
                 }
             }
+            .overlay {
+                ZStack(alignment: .topLeading) {
+                    ForEach(hearts) { h in
+                        HeartPop().position(h.point)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
             .background(isVideo ? Color.black : Color.mlrCard)
             .clipShape(shape)
             .contentShape(shape)
-            .onTapGesture {
-                // A failed image can't open in the (same-loader) lightbox, so send
-                // the user to the original in the browser instead of a dead tap.
-                if failed, let u = env.mediaTokenService.url(url) { openURL(u) } else { onTap() }
-            }
+            .modifier(TileTaps(
+                allowsDoubleTap: !isVideo && !failed && onDoubleTap != nil,
+                single: {
+                    // A failed image can't open in the (same-loader) lightbox, so send
+                    // the user to the original in the browser instead of a dead tap.
+                    if failed, let u = env.mediaTokenService.url(url) { openURL(u) } else { onTap() }
+                },
+                double: { point in
+                    guard onDoubleTap?() == true else { return }
+                    let burst = HeartBurst(point: point)
+                    hearts.append(burst)
+                    Task {
+                        try? await Task.sleep(for: .seconds(1.2))
+                        hearts.removeAll { $0.id == burst.id }
+                    }
+                }
+            ))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityLabel(isVideo ? "Play video" : "Photo")
+    }
+
+    /// Clear play affordance: a frosted disc with a play glyph and a small
+    /// video badge. (No poster frame is available, so the tile stays black.)
+    private var videoAffordance: some View {
+        ZStack(alignment: .topTrailing) {
+            LinearGradient(colors: [Color.black, Color(white: 0.16)], startPoint: .top, endPoint: .bottom)
+            Circle()
+                .fill(.ultraThinMaterial)
+                .frame(width: 68, height: 68)
+                .overlay(
+                    Image(systemName: "play.fill")
+                        .font(.mlrScaled(28))
+                        .foregroundStyle(.white)
+                        .offset(x: 2)
+                )
+                .shadow(color: .black.opacity(0.35), radius: 8, y: 2)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Label("Video", systemImage: "video.fill")
+                .font(.mlrScaled(11, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 8).padding(.vertical, 4)
+                .background(.black.opacity(0.45), in: Capsule())
+                .padding(10)
+        }
     }
 
     private var failureView: some View {
@@ -453,6 +622,113 @@ private struct PostMediaTile: View {
                 .foregroundStyle(Color.mlrTextMuted)
         }
         .padding()
+    }
+}
+
+/// Single tap always; double tap (with location) only when allowed. When a
+/// double tap is allowed the single tap waits out the double-tap window
+/// (`exclusively`), otherwise it fires immediately.
+private struct TileTaps: ViewModifier {
+    let allowsDoubleTap: Bool
+    let single: () -> Void
+    let double: (CGPoint) -> Void
+
+    func body(content: Content) -> some View {
+        if allowsDoubleTap {
+            content.gesture(
+                SpatialTapGesture(count: 2).onEnded { double($0.location) }
+                    .exclusively(before: TapGesture().onEnded { single() })
+            )
+        } else {
+            content.onTapGesture { single() }
+        }
+    }
+}
+
+private struct HeartFrame {
+    var scale: CGFloat = 0.3
+    var opacity: Double = 0
+    var rise: CGFloat = 0
+}
+
+/// The heart that pops and fades where you double-tapped. Reduce Motion: a
+/// plain fade, no scale or rise.
+private struct HeartPop: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var go = false
+
+    var body: some View {
+        Image(systemName: "heart.fill")
+            .font(.system(size: 84))
+            .foregroundStyle(.white)
+            .shadow(color: .black.opacity(0.35), radius: 10)
+            .keyframeAnimator(initialValue: HeartFrame(), trigger: go) { view, f in
+                view
+                    .scaleEffect(reduceMotion ? 1 : f.scale)
+                    .offset(y: reduceMotion ? 0 : f.rise)
+                    .opacity(f.opacity)
+            } keyframes: { _ in
+                KeyframeTrack(\.scale) {
+                    SpringKeyframe(1.2, duration: 0.28, spring: .bouncy)
+                    CubicKeyframe(1.0, duration: 0.12)
+                    CubicKeyframe(1.0, duration: 0.35)
+                    CubicKeyframe(0.95, duration: 0.25)
+                }
+                KeyframeTrack(\.opacity) {
+                    LinearKeyframe(1, duration: 0.06)
+                    LinearKeyframe(1, duration: 0.64)
+                    LinearKeyframe(0, duration: 0.3)
+                }
+                KeyframeTrack(\.rise) {
+                    LinearKeyframe(0, duration: 0.45)
+                    CubicKeyframe(-44, duration: 0.55)
+                }
+            }
+            .onAppear { go = true }
+            .accessibilityHidden(true)
+    }
+}
+
+/// Bounces its content whenever `trigger` flips (my reaction toggled on/off).
+private struct EmojiBounce: ViewModifier {
+    let trigger: Bool
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        if reduceMotion {
+            content
+        } else {
+            content.keyframeAnimator(initialValue: CGFloat(1), trigger: trigger) { view, scale in
+                view.scaleEffect(scale)
+            } keyframes: { _ in
+                KeyframeTrack {
+                    SpringKeyframe(1.5, duration: 0.14)
+                    SpringKeyframe(1.0, duration: 0.35, spring: .bouncy)
+                }
+            }
+        }
+    }
+}
+
+/// Page indicator for the carousel: frosted capsule, active dot stretches.
+private struct PageDots: View {
+    let count: Int
+    let current: Int
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        HStack(spacing: 5) {
+            ForEach(0..<count, id: \.self) { i in
+                Capsule()
+                    .fill(i == current ? Color.white : Color.white.opacity(0.5))
+                    .frame(width: i == current ? 16 : 6, height: 6)
+            }
+        }
+        .padding(.horizontal, 8).padding(.vertical, 5)
+        .background(.black.opacity(0.35), in: Capsule())
+        .animation(reduceMotion ? nil : MLRMotion.spring, value: current)
+        .accessibilityElement()
+        .accessibilityLabel("Photo \(current + 1) of \(count)")
     }
 }
 
