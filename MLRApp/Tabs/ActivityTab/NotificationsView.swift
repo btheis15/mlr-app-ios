@@ -320,12 +320,9 @@ extension NotificationsService {
     /// Stamp `read_at` on all unread rows for `userId`. The notifications table
     /// keys the recipient as `recipient_id` (there is no `user_id` column).
     func markAllRead(userId: UUID) async throws {
-        try await supabase
-            .from("notifications")
-            .update(["read_at": ISO8601DateFormatter().string(from: .now)])
-            .eq("recipient_id", value: userId.uuidString)
-            .is("read_at", value: nil)
-            .execute()
+        // Web parity: mark_all_notifications_read() takes no args; it resolves the
+        // caller via auth.uid() (migration 0030).
+        try await supabase.rpc("mark_all_notifications_read").execute()
 
         // Optimistically stamp the in-memory rows so the list updates immediately.
         let now = Date.now
