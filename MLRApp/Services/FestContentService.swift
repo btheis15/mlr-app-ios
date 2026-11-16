@@ -527,12 +527,11 @@ final class FestContentService {
     /// Returns nil when the `home_callouts` table doesn't exist yet (pre-migration),
     /// so the caller can fall back to the seed. Returns [] when the table exists but
     /// has no active rows — that means "no callouts", not "show the seed".
-    private func fetchCallouts() async throws -> [HomeCallout]? {
+    private func fetchCallouts(activeOnly: Bool = true) async throws -> [HomeCallout]? {
         do {
-            let rows: [CalloutRow] = try await supabase
-                .from("home_callouts")
-                .select("*")
-                .eq("is_active", value: true)
+            var query = supabase.from("home_callouts").select("*")
+            if activeOnly { query = query.eq("is_active", value: true) }
+            let rows: [CalloutRow] = try await query
                 .order("position", ascending: true)
                 .execute().value
             return rows.map { row in
@@ -558,6 +557,17 @@ final class FestContentService {
             // Table doesn't exist yet (pre-migration 0083) → return nil so caller shows seed.
             return nil
         }
+    }
+
+    /// Every call-out row, active or not, in position order — for the admin list
+    /// and composer (the Home stack only ever sees active rows). Throws on a
+    /// read error so the editor can say so instead of showing an empty list.
+    func allCallouts() async throws -> [HomeCallout] {
+        guard let rows = try await fetchCallouts(activeOnly: false) else {
+            throw NSError(domain: "FestContentService", code: 1, userInfo: [
+                NSLocalizedDescriptionKey: "Couldn\u{2019}t read the call-outs. Check your connection and try again."])
+        }
+        return rows
     }
 
     // MARK: - Callout completions (migration 0098)
