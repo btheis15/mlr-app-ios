@@ -507,6 +507,36 @@ final class HousesService {
         await fetchHouses()
     }
 
+    /// Write the new order as `houses.position` = index (web: saveHouse position).
+    /// On a partial failure the list is refetched so the screen shows what the
+    /// server really holds, and the error is rethrown for the caller's rollback.
+    func saveHouseOrder(ids: [UUID]) async throws {
+        do {
+            for (i, id) in ids.enumerated() {
+                try await supabase.from("houses")
+                    .update(["position": AnyJSON.double(Double(i))])
+                    .eq("id", value: id.uuidString)
+                    .execute()
+            }
+        } catch {
+            await fetchHouses()
+            throw error
+        }
+        await fetchHouses()
+    }
+
+    /// How many members are assigned to each house (profiles.house_id), for the
+    /// delete confirmation. One read, counted client-side.
+    func memberCounts() async -> [UUID: Int] {
+        struct Row: Decodable { let house_id: UUID? }
+        let rows: [Row] = (try? await supabase.from("profiles")
+            .select("house_id")
+            .execute().value) ?? []
+        var out: [UUID: Int] = [:]
+        for r in rows { if let h = r.house_id { out[h, default: 0] += 1 } }
+        return out
+    }
+
     func deleteHouse(id: UUID) async throws {
         try await supabase.from("houses").delete().eq("id", value: id.uuidString).execute()
         houses.removeAll { $0.id == id }
