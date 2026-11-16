@@ -107,6 +107,13 @@ struct FestTheme: Hashable {
         return 0.2126 * chan((n >> 16) & 255) + 0.7152 * chan((n >> 8) & 255) + 0.0722 * chan(n & 255)
     }
 
+    /// Readable text colour: `text` if it has >= 4.5:1 contrast against
+    /// `background`, else the app's dark text or white, whichever contrasts more.
+    static func readableOn(background: String, text: String, darkText: String = "#1C1C1E") -> String {
+        if contrast(text, background) >= 4.5 { return text }
+        return contrast(darkText, background) >= contrast("#FFFFFF", background) ? darkText : "#FFFFFF"
+    }
+
     static func contrast(_ a: String, _ b: String) -> Double {
         let (x, y) = (luminance(a), luminance(b))
         return (max(x, y) + 0.05) / (min(x, y) + 0.05)
@@ -117,6 +124,29 @@ struct FestTheme: Hashable {
 /// `Font.festSerif`) resolves through this at render time, so applying a year's
 /// look needs no per-view plumbing. `.festThemeScope()` sets it; a Past Years
 /// page sets its own year's look and restores the current year's on leave.
+extension Color {
+    /// A fest-themed text colour guaranteed readable on a fest-themed background
+    /// slot. Resolves at render time (light/dark aware) like `Color(festSlot:)`;
+    /// built-in pairs are the fallbacks when the theme leaves a slot unset.
+    static func festReadable(_ slot: FestTheme.Slot, light: String, dark: String,
+                             on bg: FestTheme.Slot, bgLight: String, bgDark: String) -> Color {
+        Color(uiColor: UIColor { traits in
+            let isDark = traits.userInterfaceStyle == .dark
+            let theme = FestThemeStore.active
+            let text = theme.hex(slot, dark: isDark) ?? (isDark ? dark : light)
+            let back = theme.hex(bg, dark: isDark) ?? (isDark ? bgDark : bgLight)
+            return UIColor(Color(hex: FestTheme.readableOn(background: back, text: text)))
+        })
+    }
+
+    /// Primary (heading) colour made readable on the fest background.
+    static let mlrFestReadable = festReadable(.primary, light: "#6B0F24", dark: "#E0708A",
+                                              on: .background, bgLight: "#ECDCBE", bgDark: "#1E1712")
+    /// Ink (body) colour made readable on the fest background.
+    static let mlrFestInkReadable = festReadable(.ink, light: "#33240F", dark: "#F1E7D6",
+                                                 on: .background, bgLight: "#ECDCBE", bgDark: "#1E1712")
+}
+
 enum FestThemeStore {
     nonisolated(unsafe) static var active: FestTheme = .builtIn
 }

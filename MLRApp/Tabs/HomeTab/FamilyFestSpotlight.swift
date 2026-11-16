@@ -166,7 +166,7 @@ struct FamilyFestSpotlight: View {
                     PulsingDot(color: Color.mlrFest)
                     Text("FAMILY FEST · HAPPENING NOW")
                         .font(.mlrScaled(10, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .tracking(0.8)
                     Spacer()
                 }
@@ -174,7 +174,7 @@ struct FamilyFestSpotlight: View {
                 if let day = season.dayNumber {
                     Text("Day \(day) of \(season.totalDays) Up North 🎆")
                         .font(.festSerif(17, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .contentTransition(.numericText())
                 }
 
@@ -191,12 +191,12 @@ struct FamilyFestSpotlight: View {
                 } else {
                     Text("See everything planned for this week →")
                         .font(.mlrScaled(13))
-                        .foregroundStyle(Color.mlrFest.opacity(0.7))
+                        .foregroundStyle(Color.mlrFestReadable.opacity(0.7))
                 }
 
                 Text("Open Family Fest for more →")
                     .font(.mlrScaled(11, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.7))
+                    .foregroundStyle(Color.mlrFestReadable.opacity(0.7))
             }
             .padding(14)
             .contentShape(Rectangle())
@@ -209,19 +209,19 @@ struct FamilyFestSpotlight: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(event.title)
                     .font(.mlrScaled(13, weight: .medium))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                     .lineLimit(1)
                 if let loc = event.location, env.isSignedIn {
                     Text("📍 \(loc)")
                         .font(.mlrScaled(11))
-                        .foregroundStyle(Color.mlrFest.opacity(0.6))
+                        .foregroundStyle(Color.mlrFestReadable.opacity(0.6))
                         .lineLimit(1)
                 }
             }
             Spacer()
             Text(event.time)
                 .font(.mlrScaled(11, weight: .medium))
-                .foregroundStyle(Color.mlrFest.opacity(0.7))
+                .foregroundStyle(Color.mlrFestReadable.opacity(0.7))
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
@@ -234,12 +234,12 @@ struct FamilyFestSpotlight: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text("🍽️ Dinner · \(dinner.title)")
                     .font(.mlrScaled(13, weight: .medium))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                     .lineLimit(1)
                 if dinner.menu != "TBD" {
                     Text(dinner.menu)
                         .font(.mlrScaled(11))
-                        .foregroundStyle(Color.mlrFest.opacity(0.6))
+                        .foregroundStyle(Color.mlrFestReadable.opacity(0.6))
                         .lineLimit(1)
                 }
             }
@@ -247,7 +247,7 @@ struct FamilyFestSpotlight: View {
             if dinner.time != "TBD" {
                 Text(dinner.time)
                     .font(.mlrScaled(11, weight: .medium))
-                    .foregroundStyle(Color.mlrFest.opacity(0.7))
+                    .foregroundStyle(Color.mlrFestReadable.opacity(0.7))
             }
         }
         .padding(.horizontal, 10)
@@ -267,10 +267,10 @@ struct FamilyFestSpotlight: View {
                     .tracking(0.6)
                 Text("Thanks for a great week Up North")
                     .font(.festSerif(16, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                 Text("Add the photos you didn't get to share yet.")
                     .font(.mlrScaled(13))
-                    .foregroundStyle(Color.mlrFestInk.opacity(0.8))
+                    .foregroundStyle(Color.mlrFestInkReadable.opacity(0.8))
                 Text("Add your photos →")
                     .font(.mlrScaled(12, weight: .semibold))
                     .foregroundStyle(Color.mlrAccent)
@@ -294,16 +294,16 @@ struct FamilyFestSpotlight: View {
                         .frame(width: 46, height: 46)
                     Image(systemName: iconName)
                         .font(.mlrScaled(20))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
                     Text(verbatim: "Family Fest \(FamilyFestConfig.year)")
                         .font(.festSerif(16, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                     Text(statusLine)
                         .font(.mlrScaled(12))
-                        .foregroundStyle(Color.mlrFestInk.opacity(0.85))
+                        .foregroundStyle(Color.mlrFestInkReadable.opacity(0.85))
                         .lineLimit(1)
                 }
 
@@ -311,7 +311,7 @@ struct FamilyFestSpotlight: View {
 
                 Image(systemName: "chevron.right")
                     .font(.mlrScaled(13, weight: .semibold))
-                    .foregroundStyle(Color.mlrFest.opacity(0.6))
+                    .foregroundStyle(Color.mlrFestReadable.opacity(0.6))
             }
             .padding(14)
             .contentShape(Rectangle())
@@ -340,9 +340,9 @@ struct FamilyFestSpotlight: View {
             Spacer()
             Image(systemName: "chevron.right")
                 .font(.mlrScaled(12, weight: .semibold))
-                .foregroundStyle(Color.mlrFest.opacity(0.4))
+                .foregroundStyle(Color.mlrFestReadable.opacity(0.4))
         }
-        .foregroundStyle(Color.mlrFest)
+        .foregroundStyle(Color.mlrFestReadable)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .contentShape(Rectangle())
