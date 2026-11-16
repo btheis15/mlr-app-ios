@@ -15,7 +15,14 @@ struct PostComposer: View {
 
     @State private var text: String = ""
     @State private var selectedPhotos: [PhotosPickerItem] = []
-    @State private var images: [UIImage] = []
+    @State private var images: [ComposerImage] = []
+    /// Per-photo upload state (MediaService reports no byte progress, so each
+    /// thumbnail shows waiting / uploading / done and the footer shows "n of m").
+    @State private var uploadStatus: [UUID: ComposerUploadStatus] = [:]
+    @State private var uploadedCount = 0
+    @State private var uploadTotal = 0
+    @State private var draggingId: UUID?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var selectedVideo: PhotosPickerItem?
     @State private var videoData: Data?
     @State private var tagIds: Set<UUID> = []
@@ -78,6 +85,7 @@ struct PostComposer: View {
             }
         }
         .onChange(of: selectedPhotos) { _, items in
+            guard !items.isEmpty else { return }
             Task { await loadPhotos(items) }
         }
         .onChange(of: selectedVideo) { _, item in
@@ -135,8 +143,17 @@ struct PostComposer: View {
                         .font(.mlrScaled(14))
                 }
 
-                if isUploading {
-                    ProgressView("Uploading…").font(.caption).tint(Color.mlrPrimary)
+                if isUploading && uploadTotal > 0 {
+                    VStack(alignment: .leading, spacing: 4) {
+                        ProgressView(value: Double(uploadedCount), total: Double(uploadTotal))
+                            .tint(Color.mlrPrimary)
+                        Text("Uploading \(min(uploadedCount + 1, uploadTotal)) of \(uploadTotal)")
+                            .font(.caption)
+                            .monospacedDigit()
+                            .foregroundStyle(Color.mlrTextMuted)
+                            .contentTransition(.numericText())
+                    }
+                    .animation(reduceMotion ? nil : MLRMotion.spring, value: uploadedCount)
                 }
                 if let err = errorMessage {
                     Text(err).font(.caption).foregroundStyle(Color.mlrDanger)
@@ -185,23 +202,97 @@ struct PostComposer: View {
     private var imageStrip: some View {
         ScrollView(.horizontal, showsIndicators: false) {
             HStack(spacing: 8) {
-                ForEach(Array(images.enumerated()), id: \.offset) { idx, image in
-                    ZStack(alignment: .topTrailing) {
-                        Image(uiImage: image)
-                            .resizable().scaledToFill()
-                            .frame(width: 120, height: 120)
-                            .clipShape(RoundedRectangle(cornerRadius: 12))
-                        Button {
-                            images.remove(at: idx)
-                            if idx < selectedPhotos.count { selectedPhotos.remove(at: idx) }
-                        } label: {
-                            Image(systemName: "xmark.circle.fill")
-                                .font(.mlrScaled(20)).foregroundStyle(.white).shadow(radius: 2).padding(4)
-                        }
-                    }
+                ForEach(images) { item in
+                    thumbnail(item)
                 }
             }
+            .animation(reduceMotion ? nil : MLRMotion.spring, value: images.map(\.id))
         }
+    }
+
+    /// A photo thumbnail: upload-state overlay, ✕ to remove, long-press drag to
+    /// reorder (plus Move earlier/later in the context menu for accessibility).
+    private func thumbnail(_ item: ComposerImage) -> some View {
+        let status = uploadStatus[item.id]
+        return ZStack(alignment: .topTrailing) {
+            Image(uiImage: item.image)
+                .resizable().scaledToFill()
+                .frame(width: 120, height: 120)
+                .clipShape(RoundedRectangle(cornerRadius: 12))
+                .overlay {
+                    switch status {
+                    case .waiting:
+                        RoundedRectangle(cornerRadius: 12).fill(.black.opacity(0.35))
+                            .overlay(Image(systemName: "clock").foregroundStyle(.white))
+                    case .uploading:
+                        RoundedRectangle(cornerRadius: 12).fill(.black.opacity(0.4))
+                            .overlay(ProgressView().tint(.white))
+                    case .done:
+                        RoundedRectangle(cornerRadius: 12).fill(.black.opacity(0.25))
+                            .overlay(Image(systemName: "checkmark.circle.fill")
+                                .font(.mlrScaled(26)).foregroundStyle(.white)
+                                .transition(.scale.combined(with: .opacity)))
+                    case nil:
+                        EmptyView()
+                    }
+                }
+                .opacity(draggingId == item.id ? 0.45 : 1)
+            if status == nil {
+                Button {
+                    Haptics.tap()
+                    if reduceMotion { removeImage(item.id) } else { withAnimation(MLRMotion.spring) { removeImage(item.id) } }
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.mlrScaled(20)).foregroundStyle(.white).shadow(radius: 2).padding(4)
+                }
+                .accessibilityLabel("Remove photo")
+            }
+        }
+        .animation(reduceMotion ? nil : MLRMotion.spring, value: status)
+        .draggable(item.id.uuidString) {
+            Image(uiImage: item.image).resizable().scaledToFill()
+                .frame(width: 80, height: 80).clipShape(RoundedRectangle(cornerRadius: 10))
+                .onAppear { draggingId = item.id }
+        }
+        .dropDestination(for: String.self) { ids, _ in
+            defer { draggingId = nil }
+            guard let raw = ids.first, let from = UUID(uuidString: raw) else { return false }
+            moveImage(from, before: item.id)
+            return true
+        }
+        .contextMenu {
+            if let idx = images.firstIndex(where: { $0.id == item.id }), status == nil {
+                if idx > 0 {
+                    Button { swapImage(idx, idx - 1) } label: { Label("Move earlier", systemImage: "arrow.left") }
+                }
+                if idx < images.count - 1 {
+                    Button { swapImage(idx, idx + 1) } label: { Label("Move later", systemImage: "arrow.right") }
+                }
+                Button(role: .destructive) { removeImage(item.id) } label: { Label("Remove", systemImage: "trash") }
+            }
+        }
+    }
+
+    private func removeImage(_ id: UUID) {
+        images.removeAll { $0.id == id }
+    }
+
+    private func swapImage(_ a: Int, _ b: Int) {
+        guard images.indices.contains(a), images.indices.contains(b) else { return }
+        Haptics.select()
+        if reduceMotion { images.swapAt(a, b) } else { withAnimation(MLRMotion.spring) { images.swapAt(a, b) } }
+    }
+
+    private func moveImage(_ id: UUID, before target: UUID) {
+        guard id != target,
+              let from = images.firstIndex(where: { $0.id == id }),
+              let to = images.firstIndex(where: { $0.id == target }) else { return }
+        Haptics.select()
+        let apply = {
+            let moved = images.remove(at: from)
+            images.insert(moved, at: to)
+        }
+        if reduceMotion { apply() } else { withAnimation(MLRMotion.spring, apply) }
     }
 
     private var videoChip: some View {
@@ -232,10 +323,12 @@ struct PostComposer: View {
 
     private var toolbar: some View {
         HStack(spacing: 4) {
-            PhotosPicker(selection: $selectedPhotos, maxSelectionCount: maxPhotos, matching: .images) {
+            // Append mode: picked photos are added (and the selection cleared) so a
+            // manual reorder is never undone by the picker re-delivering its list.
+            PhotosPicker(selection: $selectedPhotos, maxSelectionCount: max(1, maxPhotos - images.count), matching: .images) {
                 Label("Photos", systemImage: "photo.on.rectangle").font(.mlrScaled(14, weight: .medium))
             }
-            .disabled(isPosting || isUploading)
+            .disabled(isPosting || isUploading || images.count >= maxPhotos)
 
             PhotosPicker(selection: $selectedVideo, matching: .videos) {
                 Label("Video", systemImage: "video.badge.plus").font(.mlrScaled(14, weight: .medium))
@@ -279,13 +372,45 @@ struct PostComposer: View {
     // MARK: - Actions
 
     private func loadPhotos(_ items: [PhotosPickerItem]) async {
-        var loaded: [UIImage] = []
+        var loaded: [ComposerImage] = []
         for item in items {
             if let data = try? await item.loadTransferable(type: Data.self), let img = UIImage(data: data) {
-                loaded.append(img)
+                loaded.append(ComposerImage(image: img))
             }
         }
-        await MainActor.run { images = loaded }
+        await MainActor.run {
+            let room = max(0, maxPhotos - images.count)
+            let added = Array(loaded.prefix(room))
+            if reduceMotion { images.append(contentsOf: added) }
+            else { withAnimation(MLRMotion.spring) { images.append(contentsOf: added) } }
+            selectedPhotos = []
+        }
+    }
+
+    /// Upload every attachment in order, updating per-thumbnail state and the
+    /// "n of m" footer as each finishes. Throws on the first failure (the
+    /// caller keeps the draft and resets the thumbnails).
+    @MainActor
+    private func uploadAttachments(userId: UUID) async throws -> [(path: String, type: String)] {
+        var media: [(path: String, type: String)] = []
+        uploadTotal = images.count + (videoData == nil ? 0 : 1)
+        uploadedCount = 0
+        isUploading = true
+        uploadStatus = Dictionary(uniqueKeysWithValues: images.map { ($0.id, ComposerUploadStatus.waiting) })
+        for item in images {
+            uploadStatus[item.id] = .uploading
+            let url = try await env.mediaService.uploadPostImage(image: item.image, userId: userId)
+            media.append((path: url, type: "image"))
+            uploadStatus[item.id] = .done
+            uploadedCount += 1
+        }
+        if let videoData {
+            let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: userId)
+            media.append((path: url, type: "video"))
+            uploadedCount += 1
+        }
+        isUploading = false
+        return media
     }
 
     @MainActor
@@ -306,23 +431,14 @@ struct PostComposer: View {
                     try await env.postsService.removePostMedia(postId: editing.id, displayUrl: url)
                 }
                 if !images.isEmpty || videoData != nil {
-                    isUploading = true
-                    var newMedia: [(path: String, type: String)] = []
-                    for image in images {
-                        let url = try await env.mediaService.uploadPostImage(image: image, userId: profile.id)
-                        newMedia.append((path: url, type: "image"))
-                    }
-                    if let videoData {
-                        let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: profile.id)
-                        newMedia.append((path: url, type: "video"))
-                    }
-                    isUploading = false
+                    let newMedia = try await uploadAttachments(userId: profile.id)
                     try await env.postsService.addPostMedia(
                         postId: editing.id, media: newMedia, startPosition: editing.mediaUrls.count)
                 }
                 if !removedUrls.isEmpty || !images.isEmpty || videoData != nil {
                     await env.postsService.fetchPosts(userId: nil)
                 }
+                Haptics.success()
                 dismiss()
                 return
             }
@@ -330,16 +446,7 @@ struct PostComposer: View {
             // Upload photos + optional video → media tuples.
             var media: [(path: String, type: String)] = []
             if !images.isEmpty || videoData != nil {
-                isUploading = true
-                for image in images {
-                    let url = try await env.mediaService.uploadPostImage(image: image, userId: profile.id)
-                    media.append((path: url, type: "image"))
-                }
-                if let videoData {
-                    let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: profile.id)
-                    media.append((path: url, type: "video"))
-                }
-                isUploading = false
+                media = try await uploadAttachments(userId: profile.id)
             }
 
             try await env.postsService.createPost(
@@ -349,9 +456,14 @@ struct PostComposer: View {
                 tagIds: Array(tagIds),
                 occurredAt: date
             )
+            Haptics.success()
             dismiss()
         } catch {
+            // The draft (text, photos, video, tags, date) is deliberately kept so
+            // the member can just tap Post again.
             isUploading = false
+            uploadStatus = [:]
+            Haptics.error()
             errorMessage = isEditing ? "Couldn't save your changes." : "Couldn't publish your post. Please try again."
         }
     }
@@ -378,6 +490,16 @@ struct PostComposer: View {
             .value
     }
 }
+
+// MARK: - Composer attachment models
+
+/// A picked photo with a stable identity (reorder/remove/upload-state key).
+struct ComposerImage: Identifiable {
+    let id = UUID()
+    let image: UIImage
+}
+
+enum ComposerUploadStatus: Equatable { case waiting, uploading, done }
 
 // MARK: - TagPicker
 

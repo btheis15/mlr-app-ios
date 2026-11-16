@@ -34,6 +34,16 @@ struct CommentsView: View {
     @State private var commentReactions: [CommentReaction] = []
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
+    // Live updates + optimistic send
+    @State private var live = CommentsLiveChannel()
+    /// Ids of optimistic (not yet confirmed) comments; the merge keeps them.
+    @State private var pendingTempIds: Set<UUID> = []
+    /// Comments whose reaction I am toggling right now (realtime echo skipped).
+    @State private var reactionInFlight: Set<UUID> = []
+    /// Set to your own just-sent comment so the list scrolls to it.
+    @State private var scrollTarget: UUID? = nil
+    @FocusState private var composerFocused: Bool
+
     // Attachments (migration 0162) — same compress/upload pipeline as a post.
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var images: [UIImage] = []
@@ -54,14 +64,19 @@ struct CommentsView: View {
                 Divider()
 
                 commentList
-
-                Divider()
-
-                if env.isSignedIn {
-                    commentInput
-                } else {
-                    signInPrompt
+            }
+            // Pinned above the keyboard (safe-area inset rides up with it) and
+            // grows with the text.
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                VStack(spacing: 0) {
+                    Divider()
+                    if env.isSignedIn {
+                        commentInput
+                    } else {
+                        signInPrompt
+                    }
                 }
+                .background(Color.mlrSurface)
             }
             .navigationTitle("Comments")
             .navigationBarTitleDisplayMode(.inline)
@@ -76,11 +91,13 @@ struct CommentsView: View {
         }
         .task {
             await loadComments()
+            startLiveUpdates()
             // Pre-load member list for @mention autocomplete
             if env.isSignedIn {
                 allProfiles = (try? await fetchMemberList()) ?? []
             }
         }
+        .onDisappear { live.stop() }
         .onChange(of: selectedPhotos) { _, items in
             Task { await loadPhotos(items) }
         }
@@ -179,10 +196,73 @@ struct CommentsView: View {
                         .id(comment.id)
                         .listRowSeparator(.hidden)
                         .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                        // An optimistic (still-sending) comment is dimmed and inert.
+                        .opacity(pendingTempIds.contains(comment.id) ? 0.55 : 1)
+                        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+                            if !pendingTempIds.contains(comment.id) {
+                                if canDelete(comment) {
+                                    Button(role: .destructive) {
+                                        Task { await deleteComment(comment) }
+                                    } label: { Label("Delete", systemImage: "trash") }
+                                }
+                                if env.isSignedIn && comment.authorId != env.currentProfile?.id {
+                                    Button {
+                                        Task { await reportComment(comment) }
+                                    } label: { Label("Report", systemImage: "flag") }
+                                    .tint(Color.mlrWarning)
+                                }
+                            }
+                        }
+                        .swipeActions(edge: .leading, allowsFullSwipe: false) {
+                            if env.isSignedIn && !pendingTempIds.contains(comment.id) {
+                                Button { replyTo(comment) } label: {
+                                    Label("Reply", systemImage: "arrowshape.turn.up.left")
+                                }
+                                .tint(Color.mlrPrimary)
+                                if env.isVerifiedMember {
+                                    Button {
+                                        Task { await toggleReaction(comment, "❤️") }
+                                    } label: { Label("Like", systemImage: "heart.fill") }
+                                    .tint(.pink)
+                                }
+                            }
+                        }
+                        .contextMenu {
+                            if env.isSignedIn && !pendingTempIds.contains(comment.id) {
+                                Button { replyTo(comment) } label: {
+                                    Label("Reply", systemImage: "arrowshape.turn.up.left")
+                                }
+                                if env.isVerifiedMember {
+                                    Menu {
+                                        ForEach(commentReactionEmojis, id: \.self) { emoji in
+                                            Button(emoji) { Task { await toggleReaction(comment, emoji) } }
+                                        }
+                                    } label: { Label("React", systemImage: "face.smiling") }
+                                }
+                                if env.isSignedIn && comment.authorId != env.currentProfile?.id {
+                                    Button(role: .destructive) {
+                                        Task { await reportComment(comment) }
+                                    } label: { Label("Report comment", systemImage: "flag") }
+                                }
+                                if canDelete(comment) {
+                                    Button(role: .destructive) {
+                                        Task { await deleteComment(comment) }
+                                    } label: { Label("Delete comment", systemImage: "trash") }
+                                }
+                            }
+                        }
                     }
                 }
                 .listStyle(.plain)
+                .scrollDismissesKeyboard(.interactively)
+                .onChange(of: scrollTarget) { _, id in
+                    guard let id else { return }
+                    withAnimation(reduceMotion ? nil : MLRMotion.entrance) { proxy.scrollTo(id, anchor: .bottom) }
+                }
                 .onAppear {
+                    if let id = scrollTarget {
+                        proxy.scrollTo(id, anchor: .bottom)
+                    }
                     guard let focusCommentId, comments.contains(where: { $0.id == focusCommentId }) else { return }
                     DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                         withAnimation { proxy.scrollTo(focusCommentId, anchor: .center) }
@@ -237,23 +317,16 @@ struct CommentsView: View {
             HStack(alignment: .bottom, spacing: 10) {
                 AvatarView(url: env.currentProfile?.avatarUrl, size: .small)
 
-                ZStack(alignment: .topLeading) {
-                    if commentText.isEmpty {
-                        Text("Add a comment…")
-                            .foregroundStyle(Color.mlrTextSubtle)
-                            .font(.subheadline)
-                            .padding(.top, 8)
-                            .padding(.leading, 4)
+                // Vertical-axis TextField: one line that grows to 5 as you type.
+                TextField("Add a comment…", text: $commentText, axis: .vertical)
+                    .lineLimit(1...5)
+                    .font(.subheadline)
+                    .focused($composerFocused)
+                    .onChange(of: commentText) { _, val in
+                        mentionQuery = detectMentionQuery(in: val)
                     }
-                    TextEditor(text: $commentText)
-                        .frame(minHeight: 36, maxHeight: 100)
-                        .font(.subheadline)
-                        .onChange(of: commentText) { _, val in
-                            mentionQuery = detectMentionQuery(in: val)
-                        }
-                }
-                .padding(.horizontal, 10)
-                .padding(.vertical, 6)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 9)
                 .background(Color.mlrCard)
                 .clipShape(RoundedRectangle(cornerRadius: 18))
 
@@ -265,6 +338,7 @@ struct CommentsView: View {
                         .foregroundStyle(canSend ? Color.mlrPrimary : Color.mlrTextSubtle)
                 }
                 .disabled(!canSend || isSending)
+                .animation(reduceMotion ? nil : MLRMotion.spring, value: canSend)
             }
             .padding(.horizontal, 12)
             .padding(.vertical, 10)
@@ -278,6 +352,7 @@ struct CommentsView: View {
             }
         }
         .background(Color.mlrSurface)
+        .animation(reduceMotion ? nil : MLRMotion.spring, value: commentText.isEmpty)
     }
 
     private var attachmentPreviews: some View {
@@ -366,6 +441,8 @@ struct CommentsView: View {
         guard env.isSignedIn else { showSignIn = true; return }
         guard env.isVerifiedMember, let me = env.currentProfile else { return }
         let snapshot = commentReactions
+        reactionInFlight.insert(comment.id)
+        defer { reactionInFlight.remove(comment.id) }
         let mine = commentReactions.first { $0.commentId == comment.id && $0.userId == me.id }
         let removing = mine?.emoji == emoji
         let apply = {
@@ -389,42 +466,165 @@ struct CommentsView: View {
         }
     }
 
+    /// Run a list mutation with the app's spring (instantly under Reduce Motion).
+    @MainActor
+    private func animated(_ change: () -> Void) {
+        if reduceMotion { change() } else { withAnimation(MLRMotion.spring, change) }
+    }
+
     @MainActor
     private func sendComment() async {
         guard let profile = env.currentProfile, canSend else { return }
-        isSending = true
         sendError = nil
         let trimmed = commentText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let mentioned = mentionedUserIds(in: trimmed)
+
+        // Text-only: optimistic. The comment appears (dimmed) at once, the
+        // composer clears and the list scrolls to it; on failure the row is
+        // rolled back and the draft restored.
+        if images.isEmpty && videoData == nil {
+            let draft = commentText
+            let tempId = UUID()
+            let temp = PostComment(
+                id: tempId, postId: post.id, authorId: profile.id,
+                authorName: profile.name, authorAvatarUrl: profile.avatarUrl,
+                text: trimmed, status: .visible, createdAt: .now)
+            pendingTempIds.insert(tempId)
+            commentText = ""
+            mentionQuery = nil
+            Haptics.tap()
+            animated { comments.append(temp) }
+            scrollTarget = tempId
+            do {
+                let real = try await env.postsService.addComment(
+                    postId: post.id, text: trimmed, authorId: profile.id,
+                    mentionedIds: mentioned, media: [])
+                pendingTempIds.remove(tempId)
+                // Swap temp -> real in place; if realtime already delivered the
+                // real row, just drop the temp. No animation: same content.
+                if let idx = comments.firstIndex(where: { $0.id == tempId }) {
+                    if comments.contains(where: { $0.id == real.id }) {
+                        comments.remove(at: idx)
+                    } else {
+                        comments[idx] = real
+                    }
+                } else if !comments.contains(where: { $0.id == real.id }) {
+                    comments.append(real)
+                }
+                scrollTarget = real.id
+            } catch {
+                pendingTempIds.remove(tempId)
+                animated { comments.removeAll { $0.id == tempId } }
+                // Restore the draft (keep anything typed since, below it).
+                commentText = commentText.isEmpty ? draft : draft + "\n" + commentText
+                sendError = "Couldn't post comment. Please try again."
+                Haptics.error()
+            }
+            return
+        }
+
+        // With attachments: upload first, then insert (no optimistic row).
+        isSending = true
         do {
             var media: [(path: String, type: String)] = []
-            if !images.isEmpty || videoData != nil {
-                isUploading = true
-                for image in images {
-                    let url = try await env.mediaService.uploadPostImage(image: image, userId: profile.id)
-                    media.append((path: url, type: "image"))
-                }
-                if let videoData {
-                    let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: profile.id)
-                    media.append((path: url, type: "video"))
-                }
-                isUploading = false
+            isUploading = true
+            for image in images {
+                let url = try await env.mediaService.uploadPostImage(image: image, userId: profile.id)
+                media.append((path: url, type: "image"))
             }
+            if let videoData {
+                let url = try await env.mediaService.uploadPostVideo(data: videoData, userId: profile.id)
+                media.append((path: url, type: "video"))
+            }
+            isUploading = false
             let comment = try await env.postsService.addComment(
                 postId: post.id,
                 text: trimmed,
                 authorId: profile.id,
-                mentionedIds: mentionedUserIds(in: trimmed),
+                mentionedIds: mentioned,
                 media: media
             )
-            comments.append(comment)
+            if !comments.contains(where: { $0.id == comment.id }) {
+                animated { comments.append(comment) }
+            }
+            scrollTarget = comment.id
             images = []; selectedPhotos = []; videoData = nil; selectedVideo = nil
             commentText = ""
             mentionQuery = nil
+            Haptics.success()
         } catch {
             sendError = "Couldn't post comment. Please try again."
+            Haptics.error()
         }
         isUploading = false
         isSending = false
+    }
+
+    // MARK: Live updates (merge, never reload)
+
+    @MainActor
+    private func startLiveUpdates() {
+        live.start(
+            postId: post.id,
+            onCommentsChanged: { Task { await mergeRemoteComments() } },
+            onCommentDeleted: { id in
+                guard comments.contains(where: { $0.id == id }) else { return }
+                animated {
+                    comments.removeAll { $0.id == id }
+                    commentReactions.removeAll { $0.commentId == id }
+                }
+            },
+            onReactionChanged: { id in Task { await refreshReactions(for: id) } }
+        )
+    }
+
+    /// Fetch the thread and fold it into what's on screen: new rows animate in,
+    /// edited rows update in place, deleted rows drop out, and optimistic rows
+    /// that haven't been confirmed yet stay put (unless the server copy of the
+    /// same comment has already arrived).
+    @MainActor
+    private func mergeRemoteComments() async {
+        guard let fresh = try? await env.postsService.fetchComments(postId: post.id) else { return }
+        let known = Set(comments.map(\.id))
+        let newOnes = fresh.filter { !known.contains($0.id) }
+        var merged = fresh
+        for temp in comments where pendingTempIds.contains(temp.id) {
+            let echoed = newOnes.contains { $0.authorId == temp.authorId && $0.text == temp.text }
+            if !echoed { merged.append(temp) }
+        }
+        guard merged != comments else { return }
+        animated { comments = merged }
+        if env.isSignedIn, !newOnes.isEmpty {
+            let more = await env.postsService.fetchCommentReactions(commentIds: newOnes.map(\.id))
+            commentReactions.removeAll { r in newOnes.contains { $0.id == r.commentId } }
+            commentReactions.append(contentsOf: more)
+        }
+    }
+
+    /// Re-read one comment's reactions. Skipped for a comment I'm toggling
+    /// right now (my optimistic state is the truth until the write settles).
+    @MainActor
+    private func refreshReactions(for commentId: UUID) async {
+        guard env.isSignedIn,
+              comments.contains(where: { $0.id == commentId }),
+              !reactionInFlight.contains(commentId) else { return }
+        let fresh = await env.postsService.fetchCommentReactions(commentIds: [commentId])
+        guard !reactionInFlight.contains(commentId) else { return }
+        animated {
+            commentReactions.removeAll { $0.commentId == commentId }
+            commentReactions.append(contentsOf: fresh)
+        }
+    }
+
+    /// Reply = drop an @mention of the author into the composer and focus it.
+    @MainActor
+    private func replyTo(_ comment: PostComment) {
+        let tag = "@\(comment.authorName) "
+        if !commentText.contains(tag) {
+            commentText = commentText.isEmpty ? tag : commentText + (commentText.hasSuffix(" ") ? "" : " ") + tag
+        }
+        composerFocused = true
+        Haptics.tap()
     }
 
     /// Author within the 24h window, or an admin anytime (RLS is the real gate).
@@ -438,7 +638,8 @@ struct CommentsView: View {
     private func deleteComment(_ comment: PostComment) async {
         do {
             try await env.postsService.deleteComment(commentId: comment.id)
-            comments.removeAll { $0.id == comment.id }
+            Haptics.tap()
+            await MainActor.run { animated { comments.removeAll { $0.id == comment.id } } }
         } catch {
             print("[Comments] delete error: \(error)")
         }
