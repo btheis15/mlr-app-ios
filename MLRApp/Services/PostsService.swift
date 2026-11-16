@@ -2,7 +2,7 @@ import Foundation
 import SwiftUI
 import Supabase
 
-private let postStorageBase = "https://vrksrpzlslrcjvbzchfg.supabase.co/storage/v1/object/public/post-photos"
+private let postStorageBase = MLRBackend.current.publicStorageBase("post-photos")
 
 // MARK: - PostsService
 

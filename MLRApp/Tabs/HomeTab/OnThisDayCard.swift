@@ -20,7 +20,7 @@ struct OnThisDayCard: View {
     }
 
     private static let bucketBase =
-        "https://vrksrpzlslrcjvbzchfg.supabase.co/storage/v1/object/public/post-photos"
+        MLRBackend.current.publicStorageBase("post-photos")
     private static let windowDays = 3
     private static let yearLen = 365
 
