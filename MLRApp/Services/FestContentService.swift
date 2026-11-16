@@ -13,11 +13,112 @@ struct FestConfig: Equatable, Identifiable {
     /// Nil means "use the built-in look" — never backfilled with the 2026 values.
     var theme: String?
     var coverUrl: String?
+    /// Per-year look colours/background/font (migration 0219). Default = built-in.
+    var look: FestTheme = .builtIn
 
     var id: Int { year }
 
     var season: FestSeason { FestSeason.compute(startISO: startDate, endISO: endDate) }
     var dateRangeLabel: String { FamilyFestConfig.rangeLabel(start: startDate, end: endDate) }
+}
+
+// MARK: - Per-year look (migration 0219)
+
+/// A fest year's look. Every field nil = the built-in look; hex is validated
+/// (`^#[0-9A-Fa-f]{6}$`) so a bad value falls back per field, never blanks.
+struct FestTheme: Equatable {
+    enum Slot { case primary, accent, background, card, border, ink }
+
+    var primary: String?
+    var accent: String?
+    var background: String?
+    var card: String?
+    var border: String?
+    var ink: String?
+    var bgStyle: String?          // default | flat | image
+    var bgImageUrl: String?
+    var bgImageMode: String?      // cover | tile
+    var bgImageOpacity: Int?      // 0-100
+    var font: String?             // cinzel | playfair | sans
+
+    static let builtIn = FestTheme()
+
+    /// Web's built-in values, for the editor swatches and contrast check only.
+    static let defaults: [Slot: String] = [
+        .primary: "#8b2e2e", .accent: "#1e3a8a", .background: "#f4ecd8",
+        .card: "#fdfaf1", .border: "#d8c7a3", .ink: "#3a2a18",
+    ]
+
+    static func validHex(_ v: String?) -> String? {
+        guard let s = v?.trimmingCharacters(in: .whitespaces),
+              s.range(of: "^#[0-9A-Fa-f]{6}$", options: .regularExpression) != nil
+        else { return nil }
+        return s
+    }
+
+    func raw(_ slot: Slot) -> String? {
+        switch slot {
+        case .primary: return primary
+        case .accent: return accent
+        case .background: return background
+        case .card: return card
+        case .border: return border
+        case .ink: return ink
+        }
+    }
+
+    /// Override hex for a slot, or nil for the built-in. Web applies colours in
+    /// light mode only: dark mode takes just primary and accent.
+    func hex(_ slot: Slot, dark: Bool) -> String? {
+        if dark && slot != .primary && slot != .accent { return nil }
+        return Self.validHex(raw(slot))
+    }
+
+    /// http(s) only, no quote/paren/backslash/whitespace (same gate as web).
+    var safeImageURL: URL? {
+        guard let s = bgImageUrl?.trimmingCharacters(in: .whitespaces),
+              s.range(of: "^https?://[^\"'()\\\\\\s]+$", options: [.regularExpression, .caseInsensitive]) != nil
+        else { return nil }
+        return URL(string: s)
+    }
+
+    /// 0-1, default 35% like web.
+    var imageStrength: Double { Double(min(100, max(0, bgImageOpacity ?? 35))) / 100 }
+
+    /// Plain-English contrast warnings (shown, never enforced), as web.
+    func contrastWarnings() -> [String] {
+        func v(_ s: Slot) -> String { Self.validHex(raw(s)) ?? Self.defaults[s]! }
+        let pairs: [(String, String, Double, String)] = [
+            (v(.ink), v(.card), 4.5, "Body text on cards is hard to read — darken the text colour or lighten the card."),
+            (v(.ink), v(.background), 4.5, "Text on the background is hard to read — try a lighter background."),
+            (v(.primary), v(.card), 3, "Headings and buttons barely show against cards — deepen the main colour."),
+            (v(.accent), v(.card), 3, "The accent colour barely shows against cards — deepen it."),
+            ("#ffffff", v(.primary), 3, "White button text won't read on the main colour — pick a darker main colour."),
+        ]
+        return pairs.compactMap { Self.contrast($0.0, $0.1) < $0.2 ? $0.3 : nil }
+    }
+
+    private static func luminance(_ hex: String) -> Double {
+        let n = Int(hex.dropFirst(), radix: 16) ?? 0
+        func chan(_ c: Int) -> Double {
+            let s = Double(c) / 255
+            return s <= 0.03928 ? s / 12.92 : pow((s + 0.055) / 1.055, 2.4)
+        }
+        return 0.2126 * chan((n >> 16) & 255) + 0.7152 * chan((n >> 8) & 255) + 0.0722 * chan(n & 255)
+    }
+
+    static func contrast(_ a: String, _ b: String) -> Double {
+        let (x, y) = (luminance(a), luminance(b))
+        return (max(x, y) + 0.05) / (min(x, y) + 0.05)
+    }
+}
+
+/// The look currently on screen. The fest palette (`Color.mlrFest*`,
+/// `Font.festSerif`) resolves through this at render time, so applying a year's
+/// look needs no per-view plumbing. `.festThemeScope()` sets it; a Past Years
+/// page sets its own year's look and restores the current year's on leave.
+enum FestThemeStore {
+    nonisolated(unsafe) static var active: FestTheme = .builtIn
 }
 
 /// A refusal the "start next year" sheet shows verbatim. These are answers to
@@ -611,6 +712,23 @@ final class FestContentService {
         await resolveYear()
     }
 
+    /// Writes only the look columns (migration 0219). Nil = built-in look.
+    func saveYearTheme(_ t: FestTheme) async throws {
+        var p: [String: AnyJSON] = [
+            "fest_year": .integer(year),
+            "theme_primary": j(t.primary), "theme_accent": j(t.accent),
+            "theme_background": j(t.background), "theme_card": j(t.card),
+            "theme_border": j(t.border), "theme_ink": j(t.ink),
+            "theme_bg_style": j(t.bgStyle), "theme_bg_image_url": j(t.bgImageUrl),
+            "theme_bg_image_mode": j(t.bgImageMode),
+            "theme_bg_image_opacity": t.bgImageOpacity.map { .integer($0) } ?? .null,
+            "theme_font": j(t.font),
+        ]
+        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
+        try await supabase.from("fest_config").upsert(p, onConflict: "fest_year").execute()
+        await resolveYear()
+    }
+
     // MARK: - Starting the next fest year
 
     struct StartYearResult { var copied: Int; var warning: String? }
@@ -964,18 +1082,49 @@ private struct ConfigRow: Decodable {
     // Migration 0219. Nil means "use the built-in look".
     let theme: String?
     let coverUrl: String?
+    let look: FestTheme
     enum CodingKeys: String, CodingKey {
         case name, tagline, theme
         case festYear = "fest_year"
         case startDate = "start_date"
         case endDate = "end_date"
         case coverUrl = "cover_url"
+        case primary = "theme_primary", accent = "theme_accent"
+        case background = "theme_background", card = "theme_card"
+        case border = "theme_border", ink = "theme_ink"
+        case bgStyle = "theme_bg_style", bgImageUrl = "theme_bg_image_url"
+        case bgImageMode = "theme_bg_image_mode"
+        case bgImageOpacity = "theme_bg_image_opacity", font = "theme_font"
+    }
+
+    init(from decoder: Decoder) throws {
+        let c = try decoder.container(keyedBy: CodingKeys.self)
+        festYear = try c.decode(Int.self, forKey: .festYear)
+        name = try c.decode(String.self, forKey: .name)
+        tagline = try c.decodeIfPresent(String.self, forKey: .tagline)
+        startDate = try c.decode(String.self, forKey: .startDate)
+        endDate = try c.decode(String.self, forKey: .endDate)
+        theme = try? c.decodeIfPresent(String.self, forKey: .theme)
+        coverUrl = try? c.decodeIfPresent(String.self, forKey: .coverUrl)
+        // The look columns are tolerant: absent (older schema) or malformed
+        // values become nil (built-in look) and never fail the row.
+        func str(_ k: CodingKeys) -> String? { (try? c.decodeIfPresent(String.self, forKey: k)) ?? nil }
+        look = FestTheme(
+            primary: FestTheme.validHex(str(.primary)), accent: FestTheme.validHex(str(.accent)),
+            background: FestTheme.validHex(str(.background)), card: FestTheme.validHex(str(.card)),
+            border: FestTheme.validHex(str(.border)), ink: FestTheme.validHex(str(.ink)),
+            bgStyle: str(.bgStyle).flatMap { ["default", "flat", "image"].contains($0) ? $0 : nil },
+            bgImageUrl: str(.bgImageUrl),
+            bgImageMode: str(.bgImageMode).flatMap { ["cover", "tile"].contains($0) ? $0 : nil },
+            bgImageOpacity: ((try? c.decodeIfPresent(Int.self, forKey: .bgImageOpacity)) ?? nil)
+                .map { min(100, max(0, $0)) },
+            font: str(.font).flatMap { ["cinzel", "playfair", "sans"].contains($0) ? $0 : nil })
     }
 
     var config: FestConfig {
         FestConfig(year: festYear, name: name, tagline: tagline,
                    startDate: startDate, endDate: endDate,
-                   theme: theme, coverUrl: coverUrl)
+                   theme: theme, coverUrl: coverUrl, look: look)
     }
 }
 

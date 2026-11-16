@@ -64,7 +64,7 @@ struct FestOverviewView: View {
     var body: some View {
         NavigationStack {
             ZStack {
-                Color.mlrFestParchment.ignoresSafeArea()
+                FestThemedBackground()
 
                 ScrollView {
                     VStack(alignment: .leading, spacing: 20) {
@@ -160,6 +160,7 @@ struct FestOverviewView: View {
             env.festContentService.subscribeToRealtime()
         }
         .onDisappear { env.festContentService.unsubscribeFromRealtime() }
+        .festThemeScope()
     }
 
     // MARK: - Admin date preview ("see as Day N")
