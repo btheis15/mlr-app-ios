@@ -131,89 +131,83 @@ private struct RosterEntryEditor: View {
     @Environment(AppEnvironment.self) private var env
     @Environment(\.dismiss) private var dismiss
 
+    struct Values: Equatable {
+        var name = ""
+        var email = ""
+        var phone = ""
+        var houseId: UUID?
+    }
+
     let entry: FamilyRosterEntry?
     let houses: [House]
     let onSaved: () -> Void
 
-    @State private var name: String
-    @State private var email: String
-    @State private var phone: String
-    @State private var houseId: UUID?
-    @State private var saving = false
+    @State private var draft: EditorDraft<Values>
+    @State private var removing = false
     @State private var confirmDelete = false
-    @State private var errorText: String?
+    @State private var removeError: String?
 
     init(entry: FamilyRosterEntry?, houses: [House], onSaved: @escaping () -> Void) {
         self.entry = entry
         self.houses = houses
         self.onSaved = onSaved
-        _name = State(initialValue: entry?.name ?? "")
-        _email = State(initialValue: entry?.email ?? "")
-        _phone = State(initialValue: entry?.phone ?? "")
-        _houseId = State(initialValue: entry?.houseId)
+        _draft = State(initialValue: EditorDraft(Values(
+            name: entry?.name ?? "", email: entry?.email ?? "",
+            phone: entry?.phone ?? "", houseId: entry?.houseId)))
     }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Person") {
-                    TextField("Name", text: $name)
-                    TextField("Email", text: $email)
-                        .textInputAutocapitalization(.never).autocorrectionDisabled().keyboardType(.emailAddress)
-                    TextField("Phone (optional)", text: $phone).keyboardType(.phonePad)
+        EditorSheet(title: entry == nil ? "Add family member" : "Edit",
+                    isDirty: draft.isDirty,
+                    canSave: !draft.value.name.trimmingCharacters(in: .whitespaces).isEmpty && !removing,
+                    save: { try await save() }) {
+            Section("Person") {
+                EditorTextField("Name", text: $draft.value.name, limit: 80, required: true)
+                EditorTextField("Email", text: $draft.value.email, keyboard: .emailAddress, autocapitalize: false)
+                EditorTextField("Phone (optional)", text: $draft.value.phone, keyboard: .phonePad)
+            }
+            Section("House (optional)") {
+                Picker("House", selection: $draft.value.houseId) {
+                    Text("No house").tag(UUID?.none)
+                    ForEach(houses) { h in Text("\(h.emoji) \(h.name)").tag(UUID?.some(h.id)) }
                 }
-                Section("House (optional)") {
-                    Picker("House", selection: $houseId) {
-                        Text("No house").tag(UUID?.none)
-                        ForEach(houses) { h in Text("\(h.emoji) \(h.name)").tag(UUID?.some(h.id)) }
+            }
+            if entry != nil {
+                Section {
+                    Button(role: .destructive) { confirmDelete = true } label: { Text("Remove from roster") }
+                        .disabled(removing)
+                    if let removeError {
+                        Text(removeError).font(.mlrScaled(13)).foregroundStyle(Color.mlrDanger)
                     }
                 }
-                if entry != nil {
-                    Section {
-                        Button(role: .destructive) { confirmDelete = true } label: { Text("Remove from roster") }
-                    }
-                }
-                if let errorText {
-                    Section { Text(errorText).font(.mlrScaled(13)).foregroundStyle(Color.mlrDanger) }
-                }
             }
-            .navigationTitle(entry == nil ? "Add family member" : "Edit")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(saving ? "Saving…" : "Save") { Task { await save() } }
-                        .disabled(saving || name.trimmingCharacters(in: .whitespaces).isEmpty)
-                }
-            }
-            .confirmationDialog("Remove \(name) from the roster?", isPresented: $confirmDelete, titleVisibility: .visible) {
-                Button("Remove", role: .destructive) { Task { await remove() } }
-            }
+        }
+        .confirmationDialog("Remove \(draft.value.name) from the roster?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Remove", role: .destructive) { Task { await remove() } }
         }
     }
 
-    private func save() async {
-        saving = true; errorText = nil
-        defer { saving = false }
-        do {
-            try await env.familyRosterService.saveEntry(
-                id: entry?.id,
-                name: name,
-                email: email.trimmingCharacters(in: .whitespaces).isEmpty ? nil : email,
-                phone: phone.trimmingCharacters(in: .whitespaces).isEmpty ? nil : phone,
-                houseId: houseId)
-            onSaved()
-            dismiss()
-        } catch {
-            errorText = "Couldn't save. Check the email isn't already used."
-        }
+    private func save() async throws {
+        let v = draft.value
+        try await env.familyRosterService.saveEntry(
+            id: entry?.id,
+            name: v.name,
+            email: v.email.trimmingCharacters(in: .whitespaces).isEmpty ? nil : v.email,
+            phone: v.phone.trimmingCharacters(in: .whitespaces).isEmpty ? nil : v.phone,
+            houseId: v.houseId)
+        onSaved()
     }
 
     private func remove() async {
-        guard let id = entry?.id else { return }
-        saving = true
-        defer { saving = false }
-        do { try await env.familyRosterService.deleteEntry(id: id); onSaved(); dismiss() }
-        catch { errorText = "Couldn't remove." }
+        guard let id = entry?.id, !removing else { return }
+        removing = true; removeError = nil
+        defer { removing = false }
+        do {
+            try await env.familyRosterService.deleteEntry(id: id)
+            onSaved(); Haptics.success(); dismiss()
+        } catch {
+            removeError = "Couldn\u{2019}t remove. \(EditorError.message(error))"
+            Haptics.error()
+        }
     }
 }

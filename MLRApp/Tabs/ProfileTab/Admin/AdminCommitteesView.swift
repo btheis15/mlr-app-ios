@@ -144,34 +144,37 @@ struct AdminCommitteesView: View {
     private func archive(_ c: Committee) async {
         committeeToArchive = nil
         do { try await env.committeeService.archiveCommittee(id: c.id); await env.committeeService.fetchCommittees() }
-        catch { self.error = "Couldn't archive \(c.name)." }
+        catch { self.error = "Couldn\u{2019}t archive \(c.name). \(EditorError.message(error))" }
     }
 
     private func restore(_ c: Committee) async {
         do { try await env.committeeService.restoreCommittee(id: c.id); await env.committeeService.fetchCommittees() }
-        catch { self.error = "Couldn't restore \(c.name)." }
+        catch { self.error = "Couldn\u{2019}t restore \(c.name). \(EditorError.message(error))" }
     }
 
     private func delete(_ c: Committee) async {
         committeeToDelete = nil
         do { try await env.committeeService.deleteCommittee(id: c.id); await env.committeeService.fetchCommittees() }
-        catch { self.error = "Couldn't delete \(c.name)." }
+        catch { self.error = "Couldn\u{2019}t delete \(c.name). \(EditorError.message(error))" }
     }
 }
 
 // MARK: - CommitteeEditor (create + edit details + manage roles)
 
-private struct CommitteeEditor: View {
+struct CommitteeEditor: View {
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.dismiss) private var dismiss
+
+    struct Values: Equatable {
+        var name = ""
+        var emoji: String? = "🌲"
+        var description = ""
+    }
 
     let committee: Committee?
+    /// Called after a successful save (the in-place pencil uses it to refresh).
+    var onSaved: (() -> Void)?
 
-    @State private var name: String
-    @State private var emoji: String
-    @State private var description: String
-    @State private var saving = false
-    @State private var error: String?
+    @State private var draft: EditorDraft<Values>
 
     // Roles (edit mode only).
     @State private var areas: [CommitteeArea] = []
@@ -180,59 +183,44 @@ private struct CommitteeEditor: View {
     @State private var editingArea: CommitteeArea?
     @State private var areaToDelete: CommitteeArea?
 
-    init(committee: Committee?) {
+    init(committee: Committee?, onSaved: (() -> Void)? = nil) {
         self.committee = committee
-        _name = State(initialValue: committee?.name ?? "")
-        _emoji = State(initialValue: committee?.emoji ?? "🌲")
-        _description = State(initialValue: committee?.description ?? "")
+        self.onSaved = onSaved
+        _draft = State(initialValue: EditorDraft(Values(
+            name: committee?.name ?? "", emoji: committee?.emoji ?? "🌲",
+            description: committee?.description ?? "")))
     }
 
     private var editing: Bool { committee != nil }
-    private var canSave: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !saving }
+    private var canSave: Bool { !draft.value.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var liveAreas: [CommitteeArea] { areas.filter { !$0.isArchived } }
     private var archivedAreas: [CommitteeArea] { areas.filter { $0.isArchived } }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Name") { TextField("e.g. Meals", text: $name) }
-                Section("Emoji") {
-                    TextField("🌲", text: $emoji)
-                        .onChange(of: emoji) { _, new in if let f = new.first { emoji = String(f) } }
-                }
-                Section("Description (optional)") {
-                    TextField("What's this committee about?", text: $description, axis: .vertical)
-                        .lineLimit(2...4)
-                }
+        EditorSheet(title: editing ? "Edit committee" : "New committee",
+                    isDirty: draft.isDirty,
+                    canSave: canSave,
+                    save: { try await save() }) {
+            Section {
+                EditorTextField("Name", text: $draft.value.name, placeholder: "e.g. Meals", limit: 60, required: true)
+                EditorEmojiField("Emoji", emoji: $draft.value.emoji)
+                EditorLongText("Description (optional)", text: $draft.value.description,
+                               placeholder: "What's this committee about?", limit: 300, lines: 2...4)
+            }
 
-                if editing { rolesSection }
-
-                if let error {
-                    Text(error).font(.caption).foregroundStyle(Color.mlrDanger)
-                }
+            if editing { rolesSection }
+        }
+        .task { if editing { await loadAreas() } }
+        .sheet(item: $editingArea) { area in
+            if let committee {
+                RoleEditSheet(committee: committee, area: area) { await loadAreas() }
             }
-            .navigationTitle(editing ? "Edit committee" : "New committee")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.disabled(saving)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button(editing ? "Save" : "Create") { Task { await save() } }.disabled(!canSave)
-                }
-            }
-            .task { if editing { await loadAreas() } }
-            .sheet(item: $editingArea) { area in
-                if let committee {
-                    RoleEditSheet(committee: committee, area: area) { await loadAreas() }
-                }
-            }
-            .alert("Delete role forever?", isPresented: .constant(areaToDelete != nil), presenting: areaToDelete) { a in
-                Button("Delete \(a.area) forever", role: .destructive) { Task { await deleteArea(a.area) } }
-                Button("Cancel", role: .cancel) { areaToDelete = nil }
-            } message: { a in
-                Text("Permanently erases the \"\(a.area)\" role and its chat history for everyone. This can't be undone — use Restore instead if you just want it back.")
-            }
+        }
+        .alert("Delete role forever?", isPresented: .constant(areaToDelete != nil), presenting: areaToDelete) { a in
+            Button("Delete \(a.area) forever", role: .destructive) { Task { await deleteArea(a.area) } }
+            Button("Cancel", role: .cancel) { areaToDelete = nil }
+        } message: { a in
+            Text("Permanently erases the \"\(a.area)\" role and its chat history for everyone. This can't be undone — use Restore instead if you just want it back.")
         }
     }
 
@@ -296,23 +284,17 @@ private struct CommitteeEditor: View {
 
     // MARK: Actions
 
-    private func save() async {
-        saving = true; error = nil
-        defer { saving = false }
-        let n = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let d = description.trimmingCharacters(in: .whitespacesAndNewlines)
-        let e = emoji.isEmpty ? "🌲" : emoji
-        do {
-            if let committee {
-                try await env.committeeService.updateCommittee(id: committee.id, name: n, emoji: e, description: d)
-            } else {
-                _ = try await env.committeeService.createCommittee(name: n, emoji: e, description: d)
-            }
-            await env.committeeService.fetchCommittees()
-            dismiss()
-        } catch {
-            self.error = "Couldn't save the committee."
+    private func save() async throws {
+        let n = draft.value.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let d = draft.value.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        let e = (draft.value.emoji?.isEmpty ?? true) ? "🌲" : draft.value.emoji!
+        if let committee {
+            try await env.committeeService.updateCommittee(id: committee.id, name: n, emoji: e, description: d)
+        } else {
+            _ = try await env.committeeService.createCommittee(name: n, emoji: e, description: d)
         }
+        await env.committeeService.fetchCommittees()
+        onSaved?()
     }
 
     private func loadAreas() async {
@@ -354,77 +336,55 @@ private struct CommitteeEditor: View {
 
     /// Surface the server's validation message (reserved names, duplicates, etc.).
     private func friendly(_ error: Error) -> String {
-        let m = (error as NSError).localizedDescription
+        let m = EditorError.message(error)
         return m.isEmpty ? "That role name isn't allowed." : m
     }
 }
 
 // MARK: - RoleEditSheet (rename + description, migrations 0073/0112 rename + 0179 description)
 
-private struct RoleEditSheet: View {
+struct RoleEditSheet: View {
     @Environment(AppEnvironment.self) private var env
-    @Environment(\.dismiss) private var dismiss
 
     let committee: Committee
     let area: CommitteeArea
     let onSaved: () async -> Void
 
-    @State private var name: String
-    @State private var description: String
-    @State private var saving = false
-    @State private var error: String?
+    struct Values: Equatable {
+        var name: String
+        var description: String
+    }
+
+    @State private var draft: EditorDraft<Values>
 
     init(committee: Committee, area: CommitteeArea, onSaved: @escaping () async -> Void) {
         self.committee = committee
         self.area = area
         self.onSaved = onSaved
-        _name = State(initialValue: area.area)
-        _description = State(initialValue: area.description ?? "")
+        _draft = State(initialValue: EditorDraft(Values(name: area.area, description: area.description ?? "")))
     }
-
-    private var canSave: Bool { !name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && !saving }
 
     var body: some View {
-        NavigationStack {
-            Form {
-                Section("Role name") { TextField("e.g. Meals", text: $name) }
-                Section("Description (optional)") {
-                    TextField("What's this role for?", text: $description, axis: .vertical)
-                        .lineLimit(2...4)
-                }
-                if let error {
-                    Text(error).font(.caption).foregroundStyle(Color.mlrDanger)
-                }
-            }
-            .navigationTitle("Edit role")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .cancellationAction) {
-                    Button("Cancel") { dismiss() }.disabled(saving)
-                }
-                ToolbarItem(placement: .confirmationAction) {
-                    Button("Save") { Task { await save() } }.disabled(!canSave)
-                }
+        EditorSheet(title: "Edit role",
+                    isDirty: draft.isDirty,
+                    canSave: !draft.value.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+                    save: { try await save() }) {
+            Section {
+                EditorTextField("Role name", text: $draft.value.name, placeholder: "e.g. Meals", limit: 60, required: true)
+                EditorLongText("Description (optional)", text: $draft.value.description,
+                               placeholder: "What's this role for?", limit: 300, lines: 2...4)
             }
         }
     }
 
-    private func save() async {
-        saving = true; error = nil
-        defer { saving = false }
-        let newName = name.trimmingCharacters(in: .whitespacesAndNewlines)
-        let newDescription = description.trimmingCharacters(in: .whitespacesAndNewlines)
-        do {
-            if newName != area.area {
-                try await env.committeeService.renameCommitteeArea(committeeId: committee.id, old: area.area, new: newName)
-            }
-            // Description is written against the (possibly new) name, mirroring web.
-            try await env.committeeService.setCommitteeAreaDescription(committeeId: committee.id, area: newName, description: newDescription)
-            await onSaved()
-            dismiss()
-        } catch {
-            let m = (error as NSError).localizedDescription
-            self.error = m.isEmpty ? "Couldn't save the role." : m
+    private func save() async throws {
+        let newName = draft.value.name.trimmingCharacters(in: .whitespacesAndNewlines)
+        let newDescription = draft.value.description.trimmingCharacters(in: .whitespacesAndNewlines)
+        if newName != area.area {
+            try await env.committeeService.renameCommitteeArea(committeeId: committee.id, old: area.area, new: newName)
         }
+        // Description is written against the (possibly new) name, mirroring web.
+        try await env.committeeService.setCommitteeAreaDescription(committeeId: committee.id, area: newName, description: newDescription)
+        await onSaved()
     }
 }

@@ -74,21 +74,29 @@ final class PollsService {
 
     // MARK: - Vote
 
+    /// Optimistic: the tally moves at once and is restored if the server refuses.
     func vote(pollId: UUID, optionId: UUID) async throws {
         struct VoteParams: Encodable { let p_poll: String; let p_option: String }
-        try await supabase
-            .rpc("cast_poll_vote", params: VoteParams(p_poll: pollId.uuidString, p_option: optionId.uuidString))
-            .execute()
-        // Optimistic update
-        guard let idx = polls.firstIndex(where: { $0.id == pollId }) else { return }
-        let prev = polls[idx].myVoteOptionId
-        if let prev, let prevIdx = polls[idx].options.firstIndex(where: { $0.id == prev }) {
-            polls[idx].options[prevIdx].voteCount = max(0, polls[idx].options[prevIdx].voteCount - 1)
+        let snapshot = polls
+        if let idx = polls.firstIndex(where: { $0.id == pollId }) {
+            let prev = polls[idx].myVoteOptionId
+            guard prev != optionId else { return }   // already my vote
+            if let prev, let prevIdx = polls[idx].options.firstIndex(where: { $0.id == prev }) {
+                polls[idx].options[prevIdx].voteCount = max(0, polls[idx].options[prevIdx].voteCount - 1)
+            }
+            if let newIdx = polls[idx].options.firstIndex(where: { $0.id == optionId }) {
+                polls[idx].options[newIdx].voteCount += 1
+            }
+            polls[idx].myVoteOptionId = optionId
         }
-        if let newIdx = polls[idx].options.firstIndex(where: { $0.id == optionId }) {
-            polls[idx].options[newIdx].voteCount += 1
+        do {
+            try await supabase
+                .rpc("cast_poll_vote", params: VoteParams(p_poll: pollId.uuidString, p_option: optionId.uuidString))
+                .execute()
+        } catch {
+            polls = snapshot
+            throw error
         }
-        polls[idx].myVoteOptionId = optionId
     }
 
     // MARK: - Create

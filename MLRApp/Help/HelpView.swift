@@ -11,12 +11,6 @@ enum MLRLinks {
     static let guidePDF = URL(string: "https://mlr-app-omega.vercel.app/mlr-app-guide.pdf")!
 }
 
-enum HelpContact {
-    static let name = "Brian"
-    static let phone = "+12248005389"   // E.164 — powers tap-to-text / tap-to-call
-    static let email = "brian.theis15@gmail.com"
-}
-
 // MARK: - HelpView
 // Plain-English Help / how-to screen for the least-technical family members.
 // Leads with a real person to contact, then short FAQ cards. Mirrors the web
@@ -27,9 +21,18 @@ struct HelpView: View {
     @State private var composeState: MessageComposeState?
     @State private var showGuide = false
 
-    private var contactName:  String { env.helpContactName }
-    private var contactPhone: String { env.helpContactPhone }
-    private var contactEmail: String { env.helpContactEmail }
+    @State private var editingContact = false
+
+    private var contactPhone: String { env.helpContactPhone.trimmingCharacters(in: .whitespaces) }
+    private var contactEmail: String { env.helpContactEmail.trimmingCharacters(in: .whitespaces) }
+    /// A real person is configured (name + at least one way to reach them).
+    private var hasContact: Bool {
+        !env.helpContactName.trimmingCharacters(in: .whitespaces).isEmpty
+            && !(contactPhone.isEmpty && contactEmail.isEmpty)
+    }
+    private var contactName: String {
+        hasContact ? env.helpContactName.trimmingCharacters(in: .whitespaces) : "a family admin"
+    }
 
     var body: some View {
         ScrollView {
@@ -86,6 +89,9 @@ struct HelpView: View {
         .sheet(isPresented: $showGuide) {
             NavigationStack { GuideView() }
         }
+        .navigationDestination(isPresented: $editingContact) {
+            AdminHelpContactView()
+        }
     }
 
     // MARK: - Header
@@ -95,7 +101,7 @@ struct HelpView: View {
             Text("Help & how-to")
                 .font(.mlrScaled(24, weight: .bold))
                 .foregroundStyle(Color.mlrText)
-            Text("New here, or stuck on something? Start below — and you can always just text \(contactName).")
+            Text("New here, or stuck on something? Start below — and you can always just ask \(hasContact ? "text \(contactName)" : "a family admin").")
                 .font(.subheadline)
                 .foregroundStyle(Color.mlrTextMuted)
         }
@@ -103,14 +109,42 @@ struct HelpView: View {
 
     // MARK: - Contact escape hatch
 
+    @ViewBuilder
     private var contactCard: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Need a hand? Text \(contactName).")
-                .font(.mlrScaled(16, weight: .bold))
-                .foregroundStyle(Color.mlrText)
-            Text("If anything here doesn't work or doesn't make sense, send a quick text and \(contactName) will help you out.")
-                .font(.subheadline)
-                .foregroundStyle(Color.mlrTextMuted)
+            HStack(alignment: .top) {
+                Text(hasContact ? "Need a hand? Text \(contactName)." : "Need a hand? Ask a family admin.")
+                    .font(.mlrScaled(16, weight: .bold))
+                    .foregroundStyle(Color.mlrText)
+                Spacer(minLength: 0)
+                // Admins only (isAdmin is false while previewing as someone else).
+                if env.isAdmin {
+                    InPlaceEditPencil(thing: "help contact") { editingContact = true }
+                }
+            }
+            if hasContact {
+                contactActions
+            } else {
+                Text(env.isAdmin
+                     ? "No help contact is set yet. Tap the pencil to add a name, phone and email."
+                     : "If anything here doesn't work or doesn't make sense, ask a family admin and they'll help you out.")
+                    .font(.subheadline)
+                    .foregroundStyle(Color.mlrTextMuted)
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.mlrPrimary.opacity(0.06))
+        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.mlrPrimary.opacity(0.15), lineWidth: 1))
+        .clipShape(RoundedRectangle(cornerRadius: 16))
+    }
+
+    @ViewBuilder
+    private var contactActions: some View {
+        Text("If anything here doesn't work or doesn't make sense, send a quick text and \(contactName) will help you out.")
+            .font(.subheadline)
+            .foregroundStyle(Color.mlrTextMuted)
+        if !contactPhone.isEmpty {
             HStack(spacing: 10) {
                 Button {
                     composeState = MessageComposeState(recipients: [contactPhone], body: "")
@@ -137,17 +171,13 @@ struct HelpView: View {
                     }
                 }
             }
-            if let mail = URL(string: "mailto:\(contactEmail)?subject=\("MLR app — I need help".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
-                Link("Prefer email? \(contactEmail)", destination: mail)
-                    .font(.caption)
-                    .foregroundStyle(Color.mlrTextMuted)
-            }
         }
-        .padding(16)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.mlrPrimary.opacity(0.06))
-        .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.mlrPrimary.opacity(0.15), lineWidth: 1))
-        .clipShape(RoundedRectangle(cornerRadius: 16))
+        if !contactEmail.isEmpty,
+           let mail = URL(string: "mailto:\(contactEmail)?subject=\("MLR app — I need help".addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? "")") {
+            Link("Prefer email? \(contactEmail)", destination: mail)
+                .font(.caption)
+                .foregroundStyle(Color.mlrTextMuted)
+        }
     }
 
     // MARK: - Helpers

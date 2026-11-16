@@ -81,8 +81,27 @@ struct PollCard: View {
     @Environment(AppEnvironment.self) private var env
     let poll: Poll
 
+    @State private var actionError: String?
+    @State private var confirmClose = false
+    @State private var confirmDelete = false
+    @State private var busy = false
+
     private var canManage: Bool {
         env.isAdmin || poll.createdBy == env.currentProfile?.id
+    }
+
+    /// Run a poll write; failures are shown, never swallowed.
+    private func run(_ failure: String, _ work: @escaping () async throws -> Void) {
+        guard !busy else { return }
+        busy = true
+        Task {
+            defer { busy = false }
+            do { try await work() }
+            catch {
+                actionError = "\(failure) \(EditorError.message(error))"
+                Haptics.error()
+            }
+        }
     }
 
     var body: some View {
@@ -102,7 +121,10 @@ struct PollCard: View {
                 ForEach(poll.options) { option in
                     PollOptionRow(option: option, poll: poll) {
                         guard env.isSignedIn else { env.authService.promptSignIn(); return }
-                        Task { try? await env.pollsService.vote(pollId: poll.id, optionId: option.id) }
+                        Haptics.select()
+                        run("Couldn\u{2019}t record your vote.") {
+                            try await env.pollsService.vote(pollId: poll.id, optionId: option.id)
+                        }
                     }
                 }
             }
@@ -117,15 +139,11 @@ struct PollCard: View {
                 Spacer()
                 if canManage {
                     if poll.isOpen {
-                        Button("Close poll") {
-                            Task { try? await env.pollsService.closePoll(pollId: poll.id) }
-                        }
+                        Button("Close poll") { confirmClose = true }
                         .font(.caption)
                         .foregroundStyle(Color.mlrTextMuted)
                     }
-                    Button("Delete") {
-                        Task { try? await env.pollsService.deletePoll(pollId: poll.id) }
-                    }
+                    Button("Delete") { confirmDelete = true }
                     .font(.caption)
                     .foregroundStyle(Color.mlrDanger)
                 }
@@ -133,6 +151,28 @@ struct PollCard: View {
         }
         .padding(14)
         .cardStyle()
+        .confirmationDialog("Close this poll?", isPresented: $confirmClose, titleVisibility: .visible) {
+            Button("Close poll") {
+                run("Couldn\u{2019}t close the poll.") { try await env.pollsService.closePoll(pollId: poll.id) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("Nobody will be able to vote any more.")
+        }
+        .confirmationDialog("Delete this poll?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete poll", role: .destructive) {
+                run("Couldn\u{2019}t delete the poll.") { try await env.pollsService.deletePoll(pollId: poll.id) }
+            }
+            Button("Cancel", role: .cancel) {}
+        } message: {
+            Text("This removes the poll and everyone's votes. This can't be undone.")
+        }
+        .alert("That didn\u{2019}t work", isPresented: Binding(get: { actionError != nil },
+                                                          set: { if !$0 { actionError = nil } })) {
+            Button("OK") { actionError = nil }
+        } message: {
+            Text(actionError ?? "")
+        }
     }
 
     @ViewBuilder

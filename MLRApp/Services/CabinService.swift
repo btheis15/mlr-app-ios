@@ -440,6 +440,17 @@ final class CabinService {
         }
     }
 
+    /// Write the new room order as `cabin_rooms.sort_order` = index (admin RLS).
+    /// Refetch is the caller's job on failure (rolls back to the server order).
+    func saveCabinRoomOrder(ids: [UUID]) async throws {
+        for (i, id) in ids.enumerated() {
+            try await supabase.from("cabin_rooms")
+                .update(["sort_order": i])
+                .eq("id", value: id.uuidString)
+                .execute()
+        }
+    }
+
     /// Delete a room (admin-gated by RLS). Past bookings cascade-lose the link.
     func deleteCabinRoom(id: UUID) async throws {
         try await supabase.from("cabin_rooms").delete().eq("id", value: id.uuidString).execute()
