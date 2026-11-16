@@ -338,6 +338,8 @@ final class FestContentService {
     struct ArchivedYear {
         var schedule: [ScheduleItem]
         var dinners: [FestDinner]
+        /// Tournaments (not still in setup) keyed by schedule item id.
+        var tournaments: [String: Tournament] = [:]
         var isEmpty: Bool { schedule.isEmpty && dinners.isEmpty }
     }
 
@@ -350,7 +352,20 @@ final class FestContentService {
     func fetchArchivedYear(_ year: Int) async -> ArchivedYear {
         async let sched = try? fetchSchedule(year: year)
         async let dins = try? fetchDinners(year: year)
-        return await ArchivedYear(schedule: sched ?? [], dinners: dins ?? [])
+        let items = await sched ?? []
+        let dinners = await dins ?? []
+        // Brackets are history too (who won the musky tournament). Loaded for
+        // this year's tournament-enabled items only; a never-started one is not
+        // a record, so it is skipped. No seed fallback.
+        var tournaments: [String: Tournament] = [:]
+        let svc = TournamentsService()
+        for item in items where item.tournamentEnabled {
+            guard let id = UUID(uuidString: item.id),
+                  let t = await svc.fetch(host: .schedule(id: id)).first,
+                  t.status != .setup else { continue }
+            tournaments[item.id] = t
+        }
+        return ArchivedYear(schedule: items, dinners: dinners, tournaments: tournaments)
     }
 
     /// The well-known Drop Box id for a fest year's photo album. The year is a
@@ -590,14 +605,40 @@ final class FestContentService {
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_payees", id: isNew ? nil : p0.id, payload: p)
     }
-    func saveConfig(name: String, tagline: String?, startDate: String, endDate: String) async throws {
-        var p: [String: AnyJSON] = [
-            "fest_year": .integer(year), "name": .string(name), "tagline": j(tagline),
-            "start_date": .string(startDate), "end_date": .string(endDate),
+    /// What `save_fest_config` moved along with the window (migration 0220).
+    struct ConfigSaveResult {
+        var shiftDays = 0
+        var moved = 0
+        /// "Saved." or "Saved. The week moved 7 days later - 12 entries moved with it."
+        var message: String {
+            guard shiftDays != 0, moved != 0 else { return "Saved." }
+            let n = abs(shiftDays)
+            return "Saved. The week moved \(n) \(n == 1 ? "day" : "days") \(shiftDays > 0 ? "later" : "earlier") - "
+                + "\(moved) \(moved == 1 ? "entry" : "entries") moved with it."
+        }
+    }
+
+    /// Saves the fest window through `save_fest_config` so the planned week
+    /// (dinners, schedule, sign-up slots, day RSVPs) shifts in the same
+    /// transaction. A bare upsert strands all of it on the old dates.
+    /// The current theme is passed through so the RPC does not blank it.
+    @discardableResult
+    func saveConfig(name: String, tagline: String?, startDate: String, endDate: String) async throws -> ConfigSaveResult {
+        struct Counts: Decodable {
+            var shift_days: Int?; var dinners: Int?; var events: Int?
+            var event_slots: Int?; var activity_slots: Int?; var rsvps: Int?
+        }
+        let params: [String: AnyJSON] = [
+            "p_year": .integer(year), "p_name": .string(name), "p_tagline": j(tagline),
+            "p_theme": j(config?.theme),
+            "p_start": .string(startDate), "p_end": .string(endDate),
         ]
-        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
-        try await supabase.from("fest_config").upsert(p, onConflict: "fest_year").execute()
+        let c: Counts = try await supabase.rpc("save_fest_config", params: params).execute().value
         await resolveYear()
+        return ConfigSaveResult(
+            shiftDays: c.shift_days ?? 0,
+            moved: (c.dinners ?? 0) + (c.events ?? 0) + (c.event_slots ?? 0)
+                + (c.activity_slots ?? 0) + (c.rsvps ?? 0))
     }
 
     /// This year's theme line and cover photo (migration 0219).

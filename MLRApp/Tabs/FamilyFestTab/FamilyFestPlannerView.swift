@@ -32,13 +32,17 @@ struct FamilyFestPlannerView: View {
                 NavigationLink { FestYearLookEditor() } label: {
                     Label("This year's theme & cover", systemImage: "paintpalette")
                 }
-                NavigationLink { StartNextFestYearView() } label: {
-                    Label("Start next year's fest", systemImage: "calendar.badge.plus")
+                // Only once this fest is over: starting early invites dragging the
+                // live year's dates forward instead (web gates the same way).
+                if env.festContentService.config?.season.isConcluded == true {
+                    NavigationLink { StartNextFestYearView() } label: {
+                        Label("Start next year's fest", systemImage: "calendar.badge.plus")
+                    }
                 }
             } header: {
                 Text("Family Fest \(String(env.festContentService.year))")
             } footer: {
-                Text("Starting a new year adds it alongside this one — this fest stays exactly as it was, in Past Years.")
+                Text("Once this fest is over, you can start the next year here — it's added alongside this one, which stays exactly as it was in Past Years.")
             }
 
             // Bulk editing is easier on a big screen — hand off to the web master
