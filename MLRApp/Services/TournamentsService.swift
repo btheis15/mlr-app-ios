@@ -54,6 +54,16 @@ final class TournamentsService {
         return try await supabase.rpc(rpc, params: params).execute().value
     }
 
+    /// Web's add_entrant(p_tournament, p_team_name, p_members) -> new entrant id.
+    /// Each member is {for_user, name}: a member uuid or a free-text guest name.
+    func addEntrant(tournamentId: UUID, teamName: String?, members: [(forUser: UUID?, name: String?)]) async throws -> UUID {
+        struct M: Encodable { let for_user: String?; let name: String? }
+        struct P: Encodable { let p_tournament: String; let p_team_name: String?; let p_members: [M] }
+        let p = P(p_tournament: tournamentId.uuidString, p_team_name: teamName,
+                  p_members: members.map { M(for_user: $0.forUser?.uuidString, name: $0.name) })
+        return try await supabase.rpc("add_entrant", params: p).execute().value
+    }
+
     @discardableResult
     func importEntrants(host: TournamentHost, tournamentId: UUID) async throws -> Int {
         let rpc = { switch host { case .schedule: return "import_entrants_from_signups"; case .activity: return "import_entrants_from_activity_members" } }()
