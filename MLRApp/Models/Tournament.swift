@@ -86,6 +86,53 @@ struct TournamentMatch: Identifiable, Decodable, Hashable {
     }
 }
 
+struct TournamentSnapshot: Identifiable, Decodable, Hashable {
+    let id: UUID
+    let tournamentId: UUID
+    let reason: String
+    let takenBy: UUID?
+    let takenAt: Date
+    let playedMatches: Int
+    enum CodingKeys: String, CodingKey {
+        case id, reason
+        case tournamentId  = "tournament_id"
+        case takenBy       = "taken_by"
+        case takenAt       = "taken_at"
+        case playedMatches = "played_matches"
+    }
+    /// Plain-language reason (the server stores a short code-ish phrase).
+    var reasonLabel: String {
+        switch reason {
+        case "start over":                return "Before starting over"
+        case "rearranged after results":  return "Before rearranging"
+        case "before restore":            return "Before a restore"
+        case "tournament deleted":        return "Tournament deleted"
+        case "game deleted":              return "Activity deleted"
+        default:                          return reason.prefix(1).uppercased() + reason.dropFirst()
+        }
+    }
+}
+
+extension TournamentMatch {
+    /// Stage, then pool, then round, then position, then id.
+    static func inOrder(_ a: TournamentMatch, _ b: TournamentMatch) -> Bool {
+        func rank(_ s: MatchStage) -> Int { s == .pool ? 0 : 1 }
+        if rank(a.stage) != rank(b.stage) { return rank(a.stage) < rank(b.stage) }
+        let pa = a.pool ?? "", pb = b.pool ?? ""
+        if pa != pb { return pa < pb }
+        if a.round != b.round { return a.round < b.round }
+        if a.position != b.position { return a.position < b.position }
+        return a.id.uuidString < b.id.uuidString
+    }
+
+    /// A real result (not an auto-resolved bye). Mirrors the server's
+    /// `_tournament_match_is_played`.
+    var isPlayed: Bool {
+        slot1EntrantId != nil && slot2EntrantId != nil
+            && (winnerEntrantId != nil || (status == .complete && slot1Score != nil && slot2Score != nil))
+    }
+}
+
 struct Tournament: Identifiable {
     let id: UUID
     let scheduleItemId: UUID?
@@ -113,6 +160,34 @@ struct Tournament: Identifiable {
         return e.displayName
     }
 
+    /// Recorded results (real games, not byes).
+    var playedCount: Int { matches.filter(\.isPlayed).count }
+
+    /// Would changing who is in a slot of `m` erase results? Mirrors the
+    /// server's `_tournament_slot_change_destroys`.
+    func slotChangeDestroys(_ m: TournamentMatch) -> Bool {
+        if m.isPlayed { return true }
+        if m.winnerEntrantId != nil, let n = m.nextMatchId,
+           let next = matches.first(where: { $0.id == n }), next.isPlayed { return true }
+        return false
+    }
+
+    /// Results that would be erased by changing `m`: its own and every played
+    /// game downstream of it.
+    func resultsLost(changing ids: [UUID]) -> Int {
+        let byId = Dictionary(matches.map { ($0.id, $0) }, uniquingKeysWith: { a, _ in a })
+        var seen = Set<UUID>(); var count = 0
+        for start in ids {
+            var cur = byId[start]
+            while let c = cur, !seen.contains(c.id) {
+                seen.insert(c.id)
+                if c.isPlayed { count += 1 }
+                cur = c.nextMatchId.flatMap { byId[$0] }
+            }
+        }
+        return count
+    }
+
     var hasAnyScores: Bool { matches.contains { $0.slot1Score != nil || $0.slot2Score != nil } }
     var poolLabels: [String] { Set(entrants.compactMap { $0.pool }).sorted() }
     var hasKnockoutBracket: Bool { matches.contains { $0.stage == .bracket } }
@@ -120,7 +195,7 @@ struct Tournament: Identifiable {
         let pool = matches.filter { $0.stage == .pool }
         return !pool.isEmpty && pool.allSatisfy { $0.status == .complete }
     }
-    var bracketMatches: [TournamentMatch] { matches.filter { $0.stage == .bracket }.sorted { $0.round == $1.round ? $0.position < $1.position : $0.round < $1.round } }
+    var bracketMatches: [TournamentMatch] { matches.filter { $0.stage == .bracket }.sorted(by: TournamentMatch.inOrder) }
     var maxRound: Int { bracketMatches.map(\.round).max() ?? 0 }
 }
 

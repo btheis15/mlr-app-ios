@@ -13,25 +13,114 @@ import Supabase
 @MainActor
 final class TournamentsService {
 
-    /// Tournaments on a host (usually one), fully assembled.
-    func fetch(host: TournamentHost) async -> [Tournament] {
+    /// Tournaments on a host (usually one), fully assembled. THROWS on any
+    /// failure, so a caller can tell "the fetch failed" from "there is no
+    /// tournament". Never treat a thrown error as an empty list.
+    func fetchChecked(host: TournamentHost) async throws -> [Tournament] {
         let (col, id): (String, UUID) = {
             switch host {
             case .schedule(let i): return ("schedule_item_id", i)
             case .activity(let i): return ("private_activity_id", i)
             }
         }()
-        do {
-            let rows: [RawTournamentRow] = try await supabase
-                .from("tournaments")
-                .select("*, tournament_entrants!tournament_entrants_tournament_id_fkey(*), tournament_matches(*), tournament_participants(*)")
-                .eq(col, value: id.uuidString)
-                .execute()
-                .value
-            return rows.map { $0.assembled }
-        } catch {
-            return []
+        let rows: [RawTournamentRow] = try await supabase
+            .from("tournaments")
+            .select("*, tournament_entrants!tournament_entrants_tournament_id_fkey(*), tournament_matches(*), tournament_participants(*)")
+            .eq(col, value: id.uuidString)
+            .execute()
+            .value
+        return rows.map { $0.assembled }
+    }
+
+    /// Read-only history callers (the Past Years archive) that can tolerate a
+    /// failed fetch looking empty. Anything that can show a "set up" state or
+    /// write must use `fetchChecked` instead.
+    func fetch(host: TournamentHost) async -> [Tournament] {
+        (try? await fetchChecked(host: host)) ?? []
+    }
+
+    /// One match, fresh from the server (to catch a result someone else saved).
+    func fetchMatch(id: UUID) async throws -> TournamentMatch? {
+        let rows: [TournamentMatch] = try await supabase
+            .from("tournament_matches").select("*")
+            .eq("id", value: id.uuidString).limit(1)
+            .execute().value
+        return rows.first
+    }
+
+    /// The server's own exception text is written to be read by people
+    /// (migration 0224), so show it instead of a generic failure.
+    static func message(for error: Error, fallback: String = "Something went wrong. Try again.") -> String {
+        if let e = error as? PostgrestError {
+            let m = e.message.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !m.isEmpty { return m }
         }
+        return fallback
+    }
+
+    // MARK: Snapshots (migration 0224)
+
+    /// Saved copies of a tournament, newest first. Returns nil when the feature
+    /// is not available (table missing: 42P01, or PostgREST's schema-cache
+    /// PGRST205), so the UI hides itself. `data` is never selected.
+    func fetchSnapshots(tournamentId: UUID) async throws -> [TournamentSnapshot]? {
+        do {
+            let rows: [TournamentSnapshot] = try await supabase
+                .from("tournament_snapshots")
+                .select("id, tournament_id, reason, taken_by, taken_at, played_matches")
+                .eq("tournament_id", value: tournamentId.uuidString)
+                .order("taken_at", ascending: false)
+                .limit(30)
+                .execute().value
+            return rows
+        } catch let e as PostgrestError where e.code == "42P01" || e.code == "PGRST205" {
+            return nil
+        }
+    }
+
+    func restoreSnapshot(id: UUID) async throws {
+        struct P: Encodable { let p_snapshot: String }
+        try await supabase.rpc("restore_tournament_snapshot", params: P(p_snapshot: id.uuidString)).execute()
+    }
+
+    // MARK: Realtime (tournaments, matches, entrants)
+
+    private var channels: [UUID: RealtimeChannelV2] = [:]
+    private var debounce: [UUID: Task<Void, Never>] = [:]
+
+    /// Subscribe to changes on one tournament. Bursts (a reset rewrites many
+    /// rows) collapse into a single `onChange` ~0.6s after the last event.
+    func subscribe(tournamentId: UUID, onChange: @escaping @MainActor () -> Void) {
+        guard channels[tournamentId] == nil else { return }
+        let channel = supabase.channel("tournament-\(tournamentId.uuidString)")
+        channels[tournamentId] = channel
+        let fire: @Sendable () -> Void = { [weak self] in
+            Task { @MainActor in
+                guard let self else { return }
+                self.debounce[tournamentId]?.cancel()
+                self.debounce[tournamentId] = Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 600_000_000)
+                    guard !Task.isCancelled else { return }
+                    onChange()
+                }
+            }
+        }
+        Task {
+            channel.onPostgresChange(AnyAction.self, schema: "public", table: "tournaments",
+                                     filter: "id=eq.\(tournamentId.uuidString)") { _ in fire() }
+            for table in ["tournament_matches", "tournament_entrants"] {
+                channel.onPostgresChange(AnyAction.self, schema: "public", table: table,
+                                         filter: "tournament_id=eq.\(tournamentId.uuidString)") { _ in fire() }
+            }
+            await channel.subscribe()
+        }
+    }
+
+    func unsubscribe(tournamentId: UUID) {
+        debounce[tournamentId]?.cancel()
+        debounce.removeValue(forKey: tournamentId)
+        guard let channel = channels.removeValue(forKey: tournamentId) else { return }
+        Task { await supabase.removeChannel(channel) }
     }
 
     // MARK: Setup
@@ -100,9 +189,12 @@ final class TournamentsService {
         struct P: Encodable { let p_tournament: String }
         try await supabase.rpc("generate_bracket_from_pools", params: P(p_tournament: id.uuidString)).execute()
     }
-    func resetBracket(id: UUID) async throws {
-        struct P: Encodable { let p_tournament: String }
-        try await supabase.rpc("reset_bracket", params: P(p_tournament: id.uuidString)).execute()
+    /// `confirm` is sent only when true: omitting the key keeps the call valid on
+    /// a server that has not got migration 0224's `p_confirm` argument yet.
+    func resetBracket(id: UUID, confirm: Bool = false) async throws {
+        var params: [String: AnyJSON] = ["p_tournament": .string(id.uuidString)]
+        if confirm { params["p_confirm"] = .bool(true) }
+        try await supabase.rpc("reset_bracket", params: params).execute()
     }
 
     func generatePools(id: UUID, poolCount: Int, advance: Int, seedOrder: [UUID]? = nil) async throws {
@@ -159,19 +251,21 @@ final class TournamentsService {
 
     // MARK: Live bracket rearrange (tap-to-swap)
 
-    func setMatchEntrant(matchId: UUID, slot: Int, entrantId: UUID?) async throws {
-        let params: [String: AnyJSON] = [
+    func setMatchEntrant(matchId: UUID, slot: Int, entrantId: UUID?, force: Bool = false) async throws {
+        var params: [String: AnyJSON] = [
             "p_match":      .string(matchId.uuidString),
             "p_slot":       .double(Double(slot)),
             "p_entrant_id": entrantId.map { AnyJSON.string($0.uuidString) } ?? .null,
         ]
+        if force { params["p_force"] = .bool(true) }
         try await supabase.rpc("set_match_entrant", params: params).execute()
     }
-    func swapMatchEntrants(matchA: UUID, slotA: Int, matchB: UUID, slotB: Int) async throws {
-        let params: [String: AnyJSON] = [
+    func swapMatchEntrants(matchA: UUID, slotA: Int, matchB: UUID, slotB: Int, force: Bool = false) async throws {
+        var params: [String: AnyJSON] = [
             "p_match_a": .string(matchA.uuidString), "p_slot_a": .double(Double(slotA)),
             "p_match_b": .string(matchB.uuidString), "p_slot_b": .double(Double(slotB)),
         ]
+        if force { params["p_force"] = .bool(true) }
         try await supabase.rpc("swap_match_entrants", params: params).execute()
     }
 
@@ -265,8 +359,14 @@ private struct RawTournamentRow: Decodable {
                     pool: e.pool, position: e.position, withdrawnAt: e.withdrawn_at,
                     members: (byEntrant[e.id] ?? []).sorted { $0.position < $1.position })
             }
-            .sorted { ($0.seed ?? 1_000_000, $0.position) < ($1.seed ?? 1_000_000, $1.position) }
-        let matches = (tournament_matches ?? []).sorted { $0.round == $1.round ? $0.position < $1.position : $0.round < $1.round }
+            .sorted {
+                // Seed (nulls last), then position, then id: a refetch can never reorder the screen.
+                let s0 = $0.seed ?? Int.max, s1 = $1.seed ?? Int.max
+                if s0 != s1 { return s0 < s1 }
+                if $0.position != $1.position { return $0.position < $1.position }
+                return $0.id.uuidString < $1.id.uuidString
+            }
+        let matches = (tournament_matches ?? []).sorted(by: TournamentMatch.inOrder)
         return Tournament(
             id: id, scheduleItemId: schedule_item_id, privateActivityId: private_activity_id,
             title: title, format: format, entrantType: entrant_type, teamSize: team_size,
