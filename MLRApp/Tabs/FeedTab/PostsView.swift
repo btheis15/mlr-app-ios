@@ -236,6 +236,8 @@ private struct ConversationsList: View {
             }
         }
         .listStyle(.insetGrouped)
+        .scrollContentBackground(.hidden)
+        .background(Color.mlrSurface)
         // Rows glide to their new place when a message re-ranks a room.
         .animation(motion, value: summaries)
         .animation(motion, value: env.eventChatService.liveChats.map(\.eventId))

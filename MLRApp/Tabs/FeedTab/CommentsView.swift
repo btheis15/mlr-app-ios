@@ -65,6 +65,7 @@ struct CommentsView: View {
 
                 commentList
             }
+            .background(Color.mlrSurface)
             // Pinned above the keyboard (safe-area inset rides up with it) and
             // grows with the text.
             .safeAreaInset(edge: .bottom, spacing: 0) {
@@ -162,6 +163,7 @@ struct CommentsView: View {
                     .listRowSeparator(.hidden)
             }
             .listStyle(.plain)
+            .scrollContentBackground(.hidden)
         } else if comments.isEmpty {
             VStack(spacing: 12) {
                 Spacer()
@@ -254,6 +256,7 @@ struct CommentsView: View {
                     }
                 }
                 .listStyle(.plain)
+                .scrollContentBackground(.hidden)
                 .scrollDismissesKeyboard(.interactively)
                 .onChange(of: scrollTarget) { _, id in
                     guard let id else { return }

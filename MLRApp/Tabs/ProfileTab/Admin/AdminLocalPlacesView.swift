@@ -45,7 +45,10 @@ struct AdminLocalPlacesView: View {
             model.replace(service.places)
         }
         .onChange(of: service.places) { _, new in model.replace(new) }
-        .sheet(item: $editing) { LocalPlaceEditor(place: $0, isNew: false) }
+        .sheet(item: $editing) { place in
+            // Delete from the editor reuses this list's confirm + Undo model.
+            LocalPlaceEditor(place: place, isNew: false, onDelete: { model.pendingConfirm = $0 })
+        }
         .sheet(isPresented: $adding) { LocalPlaceEditor(place: .blank(), isNew: true) }
     }
 
@@ -128,7 +131,14 @@ struct AdminLocalPlacesView: View {
 
 struct LocalPlaceEditor: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.dismiss) private var dismiss
     let isNew: Bool
+    /// When set, the editor offers "Delete place" and hands the place to the caller
+    /// (the Admin list's EditorListModel: confirm + Undo). When nil, the editor
+    /// confirms and deletes directly (no Undo window).
+    var onDelete: ((LocalPlace) -> Void)? = nil
+    @State private var confirmDelete = false
+    @State private var deleteError: String?
     @State private var draft: EditorDraft<LocalPlace>
     @State private var phoneInput: String
     private let initialPhone: String
@@ -137,8 +147,9 @@ struct LocalPlaceEditor: View {
 
     private static let newGroupTag = "__new__"
 
-    init(place: LocalPlace, isNew: Bool) {
+    init(place: LocalPlace, isNew: Bool, onDelete: ((LocalPlace) -> Void)? = nil) {
         self.isNew = isNew
+        self.onDelete = onDelete
         _draft = State(initialValue: EditorDraft(place))
         let phone = place.phoneDisplay ?? place.phoneTel ?? ""
         _phoneInput = State(initialValue: phone)
@@ -275,7 +286,27 @@ struct LocalPlaceEditor: View {
                 EditorToggle("Visible to members", isOn: $draft.value.isActive,
                              caption: "Hidden places stay here for admins but are not shown to members.")
             }
+
+            if !isNew && service.isEditable {
+                Section {
+                    Button("Delete place", role: .destructive) {
+                        if let onDelete { dismiss(); onDelete(draft.value) } else { confirmDelete = true }
+                    }
+                    if let deleteError {
+                        Text(deleteError).font(.mlrCaption).foregroundStyle(Color.mlrDanger)
+                    }
+                }
+            }
         }
+        .confirmationDialog("Delete this place?", isPresented: $confirmDelete, titleVisibility: .visible) {
+            Button("Delete place", role: .destructive) { Task { await deleteNow() } }
+            Button("Cancel", role: .cancel) {}
+        }
+    }
+
+    private func deleteNow() async {
+        do { try await service.delete(draft.value); Haptics.warning(); dismiss() }
+        catch { deleteError = EditorError.message(error); Haptics.error() }
     }
 
     private var accentPicker: some View {

@@ -128,11 +128,24 @@ extension View {
 /// then the bundled art. A year's cover failing to load also falls back to the
 /// app-wide image so the header is never blank. `tint`/`gold` default to the
 /// active look; the editor preview passes its draft colours instead.
+private struct CoverFit: ViewModifier {
+    let fillHeight: CGFloat?
+    func body(content: Content) -> some View {
+        if let h = fillHeight {
+            content.scaledToFill().frame(maxWidth: .infinity).frame(height: h).clipped()
+        } else {
+            content.scaledToFit().frame(maxWidth: .infinity)
+        }
+    }
+}
+
 struct FestYearCover: View {
     let coverUrl: String?
     var tint: Color = .mlrFest
     var gold: Color = .mlrFestGold
     var accessibilityText = "Family Fest cover"
+    /// Fixed-height banner that fills and crops instead of letterboxing (editor preview).
+    var fillHeight: CGFloat? = nil
 
     private var yearURL: URL? {
         guard let s = coverUrl?.trimmingCharacters(in: .whitespacesAndNewlines), !s.isEmpty else { return nil }
@@ -153,8 +166,7 @@ struct FestYearCover: View {
                 fallback
             }
         }
-        .scaledToFit()
-        .frame(maxWidth: .infinity)
+        .modifier(CoverFit(fillHeight: fillHeight))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
@@ -221,8 +233,7 @@ struct FestLookPreview: View {
                 .allowsHitTesting(false)
             }
             VStack(spacing: 12) {
-                FestYearCover(coverUrl: coverUrl, tint: primary, gold: gold)
-                    .frame(maxHeight: 120)
+                FestYearCover(coverUrl: coverUrl, tint: primary, gold: gold, fillHeight: 120)
                 Text(headline)
                     .font(serif(15))
                     .tracking(1.2)

@@ -42,7 +42,7 @@ struct PostCard: View {
     }
 
     // Standard reaction emojis
-    private let reactionEmojis = ["❤️", "👍", "😂", "🙌", "🎉"]
+    private let reactionEmojis = postReactionEmojis
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {

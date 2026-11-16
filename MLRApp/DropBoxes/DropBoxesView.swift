@@ -41,6 +41,8 @@ struct DropBoxesView: View {
                     }
                 }
                 .listStyle(.insetGrouped)
+                .scrollContentBackground(.hidden)
+                .background(Color.mlrSurface)
             }
         }
         .navigationTitle("Drop Box")
