@@ -692,21 +692,27 @@ final class FestContentService {
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_dinners", id: d.id, payload: p)
     }
-    func saveDues(_ t: FestDuesTier, position: Int, isNew: Bool) async throws {
+    /// `position` nil: a new row is appended after the current last one; an
+    /// existing row keeps its stored position (the column is simply not sent).
+    func saveDues(_ t: FestDuesTier, position: Int? = nil, isNew: Bool) async throws {
         var p: [String: AnyJSON] = [
             "fest_year": .integer(year), "label": .string(t.label),
-            "amount": j(t.amount), "note": j(t.note), "position": .integer(position),
+            "amount": j(t.amount), "note": j(t.note),
             "per_day": .bool(t.perDay),
         ]
+        if let position { p["position"] = .integer(position) }
+        else if isNew { p["position"] = .integer(await nextPosition("fest_dues")) }
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_dues", id: isNew ? nil : t.id, payload: p)
     }
-    func savePayee(_ p0: Payee, position: Int, isNew: Bool) async throws {
+    func savePayee(_ p0: Payee, position: Int? = nil, isNew: Bool) async throws {
         var p: [String: AnyJSON] = [
             "fest_year": .integer(year), "name": .string(p0.name), "role": j(p0.role),
             "venmo": j(p0.venmo), "zelle": j(p0.zelle), "applecash": j(p0.appleCash),
-            "paypal": j(p0.paypal), "amount": j(p0.amount), "note": j(p0.note), "position": .integer(position),
+            "paypal": j(p0.paypal), "amount": j(p0.amount), "note": j(p0.note),
         ]
+        if let position { p["position"] = .integer(position) }
+        else if isNew { p["position"] = .integer(await nextPosition("fest_payees")) }
         if let uid = await currentUid() { p["updated_by"] = .string(uid) }
         try await upsert("fest_payees", id: isNew ? nil : p0.id, payload: p)
     }
@@ -985,6 +991,32 @@ final class FestContentService {
             "crew_user_ids": .array(crewUserIds.map { AnyJSON.string($0.uuidString) })
         ]
         try await supabase.from("fest_dinners").update(payload).eq("id", value: dinnerId.uuidString).execute()
+    }
+
+    /// Tables whose rows the Planner lets editors reorder.
+    enum OrderedTable: String {
+        case schedule = "fest_schedule_items", dinners = "fest_dinners", dues = "fest_dues", payees = "fest_payees"
+    }
+    /// Writes `position` = index for each id, in the given order. Throws if any write fails.
+    func saveOrder(_ table: OrderedTable, ids: [UUID]) async throws {
+        let name = table.rawValue
+        try await withThrowingTaskGroup(of: Void.self) { group in
+            for (i, id) in ids.enumerated() {
+                group.addTask {
+                    try await supabase.from(name).update(["position": i])
+                        .eq("id", value: id.uuidString).execute()
+                }
+            }
+            try await group.waitForAll()
+        }
+    }
+    private struct PositionRow: Decodable { let position: Int? }
+    /// Max `position` this year + 1 (0 when empty or unreadable).
+    private func nextPosition(_ table: String) async -> Int {
+        let rows: [PositionRow] = (try? await supabase.from(table).select("position")
+            .eq("fest_year", value: year).order("position", ascending: false).limit(1)
+            .execute().value) ?? []
+        return (rows.first?.position ?? -1) + 1
     }
 
     func deleteSchedule(id: UUID) async throws { try await delete("fest_schedule_items", id: id) }
