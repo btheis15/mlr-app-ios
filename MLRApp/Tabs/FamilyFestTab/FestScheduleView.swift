@@ -105,7 +105,7 @@ private struct ScheduleListRow: View {
             }
             .buttonStyle(.pressable)
             if env.canEditFestEvent(item) {
-                FestEditPencil(label: "event") { showEdit = true }
+                EditPencil("event", tint: .mlrFest) { showEdit = true }
                     .padding(.trailing, 4)
                     .background(Color.mlrFestParchment)
             }

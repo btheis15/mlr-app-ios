@@ -119,7 +119,7 @@ struct HelpView: View {
                 Spacer(minLength: 0)
                 // Admins only (isAdmin is false while previewing as someone else).
                 if env.isAdmin {
-                    InPlaceEditPencil(thing: "help contact") { editingContact = true }
+                    EditPencil("help contact") { editingContact = true }
                 }
             }
             if hasContact {

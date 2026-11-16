@@ -283,27 +283,3 @@ struct AdminView: View {
 // thing itself for people with edit rights. If an `EditPencil` later lands in
 // EditorKit.swift, replace this struct's body with it (call sites stay as is).
 
-struct InPlaceEditPencil: View {
-    /// What is being edited, for VoiceOver ("Edit <thing>").
-    let thing: String
-    var onDark = false
-    let action: () -> Void
-
-    var body: some View {
-        Button {
-            Haptics.tap()
-            action()
-        } label: {
-            Image(systemName: "pencil.circle.fill")
-                .font(.mlrScaled(24))
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(onDark ? Color.mlrPrimary : Color.white,
-                                 onDark ? Color.white : Color.mlrPrimary)
-                .shadow(color: .black.opacity(onDark ? 0.25 : 0), radius: 2, y: 1)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.pressable)
-        .accessibilityLabel("Edit \(thing)")
-    }
-}

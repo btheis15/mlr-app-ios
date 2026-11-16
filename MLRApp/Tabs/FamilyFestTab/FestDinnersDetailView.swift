@@ -33,7 +33,7 @@ struct FestDinnersDetailView: View {
                             .fixedSize(horizontal: false, vertical: true)
                         Spacer()
                         if canEdit {
-                            FestEditPencil(label: "dinner") { showEditSheet = true }
+                            EditPencil("dinner", tint: .mlrFest) { showEditSheet = true }
                         }
                     }
 

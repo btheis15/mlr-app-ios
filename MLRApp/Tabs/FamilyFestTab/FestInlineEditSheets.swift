@@ -42,26 +42,6 @@ extension AppEnvironment {
 // MARK: - Edit pencil (one look everywhere in Fest)
 // EditorKit has no `EditPencil` yet; unify with it at integration.
 
-struct FestEditPencil: View {
-    let label: String
-    let action: () -> Void
-
-    var body: some View {
-        Button {
-            Haptics.tap()
-            action()
-        } label: {
-            Image(systemName: "pencil.circle.fill")
-                .font(.system(size: 24))
-                .foregroundStyle(Color.mlrFest)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.pressable)
-        .accessibilityLabel("Edit \(label)")
-    }
-}
-
 // MARK: - Member directory (throws, so callers can show an error + retry)
 
 enum FestMemberDirectory {

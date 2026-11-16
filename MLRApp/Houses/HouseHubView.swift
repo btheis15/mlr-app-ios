@@ -91,7 +91,7 @@ struct HouseHubView: View {
                         // Same people who could edit before (any house member);
                         // hidden while an admin previews as someone else.
                         if !env.isPreviewing {
-                            InPlaceEditPencil(thing: "house rules") { showRulesEditor = true }
+                            EditPencil("house rules") { showRulesEditor = true }
                         }
                     }
                     let trimmed = rules.trimmingCharacters(in: .whitespacesAndNewlines)

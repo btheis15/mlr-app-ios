@@ -151,7 +151,7 @@ struct FestScheduleDetailView: View {
         .toolbar {
             if canManage {
                 ToolbarItem(placement: .topBarTrailing) {
-                    FestEditPencil(label: "event") { showEditSheet = true }
+                    EditPencil("event", tint: .mlrFest) { showEditSheet = true }
                 }
             }
         }

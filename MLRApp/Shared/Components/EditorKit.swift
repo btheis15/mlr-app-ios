@@ -1017,3 +1017,42 @@ extension View {
         modifier(EditorListChrome(model: model, editButton: editButton))
     }
 }
+
+// MARK: - EditPencil
+// The one "edit this, right here" control. Someone with edit rights sees it on
+// the real screen next to the thing itself; it opens the editor for exactly
+// that thing. Callers decide who sees it and must hide it while an admin is
+// previewing as another member.
+
+struct EditPencil: View {
+    /// What is being edited, for VoiceOver ("Edit <thing>").
+    let thing: String
+    var tint: Color = .mlrPrimary
+    /// Over a photo or a dark hero: white disc, tinted glyph, soft shadow.
+    var onDark = false
+    let action: () -> Void
+
+    init(_ thing: String, tint: Color = .mlrPrimary, onDark: Bool = false, action: @escaping () -> Void) {
+        self.thing = thing
+        self.tint = tint
+        self.onDark = onDark
+        self.action = action
+    }
+
+    var body: some View {
+        Button {
+            Haptics.tap()
+            action()
+        } label: {
+            Image(systemName: "pencil.circle.fill")
+                .font(.mlrScaled(24))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(onDark ? tint : Color.white, onDark ? Color.white : tint)
+                .shadow(color: .black.opacity(onDark ? 0.25 : 0), radius: 2, y: 1)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.pressable)
+        .accessibilityLabel("Edit \(thing)")
+    }
+}

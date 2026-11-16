@@ -65,7 +65,7 @@ private struct DinnerMenuCard: View {
                 if canEdit {
                     // Full editors get the whole dinner editor; chef/crew get the
                     // operational details (FestDinnerEditSheet decides).
-                    FestEditPencil(label: "dinner") { showEditSheet = true }
+                    EditPencil("dinner", tint: .mlrFest) { showEditSheet = true }
                         .padding(.top, -8).padding(.trailing, -8)
                 }
             }

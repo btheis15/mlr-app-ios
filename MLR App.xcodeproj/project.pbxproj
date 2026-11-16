@@ -95,6 +95,7 @@
 		D33F9E8D2FEC086700603CE7 /* PostCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E402FEC086700603CE7 /* PostCard.swift */; };
 		D33F9E8E2FEC086700603CE7 /* AskForHelpHomeCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E442FEC086700603CE7 /* AskForHelpHomeCard.swift */; };
 		D33F9E8F2FEC086700603CE7 /* PostsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E1A2FEC086700603CE7 /* PostsService.swift */; };
+		D3CB2431F1EA80CA0CABB07A /* LocalPlacesService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3BB2431F1EA80CA0CABB07A /* LocalPlacesService.swift */; };
 		D33F9E902FEC086700603CE7 /* Committee.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E002FEC086700603CE7 /* Committee.swift */; };
 		D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9DED2FEC086700603CE7 /* CommitteeDetailView.swift */; };
 		D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9E0B2FEC086700603CE7 /* MapsHelper.swift */; };
@@ -163,6 +164,7 @@
 		D33F9F1C2FF846D300603CE7 /* WorkItemDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F1B2FF846D300603CE7 /* WorkItemDetailSheet.swift */; };
 		D33F9F1F2FF8475E00603CE7 /* HouseChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F1E2FF8475E00603CE7 /* HouseChatView.swift */; };
 		D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */; };
+		D3C7B1BD9FBE31C537A36772 /* AdminLocalPlacesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B7B1BD9FBE31C537A36772 /* AdminLocalPlacesView.swift */; };
 		D33F9F232FF84B0500603CE7 /* WorkItemIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */; };
 		D33F9F252FF84C1C00603CE7 /* AppEntities.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33F9F242FF84C1C00603CE7 /* AppEntities.swift */; };
 		D34C7BFD302B81150034D785 /* MediaTokenService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D34C7BFC302B81150034D785 /* MediaTokenService.swift */; };
@@ -366,6 +368,7 @@
 		D33F9E182FEC086700603CE7 /* MediaService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaService.swift; sourceTree = "<group>"; };
 		D33F9E192FEC086700603CE7 /* NotificationsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationsService.swift; sourceTree = "<group>"; };
 		D33F9E1A2FEC086700603CE7 /* PostsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PostsService.swift; sourceTree = "<group>"; };
+		D3BB2431F1EA80CA0CABB07A /* LocalPlacesService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalPlacesService.swift; sourceTree = "<group>"; };
 		D33F9E1B2FEC086700603CE7 /* PushService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushService.swift; sourceTree = "<group>"; };
 		D33F9E1D2FEC086700603CE7 /* AnnouncementBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AnnouncementBanner.swift; sourceTree = "<group>"; };
 		D33F9E1E2FEC086700603CE7 /* AttendanceControl.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttendanceControl.swift; sourceTree = "<group>"; };
@@ -440,6 +443,7 @@
 		D33F9F1B2FF846D300603CE7 /* WorkItemDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemDetailSheet.swift; sourceTree = "<group>"; };
 		D33F9F1E2FF8475E00603CE7 /* HouseChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HouseChatView.swift; sourceTree = "<group>"; };
 		D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminHousesView.swift; sourceTree = "<group>"; };
+		D3B7B1BD9FBE31C537A36772 /* AdminLocalPlacesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminLocalPlacesView.swift; sourceTree = "<group>"; };
 		D33F9F222FF84B0500603CE7 /* WorkItemIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorkItemIntents.swift; sourceTree = "<group>"; };
 		D33F9F242FF84C1C00603CE7 /* AppEntities.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntities.swift; sourceTree = "<group>"; };
 		D34C7BFC302B81150034D785 /* MediaTokenService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaTokenService.swift; sourceTree = "<group>"; };
@@ -775,6 +779,7 @@
 				D33F9E182FEC086700603CE7 /* MediaService.swift */,
 				D33F9E192FEC086700603CE7 /* NotificationsService.swift */,
 				D33F9E1A2FEC086700603CE7 /* PostsService.swift */,
+				D3BB2431F1EA80CA0CABB07A /* LocalPlacesService.swift */,
 				D33F9E1B2FEC086700603CE7 /* PushService.swift */,
 				D33F9ED12FF3172100603CE7 /* WorkItemsService.swift */,
 				D33F9EE32FF4075B00603CE7 /* FestContentService.swift */,
@@ -932,6 +937,7 @@
 				D33F9E512FEC086700603CE7 /* AdminView.swift */,
 				D33F9EE92FF41A0A00603CE7 /* AppImagesAdminView.swift */,
 				D33F9F202FF847EC00603CE7 /* AdminHousesView.swift */,
+				D3B7B1BD9FBE31C537A36772 /* AdminLocalPlacesView.swift */,
 				D3512BF930058DCC008BBC44 /* AdminInviteView.swift */,
 				D3F9D8643006C201006874DA /* AdminCommitteesView.swift */,
 				D3F9D8663006C288006874DA /* AdminHelpContactView.swift */,
@@ -1307,6 +1313,7 @@
 				D3A0000000000000000000F3 /* SeasonalLogoFX.swift in Sources */,
 				D33F9E8E2FEC086700603CE7 /* AskForHelpHomeCard.swift in Sources */,
 				D33F9E8F2FEC086700603CE7 /* PostsService.swift in Sources */,
+				D3CB2431F1EA80CA0CABB07A /* LocalPlacesService.swift in Sources */,
 				D33F9E902FEC086700603CE7 /* Committee.swift in Sources */,
 				D33F9E912FEC086700603CE7 /* CommitteeDetailView.swift in Sources */,
 				D33F9E922FEC086700603CE7 /* MapsHelper.swift in Sources */,
@@ -1401,6 +1408,7 @@
 				D33F9EB92FEC086700603CE7 /* PostsView.swift in Sources */,
 				D31B53783012B54500C8D189 /* PrivateActivity.swift in Sources */,
 				D33F9F212FF847EC00603CE7 /* AdminHousesView.swift in Sources */,
+				D3C7B1BD9FBE31C537A36772 /* AdminLocalPlacesView.swift in Sources */,
 				D31B5388301392E500C8D189 /* AdminSystemView.swift in Sources */,
 				D31B535B3011680100C8D189 /* CabinMessageSheet.swift in Sources */,
 				D3F9D87330071069006874DA /* PollsService.swift in Sources */,

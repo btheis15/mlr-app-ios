@@ -159,7 +159,7 @@ struct EventSheet: View {
         .overlay(alignment: .topTrailing) {
             // Same gate as the Edit button below (admin, host, creator).
             if env.isAdmin || eventPermissions.canManage {
-                InPlaceEditPencil(thing: "event", onDark: true) { showEditor = true }
+                EditPencil("event", onDark: true) { showEditor = true }
                     .padding(6)
             }
         }

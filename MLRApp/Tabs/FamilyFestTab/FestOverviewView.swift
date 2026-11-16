@@ -84,7 +84,7 @@ struct FestOverviewView: View {
                                 .background { FestHeroGlow() }
                                 .overlay(alignment: .topTrailing) {
                                     if showsEditPencils {
-                                        FestEditPencil(label: "cover and theme") { showLookEditor = true }
+                                        EditPencil("cover and theme", tint: .mlrFest) { showLookEditor = true }
                                             .padding(6)
                                     }
                                 }
@@ -92,7 +92,7 @@ struct FestOverviewView: View {
                                 .overlay(alignment: .topTrailing) {
                                     if showsEditPencils {
                                         // Opens the Planner, where "Fest details & dates" lives.
-                                        FestEditPencil(label: "fest title and dates") { showPlanner = true }
+                                        EditPencil("fest title and dates", tint: .mlrFest) { showPlanner = true }
                                     }
                                 }
                         }
@@ -387,26 +387,6 @@ private struct FestUtilityLink<Destination: View>: View {
 }
 
 // MARK: - Edit pencil
-
-/// Small pencil for edit-in-place. Local stand-in until the shared `EditPencil`
-/// exists in EditorKit; unify at integration.
-private struct FestEditPencil: View {
-    let label: String
-    let action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            Image(systemName: "pencil.circle.fill")
-                .font(.system(size: 26))
-                .symbolRenderingMode(.palette)
-                .foregroundStyle(.white, Color.mlrFest)
-                .frame(width: 44, height: 44)
-                .contentShape(Rectangle())
-        }
-        .buttonStyle(.pressable)
-        .accessibilityLabel("Edit \(label)")
-    }
-}
 
 // MARK: - Cover Caption
 

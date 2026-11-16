@@ -151,7 +151,7 @@ private struct HomeLogoEditPencil: ViewModifier {
         content
             .overlay(alignment: .topLeading) {
                 if (env.isAdmin || canEdit) && !env.isPreviewing {
-                    InPlaceEditPencil(thing: "app images") { open = true }
+                    EditPencil("app images") { open = true }
                         .padding(.leading, 8)
                 }
             }

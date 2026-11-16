@@ -424,7 +424,7 @@ struct CommitteeDetailView: View {
                 // Name / emoji / description are the admin taxonomy RPCs
                 // (admin only; leads keep just their roster rights).
                 if env.isAdmin {
-                    InPlaceEditPencil(thing: "committee") { editingCommittee = true }
+                    EditPencil("committee") { editingCommittee = true }
                 }
             }
             if let desc = committee.description, !desc.isEmpty {
@@ -654,7 +654,7 @@ struct CommitteeDetailView: View {
                     .foregroundStyle(Color.mlrText)
                 Spacer(minLength: 0)
                 if env.isAdmin, let row = areaRows.first(where: { $0.area == area && !$0.isArchived }) {
-                    InPlaceEditPencil(thing: "role \(area)") { editingRole = row }
+                    EditPencil("role \(area)") { editingRole = row }
                 }
             }
             if let d = areaRows.first(where: { $0.area == area })?.description, !d.isEmpty {
