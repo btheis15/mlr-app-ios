@@ -465,6 +465,46 @@ struct PendingPrivateActivity: Identifiable {
 
 // MARK: - Main Tab View
 
+private struct TabBarUnselectedTint: UIViewControllerRepresentable {
+    let color: UIColor
+    func makeUIViewController(context: Context) -> Probe { Probe() }
+    func updateUIViewController(_ vc: Probe, context: Context) { vc.color = color; vc.apply() }
+    final class Probe: UIViewController {
+        var color: UIColor = .secondaryLabel
+        override func didMove(toParent parent: UIViewController?) { super.didMove(toParent: parent); apply() }
+        override func viewDidAppear(_ animated: Bool) { super.viewDidAppear(animated); apply() }
+        static func findTabBar() -> UITabBar? {
+            func walk(_ v: UIView) -> UITabBar? {
+                if let b = v as? UITabBar { return b }
+                for c in v.subviews { if let b = walk(c) { return b } }
+                return nil
+            }
+            for scene in UIApplication.shared.connectedScenes {
+                guard let ws = scene as? UIWindowScene else { continue }
+                for w in ws.windows { if let b = walk(w) { return b } }
+            }
+            return nil
+        }
+        func apply() {
+            guard let bar = Self.findTabBar() else {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in self?.apply() }
+                return
+            }
+            bar.unselectedItemTintColor = color
+            let item = UITabBarItemAppearance()
+            item.normal.iconColor = color
+            item.normal.titleTextAttributes = [.foregroundColor: color]
+            let a = UITabBarAppearance()
+            a.configureWithDefaultBackground()
+            a.stackedLayoutAppearance = item
+            a.inlineLayoutAppearance = item
+            a.compactInlineLayoutAppearance = item
+            bar.standardAppearance = a
+            bar.scrollEdgeAppearance = a
+        }
+    }
+}
+
 struct MainTabView: View {
     @Binding var selectedTab: Tab
     @Environment(AppEnvironment.self) private var env
@@ -491,6 +531,28 @@ struct MainTabView: View {
         )
     }
 
+    /// Unselected tab icons + labels take the muted text tone (selected uses the
+    /// SwiftUI tint: pine, or the fest primary on the Fest tab).
+    private static func applyTabBarColors() {
+        let muted = UIColor(Color.mlrTextMuted)
+        let item = UITabBarItemAppearance()
+        item.normal.iconColor = muted
+        item.normal.titleTextAttributes = [.foregroundColor: muted]
+        let appearance = UITabBarAppearance()
+        appearance.configureWithDefaultBackground()
+        appearance.stackedLayoutAppearance = item
+        appearance.inlineLayoutAppearance = item
+        appearance.compactInlineLayoutAppearance = item
+        UITabBar.appearance().standardAppearance = appearance
+        UITabBar.appearance().scrollEdgeAppearance = appearance
+        UITabBar.appearance().unselectedItemTintColor = muted
+    }
+
+    init(selectedTab: Binding<Tab>) {
+        _selectedTab = selectedTab
+        Self.applyTabBarColors()
+    }
+
     var body: some View {
         TabView(selection: tabSelection) {
             HomeView()
@@ -515,6 +577,9 @@ struct MainTabView: View {
                 .tabItem { Label("Profile", systemImage: "person.fill") }
                 .tag(Tab.profile)
         }
+        // The live UITabBar ignores the global appearance proxy on the floating
+        // bar, so also set the muted unselected tone on the real controller.
+        .background(TabBarUnselectedTint(color: UIColor(Color.mlrTextMuted)).frame(width: 0, height: 0))
         // Pine tint; the Family Fest tab takes the active fest theme primary when selected.
         .tint(selectedTab == .fest ? Color.mlrFest : Color.mlrPrimary)
         .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: unreadCount)

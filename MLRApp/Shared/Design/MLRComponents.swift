@@ -390,6 +390,7 @@ final class MLREditModeStore {
 
 private struct MLREditToggleModifier: ViewModifier {
     let canEdit: Bool
+    var tint: Color = .mlrPineText
     private var store: MLREditModeStore { .shared }
 
     func body(content: Content) -> some View {
@@ -401,9 +402,9 @@ private struct MLREditToggleModifier: ViewModifier {
                         withAnimation(MLRMotion.reduceMotion ? nil : MLRMotion.spring) { store.isOn.toggle() }
                     } label: {
                         if store.isOn {
-                            Text("Done").fontWeight(.semibold).foregroundStyle(Color.mlrPineText)
+                            Text("Done").fontWeight(.semibold).foregroundStyle(tint)
                         } else {
-                            Image(systemName: "pencil").fontWeight(.semibold).foregroundStyle(Color.mlrPineText)
+                            Image(systemName: "pencil").fontWeight(.semibold).foregroundStyle(tint)
                         }
                     }
                     .accessibilityLabel(store.isOn ? "Finish editing" : "Edit this screen")
@@ -415,5 +416,22 @@ private struct MLREditToggleModifier: ViewModifier {
 
 extension View {
     /// Toolbar Edit toggle for the app-wide edit switch; shown only when `canEdit`.
-    func mlrEditToggle(canEdit: Bool) -> some View { modifier(MLREditToggleModifier(canEdit: canEdit)) }
+    func mlrEditToggle(canEdit: Bool, tint: Color = .mlrPineText) -> some View { modifier(MLREditToggleModifier(canEdit: canEdit, tint: tint)) }
+}
+
+
+// MARK: - CardLink
+/// A NavigationLink for a card-style `List` row. The system disclosure chevron
+/// would sit outside the card, so the link is an invisible sibling and the row
+/// (which draws its own in-card chevron, if any) is the visible content.
+struct CardLink<Destination: View, Label: View>: View {
+    @ViewBuilder var destination: () -> Destination
+    @ViewBuilder var label: () -> Label
+
+    var body: some View {
+        ZStack {
+            NavigationLink { destination() } label: { EmptyView() }.opacity(0)
+            label()
+        }
+    }
 }

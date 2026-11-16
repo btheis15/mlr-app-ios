@@ -48,7 +48,7 @@ struct AnnouncementBannerStack: View {
     }
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 12) {
             ForEach(visible) { announcement in
                 AnnouncementBannerRow(
                     announcement: announcement,
@@ -146,64 +146,60 @@ private struct AnnouncementBannerRow: View {
     var onEnd: (() -> Void)? = nil
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
-            // Kind indicator dot
-            Circle()
-                .fill(kindColor)
-                .frame(width: 8, height: 8)
-                .padding(.top, 5)
+        MLRCard(.tinted(kindColor), padding: 14) {
+            HStack(alignment: .top, spacing: 12) {
+                IconTile(symbol: kindSymbol, accent: kindColor, size: 40)
 
-            // Text content
-            VStack(alignment: .leading, spacing: 2) {
-                Text(announcement.title)
-                    .font(.mlrScaled(14, weight: .semibold))
-                    .foregroundStyle(kindTextColor)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(announcement.title)
+                        .font(.system(.body, weight: .semibold))
+                        .foregroundStyle(Color.mlrText)
 
-                if let body = announcement.body, !body.isEmpty {
-                    Text(body)
-                        .font(.mlrScaled(13))
-                        .foregroundStyle(kindTextColor.opacity(0.85))
-                        .fixedSize(horizontal: false, vertical: true)
+                    if let body = announcement.body, !body.isEmpty {
+                        Text(body)
+                            .font(.subheadline)
+                            .foregroundStyle(Color.mlrTextMuted)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
 
-            // Admin edit-in-place (admin-posted banners only).
-            // NOTE: plain pencil control; unify with EditPencil at integration.
-            if let onEdit, let onEnd {
-                Menu {
-                    Button { onEdit() } label: { Label("Edit text", systemImage: "pencil") }
-                    Button(role: .destructive) { onEnd() } label: { Label("End now", systemImage: "stop.circle") }
-                } label: {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 22))
-                        .foregroundStyle(kindTextColor.opacity(0.75))
-                        .frame(width: 44, height: 44)
-                        .contentShape(Rectangle())
+                // Admin edit-in-place (admin-posted banners only).
+                if let onEdit, let onEnd {
+                    Menu {
+                        Button { onEdit() } label: { Label("Edit text", systemImage: "pencil") }
+                        Button(role: .destructive) { onEnd() } label: { Label("End now", systemImage: "stop.circle") }
+                    } label: {
+                        Image(systemName: "pencil.circle.fill")
+                            .font(.system(size: 22))
+                            .foregroundStyle(kindColor.opacity(0.75))
+                            .frame(width: 44, height: 44)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.pressable)
+                    .padding(.vertical, -10)
+                    .accessibilityLabel("Edit announcement")
+                }
+
+                Button(action: onDismiss) {
+                    Image(systemName: "xmark")
+                        .font(.mlrScaled(12, weight: .semibold))
+                        .foregroundStyle(Color.mlrTextMuted)
+                        .padding(6)
                 }
                 .buttonStyle(.pressable)
-                .padding(.vertical, -10)
-                .accessibilityLabel("Edit announcement")
+                .accessibilityLabel("Dismiss")
             }
-
-            // Dismiss button
-            Button(action: onDismiss) {
-                Image(systemName: "xmark")
-                    .font(.mlrScaled(11, weight: .semibold))
-                    .foregroundStyle(kindTextColor.opacity(0.6))
-                    .padding(6)
-            }
-            .buttonStyle(.pressable)
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 10)
-        .background(kindBackgroundColor)
-        .overlay(
-            Rectangle()
-                .frame(width: 3)
-                .foregroundStyle(kindColor),
-            alignment: .leading
-        )
+    }
+
+    private var kindSymbol: String {
+        switch announcement.kind {
+        case .info:    return "house.fill"
+        case .warning: return "exclamationmark.triangle.fill"
+        case .urgent:  return "exclamationmark.octagon.fill"
+        case .fest:    return "tent.fill"
+        }
     }
 
     // MARK: Kind colors

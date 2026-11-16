@@ -103,8 +103,6 @@ struct FestOverviewView: View {
                             seedFallbackNote
                         }
 
-                        GoldOrnamentDivider()
-
                         // Once the fest is concluded the week itself moves to
                         // Past Years and the hub drops to Overview + Past Years.
                         // Leaving the accordion up would keep a finished week
@@ -128,7 +126,7 @@ struct FestOverviewView: View {
                             // All-week, no-set-time activities (scavenger hunt, etc.)
                             FestAnytimeCard()
 
-                            GoldOrnamentDivider()
+                            if !dayGroups.isEmpty { GoldOrnamentDivider() }
                         }
 
                         // Secondary sections.
@@ -145,7 +143,7 @@ struct FestOverviewView: View {
                     .padding(.bottom, 32)
                 }
             }
-            .mlrEditToggle(canEdit: showsEditToggle)
+            .mlrEditToggle(canEdit: showsEditToggle, tint: .mlrFestInkReadable)
             .navigationTitle("Family Fest")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
@@ -154,7 +152,7 @@ struct FestOverviewView: View {
                     ToolbarItem(placement: .topBarLeading) {
                         Button { showDatePicker = true } label: {
                             Image(systemName: previewDate == nil ? "calendar.badge.clock" : "calendar.badge.exclamationmark")
-                                .foregroundStyle(previewDate == nil ? Color.mlrFest : .orange)
+                                .foregroundStyle(previewDate == nil ? Color.mlrFestInkReadable : .orange)
                         }
                         .accessibilityLabel("Preview Fest as a date")
                     }
@@ -163,8 +161,8 @@ struct FestOverviewView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { showPlanner = true } label: {
                             Label("Planner", systemImage: "slider.horizontal.3")
-                                .foregroundStyle(Color.mlrFestReadable)
                         }
+                        .tint(Color.mlrFestInkReadable)
                     }
                 }
             }
@@ -261,6 +259,15 @@ struct FestOverviewView: View {
                     pill("Who's coming") { FestCrewView() }
                 }
                 pill("Past Years") { FestPastYearsView() }
+            }
+            .padding(.trailing, 40)
+        }
+        // Fade the trailing edge so a clipped pill clearly reads as scrollable.
+        .mask {
+            HStack(spacing: 0) {
+                Color.black
+                LinearGradient(colors: [.black, .clear], startPoint: .leading, endPoint: .trailing)
+                    .frame(width: 28)
             }
         }
     }

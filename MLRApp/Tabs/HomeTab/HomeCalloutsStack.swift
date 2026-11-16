@@ -107,7 +107,7 @@ struct HomeCalloutsStack: View {
                     .accessibilityHidden(true)
                 }
             }
-            if canEdit {
+            if canEdit && MLREditModeStore.shared.isOn {
                 Button { Haptics.tap(); composer = CalloutComposerTarget(callout: nil) } label: {
                     Label("Add a call-out", systemImage: "plus.circle.fill")
                         .font(.mlrScaled(13, weight: .semibold))

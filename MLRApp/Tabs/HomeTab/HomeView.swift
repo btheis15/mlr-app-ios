@@ -9,6 +9,7 @@ import SwiftUI
 struct HomeView: View {
     @Environment(AppEnvironment.self) private var env
 
+    @Environment(\.colorScheme) private var colorScheme
     @State private var festSeason: FestSeason = .current()
 
     // Drive AttendanceControlStateless optimistically
@@ -54,13 +55,13 @@ struct HomeView: View {
                         // ── 2. Weather: one slim card (self-hides until a source answers).
                         HomeWeatherCard(style: .compact)
                             .padding(.horizontal, 16)
-                            .padding(.bottom, 12)
+                            .padding(.bottom, 20)
 
                         // Admin preview banner — shown when viewing Home as a future date.
                         if let pd = previewDate {
                             previewBanner(date: pd)
                                 .padding(.horizontal, 16)
-                                .padding(.bottom, 4)
+                                .padding(.bottom, 20)
                         }
 
                         // First-visit welcome (guests only; self-dismisses)
@@ -124,8 +125,10 @@ struct HomeView: View {
                             // ── 7. Quick actions — every destination, always visible ──
                             // Replaces the two collapsed accordions (Communication /
                             // Around the Resort) — nothing buried behind a tap.
-                            SectionHeader("Around the resort")
-                            quickActionsGrid
+                            VStack(alignment: .leading, spacing: 10) {
+                                SectionHeader("Around the resort")
+                                quickActionsGrid
+                            }
 
                             // ── 8. Delight cards — birthdays, who's up north, memory ─
                             UpcomingBirthdaysCard()
@@ -144,7 +147,6 @@ struct HomeView: View {
                                 .padding(.bottom, 32)
                         }
                         .padding(.horizontal, 16)
-                        .padding(.top, 2)
                     }
                 }
             }
@@ -304,12 +306,22 @@ struct HomeView: View {
 
     @ViewBuilder
     private func logoHero(geometry: GeometryProxy) -> some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 8) {
             SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
                 .scaledToFit()
                 // The season's still scene (the splash's final frame), as on web.
                 .overlay { SeasonalLogoFX(season: .current(), progress: 1).allowsHitTesting(false) }
                 .frame(width: min(geometry.size.width * 0.4, 150))
+                .background {
+                    // Dark mode only: the dark-green mark nearly vanishes on the
+                    // dark backdrop, so seat it on a soft light glow.
+                    if colorScheme == .dark {
+                        Circle()
+                            .fill(RadialGradient(colors: [Color.white.opacity(0.78), Color.white.opacity(0.6), Color.white.opacity(0.22), Color.white.opacity(0)],
+                                                 center: .center, startRadius: 40, endRadius: 100))
+                            .frame(width: 200, height: 200)
+                    }
+                }
                 .padding(.top, 8)
                 .homeLogoEditPencil()
             Text(greeting)
@@ -318,7 +330,7 @@ struct HomeView: View {
                 .multilineTextAlignment(.center)
         }
         .frame(maxWidth: .infinity)
-        .padding(.bottom, 16)
+        .padding(.bottom, 12)
     }
 
     @ViewBuilder

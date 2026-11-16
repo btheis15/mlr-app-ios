@@ -44,7 +44,7 @@ struct UpcomingEventCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             Eyebrow("Up next", color: .mlrCampfire)
             MLRCard(.hero) {
                 VStack(alignment: .leading, spacing: 14) {
@@ -52,8 +52,9 @@ struct UpcomingEventCard: View {
                         IconTile(emoji: kindEmoji, accent: kindTint, size: 64)
                         VStack(alignment: .leading, spacing: 4) {
                             Text(event.title)
-                                .font(.system(.title3, design: .serif, weight: .semibold))
+                                .font(.system(size: 20, weight: .semibold, design: .serif))
                                 .foregroundStyle(Color.mlrText)
+                                .lineLimit(2)
                                 .fixedSize(horizontal: false, vertical: true)
                             HStack(spacing: 6) {
                                 Text(MLRFormat.dateRange(start: event.startDate, end: event.endDate))

@@ -126,12 +126,13 @@ private struct ConversationsList: View {
         ScrollViewReader { proxy in
         List {
             // Main Feed pinned on top.
-            NavigationLink {
+            CardLink {
                 MainFeedView(title: "Main Feed")
                     .navigationTransition(.zoom(sourceID: "feed", in: zoom))
             } label: {
                 ConversationRow(
                     emoji: "📰",
+                    accent: .mlrPrimary,
                     title: "Main Feed",
                     subtitle: "Everyone",
                     summary: env.feedMuteService.isMuted
@@ -147,12 +148,13 @@ private struct ConversationsList: View {
 
             if let house {
                 Section(header: SectionHeader("Your house").textCase(nil)) {
-                    NavigationLink {
+                    CardLink {
                         HouseChatView(house: house, assumeMember: true)
                             .navigationTransition(.zoom(sourceID: houseKey(house.id), in: zoom))
                     } label: {
                         ConversationRow(
                             emoji: house.emoji,
+                            accent: .mlrLake,
                             title: house.name,
                             subtitle: "Your house",
                             summary: summaries[houseKey(house.id)]
@@ -170,12 +172,13 @@ private struct ConversationsList: View {
             if !eventChats.isEmpty {
                 Section(header: SectionHeader("Events you're going to").textCase(nil)) {
                     ForEach(eventChats) { chat in
-                        NavigationLink {
+                        CardLink {
                             EventChatView(chat: chat)
                                 .navigationTransition(.zoom(sourceID: "event-\(chat.eventId)", in: zoom))
                         } label: {
                             ConversationRow(
                                 emoji: chat.emoji ?? "📅",
+                                accent: .mlrCampfire,
                                 title: chat.title ?? "Event",
                                 subtitle: chat.canPost
                                     ? "Just the people going"
@@ -226,12 +229,13 @@ private struct ConversationsList: View {
                         // rather than deleted — the 7-day tail exists so
                         // last-minute details can still land after the weekend.
                         ForEach(archivedEventChats) { chat in
-                            NavigationLink {
+                            CardLink {
                                 EventChatView(chat: chat)
                                     .navigationTransition(.zoom(sourceID: "event-\(chat.eventId)", in: zoom))
                             } label: {
                                 ConversationRow(
                                     emoji: chat.emoji ?? "📅",
+                                accent: .mlrCampfire,
                                     title: chat.title ?? "Event",
                                     subtitle: "Finished",
                                     summary: nil
@@ -278,12 +282,13 @@ private struct ConversationsList: View {
 
     @ViewBuilder
     private func channelLink(_ channel: ChatChannel, actionable: Bool = true) -> some View {
-        NavigationLink {
+        CardLink {
             ChannelChatLoader(channel: channel)
                 .navigationTransition(.zoom(sourceID: channel.id, in: zoom))
         } label: {
             ConversationRow(
                 emoji: channel.committee.emoji ?? "💬",
+                accent: .mlrPrimary,
                 title: displayTitle(for: channel),
                 subtitle: displaySubtitle(for: channel),
                 summary: summaries[channel.id]
@@ -422,6 +427,7 @@ private struct ConversationsList: View {
 
 private struct ConversationRow: View {
     let emoji: String
+    var accent: Color = .mlrPrimary
     let title: String
     let subtitle: String?
     let summary: ChannelSummary?
@@ -431,7 +437,7 @@ private struct ConversationRow: View {
         let hasUnread = unread > 0
         MLRCard(.plain, padding: 14) {
             HStack(spacing: 14) {
-                IconTile(emoji: emoji, accent: .mlrPrimary, size: 52)
+                IconTile(emoji: emoji, accent: accent, size: 52)
 
                 VStack(alignment: .leading, spacing: 3) {
                     HStack(spacing: 6) {
@@ -472,6 +478,11 @@ private struct ConversationRow: View {
                         }
                     }
                 }
+
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 13, weight: .semibold))
+                    .foregroundStyle(Color.mlrTextSubtle)
+                    .accessibilityHidden(true)
             }
         }
         .padding(.vertical, 4)
