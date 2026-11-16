@@ -60,6 +60,7 @@ struct NotificationsView: View {
                 }
             }
         }
+        .mlrBackdrop()
         .task {
             await loadAndMarkSeen()
         }
@@ -156,7 +157,6 @@ struct NotificationsView: View {
                 .padding(.horizontal, 32)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(Color.mlrSurface)
     }
 
     // MARK: - Loading state

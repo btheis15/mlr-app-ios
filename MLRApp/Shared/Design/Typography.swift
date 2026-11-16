@@ -38,6 +38,43 @@ extension Font {
     static let mlrCaption  = Font.system(.caption)
     static let mlrFootnote = Font.system(.footnote)
 
+    // MARK: Revamp type scale (Northwoods lodge). Text styles, so Dynamic Type works.
+    /// Destination screen title: New York serif bold, ~34pt.
+    static let mlrScreenTitle  = Font.system(.largeTitle, design: .serif, weight: .bold)
+    /// Section header: serif semibold, ~22pt.
+    static let mlrSectionTitle = Font.system(.title2, design: .serif, weight: .semibold)
+    /// Hero card title: serif ~22pt semibold.
+    static let mlrHeroTitle    = Font.system(.title2, design: .serif, weight: .semibold)
+    /// Card title: SF ~20pt semibold.
+    static let mlrCardTitle    = Font.system(.title3, weight: .semibold)
+    /// Row title: SF 17 semibold.
+    static let mlrRowTitle     = Font.system(.body, weight: .semibold)
+    /// Secondary text: SF 15.
+    static let mlrSecondary    = Font.system(.subheadline)
+    /// Caption: SF 13.
+    static let mlrCaption13    = Font.system(.footnote)
+    /// Eyebrow: 12 semibold (apply with `.mlrEyebrow(color)` for case + tracking).
+    static let mlrEyebrow      = Font.system(.caption, weight: .semibold)
+    /// Fest display: theme heading font when the theme sets one, else serif.
+    static func festDisplay(_ size: CGFloat, weight: Font.Weight = .bold) -> Font {
+        FestThemeStore.active.font == nil
+            ? .system(size: UIFontMetrics(forTextStyle: .title1).scaledValue(for: size), weight: weight, design: .serif)
+            : .festSerif(UIFontMetrics(forTextStyle: .title1).scaledValue(for: size), weight: weight)
+    }
+}
+
+extension View {
+    /// Eyebrow label look: 12 semibold, uppercase, tracking 1.2, coloured.
+    func mlrEyebrow(_ color: Color = .mlrCampfire) -> some View {
+        self.font(.mlrEyebrow).textCase(.uppercase).tracking(1.2).foregroundStyle(color)
+    }
+    func mlrScreenTitle() -> some View { font(.mlrScreenTitle).foregroundStyle(Color.mlrText) }
+    func mlrSectionTitle() -> some View { font(.mlrSectionTitle).foregroundStyle(Color.mlrText) }
+    func mlrCardTitle() -> some View { font(.mlrCardTitle).foregroundStyle(Color.mlrText) }
+    func mlrSecondaryText() -> some View { font(.mlrSecondary).foregroundStyle(Color.mlrTextMuted) }
+}
+
+extension Font {
     /// A system font at a fixed base `size` that still scales with Dynamic Type
     /// (via UIFontMetrics) — preserves the app's exact visual sizing at the
     /// default text size while honoring the user's preferred content size.
@@ -106,12 +143,18 @@ extension View {
     func cardStyle(cornerRadius: CGFloat = 16, elevation: MLRElevation) -> some View {
         self
             .background(Color.mlrCard)
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: Self.mlrCardRadius(cornerRadius), style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
+                RoundedRectangle(cornerRadius: Self.mlrCardRadius(cornerRadius), style: .continuous)
                     .stroke(Color.mlrBorder, lineWidth: 1)
             )
             .shadow(elevation)
+    }
+
+    /// Revamp: card-sized radii (>= 16) upgrade to the spec's 22 so every
+    /// existing `cardStyle` card matches `MLRCard`; small radii (chips, thumbs) stay.
+    static func mlrCardRadius(_ requested: CGFloat) -> CGFloat {
+        requested >= 16 && requested < 22 ? 22 : requested
     }
 
     /// Accent-washed card: tinted hairline + a faint top-edge gradient wash of
@@ -126,10 +169,10 @@ extension View {
                                    startPoint: .top, endPoint: .center)
                 }
             )
-            .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
+            .clipShape(RoundedRectangle(cornerRadius: Self.mlrCardRadius(cornerRadius), style: .continuous))
             .overlay(
-                RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(tint.opacity(0.35), lineWidth: 1)
+                RoundedRectangle(cornerRadius: Self.mlrCardRadius(cornerRadius), style: .continuous)
+                    .stroke(tint.opacity(0.20), lineWidth: 1)
             )
             .shadow(elevation)
     }

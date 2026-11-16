@@ -30,6 +30,7 @@ struct PostsView: View {
                 }
             }
         }
+        .mlrBackdrop()
         // Keyed on the signed-in user id so it (re)loads once the profile finishes
         // loading after launch — not just on the first appear when it may still be nil.
         .task(id: env.currentProfile?.id) {
@@ -237,7 +238,6 @@ private struct ConversationsList: View {
         }
         .listStyle(.insetGrouped)
         .scrollContentBackground(.hidden)
-        .background(Color.mlrSurface)
         // Rows glide to their new place when a message re-ranks a room.
         .animation(motion, value: summaries)
         .animation(motion, value: env.eventChatService.liveChats.map(\.eventId))

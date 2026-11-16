@@ -36,6 +36,8 @@
 		D31B5388301392E500C8D189 /* AdminSystemView.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B5387301392E500C8D189 /* AdminSystemView.swift */; };
 		D31B538A3013A0CC00C8D189 /* Metrics.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53893013A0CC00C8D189 /* Metrics.swift */; };
 		D31B538C3013A0E800C8D189 /* Motion.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538B3013A0E800C8D189 /* Motion.swift */; };
+		D31B538D3013A0E800C8D1A2 /* MLRBackdrop.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538E3013A0E800C8D1A2 /* MLRBackdrop.swift */; };
+		D31B538D3013A0E800C8D1A1 /* MLRComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538E3013A0E800C8D1A1 /* MLRComponents.swift */; };
 		D31B538E3013A0F900C8D189 /* Feedback.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538D3013A0F900C8D189 /* Feedback.swift */; };
 		D31B53903013A11700C8D189 /* MeshHeroBackground.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */; };
 		D3C69E6F4049B45F0854E406 /* EditorKit.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B69E6F4049B45F0854E406 /* EditorKit.swift */; };
@@ -313,6 +315,8 @@
 		D31B5387301392E500C8D189 /* AdminSystemView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdminSystemView.swift; sourceTree = "<group>"; };
 		D31B53893013A0CC00C8D189 /* Metrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Metrics.swift; sourceTree = "<group>"; };
 		D31B538B3013A0E800C8D189 /* Motion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Motion.swift; sourceTree = "<group>"; };
+		D31B538E3013A0E800C8D1A2 /* MLRBackdrop.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRBackdrop.swift; sourceTree = "<group>"; };
+		D31B538E3013A0E800C8D1A1 /* MLRComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MLRComponents.swift; sourceTree = "<group>"; };
 		D31B538D3013A0F900C8D189 /* Feedback.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Feedback.swift; sourceTree = "<group>"; };
 		D31B538F3013A11700C8D189 /* MeshHeroBackground.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MeshHeroBackground.swift; sourceTree = "<group>"; };
 		D3B69E6F4049B45F0854E406 /* EditorKit.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EditorKit.swift; sourceTree = "<group>"; };
@@ -834,6 +838,8 @@
 				D33F9E2A2FEC086700603CE7 /* Typography.swift */,
 				D31B53893013A0CC00C8D189 /* Metrics.swift */,
 				D31B538B3013A0E800C8D189 /* Motion.swift */,
+				D31B538E3013A0E800C8D1A2 /* MLRBackdrop.swift */,
+				D31B538E3013A0E800C8D1A1 /* MLRComponents.swift */,
 				D31B538D3013A0F900C8D189 /* Feedback.swift */,
 				D3A0000000000000000000C2 /* ActionTile.swift */,
 			);
@@ -1279,6 +1285,8 @@
 				D3F9D88D30094A70006874DA /* ReminderScheduler.swift in Sources */,
 				D3E9F7CE30461D1000180C79 /* EventEmailComposer.swift in Sources */,
 				D31B538C3013A0E800C8D189 /* Motion.swift in Sources */,
+				D31B538D3013A0E800C8D1A2 /* MLRBackdrop.swift in Sources */,
+				D31B538D3013A0E800C8D1A1 /* MLRComponents.swift in Sources */,
 				D3E9F7D63046206100180C79 /* AdminVerifyMembersView.swift in Sources */,
 				D3A0000000000000000000B3 /* HouseCalendarSheets.swift in Sources */,
 				D3A0000000000000000000B4 /* HouseStayComposer.swift in Sources */,

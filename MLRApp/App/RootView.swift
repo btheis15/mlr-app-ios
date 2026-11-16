@@ -477,21 +477,6 @@ struct MainTabView: View {
         FestSeason.current()
     }
 
-    /// The Family Fest tab icon — the ⚔️ emoji rendered to a full-colour image.
-    /// A tab item's icon has to be an `Image`; drawing the emoji ourselves and
-    /// flagging it `.alwaysOriginal` keeps its colour (UITabBar would otherwise
-    /// tint a template image to a flat silhouette).
-    static let emojiTabIcon: UIImage = {
-        let size: CGFloat = 27
-        let font = UIFont.systemFont(ofSize: size)
-        let string = "⚔️" as NSString
-        let bounds = string.size(withAttributes: [.font: font])
-        let renderer = UIGraphicsImageRenderer(size: bounds)
-        return renderer.image { _ in
-            string.draw(at: .zero, withAttributes: [.font: font])
-        }.withRenderingMode(.alwaysOriginal)
-    }()
-
     /// Selection binding that also notices a tap on the already-selected tab, so
     /// lists can scroll back to top (`.tabReselected`).
     private var tabSelection: Binding<Tab> {
@@ -513,21 +498,11 @@ struct MainTabView: View {
                 .tag(Tab.home)
 
             PostsView()
-                .tabItem { Label("Feed", systemImage: "rectangle.stack.fill") }
+                .tabItem { Label("Feed", systemImage: "bubble.left.and.bubble.right.fill") }
                 .tag(Tab.feed)
 
             FestOverviewView()
-                .tabItem {
-                    Label {
-                        Text("Family Fest")
-                    } icon: {
-                        // A tab-bar icon must be an Image; SwiftUI ignores a Text
-                        // icon. Render the ⚔️ emoji to an image so it shows in full
-                        // colour (matching the Fest's medieval theme).
-                        Image(uiImage: Self.emojiTabIcon)
-                            .renderingMode(.original)
-                    }
-                }
+                .tabItem { Label("Family Fest", systemImage: "tent.fill") }
                 .tag(Tab.fest)
                 .badge(festSeason.isLive || festSeason.isWrap ? "●" : nil)
 
@@ -540,7 +515,8 @@ struct MainTabView: View {
                 .tabItem { Label("Profile", systemImage: "person.fill") }
                 .tag(Tab.profile)
         }
-        .tint(Color.mlrPrimary)
+        // Pine tint; the Family Fest tab takes the active fest theme primary when selected.
+        .tint(selectedTab == .fest ? Color.mlrFest : Color.mlrPrimary)
         .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: unreadCount)
         // A light selection tick on every tab switch — the kind of small,
         // native-feeling touch that makes the bar feel considered rather than

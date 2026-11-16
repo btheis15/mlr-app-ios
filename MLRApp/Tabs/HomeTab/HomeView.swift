@@ -144,8 +144,8 @@ struct HomeView: View {
                 }
             }
             .navigationBarHidden(true)
-            .background(Color.mlrSurface)
         }
+        .mlrBackdrop()
         .sheet(isPresented: $showSearch) {
             NavigationStack { GlobalSearchView(initialTerm: "") }
         }

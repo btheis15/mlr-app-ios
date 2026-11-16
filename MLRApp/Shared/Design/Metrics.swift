@@ -27,8 +27,9 @@ enum MLRSpacing {
 enum MLRRadius {
     static let sm: CGFloat     = 8
     static let button: CGFloat = 14
-    static let card: CGFloat   = 16
+    static let card: CGFloat   = 22
     static let lg: CGFloat     = 18
+    static let hero: CGFloat   = 28
     static let xl: CGFloat     = 24
     static let pill: CGFloat   = 999
 }
@@ -42,7 +43,7 @@ enum MLRElevation {
     var opacity: Double {
         switch self {
         case .none:   return 0
-        case .low:    return 0.06   // == the legacy `cardStyle(elevated: true)` recipe
+        case .low:    return 0.06   // == spec card shadow (y2, blur 10, 6%)
         case .medium: return 0.10
         case .high:   return 0.14
         case .hero:   return 0.20
@@ -60,7 +61,7 @@ enum MLRElevation {
     var y: CGFloat {
         switch self {
         case .none: return 0
-        case .low: return 4
+        case .low: return 2
         case .medium: return 8
         case .high: return 12
         case .hero: return 18

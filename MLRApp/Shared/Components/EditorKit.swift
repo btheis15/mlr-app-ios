@@ -1053,7 +1053,18 @@ struct EditPencil: View {
         self.action = action
     }
 
+    /// Revamp: pencils are hidden unless the screen's Edit toggle is on
+    /// (`.mlrEditable(canEdit:isOn:)` in MLRComponents.swift).
+    @Environment(\.mlrEditMode) private var editMode
+
     var body: some View {
+        Group {
+            if editMode { pencilButton.transition(.scale(scale: 0.6).combined(with: .opacity)) }
+        }
+        .animation(MLRMotion.reduceMotion ? nil : MLRMotion.spring, value: editMode)
+    }
+
+    private var pencilButton: some View {
         Button {
             Haptics.tap()
             action()

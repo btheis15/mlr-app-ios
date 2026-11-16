@@ -77,6 +77,7 @@ struct ProfileView: View {
                 }
             }
         }
+        .mlrBackdrop()
         .onAppear { seedFormFromProfile() }
         .onChange(of: profile?.id) { seedFormFromProfile() }
         .photosPicker(
@@ -143,7 +144,6 @@ struct ProfileView: View {
             appInfoSection
         }
         .scrollContentBackground(.hidden)
-        .background(Color.mlrSurface)
     }
 
     // MARK: - Avatar section

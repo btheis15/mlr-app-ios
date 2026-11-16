@@ -145,8 +145,7 @@ struct FestOverviewView: View {
             }
             .navigationTitle("Family Fest")
             .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(Color.mlrFestParchment, for: .navigationBar)
-            .toolbarColorScheme(.light, for: .navigationBar)
+            .toolbarBackground(.hidden, for: .navigationBar)
             .toolbar {
                 if env.isAdmin {
                     ToolbarItem(placement: .topBarLeading) {
@@ -172,6 +171,7 @@ struct FestOverviewView: View {
             .sheet(isPresented: $showDatePicker) { datePreviewSheet }
             .sheet(isPresented: $showLookEditor) { FestYearLookSheet() }
         }
+        .mlrBackdrop(.fest)
         .task {
             await env.appImagesService.load()
             await env.festContentService.load()
