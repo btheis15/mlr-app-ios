@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 // MARK: - PostsView (Feed tab root)
 //
@@ -304,8 +305,15 @@ private struct ChannelChatLoader: View {
 // The resort-wide feed: posts with photos/video, reactions, comments, tags.
 // Extracted from the old Feed tab so it can be the top "Main Feed" conversation.
 
+/// Last-known page one (posts + their reactions) for instant paint on open.
+private struct FeedSnapshot: Codable, Sendable {
+    var posts: [Post]
+    var reactions: [PostReaction]
+}
+
 struct MainFeedView: View {
     @Environment(AppEnvironment.self) private var env
+    @Environment(\.scenePhase) private var scenePhase
     var title: String = "Main Feed"
 
     @State private var showComposer = false
@@ -313,6 +321,14 @@ struct MainFeedView: View {
     @State private var showTaggedOnly = false
     @State private var adminRemoveError: String? = nil
     @State private var reactionMap: [UUID: [PostReaction]] = [:]
+    /// Posts whose reaction toggle is in flight (a batch refresh must not clobber the optimistic state).
+    @State private var togglingPosts: Set<UUID> = []
+    @State private var isAtTop = true
+    @State private var prefetchedPostIds: Set<UUID> = []
+
+    private static let staleAfter: TimeInterval = 60
+    private var feedAnimation: Animation? { MLRMotion.reduceMotion ? nil : MLRMotion.spring }
+    private var snapshotKey: String { DiskCache.key("main-feed", user: env.effectiveUserId) }
 
     private var displayedPosts: [Post] {
         guard showTaggedOnly, let myId = env.currentProfile?.id else { return env.postsService.posts }
@@ -367,14 +383,46 @@ struct MainFeedView: View {
             SignInView()
         }
         .task {
-            await env.postsService.fetchPosts(userId: env.currentProfile?.id)
-            await fetchReactions(for: env.postsService.posts)
+            // Fetch on first load only; later appearances (e.g. back from a
+            // post) keep the list and its scroll position untouched. Foreground,
+            // pull-to-refresh and realtime cover freshness.
+            Task { await env.feedMuteService.load() }
             env.postsService.subscribeToRealtime()
-            await env.feedMuteService.load()
+            if env.postsService.lastRefreshAt == nil { await initialLoad() }
         }
-        .onChange(of: env.postsService.posts) { _, newPosts in
-            Task { await fetchReactions(for: newPosts) }
+        // After every completed fetch/page: batch-load reactions for what is
+        // loaded (one query), then snapshot page one for the next cold start.
+        .task(id: env.postsService.dataVersion) {
+            await refreshReactions()
+            saveSnapshot()
         }
+        .onChange(of: scenePhase) { _, phase in
+            guard phase == .active, let last = env.postsService.lastRefreshAt,
+                  Date.now.timeIntervalSince(last) > Self.staleAfter else { return }
+            Task { await env.postsService.fetchPosts(userId: env.currentProfile?.id, holdNew: env.postsService.holdNewPosts) }
+        }
+    }
+
+    // MARK: - Loading
+
+    /// Paint the cached snapshot (no spinner), then refresh quietly.
+    private func initialLoad() async {
+        if env.postsService.posts.isEmpty,
+           let snap = DiskCache.load(FeedSnapshot.self, key: snapshotKey) {
+            env.postsService.seed(from: snap.posts)
+            reactionMap = Dictionary(grouping: snap.reactions, by: \.postId)
+        }
+        await env.postsService.fetchPosts(userId: env.currentProfile?.id)
+    }
+
+    /// Never write a snapshot while an admin is previewing as someone else, or
+    /// before the first real refresh (a seeded list is not fresher than its cache).
+    private func saveSnapshot() {
+        guard !env.isPreviewing, env.postsService.lastRefreshAt != nil else { return }
+        let page = Array(env.postsService.posts.prefix(PostsService.pageSize))
+        guard !page.isEmpty else { return }
+        let reactions = page.flatMap { reactionMap[$0.id] ?? [] }
+        DiskCache.save(FeedSnapshot(posts: page, reactions: reactions), key: snapshotKey)
     }
 
     // MARK: - Feed mute (migration 0214)
@@ -420,7 +468,8 @@ struct MainFeedView: View {
 
     @ViewBuilder
     private var content: some View {
-        if env.postsService.isLoading && env.postsService.posts.isEmpty {
+        if env.postsService.posts.isEmpty
+            && (env.postsService.isLoading || env.postsService.lastRefreshAt == nil) {
             loadingState
         } else if env.postsService.posts.isEmpty {
             emptyState
@@ -430,17 +479,93 @@ struct MainFeedView: View {
     }
 
     private var feedList: some View {
-        ScrollView(showsIndicators: false) {
-            LazyVStack(spacing: 1) {
-                ForEach(displayedPosts) { post in
-                    postRow(for: post)
+        let posts = displayedPosts
+        let nearEnd = Set(posts.suffix(5).map(\.id))
+        return ScrollViewReader { proxy in
+            ScrollView(showsIndicators: false) {
+                Color.clear.frame(height: 0).id(Self.topAnchor)
+                LazyVStack(spacing: 1) {
+                    ForEach(posts) { post in
+                        postRow(for: post)
+                            .onAppear {
+                                if nearEnd.contains(post.id) { Task { await env.postsService.loadMore() } }
+                                prefetchMedia(after: post)
+                            }
+                    }
+                    if env.postsService.hasMore {
+                        ProgressView()
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 20)
+                            // Re-runs as pages land, so a short (filtered) list still pages on.
+                            .task(id: env.postsService.posts.count) {
+                                await env.postsService.loadMore()
+                            }
+                    }
+                }
+                .padding(.top, 8)
+            }
+            .onScrollGeometryChange(for: Bool.self) { geo in
+                geo.contentOffset.y + geo.contentInsets.top <= 40
+            } action: { _, atTop in
+                isAtTop = atTop
+                env.postsService.holdNewPosts = !atTop
+                if atTop, !env.postsService.pendingNewPosts.isEmpty {
+                    withAnimation(feedAnimation) { env.postsService.revealPending() }
                 }
             }
-            .padding(.top, 8)
+            .overlay(alignment: .top) {
+                if !env.postsService.pendingNewPosts.isEmpty && !isAtTop {
+                    newPostsPill(proxy: proxy)
+                        .padding(.top, 8)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(feedAnimation, value: env.postsService.pendingNewPosts.isEmpty)
+            .refreshable {
+                await env.postsService.fetchPosts(userId: env.currentProfile?.id)
+            }
         }
-        .refreshable {
-            await env.postsService.fetchPosts(userId: env.currentProfile?.id)
+    }
+
+    private static let topAnchor = "main-feed-top"
+
+    private func newPostsPill(proxy: ScrollViewProxy) -> some View {
+        Button {
+            Haptics.tap()
+            withAnimation(feedAnimation) {
+                env.postsService.revealPending()
+                proxy.scrollTo(Self.topAnchor, anchor: .top)
+            }
+        } label: {
+            Label("New posts", systemImage: "arrow.up")
+                .font(.mlrScaled(14, weight: .semibold))
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 9)
+                .background(Capsule().fill(Color.mlrPrimary))
+                .shadow(color: .black.opacity(0.2), radius: 6, y: 2)
         }
+        .buttonStyle(.pressable)
+        .accessibilityLabel("Show new posts")
+    }
+
+    /// Warm Kingfisher's cache for the next few posts' photos, with the same
+    /// signed URL and downsampler PostMediaTile uses so the cache key hits.
+    private func prefetchMedia(after post: Post) {
+        let list = displayedPosts
+        guard let i = list.firstIndex(where: { $0.id == post.id }) else { return }
+        var urls: [URL] = []
+        for next in list.dropFirst(i + 1).prefix(3) where !prefetchedPostIds.contains(next.id) {
+            prefetchedPostIds.insert(next.id)
+            for (idx, raw) in next.mediaUrls.enumerated().prefix(4) where !next.isVideo(at: idx) {
+                if let u = env.mediaTokenService.url(raw) { urls.append(u) }
+            }
+        }
+        guard !urls.isEmpty else { return }
+        ImagePrefetcher(urls: urls, options: [
+            .processor(DownsamplingImageProcessor(size: CGSize(width: 1200, height: 1200))),
+            .scaleFactor(UIScreen.main.scale)
+        ]).start()
     }
 
     private func postRow(for post: Post) -> some View {
@@ -523,17 +648,22 @@ struct MainFeedView: View {
 
     // MARK: - Reactions
 
+    /// One batched query for every loaded post; only touches entries that changed.
     @MainActor
-    private func fetchReactions(for posts: [Post]) async {
-        for post in posts {
-            if let reactions = try? await env.postsService.fetchReactions(postId: post.id) {
-                reactionMap[post.id] = reactions
-            }
+    private func refreshReactions() async {
+        let ids = env.postsService.posts.map(\.id)
+        guard !ids.isEmpty,
+              let fresh = try? await env.postsService.fetchReactions(postIds: ids) else { return }
+        for (id, rows) in fresh where !togglingPosts.contains(id) {
+            let sorted = rows.sorted { $0.id < $1.id }
+            if (reactionMap[id] ?? []).sorted(by: { $0.id < $1.id }) != sorted { reactionMap[id] = rows }
         }
     }
 
     private func toggleReaction(post: Post, emoji: String) async {
         guard let userId = env.currentProfile?.id else { return }
+        togglingPosts.insert(post.id)
+        defer { togglingPosts.remove(post.id) }
         let existing = reactionMap[post.id] ?? []
         let myReaction = existing.first(where: { $0.userId == userId })
         let isRemoving = myReaction?.emoji == emoji
