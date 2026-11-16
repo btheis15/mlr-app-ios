@@ -132,6 +132,17 @@ struct FestCountdownEntryView: View {
                         .font(.title3.bold())
                     Text("of \(entry.season.totalDays)")
                         .font(.caption2)
+                } else if entry.season.isWrap {
+                    // Same wording as the other families: thanks + photos.
+                    Text("Thanks!")
+                        .font(.caption.bold())
+                    Text("📸")
+                        .font(.caption2)
+                } else if entry.season.isConcluded {
+                    Text("🌲")
+                        .font(.title2)
+                    Text("Next year")
+                        .font(.caption2)
                 } else {
                     Text("\(entry.season.daysUntilStart)")
                         .font(.title2.bold())

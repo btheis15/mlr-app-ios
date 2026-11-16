@@ -206,9 +206,9 @@ struct FestPastYearDetailView: View {
         .background(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.1)))
     }
 
-    /// ⚠️ Deliberately KEEPS tournament brackets nowhere here but keeps the week
-    /// itself — who ran what and what was on the menu is exactly the history
-    /// worth archiving. Rows are plain text: no expand-to-edit, no sign-up card.
+    /// The archived week: who ran what and what was on the menu is exactly the
+    /// history worth archiving. Rows are plain text (no expand-to-edit, no
+    /// sign-up card); tournament brackets are kept, opened read-only.
     @ViewBuilder
     private func week(_ content: FestContentService.ArchivedYear) -> some View {
         let anytime = content.schedule.filter { $0.day == "Anytime" }
@@ -228,7 +228,7 @@ struct FestPastYearDetailView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
                         if index > 0 { Divider().background(Color.mlrFest.opacity(0.1)) }
-                        ArchivedScheduleRow(item: item)
+                        ArchivedScheduleRow(item: item, hasTournament: content.tournaments[item.id] != nil)
                     }
                     if let dinner {
                         if !items.isEmpty { Divider().background(Color.mlrFest.opacity(0.15)) }
@@ -248,7 +248,7 @@ struct FestPastYearDetailView: View {
                 VStack(spacing: 0) {
                     ForEach(Array(anytime.enumerated()), id: \.element.id) { index, item in
                         if index > 0 { Divider().background(Color.mlrFest.opacity(0.1)) }
-                        ArchivedScheduleRow(item: item)
+                        ArchivedScheduleRow(item: item, hasTournament: content.tournaments[item.id] != nil)
                     }
                 }
                 .festCardStyle(cornerRadius: 12)
@@ -265,6 +265,7 @@ struct FestPastYearDetailView: View {
 
 private struct ArchivedScheduleRow: View {
     let item: ScheduleItem
+    var hasTournament = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 3) {
@@ -294,6 +295,23 @@ private struct ArchivedScheduleRow: View {
                     }
                     Spacer(minLength: 0)
                 }
+            }
+            if hasTournament, let id = UUID(uuidString: item.id) {
+                HStack(spacing: 6) {
+                    Spacer().frame(width: 74)
+                    // canManage is hard-wired false: no setup, scoring or
+                    // rearranging for anyone, admins included.
+                    NavigationLink {
+                        TournamentContainerView(host: .schedule(id: id), canManage: false)
+                    } label: {
+                        Text("🏆 Bracket & results →")
+                            .font(.mlrScaled(12, weight: .semibold))
+                            .foregroundStyle(Color.mlrAccent)
+                    }
+                    .buttonStyle(.pressable)
+                    Spacer(minLength: 0)
+                }
+                .padding(.top, 2)
             }
         }
         .padding(.horizontal, 12)
