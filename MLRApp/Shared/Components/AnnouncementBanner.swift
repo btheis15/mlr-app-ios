@@ -18,6 +18,16 @@ struct AnnouncementBannerStack: View {
     @State private var dbAnnouncements: [Announcement] = []
     @State private var isLoading = true
     @State private var channel: RealtimeChannelV2? = nil
+    // Admin edit-in-place (RLS: author or app admin may update/expire).
+    @State private var editing: Announcement? = nil
+    @State private var endTarget: Announcement? = nil
+    @State private var actionError: String? = nil
+
+    /// Only DB rows are admin-posted; `Announcement.seed` (the hard-coded
+    /// "Welcome to MLR" banner) is never editable.
+    private func canEdit(_ a: Announcement) -> Bool {
+        env.isAdmin && dbAnnouncements.contains { $0.id == a.id }
+    }
 
     private var visible: [Announcement] {
         let all = Announcement.seed + dbAnnouncements
@@ -42,10 +52,28 @@ struct AnnouncementBannerStack: View {
             ForEach(visible) { announcement in
                 AnnouncementBannerRow(
                     announcement: announcement,
-                    onDismiss: { dismiss(announcement) }
+                    onDismiss: { dismiss(announcement) },
+                    onEdit: canEdit(announcement) ? { editing = announcement } : nil,
+                    onEnd: canEdit(announcement) ? { endTarget = announcement } : nil
                 )
             }
         }
+        .sheet(item: $editing) { a in
+            AnnouncementEditSheet(announcement: a) { await loadFromDB() }
+        }
+        .confirmationDialog("End this banner now?", isPresented: Binding(get: { endTarget != nil },
+                                                                         set: { if !$0 { endTarget = nil } }),
+                            titleVisibility: .visible) {
+            Button("End now", role: .destructive) {
+                if let a = endTarget { Task { await endNow(a) } }
+                endTarget = nil
+            }
+            Button("Keep showing", role: .cancel) { endTarget = nil }
+        } message: { Text("It disappears for everyone. Emails or notifications already sent can\u{2019}t be recalled.") }
+        .alert("Couldn\u{2019}t end the banner", isPresented: Binding(get: { actionError != nil },
+                                                                    set: { if !$0 { actionError = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: { Text(actionError ?? "") }
         .task {
             await loadFromDB()
             await subscribeRealtime()
@@ -76,6 +104,22 @@ struct AnnouncementBannerStack: View {
         }
     }
 
+    /// Expire now: sets `expires_at` to the current time (the same field the
+    /// banner already filters on), then refreshes.
+    @MainActor
+    private func endNow(_ a: Announcement) async {
+        do {
+            try await supabase.from("announcements")
+                .update(["expires_at": ISO8601DateFormatter().string(from: Date())])
+                .eq("id", value: a.id).execute()
+            Haptics.success()
+            await loadFromDB()
+        } catch {
+            actionError = EditorError.message(error)
+            Haptics.error()
+        }
+    }
+
     @MainActor
     private func loadFromDB() async {
         do {
@@ -98,6 +142,8 @@ struct AnnouncementBannerStack: View {
 private struct AnnouncementBannerRow: View {
     let announcement: Announcement
     let onDismiss: () -> Void
+    var onEdit: (() -> Void)? = nil
+    var onEnd: (() -> Void)? = nil
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
@@ -121,6 +167,24 @@ private struct AnnouncementBannerRow: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
+
+            // Admin edit-in-place (admin-posted banners only).
+            // NOTE: plain pencil control; unify with EditPencil at integration.
+            if let onEdit, let onEnd {
+                Menu {
+                    Button { onEdit() } label: { Label("Edit text", systemImage: "pencil") }
+                    Button(role: .destructive) { onEnd() } label: { Label("End now", systemImage: "stop.circle") }
+                } label: {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 22))
+                        .foregroundStyle(kindTextColor.opacity(0.75))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.pressable)
+                .padding(.vertical, -10)
+                .accessibilityLabel("Edit announcement")
+            }
 
             // Dismiss button
             Button(action: onDismiss) {
@@ -168,6 +232,46 @@ private struct AnnouncementBannerRow: View {
         case .warning: return Color(hex: "#fffbeb") // amber-50
         case .urgent:  return Color(hex: "#fef2f2") // red-50
         case .fest:    return Color.mlrFestLight
+        }
+    }
+}
+
+// MARK: - Edit sheet (text only)
+// Edits title/body of an admin-posted banner. Severity, expiry and the send
+// channels are left alone (already sent); use "End now" to retire it early.
+
+private struct AnnouncementEditSheet: View {
+    let announcement: Announcement
+    let onSaved: () async -> Void
+    @State private var draft: EditorDraft<[String]>   // [title, body]
+
+    init(announcement: Announcement, onSaved: @escaping () async -> Void) {
+        self.announcement = announcement; self.onSaved = onSaved
+        _draft = State(initialValue: EditorDraft([announcement.title, announcement.body ?? ""]))
+    }
+
+    private var title: Binding<String> { Binding(get: { draft.value[0] }, set: { draft.value[0] = $0 }) }
+    private var body_: Binding<String> { Binding(get: { draft.value[1] }, set: { draft.value[1] = $0 }) }
+
+    var body: some View {
+        EditorSheet(
+            title: "Edit announcement",
+            isDirty: draft.isDirty,
+            canSave: !draft.value[0].trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+            save: {
+                let t = draft.value[0].trimmingCharacters(in: .whitespacesAndNewlines)
+                let b = draft.value[1].trimmingCharacters(in: .whitespacesAndNewlines)
+                let fields: [String: AnyJSON] = ["title": .string(t), "body": b.isEmpty ? .null : .string(b)]
+                try await supabase.from("announcements").update(fields).eq("id", value: announcement.id).execute()
+                await onSaved()
+            }
+        ) {
+            Section {
+                EditorTextField("Title", text: title, limit: 120, required: true)
+                EditorLongText("Body", text: body_, lines: 2...6)
+            } footer: {
+                Text("Only the wording changes. Emails and notifications already sent are not re-sent.")
+            }
         }
     }
 }

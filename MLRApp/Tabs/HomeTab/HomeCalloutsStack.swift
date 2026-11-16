@@ -41,6 +41,15 @@ struct HomeCalloutsStack: View {
     @State private var dismissed: Set<String> = []
     // Callout being marked done (optimistic spinner state).
     @State private var markingDoneId: String? = nil
+    // Composer target for edit-in-place / add (nil = closed).
+    @State private var composer: CalloutComposerTarget? = nil
+
+    /// Who may edit call-outs: an app admin (the admin list's gate) or a fest
+    /// editor (`can_edit_fest()`, what RLS enforces). Hidden while previewing.
+    private var canEdit: Bool {
+        env.isSignedIn && env.previewMode == .off && env.previewMember == nil
+            && (env.realIsAdmin || env.festContentService.userCanEditFest)
+    }
 
     private var today: String {
         if let p = previewDate { return p }
@@ -78,6 +87,7 @@ struct HomeCalloutsStack: View {
         // group, guaranteed to render in front of FestSpotlight. Cards are iterated
         // deepest-first so ZStack's back-to-front order puts card 0 on top.
         let deckCards = Array(visible.prefix(maxDepth).reversed())
+        VStack(spacing: 10) {
         ZStack(alignment: .top) {
             // FestSpotlight is always declared first = always at the back.
             FamilyFestSpotlight(season: season)
@@ -95,7 +105,8 @@ struct HomeCalloutsStack: View {
                                     dismissed.insert(callout.dismissId)
                                 }
                             },
-                            onMarkDone: { markDone(callout) }
+                            onMarkDone: { markDone(callout) },
+                            onEdit: canEdit ? { composer = CalloutComposerTarget(callout: callout) } : nil
                         )
                         .popoverTip(CalloutSwipeTip())
                     } else {
@@ -109,7 +120,26 @@ struct HomeCalloutsStack: View {
             }
         }
         .padding(.bottom, CGFloat(maxDepth) * 10)
+            if canEdit {
+                Button { Haptics.tap(); composer = CalloutComposerTarget(callout: nil) } label: {
+                    Label("Add a call-out", systemImage: "plus.circle.fill")
+                        .font(.mlrScaled(13, weight: .semibold))
+                        .foregroundStyle(Color.mlrPrimary)
+                        .padding(.horizontal, 14)
+                        .frame(minHeight: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.pressable)
+                .frame(maxWidth: .infinity, alignment: .trailing)
+            }
+        }
+        .sheet(item: $composer) { target in
+            CalloutComposerView(existing: target.callout)
+        }
         .task { await fetchCompletions() }
+        .task(id: env.isSignedIn) {
+            if env.isSignedIn { _ = await env.festContentService.canEditFest() }
+        }
         .onChange(of: env.isSignedIn) { _, nowSignedIn in
             guard nowSignedIn else { return }
             Task { await fetchCompletions() }
@@ -139,6 +169,12 @@ struct HomeCalloutsStack: View {
     }
 }
 
+/// Sheet target for the composer: an existing callout, or nil for a new one.
+private struct CalloutComposerTarget: Identifiable {
+    let id = UUID()
+    let callout: HomeCallout?
+}
+
 // MARK: - SwipeableCalloutCard
 
 private struct SwipeableCalloutCard: View {
@@ -146,6 +182,7 @@ private struct SwipeableCalloutCard: View {
     let isMarkingDone: Bool
     let onDismiss: () -> Void
     let onMarkDone: () -> Void
+    var onEdit: (() -> Void)? = nil
 
     @State private var dragX: CGFloat = 0
     @State private var flying = false
@@ -159,7 +196,7 @@ private struct SwipeableCalloutCard: View {
 
     var body: some View {
         HomeCalloutCard(callout: callout, isMarkingDone: isMarkingDone,
-                        onDismiss: dismiss, onMarkDone: onMarkDone)
+                        onDismiss: dismiss, onMarkDone: onMarkDone, onEdit: onEdit)
             .offset(x: dragX)
             .rotationEffect(.degrees(dragX / 20))
             .opacity(flying ? 0 : 1)
@@ -236,6 +273,17 @@ struct HomeCalloutCard: View {
     /// of the card. Tapping it permanently hides the callout for this user
     /// (migration 0098), unlike the swipe/✕ which only lasts the session.
     var onMarkDone: (() -> Void)? = nil
+    /// Set only for someone who may edit call-outs: shows a pencil that opens this
+    /// callout's composer. Nil everywhere else (members, previews, the live preview).
+    var onEdit: (() -> Void)? = nil
+
+    // Explicit init: the @State privates below would make the synthesized
+    // memberwise init file-private, and the admin composer previews this card.
+    init(callout: HomeCallout, isMarkingDone: Bool = false, onDismiss: (() -> Void)? = nil,
+         onMarkDone: (() -> Void)? = nil, onEdit: (() -> Void)? = nil) {
+        self.callout = callout; self.isMarkingDone = isMarkingDone
+        self.onDismiss = onDismiss; self.onMarkDone = onMarkDone; self.onEdit = onEdit
+    }
 
     @Environment(AppEnvironment.self) private var env
     @State private var imageLoadFailed = false
@@ -425,6 +473,24 @@ struct HomeCalloutCard: View {
                 }
                 .buttonStyle(.pressable)
                 .padding(12)
+            }
+        }
+        // Edit in place (top-left, opposite the dismiss pill).
+        // NOTE: plain pencil button; unify with EditPencil at integration.
+        .overlay(alignment: .topLeading) {
+            if let onEdit {
+                Button { Haptics.tap(); onEdit() } label: {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 26))
+                        .symbolRenderingMode(.palette)
+                        .foregroundStyle(hasImage ? Color.white : Color.mlrPrimary,
+                                         hasImage ? Color.black.opacity(0.4) : Color.mlrPrimary.opacity(0.12))
+                        .frame(width: 44, height: 44)
+                        .contentShape(Rectangle())
+                }
+                .buttonStyle(.pressable)
+                .padding(2)
+                .accessibilityLabel("Edit call-out")
             }
         }
         .sheet(item: $signupItem) { item in
