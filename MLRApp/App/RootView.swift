@@ -285,11 +285,10 @@ struct RootView: View {
     /// yet, e.g. a cold launch) and open it. Not in the list → stay on Feed.
     private func resolveEventChat(_ eventId: String) {
         Task { @MainActor in
-            func find() -> EventChatSummary? {
-                env.eventChatService.chats.first { $0.eventId.caseInsensitiveCompare(eventId) == .orderedSame }
-            }
-            if find() == nil { await env.eventChatService.loadChats() }
-            pendingEventChat = find()
+            let service = env.eventChatService
+            let matches: (EventChatSummary) -> Bool = { $0.eventId.caseInsensitiveCompare(eventId) == .orderedSame }
+            if !service.chats.contains(where: matches) { await service.loadChats() }
+            pendingEventChat = service.chats.first(where: matches)
         }
     }
 

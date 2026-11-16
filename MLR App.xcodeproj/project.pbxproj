@@ -22,6 +22,7 @@
 		D31B536D3012A45500C8D189 /* ChatPoll.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536C3012A45500C8D189 /* ChatPoll.swift */; };
 		D31B536F3012A46900C8D189 /* ChatPollsService.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B536E3012A46900C8D189 /* ChatPollsService.swift */; };
 		D31B53723012A51F00C8D189 /* ChatPollCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53713012A51F00C8D189 /* ChatPollCard.swift */; };
+		D3C01B10AF398456A4255942 /* ChatInteractions.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B01B10AF398456A4255942 /* ChatInteractions.swift */; };
 		D31B53743012A82E00C8D189 /* EventSignups.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53733012A82E00C8D189 /* EventSignups.swift */; };
 		D31B53763012A89400C8D189 /* EventSignupSection.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53753012A89400C8D189 /* EventSignupSection.swift */; };
 		D31B53783012B54500C8D189 /* PrivateActivity.swift in Sources */ = {isa = PBXBuildFile; fileRef = D31B53773012B54500C8D189 /* PrivateActivity.swift */; };
@@ -294,6 +295,7 @@
 		D31B536C3012A45500C8D189 /* ChatPoll.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPoll.swift; sourceTree = "<group>"; };
 		D31B536E3012A46900C8D189 /* ChatPollsService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPollsService.swift; sourceTree = "<group>"; };
 		D31B53713012A51F00C8D189 /* ChatPollCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatPollCard.swift; sourceTree = "<group>"; };
+		D3B01B10AF398456A4255942 /* ChatInteractions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInteractions.swift; sourceTree = "<group>"; };
 		D31B53733012A82E00C8D189 /* EventSignups.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSignups.swift; sourceTree = "<group>"; };
 		D31B53753012A89400C8D189 /* EventSignupSection.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EventSignupSection.swift; sourceTree = "<group>"; };
 		D31B53773012B54500C8D189 /* PrivateActivity.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PrivateActivity.swift; sourceTree = "<group>"; };
@@ -571,6 +573,7 @@
 			isa = PBXGroup;
 			children = (
 				D31B53713012A51F00C8D189 /* ChatPollCard.swift */,
+				D3B01B10AF398456A4255942 /* ChatInteractions.swift */,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -1233,6 +1236,7 @@
 				D33F9E742FEC086700603CE7 /* EventSheet.swift in Sources */,
 				D3E9F7C430461A5600180C79 /* StartNextFestYearView.swift in Sources */,
 				D31B53723012A51F00C8D189 /* ChatPollCard.swift in Sources */,
+				D3C01B10AF398456A4255942 /* ChatInteractions.swift in Sources */,
 				D33F9E752FEC086700603CE7 /* PushToggleView.swift in Sources */,
 				D33F9E762FEC086700603CE7 /* MLRSheet.swift in Sources */,
 				D33F9ED22FF3172100603CE7 /* WorkItemsService.swift in Sources */,

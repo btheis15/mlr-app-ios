@@ -46,11 +46,13 @@ enum DiskCache {
         return try? decoder.decode(type, from: data)
     }
 
-    /// Writes off the calling actor; failures are ignored (it is only a cache).
-    static func save<T: Encodable & Sendable>(_ value: T, key: String) {
+    /// Encodes here (models' Codable conformances are main-actor isolated) and
+    /// writes the bytes off the calling actor; failures are ignored (it is only
+    /// a cache).
+    static func save<T: Encodable>(_ value: T, key: String) {
+        guard let data = try? encoder.encode(value) else { return }
         let target = url(for: key)
         Task.detached(priority: .utility) {
-            guard let data = try? encoder.encode(value) else { return }
             try? data.write(to: target, options: .atomic)
         }
     }
