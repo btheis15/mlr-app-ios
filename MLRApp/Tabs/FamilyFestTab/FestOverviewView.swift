@@ -134,7 +134,7 @@ struct FestOverviewView: View {
 
                         Text("Leo & Dorothy Theis · Est. 1987 · Tomahawk, WI")
                             .font(.festSerif(11))
-                            .foregroundStyle(Color.mlrFestInk.opacity(0.65))
+                            .foregroundStyle(Color.mlrFestInkReadable.opacity(0.65))
                             .frame(maxWidth: .infinity, alignment: .center)
                             .padding(.top, 4)
                     }
@@ -161,7 +161,7 @@ struct FestOverviewView: View {
                     ToolbarItem(placement: .topBarTrailing) {
                         Button { showPlanner = true } label: {
                             Label("Planner", systemImage: "slider.horizontal.3")
-                                .foregroundStyle(Color.mlrFest)
+                                .foregroundStyle(Color.mlrFestReadable)
                         }
                     }
                 }
@@ -399,15 +399,15 @@ private struct FestCoverCaption: View {
                 .font(.festSerif(17, weight: .bold))
                 .tracking(2)
                 .textCase(.uppercase)
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(Color.mlrFestReadable)
 
             Text("\(FamilyFestConfig.dateRangeLabel), \(String(FamilyFestConfig.year))")
                 .font(.festSerif(19, weight: .bold))
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(Color.mlrFestReadable)
 
             Text("Muskellunge Lake Resort · Tomahawk, WI")
                 .font(.mlrScaled(12))
-                .foregroundStyle(Color.mlrFestInk.opacity(0.7))
+                .foregroundStyle(Color.mlrFestInkReadable.opacity(0.7))
         }
         .multilineTextAlignment(.center)
         .frame(maxWidth: .infinity)
@@ -425,7 +425,7 @@ private struct FestInfoCard<Content: View>: View {
         VStack(alignment: .leading, spacing: 10) {
             Text(title)
                 .font(.festSerif(19, weight: .bold))
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(Color.mlrFestReadable)
             content
         }
         .padding(16)
