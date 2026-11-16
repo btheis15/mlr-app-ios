@@ -52,7 +52,7 @@ private struct DinnerMenuCard: View {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(dinner.title)
                         .font(.festSerif(18, weight: .bold))
-                        .foregroundStyle(Color.mlrFest)
+                        .foregroundStyle(Color.mlrFestReadable)
                         .fixedSize(horizontal: false, vertical: true)
                     HStack(spacing: 12) {
                         Label(dinner.day, systemImage: "calendar")

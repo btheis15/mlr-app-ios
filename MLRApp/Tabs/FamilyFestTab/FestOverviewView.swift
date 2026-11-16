@@ -18,6 +18,7 @@ struct FestOverviewView: View {
     @State private var showLookEditor = false
     @State private var previewDate: Date? = nil      // admin "see as this day" preview
     @State private var showDatePicker = false
+    @State private var editing = false
 
     private var content: FestContentService { env.festContentService }
 
@@ -74,6 +75,8 @@ struct FestOverviewView: View {
                     VStack(alignment: .leading, spacing: 20) {
 
                         if previewDate != nil { previewBanner }
+
+                        pillRow
 
                         FestStatus(season: festSeason, previewDate: previewDate)
 
@@ -143,6 +146,7 @@ struct FestOverviewView: View {
                     .padding(.bottom, 32)
                 }
             }
+            .mlrEditable(canEdit: showsEditToggle, isOn: $editing)
             .navigationTitle("Family Fest")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarBackground(.hidden, for: .navigationBar)
@@ -236,6 +240,45 @@ struct FestOverviewView: View {
     }
 
     // MARK: - Secondary sections
+
+    /// Edit toggle for fest editors, or anyone who is chef/crew on a dinner (same rules as the pencils).
+    private var showsEditToggle: Bool {
+        guard !env.isPreviewing else { return false }
+        return canEdit || content.dinners.contains { env.canEditFestDinner(chefUserId: $0.chefUserId, crewUserIds: $0.crewUserIds) }
+    }
+
+    /// Overview (selected) plus the existing sub-screens, which simply push.
+    private var pillRow: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                Text("Overview")
+                    .font(.system(.subheadline, weight: .semibold))
+                    .foregroundStyle(Color.white)
+                    .padding(.horizontal, 16).frame(height: 36)
+                    .background(Color.mlrFest, in: Capsule())
+                if !festSeason.isConcluded {
+                    pill("Dinners") { FestDinnersView() }
+                    pill("Pay") { FestPayView() }
+                    pill("Who's coming") { FestCrewView() }
+                }
+                pill("Past Years") { FestPastYearsView() }
+            }
+        }
+    }
+
+    private func pill<D: View>(_ title: String, @ViewBuilder _ dest: @escaping () -> D) -> some View {
+        NavigationLink {
+            dest().navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        } label: {
+            Text(title)
+                .font(.system(.subheadline, weight: .semibold))
+                .foregroundStyle(Color.mlrFestInkReadable)
+                .padding(.horizontal, 16).frame(height: 36)
+                .background(Color.mlrFestCard, in: Capsule())
+                .overlay(Capsule().stroke(Color.mlrFestBorder, lineWidth: 1))
+        }
+        .buttonStyle(.pressable)
+    }
 
     private var moreSection: some View {
         VStack(alignment: .leading, spacing: 12) {

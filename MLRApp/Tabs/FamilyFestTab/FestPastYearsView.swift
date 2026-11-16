@@ -164,10 +164,10 @@ struct FestPastYearDetailView: View {
             Text("In the archives")
                 .font(.festSerif(11, weight: .semibold))
                 .tracking(1.5)
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(Color.mlrFestReadable)
             Text(year.name)
                 .font(.festSerif(20, weight: .bold))
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(Color.mlrFestReadable)
                 .multilineTextAlignment(.center)
             if let theme = year.theme?.blankToNil {
                 Text(theme)
@@ -191,7 +191,7 @@ struct FestPastYearDetailView: View {
         VStack(spacing: 6) {
             Text("Thank you for a great Family Fest 🎆")
                 .font(.mlrScaled(14, weight: .bold))
-                .foregroundStyle(Color.mlrFest)
+                .foregroundStyle(Color.mlrFestReadable)
             Text("See you next year!")
                 .font(.mlrScaled(13))
                 .foregroundStyle(Color.mlrFestInk.opacity(0.75))
@@ -231,7 +231,7 @@ struct FestPastYearDetailView: View {
                 Text(day.uppercased())
                     .font(.festSerif(12, weight: .bold))
                     .tracking(1.2)
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
 
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
@@ -252,7 +252,7 @@ struct FestPastYearDetailView: View {
                 Text("ALL WEEK — ANYTIME")
                     .font(.festSerif(12, weight: .bold))
                     .tracking(1.2)
-                    .foregroundStyle(Color.mlrFest)
+                    .foregroundStyle(Color.mlrFestReadable)
                 VStack(spacing: 0) {
                     ForEach(Array(anytime.enumerated()), id: \.element.id) { index, item in
                         if index > 0 { Divider().background(Color.mlrFest.opacity(0.1)) }
