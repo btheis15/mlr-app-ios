@@ -269,7 +269,7 @@ struct EventsView: View {
                  ? "When events get scheduled, they'll show up here."
                  : "Past events will appear here after they wrap.")
         } actions: {
-            if env.isAdmin && filter == .upcoming {
+            if env.isSignedIn, !env.isAwaitingVerification, env.isAdmin, filter == .upcoming {
                 Button("Create Event") { showComposer = true }
                     .buttonStyle(.borderedProminent)
                     .tint(Color.mlrPrimary)

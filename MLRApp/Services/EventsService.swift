@@ -223,22 +223,12 @@ final class EventsService {
     /// by the Family Fest "Crew" tab to show who's coming and which days.
     func fetchAttendeesWithDays(eventId: String) async -> [FestAttendee] {
         do {
-            let rows: [AttendeeWithDaysRow] = try await supabase
-                .from("event_attendance")
-                .select("""
-                    status, days,
-                    profiles!event_attendance_user_id_fkey(id, display_name, contact_email, avatar_url, phone, is_admin,
-                                     beta_tester, willing_to_help, intro_seen,
-                                     email_alerts, push_level, push_types,
-                                     notif_types, push_prompted, created_at)
-                """)
-                .eq("event_id", value: eventId)
-                .in("status", values: ["going", "maybe"])
-                .execute()
-                .value
-            return rows.compactMap { row in
-                guard let profile = row.profiles else { return nil }
-                return FestAttendee(profile: profile, status: row.status, days: row.days)
+            // Same rows as the "who is going" count: members, roster people and
+            // outside guests (the latter two have no profile).
+            return try await fetchAttendanceRows(eventId: eventId).map { row in
+                let a = row.asAttendee
+                return FestAttendee(id: row.id, profile: row.profile, name: a.name, note: a.note,
+                                    status: row.status, days: row.days)
             }
         } catch {
             print("[EventsService] fetchAttendeesWithDays error: \(error)")
@@ -461,22 +451,19 @@ struct DayRosterEntry: Identifiable {
     }
 }
 
-private struct AttendeeWithDaysRow: Decodable {
-    let status: AttendanceStatus
-    let days: [String: AttendanceStatus]?
-    let profiles: Profile?
-}
-
 // MARK: - FestAttendee
 // A member coming to the Family Fest event, with their per-day RSVP (days are
 // keyed by weekday name, e.g. "Monday"). Used by the Crew tab.
 
 struct FestAttendee: Identifiable {
-    let profile: Profile
+    /// Attendance row id (roster people and guests have no profile).
+    let id: UUID
+    let profile: Profile?
+    let name: String
+    /// "Guest of {sponsor}" for outside guests.
+    let note: String?
     let status: AttendanceStatus
     let days: [String: AttendanceStatus]?
-
-    var id: UUID { profile.id }
 
     /// Weekday names the member is "going" on. Empty set + overall going means
     /// they're in for the whole week (no per-day picks).

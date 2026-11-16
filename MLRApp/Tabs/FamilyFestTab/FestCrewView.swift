@@ -119,7 +119,7 @@ struct FestCrewView: View {
         if env.eventsService.events.isEmpty { await env.eventsService.fetchEvents() }
         festEvent = env.eventsService.events.first(where: { $0.isFamilyFest })
         attendees = await env.eventsService.fetchAttendeesWithDays(eventId: FamilyFestConfig.id)
-            .sorted { $0.profile.name < $1.profile.name }
+            .sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         loading = false
     }
 }
@@ -139,9 +139,29 @@ private struct AttendeeCard: View {
         let going = attendee.goingDays(allDays: festDays)
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 10) {
-                AvatarView(profile: attendee.profile, size: .small)
-                PrivateName(profile: attendee.profile, font: .festSerif(15, weight: .bold))
-                    .foregroundStyle(Color.mlrFest)
+                if let profile = attendee.profile {
+                    AvatarView(profile: profile, size: .small)
+                    PrivateName(profile: profile, font: .festSerif(15, weight: .bold))
+                        .foregroundStyle(Color.mlrFest)
+                } else {
+                    // Roster person or outside guest: no profile, so no avatar photo.
+                    Text(String(attendee.name.prefix(1)).uppercased())
+                        .font(.mlrScaled(13, weight: .bold))
+                        .foregroundStyle(Color.mlrFest)
+                        .frame(width: 32, height: 32)
+                        .background(Color.mlrFest.opacity(0.12))
+                        .clipShape(Circle())
+                    VStack(alignment: .leading, spacing: 1) {
+                        Text(attendee.name)
+                            .font(.festSerif(15, weight: .bold))
+                            .foregroundStyle(Color.mlrFest)
+                        if let note = attendee.note {
+                            Text(note)
+                                .font(.mlrScaled(11))
+                                .foregroundStyle(Color.mlrFest.opacity(0.6))
+                        }
+                    }
+                }
                 Spacer()
                 if attendee.isWholeWeek {
                     Text("All week")
