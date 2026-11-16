@@ -14,6 +14,15 @@ extension Font {
 
     // Family Fest serif (Cinzel)
     static func festSerif(_ size: CGFloat, weight: Font.Weight = .regular) -> Font {
+        // Per-year look (migration 0219). Playfair isn't bundled, so it maps to
+        // the system serif design; "sans" to the system default.
+        switch FestThemeStore.active.font {
+        case "playfair":
+            return .system(size: size, weight: weight, design: .serif)
+        case "sans":
+            return .system(size: size, weight: weight)
+        default: break
+        }
         switch weight {
         case .bold, .heavy, .black:
             return .custom("Cinzel-Bold", size: size)
@@ -175,7 +184,7 @@ extension View {
             .clipShape(RoundedRectangle(cornerRadius: cornerRadius))
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .stroke(Color.mlrFestGold.opacity(0.6), lineWidth: 1)
+                    .stroke(Color.mlrFestBorder, lineWidth: 1)
             )
             .shadow(.medium)
     }

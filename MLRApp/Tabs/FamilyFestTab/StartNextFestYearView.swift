@@ -167,8 +167,27 @@ struct FestYearLookEditor: View {
     @State private var saving = false
     @State private var error: String?
     @State private var loaded = false
+    @State private var look = FestTheme.builtIn
+    @State private var confirmReset = false
 
     private var service: FestContentService { env.festContentService }
+
+    /// A binding that shows the built-in swatch until a colour is picked.
+    private func colorBinding(_ slot: FestTheme.Slot, _ kp: WritableKeyPath<FestTheme, String?>) -> Binding<Color> {
+        Binding(
+            get: { Color(hex: FestTheme.validHex(look[keyPath: kp]) ?? FestTheme.defaults[slot]!) },
+            set: { look[keyPath: kp] = $0.festHexString })
+    }
+
+    private func slotRow(_ title: String, _ slot: FestTheme.Slot, _ kp: WritableKeyPath<FestTheme, String?>) -> some View {
+        HStack {
+            ColorPicker(title, selection: colorBinding(slot, kp), supportsOpacity: false)
+            if look[keyPath: kp] != nil {
+                Button("Built-in") { look[keyPath: kp] = nil }
+                    .font(.mlrScaled(12)).buttonStyle(.borderless)
+            }
+        }
+    }
 
     var body: some View {
         Form {
@@ -190,6 +209,63 @@ struct FestYearLookEditor: View {
                 Text("This year's own cover, kept with the year — so next year's poster never replaces the one the archive shows. Empty falls back to the classic art.")
             }
 
+            Section {
+                slotRow("Main colour", .primary, \.primary)
+                slotRow("Accent", .accent, \.accent)
+                slotRow("Background", .background, \.background)
+                slotRow("Cards", .card, \.card)
+                slotRow("Borders", .border, \.border)
+                slotRow("Text", .ink, \.ink)
+                ForEach(look.contrastWarnings(), id: \.self) { w in
+                    Label(w, systemImage: "exclamationmark.triangle.fill")
+                        .font(.mlrScaled(12))
+                        .foregroundStyle(.orange)
+                }
+            } header: {
+                Text("Colours")
+            } footer: {
+                Text("Light mode only; dark mode keeps the app's fest palette and uses just the main colour and accent. Unpicked colours keep the built-in look.")
+            }
+
+            Section {
+                Picker("Background", selection: Binding(
+                    get: { look.bgStyle ?? "default" }, set: { look.bgStyle = $0 })) {
+                    Text("Default").tag("default")
+                    Text("Flat").tag("flat")
+                    Text("Image").tag("image")
+                }
+                if look.bgStyle == "image" {
+                    TextField("Background image URL", text: Binding(
+                        get: { look.bgImageUrl ?? "" }, set: { look.bgImageUrl = $0 }))
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Picker("Image", selection: Binding(
+                        get: { look.bgImageMode ?? "cover" }, set: { look.bgImageMode = $0 })) {
+                        Text("Cover").tag("cover")
+                        Text("Tile").tag("tile")
+                    }
+                    VStack(alignment: .leading) {
+                        Text("Image strength \(look.bgImageOpacity ?? 35)%")
+                            .font(.mlrScaled(13))
+                        Slider(value: Binding(
+                            get: { Double(look.bgImageOpacity ?? 35) },
+                            set: { look.bgImageOpacity = Int($0.rounded()) }), in: 0...100, step: 5)
+                    }
+                }
+                Picker("Heading font", selection: Binding(
+                    get: { look.font ?? "cinzel" }, set: { look.font = $0 })) {
+                    Text("Cinzel").tag("cinzel")
+                    Text("Serif (Playfair)").tag("playfair")
+                    Text("Sans").tag("sans")
+                }
+            } header: {
+                Text("Background & font")
+            }
+
+            Section {
+                Button("Reset to built-in", role: .destructive) { confirmReset = true }
+            }
+
             if let error {
                 Section {
                     Label(error, systemImage: "exclamationmark.triangle.fill")
@@ -197,6 +273,12 @@ struct FestYearLookEditor: View {
                         .foregroundStyle(.red)
                 }
             }
+        }
+        .confirmationDialog("Reset this year's colours, background and font to the built-in look?",
+                            isPresented: $confirmReset, titleVisibility: .visible) {
+            Button("Reset to built-in", role: .destructive) { look = .builtIn }
+        } message: {
+            Text("Tap Save to apply.")
         }
         .navigationTitle("Theme & cover")
         .navigationBarTitleDisplayMode(.inline)
@@ -215,6 +297,7 @@ struct FestYearLookEditor: View {
             guard !loaded else { return }
             theme = service.config?.theme ?? ""
             coverUrl = service.config?.coverUrl ?? ""
+            look = service.config?.look ?? .builtIn
             loaded = true
         }
     }
@@ -228,10 +311,22 @@ struct FestYearLookEditor: View {
                 theme: theme.trimmingCharacters(in: .whitespaces).isEmpty ? nil : theme,
                 coverUrl: coverUrl.trimmingCharacters(in: .whitespaces).isEmpty ? nil : coverUrl
             )
+            try await service.saveYearTheme(look)
             Haptics.success()
             dismiss()
         } catch {
             self.error = error.localizedDescription
         }
+    }
+}
+
+private extension Color {
+    /// "#rrggbb" in sRGB, for storing a picked colour.
+    var festHexString: String {
+        let ui = UIColor(self)
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        ui.getRed(&r, green: &g, blue: &b, alpha: &a)
+        func c(_ v: CGFloat) -> Int { Int((min(1, max(0, v)) * 255).rounded()) }
+        return String(format: "#%02X%02X%02X", c(r), c(g), c(b))
     }
 }

@@ -43,19 +43,25 @@ extension Color {
     // Family Fest heraldic wine + parchment (the FF section's identity).
     // Parchment becomes a dark warm brown in dark mode so the section still reads
     // as a distinct "Renaissance" world rather than the resort's pure-black canvas.
-    static let mlrFest          = Color(light: "#6B0F24", dark: "#E0708A")
+    static let mlrFest          = Color(light: "#6B0F24", dark: "#E0708A", festSlot: .primary)
     static let mlrFestLight     = Color(light: "#F6E4CF", dark: "#3A2A22")
-    static let mlrFestParchment = Color(light: "#ECDCBE", dark: "#1E1712")
+    static let mlrFestParchment = Color(light: "#ECDCBE", dark: "#1E1712", festSlot: .background)
     /// Raised card surface inside the Fest section — white on parchment (light),
     /// clearly elevated warm brown in dark mode. Use for day-section cards, info
     /// cards, and utility links so they stand out against the parchment page bg.
-    static let mlrFestCard      = Color(light: "#FBF3E1", dark: "#40332A")
+    static let mlrFestCard      = Color(light: "#FBF3E1", dark: "#40332A", festSlot: .card)
     /// Fest BODY text — warm sepia ink on light parchment, warm cream on dark.
     /// Reserve `mlrFest` (wine) for headings/accents; body should use this so it
     /// stops reading as low-contrast tinted grey. (Renaissance manuscript ink.)
-    static let mlrFestInk       = Color(light: "#33240F", dark: "#F1E7D6")
+    static let mlrFestInk       = Color(light: "#33240F", dark: "#F1E7D6", festSlot: .ink)
     /// Aged-gold heraldic accent — ornamental dividers, crest motifs, gilt rules.
-    static let mlrFestGold      = Color(light: "#C29A2E", dark: "#E7C05A")
+    /// Fest card/divider stroke: the year's border colour, else gold at 60%.
+    static let mlrFestBorder = Color(uiColor: UIColor { traits in
+        let isDark = traits.userInterfaceStyle == .dark
+        if let hex = FestThemeStore.active.hex(.border, dark: isDark) { return UIColor(Color(hex: hex)) }
+        return UIColor(Color(hex: isDark ? "#E7C05A" : "#C29A2E")).withAlphaComponent(0.6)
+    })
+    static let mlrFestGold      = Color(light: "#C29A2E", dark: "#E7C05A", festSlot: .accent)
 
     // Payment brand colors (Fest pay rows, member pay links). Brand-fixed hues,
     // nudged lighter on dark so the pills stay legible on OLED.
@@ -100,6 +106,18 @@ extension Color {
             r = 1; g = 1; b = 1
         }
         self.init(red: r, green: g, blue: b)
+    }
+
+    /// Fest palette color: resolves the active year's look (`FestThemeStore`)
+    /// first, else the built-in pair. Dark mode only takes primary and accent.
+    init(light: String, dark: String, festSlot: FestTheme.Slot) {
+        self.init(uiColor: UIColor { traits in
+            let isDark = traits.userInterfaceStyle == .dark
+            if let hex = FestThemeStore.active.hex(festSlot, dark: isDark) {
+                return UIColor(Color(hex: hex))
+            }
+            return UIColor(Color(hex: isDark ? dark : light))
+        })
     }
 
     /// Adaptive color resolving per the active interface style.

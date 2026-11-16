@@ -58,3 +58,63 @@ extension Text {
             .foregroundStyle(Color.mlrFest)
     }
 }
+
+// MARK: - Per-year look scope (migration 0219)
+
+/// Applies a fest year's look to the screen. The fest palette resolves through
+/// `FestThemeStore.active`, so this sets it before the content renders and
+/// rebuilds when the look changes. `config == nil` means the CURRENT year; a
+/// Past Years page passes its own year and the current look is restored on leave.
+private struct FestThemeScope: ViewModifier {
+    @Environment(AppEnvironment.self) private var env
+    let config: FestConfig?
+
+    private var look: FestTheme { (config ?? env.festContentService.config)?.look ?? .builtIn }
+    private var currentLook: FestTheme { env.festContentService.config?.look ?? .builtIn }
+
+    func body(content: Content) -> some View {
+        // Set during body so children resolve against the right look on first render.
+        let l = look
+        FestThemeStore.active = l
+        return content
+            .id(l)
+            .onAppear { FestThemeStore.active = look }
+            .onDisappear { if config != nil { FestThemeStore.active = currentLook } }
+    }
+}
+
+/// The year's page background: parchment, plus an optional photo under it at
+/// the chosen strength (web: photo beneath a veil of the background colour).
+struct FestThemedBackground: View {
+    @Environment(AppEnvironment.self) private var env
+    var config: FestConfig?
+
+    var body: some View {
+        let look = (config ?? env.festContentService.config)?.look ?? .builtIn
+        ZStack {
+            Color.mlrFestParchment
+            if look.bgStyle == "image", let url = look.safeImageURL {
+                AsyncImage(url: url) { phase in
+                    if let image = phase.image {
+                        if look.bgImageMode == "tile" {
+                            image.resizable(resizingMode: .tile)
+                        } else {
+                            image.resizable().scaledToFill()
+                        }
+                    }
+                }
+                .opacity(look.imageStrength)
+                .allowsHitTesting(false)
+            }
+        }
+        .clipped()
+        .ignoresSafeArea()
+    }
+}
+
+extension View {
+    /// Apply this (or, with `config`, an archived) fest year's look.
+    func festThemeScope(_ config: FestConfig? = nil) -> some View {
+        modifier(FestThemeScope(config: config))
+    }
+}

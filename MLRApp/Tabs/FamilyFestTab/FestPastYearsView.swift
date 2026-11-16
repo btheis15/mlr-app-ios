@@ -53,7 +53,8 @@ struct FestPastYearsView: View {
             }
             .padding(16)
         }
-        .background(Color.mlrFestParchment.ignoresSafeArea())
+        .background(FestThemedBackground())
+        .festThemeScope()
         .navigationTitle("Past Years")
         .navigationBarTitleDisplayMode(.inline)
         .task { await env.festContentService.load() }
@@ -142,7 +143,8 @@ struct FestPastYearDetailView: View {
             }
             .padding(16)
         }
-        .background(Color.mlrFestParchment.ignoresSafeArea())
+        .background(FestThemedBackground(config: year))
+        .festThemeScope(year)
         .navigationTitle(String(year.year))
         .navigationBarTitleDisplayMode(.inline)
         .task {
