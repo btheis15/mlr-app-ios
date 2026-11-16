@@ -316,12 +316,20 @@ final class EventChatService {
     /// membership, a going RSVP, and that the room isn't archived. There is no
     /// send RPC to route around it. Text-only sends show an optimistic bubble
     /// and rethrow on failure so the caller can restore the draft.
+    ///
+    /// `optimistic: false` lets the room view own the unconfirmed bubble (so a
+    /// failed send can stay on screen as "Not delivered"); `onProgress` reports
+    /// completed/total uploads and `onPersisted` fires the moment the confirmed
+    /// message replaces it in `messages`.
     func send(eventId: String, text: String, replyToId: UUID?, mentionedIds: [UUID],
-              attachments: [ChatAttachment], me: Profile?, mediaService: MediaService) async throws {
+              attachments: [ChatAttachment], me: Profile?, mediaService: MediaService,
+              optimistic: Bool = true,
+              onProgress: ((Double) -> Void)? = nil,
+              onPersisted: (() -> Void)? = nil) async throws {
         guard previewUserId == nil, let uid = supabase.auth.currentUser?.id else { return }
 
         var tempId: UUID?
-        if attachments.isEmpty {
+        if attachments.isEmpty && optimistic {
             let t = UUID()
             tempId = t
             pendingIds.insert(t)
@@ -342,6 +350,7 @@ final class EventChatService {
                 uploaded.append(ChatMedia(url: res.url, type: type,
                                           name: att.kind == .file ? att.filename : nil,
                                           position: uploaded.count))
+                onProgress?(Double(uploaded.count) / Double(attachments.count))
             }
 
             struct Insert: Encodable {
@@ -385,6 +394,7 @@ final class EventChatService {
                 if let i = list.firstIndex(where: { $0.id == msg.id }) { list[i] = msg } else { list.append(msg) }
                 messages[eventId] = list
             }
+            onPersisted?()
             await markRead(eventId: eventId)
         } catch {
             if let tempId { messages[eventId]?.removeAll { $0.id == tempId } }
@@ -510,39 +520,45 @@ struct EventChatView: View {
     @State private var roster: [Profile] = []
     @State private var replyingTo: EventChatMessage?
     @State private var editing: EventChatMessage?
-    @State private var expandedReaction: String?
+    // Typing indicator (same broadcast helper as the committee + house rooms).
+    @State private var typing = ChatTypingChannel()
+    // Unconfirmed outgoing messages: the local bubbles + their send state.
+    @State private var unsent: [EventChatMessage] = []
+    @State private var outbox: [UUID: ChatOutboxEntry] = [:]
+    // Smart auto-scroll + jump pill with unread count.
+    @State private var atBottom = true
+    @State private var showJumpPill = false
+    @State private var unreadWhileUp = 0
+    @State private var didInitialScroll = false
+    @State private var scrollBump = 0
+    // First message from someone else since this device last closed the room.
+    @State private var firstUnreadId: String?
+
+    private static let bottomID = "__event_chat_bottom__"
 
     private var service: EventChatService { env.eventChatService }
     private var messages: [EventChatMessage] { service.messages[chat.eventId] ?? [] }
     private var myId: UUID? { env.currentProfile?.id }
+    private var roomKey: String { "event:\(chat.eventId)" }
     /// Mute state comes from the refreshed summary, not the snapshot we opened with.
     private var current: EventChatSummary { service.chats.first { $0.eventId == chat.eventId } ?? chat }
     /// A reaction counts as speaking, so it follows the composer's gate.
     private var canSpeak: Bool { chat.canPost && !chat.archived && !env.isPreviewing }
 
+    /// What the room shows: confirmed messages (held ones only to their author)
+    /// then my unconfirmed local bubbles.
+    private var visibleMessages: [EventChatMessage] {
+        messages.filter { !$0.isHidden || $0.authorId == myId } + unsent
+    }
+
+    private static func groupItems(_ list: [EventChatMessage]) -> [ChatGroupItem] {
+        list.map { ChatGroupItem(id: $0.id.uuidString, authorId: $0.authorId, date: $0.createdAt) }
+    }
+
     var body: some View {
         VStack(spacing: 0) {
-            ScrollViewReader { proxy in
-                ScrollView {
-                    LazyVStack(alignment: .leading, spacing: 10) {
-                        header
-                        ForEach(messages) { message in
-                            if !message.isHidden || message.authorId == myId {
-                                bubble(message, proxy: proxy)
-                                    .id(message.id)
-                            }
-                        }
-                    }
-                    .padding(16)
-                }
-                .scrollDismissesKeyboard(.interactively)
-                .onChange(of: messages.count) { _, _ in
-                    if let last = messages.last {
-                        withAnimation { proxy.scrollTo(last.id, anchor: .bottom) }
-                    }
-                }
-            }
-
+            messageScroll
+            TypingIndicator(names: typing.typers)
             composerArea
         }
         .background(Color.mlrSurface)
@@ -553,15 +569,78 @@ struct EventChatView: View {
                 ToolbarItem(placement: .topBarTrailing) { muteMenu }
             }
         }
+        .chatDraftPersistence(text: $draft, roomKey: roomKey,
+                              userId: env.isPreviewing ? nil : myId,
+                              paused: editing != nil)
+        .onChange(of: draft) { _, new in
+            if canSpeak && editing == nil && !new.trimmingCharacters(in: .whitespaces).isEmpty {
+                typing.notifyTyping()
+            }
+        }
         .task {
             // Previewing as someone else: no reads, no subscription, no receipts.
             guard !env.isPreviewing else { return }
             await service.loadMessages(eventId: chat.eventId)
+            if let me = myId {
+                firstUnreadId = ChatReadMarker.firstUnreadId(
+                    in: Self.groupItems(visibleMessages),
+                    lastSeen: ChatReadMarker.lastSeen(room: roomKey, user: me), me: me)
+            }
             await service.markRead(eventId: chat.eventId)
             roster = await service.fetchRoster(eventId: chat.eventId)
             service.subscribe(eventId: chat.eventId)
+            if canSpeak, let me = env.currentProfile {
+                typing.start(roomKey: roomKey, uid: me.id, name: me.displayName)
+            }
         }
-        .onDisappear { service.unsubscribe(eventId: chat.eventId) }
+        .onDisappear {
+            if !env.isPreviewing, let me = myId {
+                ChatReadMarker.markSeen(room: roomKey, user: me)
+            }
+            service.unsubscribe(eventId: chat.eventId)
+            typing.stop()
+        }
+    }
+
+    private var messageScroll: some View {
+        let list = visibleMessages
+        let metas = ChatGrouping.meta(for: Self.groupItems(list), firstUnreadId: firstUnreadId)
+        return ScrollViewReader { proxy in
+            ScrollView {
+                LazyVStack(spacing: 0) {
+                    header
+                        .padding(.horizontal, 16)
+                    ForEach(list) { message in
+                        row(message, meta: metas[message.id.uuidString] ?? ChatRowMeta(), proxy: proxy)
+                            .id(message.id)
+                    }
+                    Color.clear.frame(height: 1).id(Self.bottomID)
+                }
+                .padding(.vertical, 12)
+            }
+            .chatScrollBehavior(atBottom: $atBottom)
+            .onChange(of: atBottom) { _, now in
+                if now { showJumpPill = false; unreadWhileUp = 0 }
+            }
+            .onChange(of: list.count) { old, new in
+                guard new != old, new > 0 else { return }
+                if !didInitialScroll {
+                    didInitialScroll = true
+                    proxy.scrollTo(Self.bottomID, anchor: .bottom)
+                } else if atBottom || list.last?.authorId == myId {
+                    withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
+                } else if new > old {
+                    showJumpPill = true
+                    unreadWhileUp += new - old
+                }
+            }
+            .onChange(of: scrollBump) {
+                withAnimation { proxy.scrollTo(Self.bottomID, anchor: .bottom) }
+                showJumpPill = false
+                unreadWhileUp = 0
+            }
+            .chatJumpPill(visible: showJumpPill && !atBottom, unread: unreadWhileUp) { scrollBump += 1 }
+        }
     }
 
     // MARK: Mute (same menu as the feed bell)
@@ -635,14 +714,30 @@ struct EventChatView: View {
     }
 
     @ViewBuilder
-    private func bubble(_ message: EventChatMessage, proxy: ScrollViewProxy) -> some View {
+    private func row(_ message: EventChatMessage, meta: ChatRowMeta, proxy: ScrollViewProxy) -> some View {
         let mine = message.authorId == myId
+        let pending = outbox[message.id]
+        ChatMessageRow(
+            meta: meta,
+            isOwn: mine,
+            authorName: message.authorName,
+            avatarUrl: message.authorAvatarUrl,
+            createdAt: message.createdAt,
+            isDeleted: message.isDeleted,
+            delivery: pending?.delivery,
+            onReply: (canSpeak && !message.isDeleted) ? { replyingTo = message; editing = nil } : nil,
+            onDoubleTap: (canSpeak && !message.isDeleted) ? { quickTapback(message) } : nil,
+            onRetry: { Task { await deliver(message.id) } },
+            onDeleteUnsent: { discardUnsent(message.id) }
+        ) {
+            bubble(message, mine: mine, pending: pending, tail: meta.endsGroup, proxy: proxy)
+        }
+    }
+
+    @ViewBuilder
+    private func bubble(_ message: EventChatMessage, mine: Bool, pending: ChatOutboxEntry?,
+                        tail: Bool, proxy: ScrollViewProxy) -> some View {
         VStack(alignment: mine ? .trailing : .leading, spacing: 3) {
-            if !mine && !message.isDeleted {
-                Text(message.authorName)
-                    .font(.mlrScaled(11, weight: .semibold))
-                    .foregroundStyle(Color.mlrTextMuted)
-            }
             if message.isDeleted {
                 Label("message deleted", systemImage: "trash")
                     .font(.mlrScaled(13))
@@ -652,24 +747,20 @@ struct EventChatView: View {
                     .background(Color.mlrCard.opacity(0.6))
                     .clipShape(RoundedRectangle(cornerRadius: 14))
             } else {
-                content(message, mine: mine, proxy: proxy)
-                    .contextMenu { menu(message, mine: mine) }
+                content(message, mine: mine, pending: pending, tail: tail, proxy: proxy)
+                    .contextMenu {
+                        // Unsent bubbles have no server id yet.
+                        if pending == nil { menu(message, mine: mine) }
+                    }
+                ChatReactionPills(reactions: message.reactions, myUserId: myId, isOwn: mine,
+                                  reactorName: { reactorName($0) })
             }
-            if !message.reactions.isEmpty && !message.isDeleted {
-                reactionPills(message, mine: mine)
-            }
-            HStack(spacing: 4) {
-                Text(message.createdAt.formatted(date: .omitted, time: .shortened))
-                if message.isEdited && !message.isDeleted { Text("· edited") }
-            }
-            .font(.mlrScaled(10))
-            .foregroundStyle(Color.mlrTextSubtle)
         }
-        .frame(maxWidth: .infinity, alignment: mine ? .trailing : .leading)
     }
 
     @ViewBuilder
-    private func content(_ message: EventChatMessage, mine: Bool, proxy: ScrollViewProxy) -> some View {
+    private func content(_ message: EventChatMessage, mine: Bool, pending: ChatOutboxEntry?,
+                         tail: Bool, proxy: ScrollViewProxy) -> some View {
         VStack(alignment: mine ? .trailing : .leading, spacing: 4) {
             if let q = quote(for: message.replyToId) {
                 Button {
@@ -694,18 +785,30 @@ struct EventChatView: View {
                 }
                 .buttonStyle(.pressable)
             }
-            if !message.media.isEmpty {
+            if let pending, !pending.payload.attachments.isEmpty {
+                ChatPendingAttachments(entry: pending, isOwn: mine)
+            } else if !message.media.isEmpty {
                 ChatMediaView(media: signed(message.media), isOwn: mine)
             }
             if let text = message.text, !text.isEmpty {
-                MentionText(
-                    text,
-                    baseColor: mine ? .white : Color.mlrText,
-                    mentionColor: mine ? Color.mlrPrimaryLight : Color.mlrPrimary
-                )
+                VStack(alignment: .trailing, spacing: 2) {
+                    MentionText(
+                        text,
+                        baseColor: mine ? .white : Color.mlrText,
+                        mentionColor: mine ? Color.mlrPrimaryLight : Color.mlrPrimary
+                    )
+                    if message.isEdited {
+                        Text("edited")
+                            .font(.mlrScaled(10))
+                            .foregroundStyle(mine ? Color.white.opacity(0.7) : Color.mlrTextSubtle)
+                    }
+                }
                 .padding(.horizontal, 12).padding(.vertical, 8)
-                .background(mine ? Color.mlrPrimary : Color.mlrCard)
-                .clipShape(RoundedRectangle(cornerRadius: 14))
+                .chatBubbleBackground(isOwn: mine, tail: tail)
+            } else if message.isEdited {
+                Text("edited")
+                    .font(.mlrScaled(10))
+                    .foregroundStyle(Color.mlrTextSubtle)
             }
             // ⚠️ A held message is shown to ITS AUTHOR with a reason. Everyone
             // else can't see it at all (RLS), so vanishing without explanation
@@ -738,47 +841,6 @@ struct EventChatView: View {
                 Button { startEdit(message) } label: { Label("Edit", systemImage: "pencil") }
             }
             Button(role: .destructive) { delete(message) } label: { Label("Delete", systemImage: "trash") }
-        }
-    }
-
-    private func reactionPills(_ message: EventChatMessage, mine: Bool) -> some View {
-        VStack(alignment: mine ? .trailing : .leading, spacing: 3) {
-            HStack(spacing: 4) {
-                ForEach(chatReactionCounts(message.reactions), id: \.emoji) { item in
-                    let mineR = message.reactions.contains { $0.emoji == item.emoji && $0.userId == myId }
-                    let expanded = expandedReaction == "\(message.id)|\(item.emoji)"
-                    Button {
-                        withAnimation(.easeOut(duration: 0.15)) {
-                            expandedReaction = expanded ? nil : "\(message.id)|\(item.emoji)"
-                        }
-                    } label: {
-                        HStack(spacing: 2) {
-                            Text(item.emoji).font(.mlrScaled(12))
-                            if item.count > 1 {
-                                Text("\(item.count)")
-                                    .font(.mlrScaled(11, weight: .semibold))
-                                    .foregroundStyle(mineR ? Color.mlrPrimary : Color.mlrTextMuted)
-                            }
-                        }
-                        .padding(.horizontal, 7).padding(.vertical, 3)
-                        .background(mineR ? Color.mlrPrimaryLight : Color.mlrCard)
-                        .clipShape(Capsule())
-                        .overlay(Capsule().stroke(expanded ? Color.mlrPrimary : (mineR ? Color.mlrPrimary.opacity(0.4) : Color.mlrBorder), lineWidth: expanded ? 1.5 : 1))
-                    }
-                    .buttonStyle(.pressable)
-                    .accessibilityLabel("See who reacted \(item.emoji)")
-                }
-            }
-            if let key = expandedReaction, key.hasPrefix("\(message.id)|") {
-                let emoji = String(key.dropFirst("\(message.id)|".count))
-                let names = message.reactions.filter { $0.emoji == emoji }.map { reactorName($0.userId) }
-                if !names.isEmpty {
-                    Text("\(emoji) \(names.joined(separator: ", "))")
-                        .font(.mlrScaled(11))
-                        .foregroundStyle(Color.mlrTextMuted)
-                        .frame(maxWidth: 240, alignment: mine ? .trailing : .leading)
-                }
-            }
         }
     }
 
@@ -859,6 +921,14 @@ struct EventChatView: View {
         Task { await service.react(eventId: chat.eventId, messageId: message.id, emoji: emoji, userId: myId) }
     }
 
+    /// Double-tap: quick ❤️ tapback (toggles). Returns true when it added one.
+    private func quickTapback(_ message: EventChatMessage) -> Bool {
+        guard canSpeak, let myId else { return false }
+        let adding = message.reactions.first { $0.userId == myId }?.emoji != "❤️"
+        react(message, "❤️")
+        return adding
+    }
+
     private func startEdit(_ message: EventChatMessage) {
         editing = message
         replyingTo = nil
@@ -891,26 +961,64 @@ struct EventChatView: View {
             return
         }
 
+        guard let uid = myId else { return }
         let mentioned = roster
             .filter { !$0.name.isEmpty && $0.id != myId && text.lowercased().contains("@\($0.name.lowercased())") }
             .map(\.id)
         let reply = replyingTo
-        let saved = draft
-        // Text-only: clear instantly (optimistic bubble); restore on failure.
-        if attachments.isEmpty { draft = ""; replyingTo = nil } else { sending = true }
-        defer { sending = false }
-        do {
-            try await service.send(eventId: chat.eventId, text: text, replyToId: reply?.id,
-                                   mentionedIds: mentioned, attachments: attachments,
-                                   me: env.currentProfile, mediaService: env.mediaService)
-            draft = ""
-            replyingTo = nil
-        } catch {
-            draft = saved
-            replyingTo = reply
-            Haptics.error()
-            self.error = "Couldn't send that."
+
+        // Optimistic: an instant local bubble (text or attachments), composer clears
+        // right away. If the send fails the bubble stays as "Not delivered" with
+        // Retry / Delete — the draft is not restored.
+        let tempId = UUID()
+        let temp = EventChatMessage(
+            id: tempId, eventId: chat.eventId, authorId: uid,
+            authorName: env.currentProfile?.displayName ?? "You",
+            authorAvatarUrl: env.currentProfile?.avatarUrl,
+            text: text.isEmpty ? nil : text, status: "visible", createdAt: .now, replyToId: reply?.id)
+        outbox[tempId] = ChatOutboxEntry(
+            delivery: .sending,
+            payload: ChatOutgoing(text: text, replyToId: reply?.id, mentionedIds: mentioned, attachments: attachments))
+        if MLRMotion.reduceMotion {
+            unsent.append(temp)
+        } else {
+            withAnimation(.spring(response: 0.4, dampingFraction: 0.72)) { unsent.append(temp) }
         }
+        draft = ""
+        replyingTo = nil
+        await deliver(tempId)
+    }
+
+    /// Send (or re-send) the unconfirmed bubble `tempId`.
+    private func deliver(_ tempId: UUID) async {
+        guard var entry = outbox[tempId] else { return }
+        entry.delivery = .sending
+        entry.progress = 0
+        outbox[tempId] = entry
+        let p = entry.payload
+        do {
+            try await service.send(eventId: chat.eventId, text: p.text, replyToId: p.replyToId,
+                                   mentionedIds: p.mentionedIds, attachments: p.attachments,
+                                   me: env.currentProfile, mediaService: env.mediaService,
+                                   optimistic: false,
+                                   onProgress: { outbox[tempId]?.progress = $0 },
+                                   onPersisted: { finishUnsent(tempId) })
+            finishUnsent(tempId)
+        } catch {
+            outbox[tempId]?.delivery = .failed
+            Haptics.error()
+        }
+    }
+
+    /// The confirmed message is now in the service's list — drop the local bubble.
+    private func finishUnsent(_ id: UUID) {
+        unsent.removeAll { $0.id == id }
+        outbox[id] = nil
+    }
+
+    /// Delete an unsent ("Not delivered") bubble.
+    private func discardUnsent(_ id: UUID) {
+        chatWithAnimation { finishUnsent(id) }
     }
 }
 

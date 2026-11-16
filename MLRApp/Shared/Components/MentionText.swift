@@ -452,6 +452,14 @@ struct ChatComposer: View {
 
     private var trimmed: String { text.trimmingCharacters(in: .whitespacesAndNewlines) }
     private var canSend: Bool { (!trimmed.isEmpty || !attachments.isEmpty) && !sending }
+    private var sendSymbol: String {
+        if isEditing { return canSend ? "checkmark.circle.fill" : "checkmark.circle" }
+        return canSend ? "arrow.up.circle.fill" : "arrow.up.circle"
+    }
+    /// About five lines of body text, then the field scrolls.
+    private var maxFieldHeight: CGFloat {
+        UIFont.preferredFont(forTextStyle: .body).lineHeight * 5 + 18
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -514,12 +522,14 @@ struct ChatComposer: View {
                     text: $text,
                     height: $height,
                     pendingMention: $pendingMention,
+                    maxHeight: maxFieldHeight,
                     onMentionQueryChange: { q in
                         withAnimation(.easeOut(duration: 0.16)) { mentionQuery = q }
                     },
                     onPasteMedia: { items in if allowsAttachments { attachments.append(contentsOf: items) } }
                 )
                 .frame(height: height)
+                .animation(MLRMotion.reduceMotion ? nil : .snappy(duration: 0.18), value: height)
                 .padding(.horizontal, 8)
                 .background(Color.mlrSurface)
                 .clipShape(RoundedRectangle(cornerRadius: 20))
@@ -530,20 +540,22 @@ struct ChatComposer: View {
                     onSend(attachments)
                     attachments = []
                 } label: {
+                    // The glyph morphs outline -> filled as the message becomes
+                    // sendable (symbol replace + a bounce), instead of a tinted disc.
                     Group {
                         if sending {
-                            ProgressView().tint(.white)
+                            ProgressView().tint(Color.mlrPrimary)
                         } else {
-                            Image(systemName: isEditing ? "checkmark" : "arrow.up")
-                                .font(.mlrScaled(16, weight: .bold))
-                                .foregroundStyle(.white)
+                            Image(systemName: sendSymbol)
+                                .font(.system(size: 34, weight: .regular))
+                                .foregroundStyle(canSend ? Color.mlrPrimary : Color.mlrTextSubtle)
+                                .contentTransition(.symbolEffect(.replace))
+                                .symbolEffect(.bounce, value: MLRMotion.reduceMotion ? false : canSend)
                         }
                     }
                     .frame(width: 38, height: 38)
-                    .background(canSend ? Color.mlrPrimary : Color.mlrPrimary.opacity(0.4))
-                    .clipShape(Circle())
-                    .scaleEffect(canSend ? 1 : 0.9)
-                    .animation(.spring(response: 0.3, dampingFraction: 0.6), value: canSend)
+                    .scaleEffect(canSend ? 1 : 0.92)
+                    .animation(MLRMotion.reduceMotion ? nil : .spring(response: 0.3, dampingFraction: 0.6), value: canSend)
                 }
                 .buttonStyle(.pressable)
                 .disabled(!canSend)
