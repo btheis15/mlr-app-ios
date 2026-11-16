@@ -752,21 +752,12 @@ final class FestContentService {
                 + (c.activity_slots ?? 0) + (c.rsvps ?? 0))
     }
 
-    /// This year's theme line and cover photo (migration 0219).
-    /// Nil clears the override and falls back to the built-in look.
-    func saveYearLook(theme: String?, coverUrl: String?) async throws {
+    /// This year's whole look in ONE upsert (migration 0219): theme line, cover
+    /// photo, colours, background and font. A single write, so a failure can never
+    /// leave half the look saved. Nil = built-in look / no override.
+    func saveYearLook(theme: String?, coverUrl: String?, look t: FestTheme) async throws {
         var p: [String: AnyJSON] = [
             "fest_year": .integer(year), "theme": j(theme), "cover_url": j(coverUrl),
-        ]
-        if let uid = await currentUid() { p["updated_by"] = .string(uid) }
-        try await supabase.from("fest_config").upsert(p, onConflict: "fest_year").execute()
-        await resolveYear()
-    }
-
-    /// Writes only the look columns (migration 0219). Nil = built-in look.
-    func saveYearTheme(_ t: FestTheme) async throws {
-        var p: [String: AnyJSON] = [
-            "fest_year": .integer(year),
             "theme_primary": j(t.primary), "theme_accent": j(t.accent),
             "theme_background": j(t.background), "theme_card": j(t.card),
             "theme_border": j(t.border), "theme_ink": j(t.ink),

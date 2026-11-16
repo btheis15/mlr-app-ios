@@ -122,6 +122,12 @@ struct FestPastYearDetailView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
+                // This year's own cover only when it has one (the archive keeps
+                // what the fest looked like; no app-wide image substituted in).
+                if year.coverUrl?.trimmingCharacters(in: .whitespaces).isEmpty == false {
+                    FestYearCover(coverUrl: year.coverUrl,
+                                  accessibilityText: "Family Fest \(String(year.year)) cover")
+                }
                 heading
                 thankYou
 

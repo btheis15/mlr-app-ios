@@ -15,10 +15,14 @@ struct FestOverviewView: View {
     @Environment(AppEnvironment.self) private var env
     @State private var canEdit = false
     @State private var showPlanner = false
+    @State private var showLookEditor = false
     @State private var previewDate: Date? = nil      // admin "see as this day" preview
     @State private var showDatePicker = false
 
     private var content: FestContentService { env.festContentService }
+
+    /// Same permission as the Planner button; hidden while an admin previews as someone else.
+    private var showsEditPencils: Bool { canEdit && !env.isPreviewing }
 
     /// The fest season for the previewed day (or the real today) — drives the
     /// FestStatus phase + "Day N of N".
@@ -75,8 +79,22 @@ struct FestOverviewView: View {
 
                         // Identity: cover art + theme/dates/venue caption.
                         VStack(spacing: 10) {
-                            FestCoverImage()
+                            FestYearCover(coverUrl: content.config?.coverUrl,
+                                          accessibilityText: "Family Fest \(String(content.year)) cover")
+                                .background { FestHeroGlow() }
+                                .overlay(alignment: .topTrailing) {
+                                    if showsEditPencils {
+                                        FestEditPencil(label: "cover and theme") { showLookEditor = true }
+                                            .padding(6)
+                                    }
+                                }
                             FestCoverCaption()
+                                .overlay(alignment: .topTrailing) {
+                                    if showsEditPencils {
+                                        // Opens the Planner, where "Fest details & dates" lives.
+                                        FestEditPencil(label: "fest title and dates") { showPlanner = true }
+                                    }
+                                }
                         }
 
                         if content.usingSeedFallback {
@@ -152,6 +170,7 @@ struct FestOverviewView: View {
                 NavigationStack { FamilyFestPlannerView() }
             }
             .sheet(isPresented: $showDatePicker) { datePreviewSheet }
+            .sheet(isPresented: $showLookEditor) { FestYearLookSheet() }
         }
         .task {
             await env.appImagesService.load()
@@ -367,23 +386,25 @@ private struct FestUtilityLink<Destination: View>: View {
     }
 }
 
-// MARK: - Cover Art
+// MARK: - Edit pencil
 
-/// The Family Fest 2026 "Renaissance / Fantasy" cover, bundled in the asset
-/// catalog so it shows offline. Mirrors the web fest page's FestCover header.
-private struct FestCoverImage: View {
+/// Small pencil for edit-in-place. Local stand-in until the shared `EditPencil`
+/// exists in EditorKit; unify at integration.
+private struct FestEditPencil: View {
+    let label: String
+    let action: () -> Void
+
     var body: some View {
-        SiteImage(key: SiteImageKey.festCover, fallback: "family-fest-cover")
-            .scaledToFit()
-            .frame(maxWidth: .infinity)
-            .clipShape(RoundedRectangle(cornerRadius: 16))
-            .overlay(
-                RoundedRectangle(cornerRadius: 16)
-                    .strokeBorder(LinearGradient.festHeraldic, lineWidth: 1.5)
-            )
-            .background { FestHeroGlow() }
-            .shadow(color: .mlrFest.opacity(0.18), radius: 16, x: 0, y: 8)
-            .accessibilityLabel("Family Fest 2026 — Ye Olde Family Feste")
+        Button(action: action) {
+            Image(systemName: "pencil.circle.fill")
+                .font(.system(size: 26))
+                .symbolRenderingMode(.palette)
+                .foregroundStyle(.white, Color.mlrFest)
+                .frame(width: 44, height: 44)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.pressable)
+        .accessibilityLabel("Edit \(label)")
     }
 }
 
