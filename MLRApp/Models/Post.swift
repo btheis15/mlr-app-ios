@@ -2,7 +2,7 @@ import Foundation
 
 // MARK: - Post
 
-struct Post: Identifiable, Equatable {
+struct Post: Identifiable, Equatable, Codable {
     let id: UUID
     let authorId: UUID
     var authorName: String
@@ -31,7 +31,7 @@ struct Post: Identifiable, Equatable {
 }
 
 // A member tagged in a post (post_tags).
-struct PostTag: Identifiable, Equatable {
+struct PostTag: Identifiable, Equatable, Codable {
     let id: UUID        // tagged_user_id
     let name: String
 }
