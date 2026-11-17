@@ -314,16 +314,7 @@ struct HomeView: View {
                 // The season's still scene (the splash's final frame), as on web.
                 .overlay { SeasonalLogoFX(season: .current(), progress: 1).allowsHitTesting(false) }
                 .frame(width: min(geometry.size.width * 0.28, 104))
-                .background {
-                    // Dark mode only: the dark-green mark nearly vanishes on the
-                    // dark backdrop, so seat it on a soft light glow.
-                    if colorScheme == .dark {
-                        Circle()
-                            .fill(RadialGradient(colors: [Color.white.opacity(0.16), Color.white.opacity(0.10), Color.white.opacity(0.035), Color.white.opacity(0)],
-                                                 center: .center, startRadius: 40, endRadius: 100))
-                            .frame(width: 200, height: 200)
-                    }
-                }
+                .modifier(DarkLogoPlaque(active: colorScheme == .dark))
                 .padding(.top, 0)
                 .homeLogoEditPencil()
             Text(greeting)
@@ -507,5 +498,27 @@ extension EnvironmentValues {
     var navigate: (Tab) -> Void {
         get { self[NavigateKey.self] }
         set { self[NavigateKey.self] = newValue }
+    }
+}
+
+
+/// Dark mode only: seats the dark-green logo on a small cream "lodge sign" plaque.
+private struct DarkLogoPlaque: ViewModifier {
+    let active: Bool
+    func body(content: Content) -> some View {
+        if active {
+            content
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
+                .background {
+                    RoundedRectangle(cornerRadius: 18, style: .continuous)
+                        .fill(Color(red: 0xF1/255, green: 0xEF/255, blue: 0xE4/255))
+                        .overlay(RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .strokeBorder(Color(red: 0x3A/255, green: 0x4C/255, blue: 0x42/255), lineWidth: 0.5))
+                        .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+                }
+        } else {
+            content
+        }
     }
 }
