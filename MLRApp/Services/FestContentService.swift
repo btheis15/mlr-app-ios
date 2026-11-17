@@ -16,6 +16,10 @@ struct FestConfig: Equatable, Identifiable {
     var coverUrl: String?
     /// Per-year look colours/background/font (migration 0219). Default = built-in.
     var look: FestTheme = .builtIn
+    /// Editor-chosen theme emoji (migration 0228 `theme_icons`); nil/empty = automatic.
+    var icons: [String]?
+    /// Uploaded logo/image (migration 0228 `theme_icon_url`); wins over emoji.
+    var iconUrl: String?
 
     var id: Int { year }
 
@@ -61,7 +65,12 @@ extension FestConfig {
     }
 
     /// Emoji representing this fest's theme (never empty).
-    var themeIcons: [String] { Self.themeIcons(for: [theme, tagline, name]) }
+    var themeIcons: [String] {
+        if let stored = icons?.filter({ !$0.isEmpty }), !stored.isEmpty { return Array(stored.prefix(5)) }
+        return autoThemeIcons
+    }
+    /// Keyword-derived icons, ignoring stored ones (editor placeholder).
+    var autoThemeIcons: [String] { Self.themeIcons(for: [theme, tagline, name]) }
     var primaryThemeIcon: String { themeIcons.first ?? "🎪" }
 }
 
@@ -898,6 +907,27 @@ final class FestContentService {
         await resolveYear()
     }
 
+    /// Saves the theme icons on their own (migration 0228 `theme_icons`), so a
+    /// server without the column fails only this write, never the whole look.
+    /// Direct update under the same `can_edit_fest()` RLS as `saveYearLook`.
+    func saveThemeIcons(_ icons: [String], iconUrl: String?) async throws {
+        let clean = Array(icons.map { $0.trimmingCharacters(in: .whitespaces) }.filter { !$0.isEmpty }.prefix(5))
+        let value: AnyJSON = clean.isEmpty ? .null : .array(clean.map { .string($0) })
+        do {
+            try await supabase.from("fest_config").update(["theme_icons": value,
+                                                     "theme_icon_url": iconUrl?.nilIfBlank.map { AnyJSON.string($0) } ?? .null])
+                .eq("fest_year", value: year).execute()
+        } catch {
+            let m = error.localizedDescription
+            if m.contains("theme_icon") {
+                throw NSError(domain: "FestIcons", code: 1, userInfo: [NSLocalizedDescriptionKey:
+                    "Theme icons can't be saved yet: the server update (migration 0228) hasn't been applied."])
+            }
+            throw error
+        }
+        await resolveYear()
+    }
+
     // MARK: - Starting the next fest year
 
     struct StartYearResult { var copied: Int; var warning: String? }
@@ -1316,8 +1346,11 @@ private struct ConfigRow: Decodable {
     let theme: String?
     let coverUrl: String?
     let look: FestTheme
+    let icons: [String]?
+    let iconUrl: String?
     enum CodingKeys: String, CodingKey {
         case name, tagline, theme
+        case icons = "theme_icons", iconUrl = "theme_icon_url"
         case festYear = "fest_year"
         case startDate = "start_date"
         case endDate = "end_date"
@@ -1339,6 +1372,9 @@ private struct ConfigRow: Decodable {
         endDate = try c.decode(String.self, forKey: .endDate)
         theme = try? c.decodeIfPresent(String.self, forKey: .theme)
         coverUrl = try? c.decodeIfPresent(String.self, forKey: .coverUrl)
+        // Absent column (migration 0228 not applied) or null = automatic icons.
+        icons = (try? c.decodeIfPresent([String].self, forKey: .icons)) ?? nil
+        iconUrl = ((try? c.decodeIfPresent(String.self, forKey: .iconUrl)) ?? nil)?.nilIfBlank
         // The look columns are tolerant: absent (older schema) or malformed
         // values become nil (built-in look) and never fail the row.
         func str(_ k: CodingKeys) -> String? { (try? c.decodeIfPresent(String.self, forKey: k)) ?? nil }
@@ -1357,7 +1393,7 @@ private struct ConfigRow: Decodable {
     var config: FestConfig {
         FestConfig(year: festYear, name: name, tagline: tagline,
                    startDate: startDate, endDate: endDate,
-                   theme: theme, coverUrl: coverUrl, look: look)
+                   theme: theme, coverUrl: coverUrl, look: look, icons: icons, iconUrl: iconUrl)
     }
 }
 

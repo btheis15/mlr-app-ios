@@ -65,6 +65,25 @@ final class MediaService {
         return try publicURL(bucket: "site-assets", path: path)
     }
 
+    /// Fest icon/logo to the same public `site-assets` bucket as the fest cover
+    /// (write policy: can_edit_fest(), migration 0055). Max 512 px; PNG stays PNG
+    /// when the image has transparency, otherwise JPEG.
+    func uploadFestIcon(image: UIImage, key: String) async throws -> String {
+        let resized = resize(image: image, maxDimension: 512)
+        let alpha = resized.cgImage?.alphaInfo
+        let hasAlpha = alpha == .first || alpha == .last || alpha == .premultipliedFirst || alpha == .premultipliedLast
+        let data: Data?
+        let ext: String, mime: String
+        if hasAlpha { data = resized.pngData(); ext = "png"; mime = "image/png" }
+        else { data = resized.jpegData(compressionQuality: 0.85); ext = "jpg"; mime = "image/jpeg" }
+        guard let data else { throw MediaError.encodingFailed }
+        let path = "\(key)/icon-\(Int(Date().timeIntervalSince1970)).\(ext)"
+        _ = try await supabase.storage
+            .from("site-assets")
+            .upload(path, data: data, options: FileOptions(contentType: mime))
+        return try publicURL(bucket: "site-assets", path: path)
+    }
+
     // MARK: - Mac mini upload
 
     /// POST multipart/form-data to the Mac mini's /upload endpoint.

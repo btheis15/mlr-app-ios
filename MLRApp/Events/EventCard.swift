@@ -26,10 +26,12 @@ struct EventCard: View {
     }
 
     /// Current fest's themed icon when this event is that year's fest.
+    private var festCfg: FestConfig? {
+        env.festContentService.allYears.first(where: { event.startDate.hasPrefix(String($0.year)) })
+    }
+
     private var festEmoji: String {
-        if let cfg = env.festContentService.config, event.startDate.hasPrefix(String(cfg.year)) {
-            return cfg.primaryThemeIcon
-        }
+        if let cfg = festCfg { return cfg.primaryThemeIcon }
         return FestConfig.fallbackIcons[0]
     }
 
@@ -39,7 +41,11 @@ struct EventCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 12) {
                         if event.kind == .familyFest {
-                            IconTile(emoji: festEmoji, accent: accent, size: 40)
+                            if let url = festCfg?.iconUrl {
+                                FestIconImage(url: url, emoji: festEmoji, side: 40, corner: 12)
+                            } else {
+                                IconTile(emoji: festEmoji, accent: accent, size: 40)
+                            }
                         } else {
                             IconTile(symbol: symbol, accent: accent, size: 40)
                         }
