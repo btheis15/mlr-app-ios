@@ -10,6 +10,7 @@ struct EventCard: View {
     var summary: AttendanceSummary?
     var myStatus: AttendanceStatus?
     let onTap: () -> Void
+    @Environment(AppEnvironment.self) private var env
 
     private var accent: Color {
         EventKindStyle.color(for: event.kind)
@@ -24,12 +25,24 @@ struct EventCard: View {
         }
     }
 
+    /// Current fest's themed icon when this event is that year's fest.
+    private var festEmoji: String {
+        if let cfg = env.festContentService.config, event.startDate.hasPrefix(String(cfg.year)) {
+            return cfg.primaryThemeIcon
+        }
+        return FestConfig.fallbackIcons[0]
+    }
+
     var body: some View {
         Button(action: onTap) {
             MLRCard(event.isFamilyFest ? .tinted(accent) : .plain, padding: 12) {
                 VStack(alignment: .leading, spacing: 8) {
                     HStack(alignment: .top, spacing: 12) {
-                        IconTile(symbol: symbol, accent: accent, size: 40)
+                        if event.kind == .familyFest {
+                            IconTile(emoji: festEmoji, accent: accent, size: 40)
+                        } else {
+                            IconTile(symbol: symbol, accent: accent, size: 40)
+                        }
                         VStack(alignment: .leading, spacing: 2) {
                             Eyebrow(EventKindStyle.label(for: event.kind), color: accent)
                             Text(event.title)

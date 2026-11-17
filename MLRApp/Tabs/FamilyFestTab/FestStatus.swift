@@ -207,9 +207,8 @@ private struct ConcludedCard: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 8) {
-                Image(systemName: "crown.fill")
+                Text(env.festContentService.config?.primaryThemeIcon ?? FestConfig.fallbackIcons[0])
                     .font(.mlrScaled(18))
-                    .foregroundStyle(Color.mlrFestGold)
                 Text("That's a wrap on \(String(FamilyFestConfig.year))")
                     .font(.festSerif(19, weight: .bold))
                     .foregroundStyle(Color.mlrFest)

@@ -23,6 +23,48 @@ struct FestConfig: Equatable, Identifiable {
     var dateRangeLabel: String { FamilyFestConfig.rangeLabel(start: startDate, end: endDate) }
 }
 
+// MARK: - Theme icons
+// Emoji that stand for a fest's theme. Not stored (the theme lives in separate
+// DB columns, so a new key would need a migration): derived from the theme line,
+// tagline and name by keyword, falling back to a party glyph. One resolver for
+// every call site.
+
+extension FestConfig {
+    static let fallbackIcons = ["🎪", "🎉"]
+
+    private static let iconKeywords: [(keys: [String], icons: [String])] = [
+        (["70s", "1970", "disco", "groovy"], ["🪩", "🕺", "💃", "✌️", "🌼"]),
+        (["80s", "1980", "neon"], ["📼", "🕹️", "🎸", "🕶️", "⚡"]),
+        (["90s", "1990"], ["💿", "📟", "🛼", "🎮"]),
+        (["60s", "1960", "hippie", "woodstock"], ["☮️", "🌼", "🎸", "🚐"]),
+        (["50s", "1950", "sock hop", "diner"], ["🎙️", "🍔", "🥤", "🚗"]),
+        (["medieval", "olde", "renaissance", "knight"], ["⚔️", "🏰", "👑", "🛡️"]),
+        (["western", "cowboy", "rodeo"], ["🤠", "🐎", "🌵", "🪕"]),
+        (["luau", "hawaiian", "tropical", "beach"], ["🌺", "🍍", "🏄", "🌴"]),
+        (["pirate"], ["🏴‍☠️", "🦜", "⚓", "🗺️"]),
+        (["space", "galaxy"], ["🚀", "🪐", "👽", "⭐"]),
+        (["superhero"], ["🦸", "💥", "⚡", "🛡️"]),
+        (["olympic", "games"], ["🏅", "🔥", "🏆"]),
+        (["christmas in july", "holiday"], ["🎄", "🎅", "❄️"]),
+        (["mardi gras", "carnival", "circus"], ["🎭", "🎪", "🎉"]),
+        (["camp", "northwoods", "lumberjack"], ["🏕️", "🪓", "🌲", "🔥"]),
+    ]
+
+    /// Icons for any theme text (case-insensitive keyword match).
+    static func themeIcons(for texts: [String?]) -> [String] {
+        let hay = texts.compactMap { $0?.lowercased() }.joined(separator: " ")
+        guard !hay.isEmpty else { return fallbackIcons }
+        for entry in iconKeywords where entry.keys.contains(where: { hay.contains($0) }) {
+            return entry.icons
+        }
+        return fallbackIcons
+    }
+
+    /// Emoji representing this fest's theme (never empty).
+    var themeIcons: [String] { Self.themeIcons(for: [theme, tagline, name]) }
+    var primaryThemeIcon: String { themeIcons.first ?? "🎪" }
+}
+
 // MARK: - Per-year look (migration 0219)
 
 /// A fest year's look. Every field nil = the built-in look; hex is validated

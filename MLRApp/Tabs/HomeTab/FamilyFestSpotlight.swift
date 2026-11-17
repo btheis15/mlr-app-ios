@@ -36,6 +36,15 @@ struct FamilyFestSpotlight: View {
         }
     }
 
+    /// Theme emoji for phases where the tile stands for "the fest" itself.
+    private var themedTileIcons: [String]? {
+        switch season.phase {
+        case .offSeason, .live, .concluded:
+            return env.festContentService.config?.themeIcons ?? FestConfig.fallbackIcons
+        default: return nil
+        }
+    }
+
     private var statusLine: String {
         switch season.phase {
         case .offSeason:
@@ -292,9 +301,13 @@ struct FamilyFestSpotlight: View {
                         .fill(LinearGradient(colors: [Color.mlrFest.opacity(0.9), Color.mlrFestGold],
                                              startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 60, height: 60)
-                    Image(systemName: iconName)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(.white)
+                    if let themed = themedTileIcons {
+                        FestThemeIconView(icons: themed)
+                    } else {
+                        Image(systemName: iconName)
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -409,5 +422,56 @@ struct PulsingDot: View {
                 pulsing = true
             }
         }
+    }
+}
+
+
+// MARK: - FestThemeIconView
+// Cycles a fest's theme emoji inside the Home tile with a gentle party rock.
+// Reduce Motion: first icon, static. Animation stops when off screen.
+
+struct FestThemeIconView: View {
+    let icons: [String]
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var index = 0
+    @State private var rock = false
+    @State private var visible = false
+    @State private var glint = false
+
+    private var animating: Bool { visible && !reduceMotion }
+    private var current: String { icons.isEmpty ? "🎪" : icons[index % icons.count] }
+
+    var body: some View {
+        ZStack {
+            Text(current)
+                .font(.system(size: 28))
+                .id(current)
+                .transition(.scale(scale: 0.6).combined(with: .opacity))
+                .rotationEffect(.degrees(animating ? (rock ? 6 : -6) : 0))
+            if current == "🪩" && !reduceMotion {
+                Image(systemName: "sparkle")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .offset(x: glint ? 11 : -11, y: glint ? -10 : 6)
+                    .opacity(animating ? (glint ? 0.9 : 0.1) : 0)
+            }
+        }
+        .accessibilityHidden(true)
+        .onAppear { visible = true; startRock() }
+        .onDisappear { visible = false }
+        .task(id: animating) {
+            guard animating, icons.count > 1 else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 3_500_000_000)
+                if Task.isCancelled { break }
+                withAnimation(.easeInOut(duration: 0.25)) { index = (index + 1) % icons.count }
+            }
+        }
+    }
+
+    private func startRock() {
+        guard !reduceMotion else { return }
+        withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) { rock = true }
+        withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { glint = true }
     }
 }
