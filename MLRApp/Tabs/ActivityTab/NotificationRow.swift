@@ -13,7 +13,7 @@ struct NotificationRow: View {
     var accentColor: Color {
         switch notification.kind {
         case .broadcast:
-            return Color.mlrPrimary
+            return Color.mlrPineText
         case .helpRequest, .helpResponse:
             return Color.mlrDanger
         case .cabinDecision, .cabinRequest:
@@ -25,7 +25,7 @@ struct NotificationRow: View {
         case .adminTest:
             return Color.mlrAccent
         default:
-            return Color.mlrPrimary
+            return Color.mlrPineText
         }
     }
 

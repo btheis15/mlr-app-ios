@@ -193,7 +193,7 @@ private struct SignInEntryRow: View {
                 .overlay {
                     Text(entry.email.prefix(1).uppercased())
                         .font(.mlrScaled(14, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
 
             VStack(alignment: .leading, spacing: 3) {

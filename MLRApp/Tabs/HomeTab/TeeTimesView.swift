@@ -36,10 +36,10 @@ struct TeeTimesView: View {
                         Link(destination: url) {
                             Label("View all available times", systemImage: "arrow.up.right.square")
                                 .font(.mlrScaled(14, weight: .semibold))
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.mlrPrimary.opacity(0.1))
+                                .background(Color.mlrPrimary.mlrTint(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                     }
@@ -53,7 +53,7 @@ struct TeeTimesView: View {
                                     .font(.mlrScaled(13))
                                     .foregroundStyle(Color.mlrTextMuted)
                             }
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                             .padding(.horizontal, 14).padding(.vertical, 12)
                             .cardStyle(cornerRadius: 12, elevation: .medium)
                         }
@@ -71,7 +71,7 @@ struct TeeTimesView: View {
                                 .font(.mlrScaled(12))
                                 .foregroundStyle(Color.mlrTextMuted)
                         }
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(14)
                         .cardStyle(cornerRadius: 12, elevation: .medium)
@@ -100,7 +100,7 @@ struct TeeTimesView: View {
                     Text(label).font(.mlrScaled(14, weight: .semibold))
                     Text(shortDate(offset: offset)).font(.mlrScaled(11)).foregroundStyle(Color.mlrTextMuted)
                 }
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 10)
                 .cardStyle(cornerRadius: 12, elevation: .low)

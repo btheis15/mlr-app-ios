@@ -17,7 +17,7 @@ extension LocalPlace {
         case "campfire": return .mlrCampfire
         case "sun": return .mlrSun
         case "dusk": return .mlrDusk
-        default: return .mlrPrimary
+        default: return .mlrPineText
         }
     }
     static let accentNames = ["primary", "lake", "campfire", "sun", "dusk"]
@@ -111,7 +111,7 @@ struct LocalPlacesView: View {
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
                     .buttonStyle(.pressable)
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .cardStyle()
                     .padding(.top, 4)
                 }
@@ -178,7 +178,7 @@ struct LocalPlaceCard: View {
                                 Text("Hidden")
                                     .font(.mlrScaled(10, weight: .bold))
                                     .padding(.horizontal, 6).padding(.vertical, 2)
-                                    .background(Color.mlrWarning.opacity(0.18), in: Capsule())
+                                    .background(Color.mlrWarning.mlrTint(0.18), in: Capsule())
                                     .foregroundStyle(Color.mlrWarning)
                             }
                         }
@@ -193,7 +193,7 @@ struct LocalPlaceCard: View {
                         Button(action: onEdit) {
                             Image(systemName: "pencil.circle.fill")
                                 .font(.mlrScaled(24))
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                                 .frame(width: 44, height: 44)
                         }
                         .buttonStyle(.pressable)
@@ -324,10 +324,10 @@ private struct PlaceChip: View {
             Text(label)
                 .font(.mlrScaled(13, weight: .semibold))
         }
-        .foregroundStyle(Color.mlrPrimary)
+        .foregroundStyle(Color.mlrPineText)
         .padding(.horizontal, 12)
         .frame(height: 32)
-        .background(Color.mlrPrimary.opacity(0.10))
+        .background(Color.mlrPrimary.mlrTint(0.10))
         .clipShape(Capsule())
     }
 }

@@ -50,13 +50,13 @@ struct FestDinnersDetailView: View {
                 .padding(.top, 24)
                 .padding(.bottom, 20)
 
-                Divider().background(Color.mlrFest.opacity(0.15))
+                Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
 
                 // Chef
                 DetailSection(icon: "person.fill", title: "Chef") {
                     HStack(spacing: 10) {
                         Circle()
-                            .fill(Color.mlrFest.opacity(0.12))
+                            .fill(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                             .frame(width: 38, height: 38)
                             .overlay(
                                 Text(String(dinner.chef.prefix(1)).uppercased())
@@ -70,7 +70,7 @@ struct FestDinnersDetailView: View {
                     }
                 }
 
-                Divider().background(Color.mlrFest.opacity(0.15))
+                Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
 
                 // Menu
                 DetailSection(icon: "fork.knife", title: "On the Menu") {
@@ -88,7 +88,7 @@ struct FestDinnersDetailView: View {
                     }
                 }
 
-                Divider().background(Color.mlrFest.opacity(0.15))
+                Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
 
                 // Location — Protected
                 DetailSection(icon: "mappin.and.ellipse", title: "Location") {
@@ -107,7 +107,7 @@ struct FestDinnersDetailView: View {
                     }
                 }
 
-                Divider().background(Color.mlrFest.opacity(0.15))
+                Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
 
                 // Crew — Protected
                 DetailSection(icon: "person.3.fill", title: "Crew") {
@@ -121,7 +121,7 @@ struct FestDinnersDetailView: View {
                                 ForEach(dinner.crew, id: \.self) { member in
                                     HStack(spacing: 10) {
                                         Circle()
-                                            .fill(Color.mlrFest.opacity(0.12))
+                                            .fill(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                                             .frame(width: 32, height: 32)
                                             .overlay(
                                                 Text(String(member.prefix(1)).uppercased())

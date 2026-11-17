@@ -35,7 +35,7 @@ struct AdminCabinDetails: View {
                                         Text("House").font(.mlrScaled(10, weight: .bold))
                                             .foregroundStyle(Color.mlrLake)
                                             .padding(.horizontal, 6).padding(.vertical, 2)
-                                            .background(Color.mlrLake.opacity(0.15)).clipShape(Capsule())
+                                            .background(Color.mlrLake.mlrTint(0.15)).clipShape(Capsule())
                                     }
                                 }
                                 Text("\(cabin.roomCount) room\(cabin.roomCount == 1 ? "" : "s")"
@@ -58,7 +58,7 @@ struct AdminCabinDetails: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { addingPlace = true } label: { Image(systemName: "plus") }
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
             }
         }
         .sheet(isPresented: $addingPlace) {
@@ -175,7 +175,7 @@ private struct AdminCabinEditor: View {
                 }
                 Section {
                     Button { editingRoom = newRoom() } label: {
-                        Label("Add a room", systemImage: "plus.circle.fill").foregroundStyle(Color.mlrPrimary)
+                        Label("Add a room", systemImage: "plus.circle.fill").foregroundStyle(Color.mlrPineText)
                     }
                 } footer: {
                     Text("Break the cabin into named rooms so members pick a specific one. Leave empty to use a plain room count. Room changes save right away.")

@@ -87,7 +87,7 @@ struct MemberSheetView: View {
                     if member.isAdmin {
                         Label("Admin", systemImage: "checkmark.seal.fill")
                             .font(.mlrScaled(12, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(Color.mlrPrimaryLight)
@@ -312,10 +312,10 @@ struct MemberSheetView: View {
                     if preferred {
                         Text("Preferred")
                             .font(.mlrScaled(10, weight: .bold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                             .padding(.horizontal, 6)
                             .padding(.vertical, 2)
-                            .background(Color.mlrPrimary.opacity(0.12))
+                            .background(Color.mlrPrimary.mlrTint(0.12))
                             .clipShape(Capsule())
                     }
                 }
@@ -518,7 +518,7 @@ private struct EditProfilePlaceholder: View {
         VStack(spacing: 12) {
             Image(systemName: "person.text.rectangle")
                 .font(.mlrScaled(36))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
             Text("Edit your profile from the Profile tab.")
                 .font(.mlrBody)
                 .foregroundStyle(Color.mlrTextMuted)

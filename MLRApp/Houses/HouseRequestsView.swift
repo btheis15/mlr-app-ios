@@ -182,7 +182,7 @@ struct HouseAdminsView: View {
                                     set: { on in Task { await set(member, on) } }
                                 ))
                                 .labelsHidden()
-                                .tint(Color.mlrPrimary)
+                                .tint(Color.mlrPineText)
                             }
                         }
                     }
@@ -258,7 +258,7 @@ private struct HouseRequestRow: View {
                     Text(request.kind.meta.money)
                         .font(.mlrScaled(10, weight: .semibold))
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.mlrAccent.opacity(0.15))
+                        .background(Color.mlrAccent.mlrTint(0.15))
                         .foregroundStyle(Color.mlrAccent)
                         .clipShape(Capsule())
 
@@ -271,7 +271,7 @@ private struct HouseRequestRow: View {
                         Text("TEST")
                             .font(.mlrScaled(9, weight: .black))
                             .padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(Color.mlrTextMuted.opacity(0.15))
+                            .background(Color.mlrTextMuted.mlrTint(0.15))
                             .clipShape(Capsule())
                     }
                 }
@@ -709,7 +709,7 @@ struct HouseRequestDetailView: View {
                     Text("Held")
                         .font(.mlrScaled(9, weight: .bold))
                         .padding(.horizontal, 5).padding(.vertical, 2)
-                        .background(.ultraThinMaterial, in: Capsule())
+                        .background(MLRChipFill(), in: Capsule())
                         .padding(4)
                 }
             }
@@ -751,7 +751,7 @@ struct HouseRequestDetailView: View {
                 TextField("Add a note (optional)", text: $note, axis: .vertical)
                     .lineLimit(1...4)
                 Toggle("Email \(request.createdByName ?? "them") the decision", isOn: $notifyDecision)
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
                 Text(tellsLine)
                     .font(.mlrScaled(11))
                     .foregroundStyle(Color.mlrTextMuted)
@@ -997,7 +997,7 @@ struct HouseRequestEditSheet: View {
                     TextField("Why you changed it (optional)", text: $changeNote, axis: .vertical)
                         .lineLimit(1...4)
                     Toggle("Email \(request.createdByName ?? "them") the change", isOn: $notify)
-                        .tint(Color.mlrPrimary)
+                        .tint(Color.mlrPineText)
                 } footer: {
                     Text("They get an in-app notice and a push either way.")
                 }

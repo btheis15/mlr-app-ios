@@ -61,9 +61,9 @@ struct HouseListsView: View {
             Button { creating = true } label: {
                 Label("New list", systemImage: "plus")
                     .font(.mlrScaled(15, weight: .semibold))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .padding(.horizontal, 16).padding(.vertical, 10)
-                    .background(Color.mlrPrimary.opacity(0.1))
+                    .background(Color.mlrPrimary.mlrTint(0.1))
                     .clipShape(Capsule())
             }
             .buttonStyle(.pressable)
@@ -124,7 +124,7 @@ private struct HouseListDetailView: View {
                             Button {
                                 Task { await addItem() }
                             } label: {
-                                Image(systemName: "plus.circle.fill").foregroundStyle(Color.mlrPrimary)
+                                Image(systemName: "plus.circle.fill").foregroundStyle(Color.mlrPineText)
                             }
                             .disabled(newItemText.trimmingCharacters(in: .whitespaces).isEmpty)
                         }

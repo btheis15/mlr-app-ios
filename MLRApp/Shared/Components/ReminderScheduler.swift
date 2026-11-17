@@ -63,7 +63,7 @@ struct ReminderScheduler: View {
                 if !adding {
                     Button("+ Add a reminder") { startAdding() }
                         .font(.mlrScaled(12, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
             }
 
@@ -97,7 +97,7 @@ struct ReminderScheduler: View {
                         .font(.mlrScaled(11, weight: .semibold))
                         .foregroundStyle(Color.mlrAccent)
                         .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Color.mlrAccent.opacity(0.12)).clipShape(Capsule())
+                        .background(Color.mlrAccent.mlrTint(0.12)).clipShape(Capsule())
                 }
                 .buttonStyle(.pressable)
                 .disabled(busyId == it.id)
@@ -134,12 +134,12 @@ struct ReminderScheduler: View {
 
             if sourceType == "callout" {
                 Toggle("Skip anyone who already marked this done", isOn: $excludeDone)
-                    .font(.mlrScaled(12)).tint(Color.mlrPrimary)
+                    .font(.mlrScaled(12)).tint(Color.mlrPineText)
             }
 
             if eventId != nil {
                 Toggle("Only remind people who haven't confirmed yet", isOn: $onlyUnconfirmed)
-                    .font(.mlrScaled(12)).tint(Color.mlrPrimary)
+                    .font(.mlrScaled(12)).tint(Color.mlrPineText)
             }
 
             if let when = computedAt {
@@ -148,7 +148,7 @@ struct ReminderScheduler: View {
                     .foregroundStyle(inPast(when) ? Color.mlrDanger : Color.mlrTextSubtle)
             }
             if let status {
-                Text(status).font(.mlrScaled(11, weight: .medium)).foregroundStyle(Color.mlrPrimary)
+                Text(status).font(.mlrScaled(11, weight: .medium)).foregroundStyle(Color.mlrPineText)
             }
 
             HStack(spacing: 12) {

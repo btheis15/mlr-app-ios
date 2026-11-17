@@ -103,7 +103,7 @@ struct GlobalSearchView: View {
         HStack(spacing: 12) {
             Image(systemName: hit.symbol)
                 .font(.mlrScaled(16))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
                 .frame(width: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(hit.title)
@@ -172,7 +172,7 @@ struct GlobalSearchView: View {
         HStack(spacing: 12) {
             Image(systemName: hit.symbol)
                 .font(.mlrScaled(16))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
                 .frame(width: 26)
             VStack(alignment: .leading, spacing: 2) {
                 Text(hit.sourceLabel)

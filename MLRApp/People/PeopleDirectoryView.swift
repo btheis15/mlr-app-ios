@@ -58,7 +58,7 @@ struct PeopleDirectoryView: View {
                     } label: {
                         Image(systemName: "envelope")
                     }
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
                 }
             }
         }
@@ -108,7 +108,7 @@ struct PeopleDirectoryView: View {
         } actions: {
             Button("Try Again") { Task { await load() } }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
         }
     }
 
@@ -162,7 +162,7 @@ private struct MemberRow: View {
                             if member.isAdmin {
                                 Text("Admin")
                                     .font(.mlrScaled(10, weight: .bold))
-                                    .foregroundStyle(Color.mlrPrimary)
+                                    .foregroundStyle(Color.mlrPineText)
                                     .padding(.horizontal, 6)
                                     .padding(.vertical, 2)
                                     .background(Color.mlrPrimaryLight)
@@ -230,7 +230,7 @@ private struct QuickActionBar: View {
     private func chipLabel(_ label: String, _ icon: String) -> some View {
         Label(label, systemImage: icon)
             .font(.mlrScaled(12, weight: .semibold))
-            .foregroundStyle(Color.mlrPrimary)
+            .foregroundStyle(Color.mlrPineText)
             .padding(.horizontal, 12)
             .padding(.vertical, 6)
             .background(Color.mlrPrimaryLight)
@@ -271,7 +271,7 @@ private struct EmailGroupSheet: View {
                             selectedIds.count == members.count ? "Deselect all" : "Select everyone",
                             systemImage: selectedIds.count == members.count ? "circle" : "checkmark.circle.fill"
                         )
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                     }
                 }
 

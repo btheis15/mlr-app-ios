@@ -30,7 +30,7 @@ struct WorkItemRow: View {
                     if item.isDone {
                         Image(systemName: "checkmark")
                             .font(.mlrScaled(11, weight: .bold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                     } else if checking {
                         Circle().fill(Color.mlrPrimary).frame(width: 10, height: 10)
                     }
@@ -101,7 +101,7 @@ struct WorkItemRow: View {
             .foregroundStyle(color)
             .padding(.horizontal, 6)
             .padding(.vertical, 2)
-            .background(color.opacity(0.12))
+            .background(color.mlrTint(0.12))
             .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 
@@ -110,7 +110,7 @@ struct WorkItemRow: View {
             if media.isVideo {
                 RoundedRectangle(cornerRadius: 8)
                     .fill(Color.mlrCard)
-                    .overlay(Image(systemName: "film").font(.mlrScaled(14)).foregroundStyle(Color.mlrPrimary))
+                    .overlay(Image(systemName: "film").font(.mlrScaled(14)).foregroundStyle(Color.mlrPineText))
             } else {
                 MediaThumb(url: media.url)
             }
@@ -256,7 +256,7 @@ struct EventWorkItemsSection: View {
                     Button { showAdd = true } label: {
                         Text("+ Add")
                             .font(.mlrScaled(13, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                     }
                 }
             }

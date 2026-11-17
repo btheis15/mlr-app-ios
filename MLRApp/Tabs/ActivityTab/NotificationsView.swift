@@ -50,6 +50,7 @@ struct NotificationsView: View {
                     feedList
                 }
             }
+            .mlrDarkBackdrop()
             .navigationTitle("Activity")
             .navigationBarTitleDisplayMode(.large)
             .toolbar {
@@ -100,7 +101,7 @@ struct NotificationsView: View {
                                     } label: {
                                         Label("Mark read", systemImage: "envelope.open")
                                     }
-                                    .tint(Color.mlrPrimary)
+                                    .tint(Color.mlrPineText)
                                 }
                             }
                     }
@@ -137,7 +138,7 @@ struct NotificationsView: View {
             Text("Mark all read")
                 .font(.mlrScaled(14))
         }
-        .foregroundStyle(Color.mlrPrimary)
+        .foregroundStyle(Color.mlrPineText)
         .disabled(!notifications.contains(where: \.isUnread))
     }
 
@@ -198,7 +199,7 @@ struct NotificationsView: View {
         VStack(spacing: 24) {
             Image(systemName: "bell.badge.fill")
                 .font(.mlrScaled(52, weight: .light))
-                .foregroundStyle(Color.mlrPrimary.opacity(0.6))
+                .foregroundStyle(Color.mlrPineText.opacity(0.6))
 
             VStack(spacing: 8) {
                 Text("Sign in to see your activity")
@@ -234,7 +235,7 @@ struct NotificationsView: View {
         }
         .padding(12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.mlrWarning.opacity(0.1))
+        .background(Color.mlrWarning.mlrTint(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 

@@ -160,7 +160,7 @@ struct EventComposer: View {
                 }
             }
         }
-        .tint(Color.mlrPrimary)
+        .tint(Color.mlrPineText)
         .task { await loadWorkItems() }
     }
 

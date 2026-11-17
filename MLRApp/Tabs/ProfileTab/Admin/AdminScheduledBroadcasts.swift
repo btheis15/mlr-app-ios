@@ -116,7 +116,7 @@ struct AdminScheduledBroadcasts: View {
                         editing = item
                     }
                     .font(.mlrScaled(12, weight: .medium))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     Button("Cancel", role: .destructive) { cancelTarget = item }
                         .font(.mlrScaled(12, weight: .medium))
                         .disabled(cancelling)
@@ -139,7 +139,7 @@ struct AdminScheduledBroadcasts: View {
             .font(.mlrScaled(10, weight: .bold))
             .foregroundStyle(color)
             .padding(.horizontal, 8).padding(.vertical, 3)
-            .background(color.opacity(0.12))
+            .background(color.mlrTint(0.12))
             .clipShape(Capsule())
     }
 
@@ -188,7 +188,7 @@ struct AdminScheduledBroadcasts: View {
             if item.payload.sourceType == "callout" {
                 Section {
                     Toggle("Skip anyone who already marked this callout \"done\"", isOn: $editExcludeCalloutDone)
-                        .tint(Color.mlrPrimary)
+                        .tint(Color.mlrPineText)
                 }
             }
             Section("Send at") {

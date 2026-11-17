@@ -248,7 +248,7 @@ private struct NowGameCard: View {
             name(match.slot2EntrantId)
             if canScore {
                 Label("Tap to enter the result", systemImage: "hand.tap.fill")
-                    .font(.mlrScaled(13, weight: .semibold)).foregroundStyle(Color.mlrPrimary)
+                    .font(.mlrScaled(13, weight: .semibold)).foregroundStyle(Color.mlrPineText)
                     .padding(.top, 2)
             }
         }
@@ -389,7 +389,7 @@ struct NextGameBanner: View {
             .accessibilityLabel("Dismiss")
         }
         .padding(.leading, 16).padding(.trailing, 6).padding(.vertical, 6)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: MLRRadius.card))
+        .background(MLRChipFill(thick: true), in: RoundedRectangle(cornerRadius: MLRRadius.card))
         .overlay(RoundedRectangle(cornerRadius: MLRRadius.card).strokeBorder(Color.mlrPrimary.opacity(0.6), lineWidth: 2))
         .shadow(.high)
         .padding(.horizontal, 12).padding(.bottom, 8)
@@ -570,7 +570,7 @@ struct TournamentSetupPreview: View {
                 default: return "Round \(r)"
                 }
             }.joined(separator: "  \u{203A}  "))
-                .font(.mlrScaled(12, weight: .semibold)).foregroundStyle(Color.mlrPrimary)
+                .font(.mlrScaled(12, weight: .semibold)).foregroundStyle(Color.mlrPineText)
             if strategy == .byes {
                 if byes > 0 {
                     let rested = (1...byes).map(String.init).joined(separator: ", ")
@@ -604,7 +604,7 @@ struct TournamentSetupPreview: View {
             side(s2)
         }
         .padding(.horizontal, 10).padding(.vertical, 8)
-        .background(isBye ? Color.mlrWarning.opacity(0.10) : Color.mlrPrimaryLight.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
+        .background(isBye ? Color.mlrWarning.mlrTint(0.10) : Color.mlrPrimaryLight.opacity(0.6), in: RoundedRectangle(cornerRadius: 10))
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(isBye
             ? "\(s1 <= n ? names[s1 - 1] : names[s2 - 1]) has a bye"

@@ -109,9 +109,9 @@ struct ActionTileLabel: View {
         case .primary:
             shape.fill(Color.mlrPrimary).shadow(.low)
         case .neutral:
-            shape.fill(Color.mlrPrimary.opacity(0.1))
+            shape.fill(Color.mlrPrimary.mlrTint(0.1))
         case .danger:
-            shape.fill(Color.mlrDanger.opacity(0.1))
+            shape.fill(Color.mlrDanger.mlrTint(0.1))
         }
     }
 }

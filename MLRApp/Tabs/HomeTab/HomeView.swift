@@ -152,6 +152,7 @@ struct HomeView: View {
                 .debugStartScroll()
             }
             .navigationBarTitleDisplayMode(.inline)
+            .mlrDarkBackdrop()
             .mlrEditToggle(canEdit: (env.isAdmin || appImagesCanEdit) && !env.isPreviewing)
             .task(id: env.currentProfile?.id) {
                 guard env.isSignedIn, !env.isAdmin else { return }
@@ -171,7 +172,7 @@ struct HomeView: View {
                 }
                 ToolbarItem(placement: .topBarTrailing) {
                     Button { showSearch = true } label: {
-                        Image(systemName: "magnifyingglass").foregroundStyle(Color.mlrPrimary)
+                        Image(systemName: "magnifyingglass").foregroundStyle(Color.mlrPineText)
                     }
                     .accessibilityLabel("Search Up North")
                 }
@@ -194,7 +195,7 @@ struct HomeView: View {
                             displayedComponents: .date
                         )
                         .datePickerStyle(.graphical)
-                        .tint(Color.mlrPrimary)
+                        .tint(Color.mlrPineText)
                     }
                     if previewDate != nil {
                         Section {
@@ -281,10 +282,10 @@ struct HomeView: View {
     private var quickActionsGrid: some View {
         let cols = [GridItem(.flexible(), spacing: MLRSpacing.stack), GridItem(.flexible(), spacing: MLRSpacing.stack)]
         return LazyVGrid(columns: cols, spacing: MLRSpacing.stack) {
-            quickLink(EventsView(), "calendar", "Events", .mlrPrimary, 0)
+            quickLink(EventsView(), "calendar", "Events", .mlrPineText, 0)
             quickLink(CommitteesView(), "person.3.fill", "Committees", .mlrCampfire, 1)
             quickLink(PeopleDirectoryView(), "person.2.fill", "People", .mlrLake, 2)
-            quickLink(HelpRequestsView(), "hand.raised.fill", "Ask for Help", .mlrPrimary, 3)
+            quickLink(HelpRequestsView(), "hand.raised.fill", "Ask for Help", .mlrPineText, 3)
             quickLink(LocalPlacesView(), "mappin.and.ellipse", "Local Places", .mlrLake, 4)
             quickLink(CabinBookingsView(), "house.lodge.fill", "Cabin Stay", .mlrSun, 5)
             quickLink(DropBoxesView(), "photo.stack.fill", "Drop Box", .mlrDusk, 6)
@@ -318,7 +319,7 @@ struct HomeView: View {
                     // dark backdrop, so seat it on a soft light glow.
                     if colorScheme == .dark {
                         Circle()
-                            .fill(RadialGradient(colors: [Color.white.opacity(0.78), Color.white.opacity(0.6), Color.white.opacity(0.22), Color.white.opacity(0)],
+                            .fill(RadialGradient(colors: [Color.white.opacity(0.16), Color.white.opacity(0.10), Color.white.opacity(0.035), Color.white.opacity(0)],
                                                  center: .center, startRadius: 40, endRadius: 100))
                             .frame(width: 200, height: 200)
                     }
@@ -357,7 +358,7 @@ struct HomeView: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(.orange.opacity(0.1))
+        .background(Color.orange.mlrTint(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.orange.opacity(0.25), lineWidth: 1))
     }
@@ -474,7 +475,7 @@ struct HomeTile: View {
                 .foregroundStyle(tint)
                 .frame(width: 44, height: 44)
                 .background(
-                    LinearGradient(colors: [tint.opacity(0.18), tint.opacity(0.07)],
+                    LinearGradient(colors: [tint.mlrTint(0.18, over: .mlrSurface3), tint.mlrTint(0.07, over: .mlrSurface3)],
                                    startPoint: .topLeading, endPoint: .bottomTrailing)
                 )
                 .clipShape(RoundedRectangle(cornerRadius: 12))

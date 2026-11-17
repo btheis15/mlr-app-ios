@@ -101,7 +101,7 @@ struct AdminEditMemberSheet: View {
             HStack {
                 Label("Unlocked · ~\(hoursLeft)h left", systemImage: "lock.open.fill")
                     .font(.mlrScaled(13, weight: .medium))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                 Spacer()
                 Button("Re-lock") {
                     Task { await runOverride("cancel_admin_override", note: "Re-locked.") }
@@ -122,7 +122,7 @@ struct AdminEditMemberSheet: View {
                         .multilineTextAlignment(.trailing)
                 }
             }
-            Toggle("Has Apple Cash", isOn: $appleCash).tint(Color.mlrPrimary)
+            Toggle("Has Apple Cash", isOn: $appleCash).tint(Color.mlrPineText)
         } header: {
             Text("Member info")
         } footer: {

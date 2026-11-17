@@ -150,10 +150,10 @@ struct NotifPrefsView: View {
                     .font(.mlrScaled(15))
             } icon: {
                 Image(systemName: icon)
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
             }
         }
-        .tint(Color.mlrPrimary)
+        .tint(Color.mlrPineText)
     }
 
     // A non-toggle row for a notification type that's always on (server-enforced,
@@ -164,7 +164,7 @@ struct NotifPrefsView: View {
                 Label {
                     Text(label).font(.mlrScaled(15))
                 } icon: {
-                    Image(systemName: icon).foregroundStyle(Color.mlrPrimary)
+                    Image(systemName: icon).foregroundStyle(Color.mlrPineText)
                 }
                 Text(desc)
                     .font(.caption)
@@ -173,10 +173,10 @@ struct NotifPrefsView: View {
             Spacer(minLength: 8)
             Text("🔒 Always on")
                 .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 4)
-                .background(Color.mlrPrimary.opacity(0.15))
+                .background(Color.mlrPrimary.mlrTint(0.15))
                 .clipShape(Capsule())
         }
     }

@@ -29,7 +29,7 @@ struct AwaitingVerificationView: View {
 
             Image(systemName: "hourglass")
                 .font(.system(size: 44))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
                 .symbolEffect(.pulse, options: .repeating)
                 .accessibilityHidden(true)
 

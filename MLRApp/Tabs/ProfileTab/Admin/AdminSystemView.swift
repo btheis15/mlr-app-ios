@@ -111,7 +111,7 @@ struct AdminSystemView: View {
             }
 
             if let note {
-                Section { Text(note).font(.mlrScaled(13)).foregroundStyle(Color.mlrPrimary) }
+                Section { Text(note).font(.mlrScaled(13)).foregroundStyle(Color.mlrPineText) }
             }
         }
         .navigationTitle("System")

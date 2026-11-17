@@ -162,7 +162,7 @@ struct TournamentContainerView: View {
 
                 if rearranging {
                     Text("Tap a player, then tap another slot to swap them.")
-                        .font(.mlrScaled(12)).foregroundStyle(Color.mlrPrimary)
+                        .font(.mlrScaled(12)).foregroundStyle(Color.mlrPineText)
                 }
 
                 if t.status == .setup {
@@ -522,13 +522,13 @@ private struct MatchCard: View {
             }
             Spacer()
             if rearranging {
-                if entrantId != nil { Text(isPicked ? "moving…" : "move").font(.mlrScaled(11, weight: .semibold)).foregroundStyle(Color.mlrPrimary) }
+                if entrantId != nil { Text(isPicked ? "moving…" : "move").font(.mlrScaled(11, weight: .semibold)).foregroundStyle(Color.mlrPineText) }
             } else if let score {
                 Text("\(score)").font(.mlrScaled(15, weight: .bold)).monospacedDigit().numericTransition()
             }
         }
         .padding(.horizontal, 12).padding(.vertical, 11)
-        .background(isPicked ? Color.mlrPrimary.opacity(0.25) : (isWinner ? Color.mlrPrimary.opacity(0.08) : Color.clear))
+        .background(isPicked ? Color.mlrPrimary.mlrTint(0.25) : (isWinner ? Color.mlrPrimary.mlrTint(0.08) : Color.clear))
         .scaleEffect(isPicked ? 1.02 : 1)
         .animation(MLRMotion.spring, value: isPicked)
         .contentShape(Rectangle())
@@ -538,7 +538,7 @@ private struct MatchCard: View {
     private var footer: some View {
         HStack {
             if match.isPlayIn {
-                Text("PLAY-IN").font(.mlrScaled(10, weight: .bold)).foregroundStyle(Color.mlrPrimary).tracking(0.6)
+                Text("PLAY-IN").font(.mlrScaled(10, weight: .bold)).foregroundStyle(Color.mlrPineText).tracking(0.6)
             } else if isLive {
                 HStack(spacing: 5) {
                     PulsingLiveDot(color: .mlrSuccess).scaleEffect(0.8)

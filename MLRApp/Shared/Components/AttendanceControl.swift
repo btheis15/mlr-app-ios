@@ -55,7 +55,7 @@ struct AttendanceControl: View {
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
                     .fill(Color.mlrSurface.opacity(0.6))
                 ProgressView()
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
             }
         }
         .overlay { ConfettiView(trigger: confettiTrigger) }

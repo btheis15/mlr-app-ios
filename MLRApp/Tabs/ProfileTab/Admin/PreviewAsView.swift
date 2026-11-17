@@ -23,7 +23,7 @@ struct PreviewAsView: View {
                 Button { showPersonPicker = true } label: {
                     HStack(spacing: 12) {
                         Image(systemName: "person.text.rectangle.fill")
-                            .font(.mlrScaled(16)).foregroundStyle(Color.mlrPrimary).frame(width: 26)
+                            .font(.mlrScaled(16)).foregroundStyle(Color.mlrPineText).frame(width: 26)
                         VStack(alignment: .leading, spacing: 2) {
                             Text(env.previewMember?.name ?? "Choose a person…")
                                 .font(.mlrScaled(15, weight: .medium)).foregroundStyle(Color.mlrText)
@@ -32,7 +32,7 @@ struct PreviewAsView: View {
                         }
                         Spacer()
                         if env.previewMember != nil {
-                            Image(systemName: "checkmark").foregroundStyle(Color.mlrPrimary).fontWeight(.semibold)
+                            Image(systemName: "checkmark").foregroundStyle(Color.mlrPineText).fontWeight(.semibold)
                         } else {
                             Image(systemName: "chevron.right").font(.caption).foregroundStyle(Color.mlrTextSubtle)
                         }
@@ -72,7 +72,7 @@ struct PreviewAsView: View {
             HStack(spacing: 12) {
                 Image(systemName: icon)
                     .font(.mlrScaled(16))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .frame(width: 26)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(.mlrScaled(15, weight: .medium)).foregroundStyle(Color.mlrText)
@@ -80,7 +80,7 @@ struct PreviewAsView: View {
                 }
                 Spacer()
                 if env.previewMode == mode && (mode != .member || env.previewMember == nil) {
-                    Image(systemName: "checkmark").foregroundStyle(Color.mlrPrimary).fontWeight(.semibold)
+                    Image(systemName: "checkmark").foregroundStyle(Color.mlrPineText).fontWeight(.semibold)
                 }
             }
         }

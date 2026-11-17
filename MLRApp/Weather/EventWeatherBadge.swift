@@ -15,6 +15,7 @@ import WeatherKit
 
 struct EventWeatherBadge: View {
     let isoDate: String
+    @Environment(\.colorScheme) private var scheme
     var compact: Bool = true
 
     @State private var forecast: EventForecast?
@@ -54,13 +55,13 @@ struct EventWeatherBadge: View {
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 4)
-        if #available(iOS 26, *) {
+        if #available(iOS 26, *), scheme != .dark {
             badge
                 .glassEffect(.clear, in: .capsule)
                 .accessibilityLabel("Forecast \(f.condition), high \(f.highLabel()), low \(f.lowLabel())")
         } else {
             badge
-                .background(.ultraThinMaterial, in: .capsule)
+                .background(MLRChipFill(), in: .capsule)
                 .accessibilityLabel("Forecast \(f.condition), high \(f.highLabel()), low \(f.lowLabel())")
         }
     }
@@ -92,7 +93,7 @@ struct EventWeatherBadge: View {
             card.glassCard(cornerRadius: 14)
         } else {
             card
-                .background(.regularMaterial)
+                .background(MLRChipFill(thick: true))
                 .clipShape(RoundedRectangle(cornerRadius: 14))
         }
     }

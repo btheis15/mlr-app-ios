@@ -56,7 +56,7 @@ struct UpcomingBirthdaysCard: View {
                             Text(person.daysUntil == 0 ? "Today 🎉" : person.dateLabel)
                                 .font(.mlrScaled(10))
                                 .foregroundStyle(
-                                    person.daysUntil == 0 ? Color.mlrPrimary : Color.mlrTextMuted
+                                    person.daysUntil == 0 ? Color.mlrPineText : Color.mlrTextMuted
                                 )
                         }
                         .frame(width: 58)

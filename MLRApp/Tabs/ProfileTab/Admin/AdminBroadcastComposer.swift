@@ -208,7 +208,7 @@ struct AdminBroadcastComposer: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { if isDirty { showDiscard = true } else { dismiss() } }
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                         .disabled(isPosting)
                 }
             }
@@ -227,7 +227,7 @@ struct AdminBroadcastComposer: View {
                 Text(subtitle).font(.caption).foregroundStyle(Color.mlrTextMuted)
             }
         }
-        .tint(Color.mlrPrimary)
+        .tint(Color.mlrPineText)
     }
 
     // MARK: - Activity autofill (#393)

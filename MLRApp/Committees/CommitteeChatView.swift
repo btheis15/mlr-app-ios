@@ -183,7 +183,7 @@ struct CommitteeChatView: View {
                             if entry.isLead {
                                 Text("Lead")
                                     .font(.mlrScaled(11, weight: .bold))
-                                    .foregroundStyle(Color.mlrPrimary)
+                                    .foregroundStyle(Color.mlrPineText)
                                     .padding(.horizontal, 8).padding(.vertical, 3)
                                     .background(Color.mlrPrimaryLight)
                                     .clipShape(Capsule())
@@ -282,7 +282,7 @@ struct CommitteeChatView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Replying to \(replyContext(replyingTo.id)?.author ?? replyingTo.authorName)")
                             .font(.mlrScaled(12, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                         Text(replyingTo.text.isEmpty ? "📎 Attachment" : replyingTo.text)
                             .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrTextMuted)
@@ -802,7 +802,7 @@ private struct MessageBubble: View {
                         VStack(alignment: .leading, spacing: 1) {
                             Text(replyPreview.author)
                                 .font(.mlrScaled(11, weight: .semibold))
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                             Text(replyPreview.text)
                                 .font(.mlrScaled(12))
                                 .foregroundStyle(Color.mlrTextMuted)
@@ -810,7 +810,7 @@ private struct MessageBubble: View {
                         }
                         .padding(.horizontal, 10).padding(.vertical, 6)
                         .frame(maxWidth: 240, alignment: .leading)
-                        .background(Color.mlrPrimary.opacity(0.08))
+                        .background(Color.mlrPrimary.mlrTint(0.08))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(alignment: .leading) {
                             RoundedRectangle(cornerRadius: 1).fill(Color.mlrPrimary).frame(width: 2.5).padding(.vertical, 4)

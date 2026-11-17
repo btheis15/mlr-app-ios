@@ -101,7 +101,7 @@ struct EditCabinBookingSheet: View {
 
             Section {
                 Toggle("Email them about this update", isOn: $notify)
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
             } footer: {
                 Text("Off by default — turn on to send the member a confirmation of these changes.")
             }

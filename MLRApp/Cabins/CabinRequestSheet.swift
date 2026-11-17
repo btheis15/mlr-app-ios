@@ -112,7 +112,7 @@ struct CabinRequestSheet: View {
                         Button { showMemberPicker = true } label: {
                             HStack(spacing: 10) {
                                 Image(systemName: forUser == nil ? "person.crop.circle.badge.plus" : "person.crop.circle.fill")
-                                    .foregroundStyle(Color.mlrPrimary)
+                                    .foregroundStyle(Color.mlrPineText)
                                 Text(forUser?.name ?? "Myself")
                                     .foregroundStyle(Color.mlrText)
                                 Spacer()
@@ -129,7 +129,7 @@ struct CabinRequestSheet: View {
                         .buttonStyle(.pressable)
                         if forUser != nil {
                             Toggle("Email them a confirmation", isOn: $emailForUser)
-                                .font(.mlrScaled(13)).tint(Color.mlrPrimary)
+                                .font(.mlrScaled(13)).tint(Color.mlrPineText)
                             Text("Placed under their account and approved right away.")
                                 .font(.mlrCaption).foregroundStyle(Color.mlrTextMuted)
                         }
@@ -177,7 +177,7 @@ struct CabinRequestSheet: View {
                         if nightCount > 0 {
                             Text("\(nightCount) night\(nightCount == 1 ? "" : "s")")
                                 .font(.mlrScaled(13, weight: .medium))
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                         }
                         Spacer()
                         Button("All Family Fest days") { pickFamilyFestDates() }
@@ -232,7 +232,7 @@ struct CabinRequestSheet: View {
                                 .font(.mlrScaled(14))
                                 .foregroundStyle(Color.mlrText)
                         }
-                        .tint(Color.mlrPrimary)
+                        .tint(Color.mlrPineText)
                         .onChange(of: notSureYet) { _, on in
                             if on { selectedRoomIds.removeAll() }
                         }
@@ -404,7 +404,7 @@ struct RoomPickRow: View {
             HStack(spacing: 12) {
                 Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                     .font(.mlrScaled(18))
-                    .foregroundStyle(isSelected ? Color.mlrPrimary : (room.available ? Color.mlrTextSubtle : Color.mlrDanger))
+                    .foregroundStyle(isSelected ? Color.mlrPineText : (room.available ? Color.mlrTextSubtle : Color.mlrDanger))
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text(room.name)
@@ -459,7 +459,7 @@ private struct CabinPickCard: View {
                 HStack(spacing: 8) {
                     Image(systemName: "house.fill")
                         .font(.mlrScaled(15))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                     Text(cabin.name)
                         .font(.mlrScaled(15, weight: .semibold))
                         .foregroundStyle(Color.mlrText)
@@ -469,7 +469,7 @@ private struct CabinPickCard: View {
                             .font(.mlrScaled(9, weight: .bold))
                             .foregroundStyle(Color.mlrLake)
                             .padding(.horizontal, 5).padding(.vertical, 2)
-                            .background(Color.mlrLake.opacity(0.15)).clipShape(Capsule())
+                            .background(Color.mlrLake.mlrTint(0.15)).clipShape(Capsule())
                     }
                 }
                 // Real bed/room figures — never a fabricated "sleeps" number.

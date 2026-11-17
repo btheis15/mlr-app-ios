@@ -16,6 +16,7 @@ import SwiftUI
 /// Primary call-to-action — prominent Liquid Glass tinted forest green on iOS 26,
 /// solid forest-green fill on older systems.
 struct GlassPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var scheme
     @ViewBuilder
     func makeBody(configuration: Configuration) -> some View {
         let label = configuration.label
@@ -25,7 +26,7 @@ struct GlassPrimaryButtonStyle: ButtonStyle {
             .padding(.vertical, 14)
         Group {
             if #available(iOS 26.0, *) {
-                label.glassEffect(.regular.tint(.mlrPrimary).interactive(), in: .rect(cornerRadius: 14))
+                label.glassEffect(.regular.tint(.mlrPineText).interactive(), in: .rect(cornerRadius: 14))
             } else {
                 label.background(RoundedRectangle(cornerRadius: 14).fill(Color.mlrPrimary))
             }
@@ -38,15 +39,18 @@ struct GlassPrimaryButtonStyle: ButtonStyle {
 
 /// Secondary action — neutral regular glass with green label (light fill fallback).
 struct GlassSecondaryButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var scheme
     @ViewBuilder
     func makeBody(configuration: Configuration) -> some View {
         let label = configuration.label
             .font(.mlrScaled(16, weight: .semibold))
-            .foregroundStyle(Color.mlrPrimary)
+            .foregroundStyle(Color.mlrPineText)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
         Group {
-            if #available(iOS 26.0, *) {
+            if scheme == .dark {
+                label.background(RoundedRectangle(cornerRadius: 14).fill(Color.mlrSurface3))
+            } else if #available(iOS 26.0, *) {
                 label.glassEffect(.regular.interactive(), in: .rect(cornerRadius: 14))
             } else {
                 label.background(RoundedRectangle(cornerRadius: 14).fill(Color.mlrPrimaryLight))
@@ -60,6 +64,7 @@ struct GlassSecondaryButtonStyle: ButtonStyle {
 
 /// Family Fest accent — heraldic-wine tinted glass for fest CTAs (solid fallback).
 struct GlassFestButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var scheme
     @ViewBuilder
     func makeBody(configuration: Configuration) -> some View {
         let label = configuration.label
@@ -68,7 +73,9 @@ struct GlassFestButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
         Group {
-            if #available(iOS 26.0, *) {
+            if scheme == .dark {
+                label.background(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest))
+            } else if #available(iOS 26.0, *) {
                 label.glassEffect(.regular.tint(.mlrFest).interactive(), in: .rect(cornerRadius: 14))
             } else {
                 label.background(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest))
@@ -82,6 +89,7 @@ struct GlassFestButtonStyle: ButtonStyle {
 
 /// Compact circular glass button — for floating actions (new post, ask for help).
 struct GlassCircleButtonStyle: ButtonStyle {
+    @Environment(\.colorScheme) private var scheme
     var tint: Color = .mlrPrimary
     @ViewBuilder
     func makeBody(configuration: Configuration) -> some View {
@@ -90,7 +98,9 @@ struct GlassCircleButtonStyle: ButtonStyle {
             .foregroundStyle(.white)
             .frame(width: 56, height: 56)
         Group {
-            if #available(iOS 26.0, *) {
+            if scheme == .dark {
+                label.background(Circle().fill(tint))
+            } else if #available(iOS 26.0, *) {
                 label.glassEffect(.regular.tint(tint).interactive(), in: .circle)
             } else {
                 label.background(Circle().fill(tint))
@@ -116,22 +126,43 @@ extension ButtonStyle where Self == GlassCircleButtonStyle {
 
 // MARK: - Glass card surface
 
-extension View {
-    /// Wraps content in a Liquid Glass card on iOS 26 (a tinted material on older
-    /// systems). Use for floating cards that sit over imagery or scrolling
-    /// content (spotlight, callouts). For plain inset list cards keep
-    /// `.cardStyle()` (opaque) — glass is for layered surfaces.
+private struct GlassCardModifier: ViewModifier {
+    let cornerRadius: CGFloat
+    let tint: Color?
+    @Environment(\.colorScheme) private var scheme
+
     @ViewBuilder
-    func glassCard(cornerRadius: CGFloat = 18, tint: Color? = nil) -> some View {
-        if #available(iOS 26.0, *) {
-            self.glassEffect(tint.map { Glass.regular.tint($0) } ?? .regular,
-                             in: .rect(cornerRadius: cornerRadius))
-        } else {
-            self.background(
+    func body(content: Content) -> some View {
+        if scheme == .dark {
+            // Dark: opaque surface, never see-through glass.
+            content.background(
                 RoundedRectangle(cornerRadius: cornerRadius)
-                    .fill(tint?.opacity(0.18) ?? Color.mlrCard)
-            )
+                    .fill(tint?.mlrTint(0.18, over: .mlrSurface2) ?? Color.mlrSurface2))
+                .overlay(RoundedRectangle(cornerRadius: cornerRadius).strokeBorder(Color.mlrBorder, lineWidth: 1))
+        } else if #available(iOS 26.0, *) {
+            content.glassEffect(tint.map { Glass.regular.tint($0) } ?? .regular,
+                                in: .rect(cornerRadius: cornerRadius))
+        } else {
+            content.background(
+                RoundedRectangle(cornerRadius: cornerRadius)
+                    .fill(tint?.opacity(0.18) ?? Color.mlrCard))
         }
+    }
+}
+
+/// Material in light mode; opaque surface-3 in dark (chips, pills, floating bits).
+struct MLRChipFill: ShapeStyle {
+    var thick = false
+    func resolve(in environment: EnvironmentValues) -> some ShapeStyle {
+        if environment.colorScheme == .dark { return AnyShapeStyle(Color.mlrSurface3) }
+        return thick ? AnyShapeStyle(.regularMaterial) : AnyShapeStyle(.ultraThinMaterial)
+    }
+}
+
+extension View {
+    /// Liquid Glass card on iOS 26 (tinted material on older); opaque in dark mode.
+    func glassCard(cornerRadius: CGFloat = 18, tint: Color? = nil) -> some View {
+        modifier(GlassCardModifier(cornerRadius: cornerRadius, tint: tint))
     }
 }
 

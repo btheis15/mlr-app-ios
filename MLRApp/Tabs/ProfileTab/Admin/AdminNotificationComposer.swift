@@ -105,7 +105,7 @@ struct AdminNotificationComposer: View {
                                 Spacer()
                                 if audience == option {
                                     Image(systemName: "checkmark")
-                                        .foregroundStyle(Color.mlrPrimary)
+                                        .foregroundStyle(Color.mlrPineText)
                                         .fontWeight(.semibold)
                                 }
                             }
@@ -134,7 +134,7 @@ struct AdminNotificationComposer: View {
                                     .foregroundStyle(Color.mlrAccent)
                             }
                         }
-                        .tint(Color.mlrPrimary)
+                        .tint(Color.mlrPineText)
 
                         if alsoBanner {
                             Picker("Banner expires", selection: $bannerExpiry) {
@@ -209,7 +209,7 @@ struct AdminNotificationComposer: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
             }
             .alert("Sent!", isPresented: $sent) {
@@ -232,7 +232,7 @@ struct AdminNotificationComposer: View {
         HStack(spacing: 12) {
             Image(systemName: "bell.badge.fill")
                 .font(.mlrScaled(20))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
                 .frame(width: 36, height: 36)
                 .background(Color.mlrPrimaryLight)
                 .clipShape(RoundedRectangle(cornerRadius: 8))

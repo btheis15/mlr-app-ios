@@ -92,7 +92,7 @@ extension Font {
 
 extension Text {
     func scriptStyle(size: CGFloat = 28) -> Text {
-        self.font(.script(size)).foregroundStyle(Color.mlrPrimary)
+        self.font(.script(size)).foregroundStyle(Color.mlrPineText)
     }
 
     func festSerifStyle(size: CGFloat = 22, weight: Font.Weight = .regular) -> Text {
@@ -121,7 +121,7 @@ extension View {
     func secondaryButton() -> some View {
         self
             .font(.mlrScaled(15, weight: .semibold))
-            .foregroundStyle(Color.mlrPrimary)
+            .foregroundStyle(Color.mlrPineText)
             .frame(maxWidth: .infinity)
             .padding(.vertical, 14)
             .background(Color.mlrPrimaryLight)

@@ -32,7 +32,7 @@ struct UpcomingEventCard: View {
         switch event.kind {
         case .familyFest:  return Color.mlrFest
         case .workWeekend: return Color.mlrCampfire
-        case .holiday:     return Color.mlrPrimary
+        case .holiday:     return Color.mlrPineText
         case .custom:      return Color.mlrLake
         }
     }
@@ -100,11 +100,11 @@ struct UpcomingEventCard: View {
                             if !goingPeople.isEmpty {
                                 AvatarStack(goingPeople, max: 5, size: 30, total: goingPeople.count)
                             } else {
-                                Image(systemName: "person.2").foregroundStyle(Color.mlrPrimary)
+                                Image(systemName: "person.2").foregroundStyle(Color.mlrPineText)
                             }
                             Text("Who's going")
                                 .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                             Spacer()
                             Image(systemName: "chevron.right")
                                 .font(.footnote.weight(.semibold))
@@ -143,7 +143,7 @@ struct EventKindBadge: View {
             .foregroundStyle(tintColor)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(tintColor.opacity(0.12))
+            .background(tintColor.mlrTint(0.12))
             .clipShape(Capsule())
     }
 
@@ -160,7 +160,7 @@ struct EventKindBadge: View {
         switch kind {
         case .familyFest:  return Color.mlrFest
         case .workWeekend: return Color.mlrAccent
-        case .holiday:     return Color.mlrPrimary
+        case .holiday:     return Color.mlrPineText
         case .custom:      return Color.mlrInfo
         }
     }

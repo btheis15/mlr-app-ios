@@ -39,7 +39,7 @@ struct CommitteeMemberManageSheet: View {
             Form {
                 Section {
                     Toggle("Committee lead", isOn: $isLead)
-                        .tint(Color.mlrPrimary)
+                        .tint(Color.mlrPineText)
                 } footer: {
                     Text("Leads can approve join requests, manage members, and email the committee.")
                 }
@@ -87,7 +87,7 @@ struct CommitteeMemberManageSheet: View {
             }
             .navigationTitle(memberName)
             .navigationBarTitleDisplayMode(.inline)
-            .tint(Color.mlrPrimary)
+            .tint(Color.mlrPineText)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
                 ToolbarItem(placement: .confirmationAction) {

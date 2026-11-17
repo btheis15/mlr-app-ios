@@ -160,7 +160,7 @@ struct MeetingComposer: View {
                         } label: {
                             Text(slotKind == .range ? "+ Add another date range" : "+ Add another time")
                                 .font(.mlrScaled(14, weight: .semibold))
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                         }
                     }
@@ -173,7 +173,7 @@ struct MeetingComposer: View {
                         .font(.mlrScaled(14, weight: .medium))
                         .foregroundStyle(Color.mlrText)
                 }
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
                 if hasDeadline {
                     DatePicker("Respond by", selection: $respondBy, in: Date()..., displayedComponents: .date)
                         .font(.mlrBody)
@@ -190,7 +190,7 @@ struct MeetingComposer: View {
                         .foregroundStyle(Color.mlrTextMuted)
                 }
             }
-            .tint(Color.mlrPrimary)
+            .tint(Color.mlrPineText)
             .padding(12)
             .background(Color.mlrCard)
             .clipShape(RoundedRectangle(cornerRadius: 12))

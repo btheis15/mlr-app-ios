@@ -69,7 +69,7 @@ struct AskForHelpHomeCard: View {
                         }
                     }
                 ))
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
                 .labelsHidden()
                 .disabled(isTogglingWilling)
             }

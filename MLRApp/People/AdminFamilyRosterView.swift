@@ -48,7 +48,7 @@ struct AdminFamilyRosterView: View {
         .navigationBarTitleDisplayMode(.large)
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
-                Button { addingNew = true } label: { Image(systemName: "plus") }.tint(Color.mlrPrimary)
+                Button { addingNew = true } label: { Image(systemName: "plus") }.tint(Color.mlrPineText)
             }
         }
         .refreshable { await load() }
@@ -79,7 +79,7 @@ struct AdminFamilyRosterView: View {
                     Text("On the app").font(.mlrScaled(10, weight: .bold))
                         .foregroundStyle(Color.mlrSuccess)
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.mlrSuccess.opacity(0.15)).clipShape(Capsule())
+                        .background(Color.mlrSuccess.mlrTint(0.15)).clipShape(Capsule())
                 }
             }
             // Committee spots this account-less person holds by email, until they
@@ -95,9 +95,9 @@ struct AdminFamilyRosterView: View {
                             ForEach(chips) { c in
                                 Text(c.label)
                                     .font(.mlrScaled(11, weight: .medium))
-                                    .foregroundStyle(Color.mlrPrimary)
+                                    .foregroundStyle(Color.mlrPineText)
                                     .padding(.horizontal, 8).padding(.vertical, 2)
-                                    .background(Color.mlrPrimary.opacity(0.1))
+                                    .background(Color.mlrPrimary.mlrTint(0.1))
                                     .clipShape(Capsule())
                             }
                         }

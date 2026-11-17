@@ -211,7 +211,7 @@ struct FestPastYearDetailView: View {
         }
         .frame(maxWidth: .infinity)
         .padding(16)
-        .background(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.1)))
+        .background(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.mlrTint(0.1, over: .mlrFestCard)))
     }
 
     /// The archived week: who ran what and what was on the menu is exactly the
@@ -235,11 +235,11 @@ struct FestPastYearDetailView: View {
 
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { Divider().background(Color.mlrFest.opacity(0.1)) }
+                        if index > 0 { Divider().background(Color.mlrFest.mlrTint(0.1, over: .mlrFestCard)) }
                         ArchivedScheduleRow(item: item, hasTournament: content.tournaments[item.id] != nil)
                     }
                     if let dinner {
-                        if !items.isEmpty { Divider().background(Color.mlrFest.opacity(0.15)) }
+                        if !items.isEmpty { Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard)) }
                         ArchivedDinnerRow(dinner: dinner)
                     }
                 }
@@ -255,7 +255,7 @@ struct FestPastYearDetailView: View {
                     .foregroundStyle(Color.mlrFestReadable)
                 VStack(spacing: 0) {
                     ForEach(Array(anytime.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { Divider().background(Color.mlrFest.opacity(0.1)) }
+                        if index > 0 { Divider().background(Color.mlrFest.mlrTint(0.1, over: .mlrFestCard)) }
                         ArchivedScheduleRow(item: item, hasTournament: content.tournaments[item.id] != nil)
                     }
                 }

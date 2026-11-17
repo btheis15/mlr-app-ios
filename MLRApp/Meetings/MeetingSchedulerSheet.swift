@@ -117,7 +117,7 @@ struct MeetingSchedulerSheet: View {
     private func scheduledCard(_ chosen: MeetingSlot) -> some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("📅 \(Self.formatSlot(chosen))")
-                .font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrPrimary)
+                .font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrPineText)
             if meeting.createdEventId != nil {
                 Text("Added to the resort calendar — find it on the Events tab.")
                     .font(.mlrScaled(12)).foregroundStyle(Color.mlrTextMuted)
@@ -143,7 +143,7 @@ struct MeetingSchedulerSheet: View {
             }
         }
         .padding(16)
-        .background(Color.mlrPrimary.opacity(0.10))
+        .background(Color.mlrPrimary.mlrTint(0.10))
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.mlrPrimary.opacity(0.2), lineWidth: 1))
     }
@@ -168,9 +168,9 @@ struct MeetingSchedulerSheet: View {
                 Spacer()
                 if isBest {
                     Text(everyone ? "✅ Everyone" : "Best so far")
-                        .font(.mlrScaled(11, weight: .semibold)).foregroundStyle(Color.mlrPrimary)
+                        .font(.mlrScaled(11, weight: .semibold)).foregroundStyle(Color.mlrPineText)
                         .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(Color.mlrPrimary.opacity(0.15)).clipShape(Capsule())
+                        .background(Color.mlrPrimary.mlrTint(0.15)).clipShape(Capsule())
                 }
             }
 
@@ -206,16 +206,16 @@ struct MeetingSchedulerSheet: View {
                     finalizing = s
                 } label: {
                     Text("Pick this time →")
-                        .font(.mlrScaled(12, weight: .semibold)).foregroundStyle(Color.mlrPrimary)
+                        .font(.mlrScaled(12, weight: .semibold)).foregroundStyle(Color.mlrPineText)
                         .frame(maxWidth: .infinity).padding(.vertical, 7)
-                        .background(Color.mlrPrimary.opacity(0.1)).clipShape(RoundedRectangle(cornerRadius: 10))
+                        .background(Color.mlrPrimary.mlrTint(0.1)).clipShape(RoundedRectangle(cornerRadius: 10))
                         .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrPrimary.opacity(0.2), lineWidth: 1))
                 }
                 .buttonStyle(.pressable)
             }
         }
         .padding(12)
-        .background(isBest ? Color.mlrPrimary.opacity(0.05) : Color.mlrCard)
+        .background(isBest ? Color.mlrPrimary.mlrTint(0.05) : Color.mlrCard)
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(isBest ? Color.mlrPrimary.opacity(0.3) : Color.mlrBorder, lineWidth: 1))
     }

@@ -29,7 +29,7 @@ struct ActivitiesView: View {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack(spacing: 8) {
                                 Image(systemName: icon(for: group.category))
-                                    .foregroundStyle(Color.mlrPrimary)
+                                    .foregroundStyle(Color.mlrPineText)
                                 Text(group.category)
                                     .font(.mlrScaled(20, weight: .bold))
                                     .foregroundStyle(Color.mlrText)

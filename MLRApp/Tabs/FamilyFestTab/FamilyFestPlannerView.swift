@@ -146,7 +146,7 @@ private struct FestDetailsEditor: View {
                     Text("Changing the start date moves the whole planned week with it: dinners, schedule, sign-ups and everyone\u{2019}s day RSVPs keep their weekday. Changing only the end date moves nothing.")
                 }
             }
-            if let message { Section { Text(message).foregroundStyle(Color.mlrPrimary).font(.mlrScaled(13)) } }
+            if let message { Section { Text(message).foregroundStyle(Color.mlrPineText).font(.mlrScaled(13)) } }
         }
         .disabled(saving)
         .scrollDismissesKeyboard(.interactively)

@@ -222,7 +222,7 @@ struct EventSheet: View {
                         .foregroundStyle(accent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
-                        .background(accent.opacity(0.1))
+                        .background(accent.mlrTint(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.pressable)
@@ -242,7 +242,7 @@ struct EventSheet: View {
                         .foregroundStyle(accent)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 11)
-                        .background(accent.opacity(0.1))
+                        .background(accent.mlrTint(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.pressable)
@@ -556,7 +556,7 @@ struct EventSheet: View {
                         .foregroundStyle(Color.mlrDanger)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
-                        .background(Color.mlrDanger.opacity(0.1))
+                        .background(Color.mlrDanger.mlrTint(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .buttonStyle(.pressable)

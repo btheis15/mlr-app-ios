@@ -129,10 +129,10 @@ struct AdminAlertComposer: View {
                             }
                         } icon: {
                             Image(systemName: "bell.badge")
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                         }
                     }
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
                 }
 
                 // Event targeting (migration 0096)
@@ -206,7 +206,7 @@ struct AdminAlertComposer: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Button("Cancel") { dismiss() }
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
             }
             .alert("Posted!", isPresented: $posted) {
@@ -250,7 +250,7 @@ struct AdminAlertComposer: View {
                 .foregroundStyle(Color.mlrTextSubtle)
         }
         .padding(12)
-        .background(kindColor(kind).opacity(0.08))
+        .background(kindColor(kind).mlrTint(0.08))
         .clipShape(RoundedRectangle(cornerRadius: 10))
         .overlay(
             RoundedRectangle(cornerRadius: 10)

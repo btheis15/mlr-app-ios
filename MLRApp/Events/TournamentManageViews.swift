@@ -196,7 +196,7 @@ struct TournamentSetupSheet: View {
                 setupBody(t)
             }
 
-            if let note { Section { Text(note).foregroundStyle(Color.mlrPrimary).font(.mlrScaled(13)) } }
+            if let note { Section { Text(note).foregroundStyle(Color.mlrPineText).font(.mlrScaled(13)) } }
             if let errorText { Section { Text(errorText).foregroundStyle(Color.mlrDanger).font(.mlrScaled(13)) } }
 
             if t.status == .setup {
@@ -716,7 +716,7 @@ struct MatchResultSheet: View {
 
                     Button { withAnimation(reduceMotion ? nil : MLRMotion.spring) { showScores.toggle() } } label: {
                         Text(showScores ? "Hide scores" : "Add scores (optional)")
-                            .font(.mlrScaled(15, weight: .semibold)).foregroundStyle(Color.mlrPrimary)
+                            .font(.mlrScaled(15, weight: .semibold)).foregroundStyle(Color.mlrPineText)
                             .frame(maxWidth: .infinity, minHeight: 44)
                     }
 
@@ -733,7 +733,7 @@ struct MatchResultSheet: View {
                         .foregroundStyle(Color.mlrWarning)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .padding(12)
-                        .background(Color.mlrWarning.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+                        .background(Color.mlrWarning.mlrTint(0.12), in: RoundedRectangle(cornerRadius: 12))
                         .accessibilityElement(children: .combine)
                     }
                     if let errorText {
@@ -801,7 +801,7 @@ struct MatchResultSheet: View {
             .font(.mlrScaled(13)).foregroundStyle(Color.mlrWarning)
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(12)
-            .background(Color.mlrWarning.opacity(0.12), in: RoundedRectangle(cornerRadius: 12))
+            .background(Color.mlrWarning.mlrTint(0.12), in: RoundedRectangle(cornerRadius: 12))
     }
 
     /// Presets drawn from the target score (e.g. 21): tap "21 to 15" after picking a winner.
@@ -850,7 +850,7 @@ struct MatchResultSheet: View {
                     Toggle("Auto-remind 15 min before", isOn: $remind)
                 }
                 Button(hasTime ? "Save time" : "Clear time") { Task { await saveSchedule() } }.disabled(busy)
-                if let notice { Text(notice).foregroundStyle(Color.mlrPrimary).font(.mlrScaled(13)) }
+                if let notice { Text(notice).foregroundStyle(Color.mlrPineText).font(.mlrScaled(13)) }
             }
             .padding(.top, 8)
         } label: {
@@ -998,7 +998,7 @@ private struct ScoreStepper: View {
 
     private func button(_ symbol: String, _ label: String, _ action: @escaping () -> Void) -> some View {
         Button { focus.wrappedValue = nil; action() } label: {
-            Image(systemName: symbol).font(.mlrScaled(18, weight: .bold)).foregroundStyle(Color.mlrPrimary)
+            Image(systemName: symbol).font(.mlrScaled(18, weight: .bold)).foregroundStyle(Color.mlrPineText)
                 .frame(width: 44, height: 52)
                 .background(Color.mlrPrimaryLight, in: RoundedRectangle(cornerRadius: 10))
         }

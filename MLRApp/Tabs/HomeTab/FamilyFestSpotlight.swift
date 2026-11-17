@@ -127,7 +127,7 @@ struct FamilyFestSpotlight: View {
             // Only non-members get a shortcut (to join). Members don't need a
             // redirect — the Feed/Chats tab is where their chats live now.
             if familyFest != nil && !isMember {
-                Divider().background(Color.mlrFest.opacity(0.15))
+                Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                 joinCTA
             }
         }
@@ -220,7 +220,7 @@ struct FamilyFestSpotlight: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(Color.mlrFest.opacity(0.06))
+        .background(Color.mlrFest.mlrTint(0.06, over: .mlrFestCard))
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
@@ -247,7 +247,7 @@ struct FamilyFestSpotlight: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 8)
-        .background(Color.mlrFest.opacity(0.06))
+        .background(Color.mlrFest.mlrTint(0.06, over: .mlrFestCard))
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 
@@ -396,7 +396,7 @@ struct PulsingDot: View {
     var body: some View {
         ZStack {
             Circle()
-                .fill(color.opacity(0.3))
+                .fill(color.mlrTint(0.3, over: .mlrFestCard))
                 .frame(width: 14, height: 14)
                 .scaleEffect(pulsing ? 1.5 : 1.0)
                 .opacity(pulsing ? 0 : 1)

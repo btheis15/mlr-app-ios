@@ -262,7 +262,7 @@ private struct ModerationItemRow: View {
             .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(color.opacity(0.12))
+            .background(color.mlrTint(0.12))
             .clipShape(Capsule())
     }
 
@@ -272,7 +272,7 @@ private struct ModerationItemRow: View {
             .foregroundStyle(Color.mlrWarning)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(Color.mlrWarning.opacity(0.12))
+            .background(Color.mlrWarning.mlrTint(0.12))
             .clipShape(Capsule())
     }
 
@@ -286,7 +286,7 @@ private struct ModerationItemRow: View {
         .foregroundStyle(Color.mlrDanger)
         .padding(.horizontal, 8)
         .padding(.vertical, 3)
-        .background(Color.mlrDanger.opacity(0.1))
+        .background(Color.mlrDanger.mlrTint(0.1))
         .clipShape(Capsule())
     }
 }

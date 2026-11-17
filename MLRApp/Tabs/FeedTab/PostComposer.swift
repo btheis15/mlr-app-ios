@@ -146,7 +146,7 @@ struct PostComposer: View {
                 if isUploading && uploadTotal > 0 {
                     VStack(alignment: .leading, spacing: 4) {
                         ProgressView(value: Double(uploadedCount), total: Double(uploadTotal))
-                            .tint(Color.mlrPrimary)
+                            .tint(Color.mlrPineText)
                         Text("Uploading \(min(uploadedCount + 1, uploadTotal)) of \(uploadTotal)")
                             .font(.caption)
                             .monospacedDigit()
@@ -297,7 +297,7 @@ struct PostComposer: View {
 
     private var videoChip: some View {
         HStack(spacing: 8) {
-            Image(systemName: "film").foregroundStyle(Color.mlrPrimary)
+            Image(systemName: "film").foregroundStyle(Color.mlrPineText)
             Text("Video attached")
                 .font(.mlrScaled(14))
                 .foregroundStyle(Color.mlrText)
@@ -318,7 +318,7 @@ struct PostComposer: View {
         let names = allProfiles.filter { tagIds.contains($0.id) }.map(\.name)
         return Label("With \(names.joined(separator: ", "))", systemImage: "person.2.fill")
             .font(.mlrScaled(13))
-            .foregroundStyle(Color.mlrPrimary)
+            .foregroundStyle(Color.mlrPineText)
     }
 
     private var toolbar: some View {
@@ -340,11 +340,11 @@ struct PostComposer: View {
             }
             Button { withAnimation { hasBackdate.toggle() } } label: {
                 Label("Date", systemImage: "calendar").font(.mlrScaled(14, weight: .medium))
-                    .foregroundStyle(hasBackdate ? Color.mlrPrimary : Color.mlrTextMuted)
+                    .foregroundStyle(hasBackdate ? Color.mlrPineText : Color.mlrTextMuted)
             }
             Spacer()
         }
-        .tint(Color.mlrPrimary)
+        .tint(Color.mlrPineText)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .background(Color.mlrSurface)
@@ -354,7 +354,7 @@ struct PostComposer: View {
         Button {
             Task { await post() }
         } label: {
-            if isPosting || isUploading { ProgressView().tint(Color.mlrPrimary) }
+            if isPosting || isUploading { ProgressView().tint(Color.mlrPineText) }
             else { Text(isEditing ? "Save" : "Post").fontWeight(.semibold) }
         }
         .disabled(submitDisabled)
@@ -527,7 +527,7 @@ private struct TagPicker: View {
                             Text(m.name).foregroundStyle(Color.mlrText)
                             Spacer()
                             if selected.contains(m.id) {
-                                Image(systemName: "checkmark").foregroundStyle(Color.mlrPrimary)
+                                Image(systemName: "checkmark").foregroundStyle(Color.mlrPineText)
                             }
                         }
                     }

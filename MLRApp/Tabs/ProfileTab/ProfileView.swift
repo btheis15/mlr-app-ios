@@ -248,7 +248,7 @@ struct ProfileView: View {
                                 MapsHelper.show(address: trimmed)
                             } label: {
                                 Image(systemName: "map.fill")
-                                    .foregroundStyle(Color.mlrPrimary)
+                                    .foregroundStyle(Color.mlrPineText)
                             }
                             .buttonStyle(.pressable)
                             .accessibilityLabel("Open address in Maps")
@@ -260,7 +260,7 @@ struct ProfileView: View {
                 Toggle(isOn: $hasBirthday) {
                     Text("Birthday")
                 }
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
 
                 if hasBirthday {
                     DatePicker(
@@ -270,7 +270,7 @@ struct ProfileView: View {
                         displayedComponents: .date
                     )
                     .datePickerStyle(.compact)
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
                 }
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -310,7 +310,7 @@ struct ProfileView: View {
                         .textInputAutocapitalization(.never)
                 } label: {
                     Label("Venmo", systemImage: "v.circle.fill")
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
 
                 // Zelle & Apple Cash are tied to a phone or email — offer to reuse
@@ -359,9 +359,9 @@ struct ProfileView: View {
                     }
                 } label: {
                     Label("Preferred", systemImage: "star.fill")
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
             } label: {
                 Text("Payment Handles")
                     .font(.mlrScaled(16, weight: .semibold))
@@ -404,7 +404,7 @@ struct ProfileView: View {
                 }
             } label: {
                 Image(systemName: "chevron.down.circle.fill")
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
             }
         }
     }
@@ -438,10 +438,10 @@ struct ProfileView: View {
                             .font(.caption).foregroundStyle(Color.mlrTextMuted)
                     }
                 } icon: {
-                    Image(systemName: "envelope.fill").foregroundStyle(Color.mlrPrimary)
+                    Image(systemName: "envelope.fill").foregroundStyle(Color.mlrPineText)
                 }
             }
-            .tint(Color.mlrPrimary)
+            .tint(Color.mlrPineText)
         }
     }
 
@@ -502,7 +502,7 @@ struct ProfileView: View {
                 Toggle(isOn: $spotlightEnabled) {
                     Label("Siri & Spotlight search", systemImage: "magnifyingglass")
                 }
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
                 .onChange(of: spotlightEnabled) { _, on in
                     if on { Task { await ContentIndexer.reindexAll(force: true) } }
                     else { ContentIndexer.clear() }
@@ -522,14 +522,14 @@ struct ProfileView: View {
                 AdminView()
             } label: {
                 Label("Admin tools", systemImage: "shield.fill")
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
             }
 
             NavigationLink {
                 AppImagesAdminView()
             } label: {
                 Label("App images", systemImage: "photo.stack.fill")
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
             }
         }
     }
@@ -586,11 +586,11 @@ struct ProfileView: View {
         } label: {
             if isSaving {
                 ProgressView()
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
             } else {
                 Text("Save")
                     .fontWeight(.semibold)
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
             }
         }
         .disabled(isSaving)
@@ -625,7 +625,7 @@ struct ProfileView: View {
         VStack(spacing: 28) {
             Image(systemName: "person.crop.circle")
                 .font(.mlrScaled(64, weight: .light))
-                .foregroundStyle(Color.mlrPrimary.opacity(0.5))
+                .foregroundStyle(Color.mlrPineText.opacity(0.5))
 
             VStack(spacing: 8) {
                 Text("Sign in to access your profile")
@@ -835,7 +835,7 @@ private struct WillingToHelpRow: View {
                     .foregroundStyle(Color.mlrDanger)
             }
         }
-        .tint(Color.mlrPrimary)
+        .tint(Color.mlrPineText)
         .disabled(isUpdating)
     }
 

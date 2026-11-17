@@ -46,7 +46,7 @@ struct FestDuesCalculator: View {
 
             // Per-day tiers, under a shared day-count stepper
             if dailyHasPricing {
-                Divider().background(Color.mlrFest.opacity(0.12)).padding(.vertical, 6)
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard)).padding(.vertical, 6)
                 Text("Paying by the day?")
                     .font(.mlrScaled(12, weight: .semibold))
                     .foregroundStyle(Color.mlrFestInk.opacity(0.75))
@@ -93,7 +93,7 @@ struct FestDuesCalculator: View {
         .onChange(of: days) { _, _ in recompute() }
     }
 
-    private var divider: some View { Divider().background(Color.mlrFest.opacity(0.12)) }
+    private var divider: some View { Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard)) }
 
     private func duesRow(_ tier: FestDuesTier, perDaySuffix: Bool = false) -> some View {
         HStack(alignment: .firstTextBaseline) {
