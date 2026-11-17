@@ -45,9 +45,12 @@ final class LogoMask {
 /// Shares one simulation between the behind-logo and in-front-of-logo canvases.
 final class ParticleStore {
     private var sims: [ParticleKind: ParticleSim] = [:]
+    /// Seconds of simulation to pre-run so the effect is already alive on frame one.
+    private let warmStart: Double
+    init(warmStart: Double = 0) { self.warmStart = warmStart }
     func sim(for kind: ParticleKind) -> ParticleSim {
         if let s = sims[kind] { return s }
-        var ff = 0.0
+        var ff = warmStart
         var seed = UInt64.random(in: 1...UInt64.max)
         #if DEBUG
         if let v = UserDefaults.standard.object(forKey: "leafTime") as? NSNumber ?? (UserDefaults.standard.string(forKey: "leafTime").flatMap { Double($0) as NSNumber? }) {
