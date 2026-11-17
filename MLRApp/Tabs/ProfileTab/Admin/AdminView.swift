@@ -110,6 +110,10 @@ struct AdminView: View {
                  description: "Swap the Home logo and Family Fest cover",
                  icon: "photo.stack.fill", color: Color.mlrPineText, keywords: "logo cover photo",
                  action: push { AppImagesAdminView() }),
+            Tool(id: "logofx", title: "Logo effects",
+                 description: "Falling leaves and snow on the Home logo: seasons and dates",
+                 icon: "snowflake", color: Color.mlrLake, keywords: "autumn winter snow leaves season schedule",
+                 action: push { AdminLogoFXView() }),
         ]
         if let url = URL(string: "https://docs.google.com/forms/create") {
             content.append(Tool(id: "form", title: "Create a Google Form",

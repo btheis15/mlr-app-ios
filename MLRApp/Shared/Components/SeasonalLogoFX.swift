@@ -1,5 +1,6 @@
 import SwiftUI
 import UIKit
+import Supabase
 
 // MARK: - Seasonal logo FX
 //
@@ -13,8 +14,13 @@ import UIKit
 enum Season: String, CaseIterable {
     case winter, spring, summer, fall
 
-    /// Meteorological seasons, northern hemisphere (the resort is in WI).
-    static func current(_ date: Date = Date()) -> Season {
+    /// Name used in the admin UI and the `resort_config.logo_fx` JSON keys.
+    var configKey: String { self == .fall ? "autumn" : rawValue }
+    var title: String { self == .fall ? "Autumn" : rawValue.capitalized }
+
+    /// Meteorological seasons, northern hemisphere (the resort is in WI):
+    /// the built-in fallback when no schedule applies.
+    static func meteorological(_ date: Date = Date()) -> Season {
         let m = Calendar.current.component(.month, from: date)
         switch m {
         case 12, 1, 2: return .winter
@@ -22,6 +28,198 @@ enum Season: String, CaseIterable {
         case 6...8: return .summer
         default: return .fall
         }
+    }
+
+    /// The season whose scenery to show: the admin-editable schedule's pick,
+    /// else the meteorological season (so the splash always has a scene).
+    static func current(_ date: Date = Date()) -> Season {
+        homeEffect(date) ?? meteorological(date)
+    }
+
+    /// The effect for the Home logo, or nil when the admin switched effects off
+    /// (master toggle) or no enabled season covers this date.
+    static func homeEffect(_ date: Date = Date()) -> Season? {
+        #if DEBUG
+        switch UserDefaults.standard.string(forKey: "fxSeason") {
+        case "autumn", "fall": return .fall
+        case "winter": return .winter
+        default: break
+        }
+        #endif
+        return LogoFXStore.shared.schedule.resolve(date)
+    }
+}
+
+// MARK: - Admin-editable schedule (resort_config.logo_fx)
+
+/// Month/day pair, "MM-DD".
+struct MonthDay: Equatable, Codable, Comparable {
+    var month: Int, day: Int
+    static func < (a: MonthDay, b: MonthDay) -> Bool { (a.month, a.day) < (b.month, b.day) }
+    static let monthDays = [31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+    static let monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
+    var string: String { String(format: "%02d-%02d", month, day) }
+    var words: String { "\(Self.monthNames[month - 1]) \(day)" }
+    init(_ m: Int, _ d: Int) { month = m; day = d }
+    /// Strict "MM-DD" parse (Feb 29 allowed); anything else is nil.
+    init?(_ s: String?) {
+        guard let s, s.count == 5, s[s.index(s.startIndex, offsetBy: 2)] == "-",
+              let m = Int(s.prefix(2)), let d = Int(s.suffix(2)),
+              (1...12).contains(m), (1...Self.monthDays[m - 1]).contains(d) else { return nil }
+        self.init(m, d)
+    }
+    /// Day index within a leap year, 0...365.
+    var doy: Int { Self.monthDays.prefix(month - 1).reduce(0, +) + day - 1 }
+    static func from(doy: Int) -> MonthDay {
+        var d = doy, m = 0
+        while d >= monthDays[m] { d -= monthDays[m]; m += 1 }
+        return MonthDay(m + 1, d + 1)
+    }
+}
+
+struct LogoFXSchedule: Equatable, Codable {
+    struct Rule: Equatable, Codable {
+        var enabled: Bool?
+        var start: String?
+        var end: String?
+    }
+    /// nil = true.
+    var enabled: Bool?
+    /// Keyed by `Season.configKey`; a missing season / key means the default.
+    var seasons: [String: Rule] = [:]
+
+    static let defaults: [Season: (start: MonthDay, end: MonthDay)] = [
+        .winter: (MonthDay(12, 1), MonthDay(2, 28)),
+        .spring: (MonthDay(3, 1), MonthDay(5, 31)),
+        .summer: (MonthDay(6, 1), MonthDay(8, 31)),
+        .fall: (MonthDay(9, 1), MonthDay(11, 30)),
+    ]
+
+    var masterOn: Bool { enabled ?? true }
+
+    func isOn(_ s: Season) -> Bool { seasons[s.configKey]?.enabled ?? true }
+    func start(_ s: Season) -> MonthDay { MonthDay(seasons[s.configKey]?.start) ?? Self.defaults[s]!.start }
+    func end(_ s: Season) -> MonthDay { MonthDay(seasons[s.configKey]?.end) ?? Self.defaults[s]!.end }
+
+    private func covers(_ s: Season, _ d: MonthDay) -> Bool {
+        let a = start(s).doy
+        var b = end(s).doy
+        if end(s) == MonthDay(2, 28) { b += 1 }          // "through Feb 28" also keeps Feb 29
+        let x = d.doy
+        return a <= b ? (x >= a && x <= b) : (x >= a || x <= b)
+    }
+
+    /// The season active on `date`: among enabled seasons covering it, the one
+    /// whose start is most recent. nil when effects are off or none covers it.
+    func resolve(_ date: Date) -> Season? {
+        guard masterOn else { return nil }
+        let c = Calendar.current.dateComponents([.month, .day], from: date)
+        let md = MonthDay(c.month ?? 1, c.day ?? 1)
+        var best: (Season, Int)?
+        for s in Season.allCases where isOn(s) && covers(s, md) {
+            let since = ((md.doy - start(s).doy) % 366 + 366) % 366
+            if best == nil || since < best!.1 { best = (s, since) }
+        }
+        return best?.0
+    }
+
+    /// Human warnings, e.g. "Winter and Autumn overlap Nov 28 \u{2013} Nov 30; the later start wins."
+    func overlapWarnings() -> [String] {
+        guard masterOn else { return [] }
+        let on = Season.allCases.filter(isOn)
+        var out: [String] = []
+        for (i, a) in on.enumerated() {
+            for b in on[(i + 1)...] {
+                let days = (0..<366).filter { covers(a, MonthDay.from(doy: $0)) && covers(b, MonthDay.from(doy: $0)) }
+                guard !days.isEmpty else { continue }
+                var runs: [[Int]] = []
+                for d in days { if let l = runs.last?.last, d == l + 1 { runs[runs.count - 1].append(d) } else { runs.append([d]) } }
+                let ranges = runs.map { r -> String in
+                    let f = MonthDay.from(doy: r.first!).words, l = MonthDay.from(doy: r.last!).words
+                    return f == l ? f : "\(f) \u{2013} \(l)"
+                }.joined(separator: ", ")
+                let (first, second) = start(a) > start(b) ? (a, b) : (b, a)
+                _ = second
+                out.append("\(a.title) and \(b.title) overlap \(ranges); the later start wins (\(first.title) from \(start(first).words)).")
+            }
+        }
+        return out
+    }
+
+    /// Tolerant parse of the raw `logo_fx` JSON value. Unknown keys, wrong types
+    /// and malformed dates are ignored (falling back to the defaults).
+    static func parse(_ raw: Any?) -> LogoFXSchedule {
+        var out = LogoFXSchedule()
+        guard let dict = raw as? [String: Any] else { return out }
+        out.enabled = dict["enabled"] as? Bool
+        if let ss = dict["seasons"] as? [String: Any] {
+            for s in Season.allCases {
+                guard let r = ss[s.configKey] as? [String: Any] else { continue }
+                var rule = Rule()
+                rule.enabled = r["enabled"] as? Bool
+                rule.start = MonthDay(r["start"] as? String)?.string
+                rule.end = MonthDay(r["end"] as? String)?.string
+                out.seasons[s.configKey] = rule
+            }
+        }
+        return out
+    }
+
+    /// JSON object for the database. nil when everything is default.
+    var json: [String: Any] {
+        var seasonsOut: [String: Any] = [:]
+        for s in Season.allCases {
+            seasonsOut[s.configKey] = ["enabled": isOn(s), "start": start(s).string, "end": end(s).string]
+        }
+        return ["enabled": masterOn, "seasons": seasonsOut]
+    }
+}
+
+/// Holds the resolved schedule: cached on disk so the right effect shows at
+/// launch, refreshed quietly from `resort_config`.
+@Observable
+final class LogoFXStore {
+    static let shared = LogoFXStore()
+    private static let cacheKey = "logo-fx-schedule"
+    var schedule: LogoFXSchedule
+
+    private init() {
+        var s = DiskCache.load(LogoFXSchedule.self, key: Self.cacheKey) ?? LogoFXSchedule()
+        #if DEBUG
+        if let str = Self.debugScheduleArg,
+           let data = str.data(using: .utf8), let obj = try? JSONSerialization.jsonObject(with: data) {
+            s = LogoFXSchedule.parse(obj)
+        }
+        #endif
+        schedule = s
+    }
+
+    #if DEBUG
+    /// `-fxSchedule '<json>'` read raw from the arguments (UserDefaults would parse the braces).
+    private static var debugScheduleArg: String? {
+        let a = ProcessInfo.processInfo.arguments
+        guard let i = a.firstIndex(of: "-fxSchedule"), i + 1 < a.count else { return nil }
+        return a[i + 1]
+    }
+    #endif
+
+    func set(_ s: LogoFXSchedule?) {
+        schedule = s ?? LogoFXSchedule()
+        if let s { DiskCache.save(s, key: Self.cacheKey) } else { DiskCache.remove(key: Self.cacheKey) }
+    }
+
+    @MainActor
+    func refresh() async {
+        #if DEBUG
+        if Self.debugScheduleArg != nil { return }
+        #endif
+        // A missing column / network error just keeps the cached value.
+        guard let data = try? await supabase.from("resort_config").select("logo_fx")
+                .limit(1).single().execute().data,
+              let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else { return }
+        let raw = json["logo_fx"]
+        if raw == nil || raw is NSNull { set(nil) } else { set(LogoFXSchedule.parse(raw)) }
     }
 }
 
@@ -192,7 +390,8 @@ private enum SeasonalArt {
     private static func winter(_ c: inout GraphicsContext, _ p: Double, particles: Bool = true) {
         // Snow settles into caps over the second half.
         let settle = ease(local(p, delay: 0.45, len: 0.5))
-        if settle > 0 {
+        // With live particles the snow caps are the simulation's thin accumulation instead.
+        if settle > 0 && particles {
             var g = c
             g.opacity = settle
             g.translateBy(x: 0, y: (1 - settle) * -14)

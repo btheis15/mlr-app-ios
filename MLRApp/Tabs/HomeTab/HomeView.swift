@@ -228,6 +228,7 @@ struct HomeView: View {
             // Independent loads run concurrently (they used to run one after another).
             async let images: Void = env.appImagesService.load()
             async let help: Void = env.loadHelpContact()
+            async let logoFX: Void = LogoFXStore.shared.refresh()
             async let events: Void = {
                 await env.eventsService.fetchEvents(ifStale: true)
                 if let userId = env.currentProfile?.id {
@@ -238,7 +239,7 @@ struct HomeView: View {
             // Live-update Home callouts (+ fest content) when an admin pushes one —
             // the subscription reloads on any home_callouts change (idempotent).
             env.festContentService.subscribeToRealtime()
-            _ = await (images, help, events)
+            _ = await (images, help, events, logoFX)
             publishNextEventToWidgets()
         }
         .refreshable {
@@ -306,34 +307,11 @@ struct HomeView: View {
         return "\(base), \(first)"
     }
 
-    /// Live landing leaves (fall) / snow (winter) over the still artwork. The
-    /// ground is the logo's bottom edge; in dark mode the cream plaque extends
-    /// 10 pt below the logo, so the ground is its inside bottom edge.
-    @ViewBuilder
-    private var homeLogoFX: some View {
-        let season = Season.current(previewDate ?? Date())
-        let dark = colorScheme == .dark
-        switch season {
-        case .fall, .winter:
-            ZStack {
-                SeasonalLogoFX(season: season, progress: 1, particles: false)
-                FallingParticlesFX(kind: season == .fall ? .leaf : .snow,
-                                   groundInset: dark ? 3 : -9, sideInset: dark ? 2 : 6)
-            }
-        default:
-            SeasonalLogoFX(season: season, progress: 1).allowsHitTesting(false)
-        }
-    }
-
     @ViewBuilder
     private func logoHero(geometry: GeometryProxy) -> some View {
         VStack(spacing: 6) {
-            SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
-                .scaledToFit()
-                // The season's still scene (the splash's final frame), as on web.
-                .overlay { homeLogoFX }
-                .frame(width: min(geometry.size.width * 0.28, 104))
-                .modifier(DarkLogoPlaque(active: colorScheme == .dark))
+            HomeLogoImage(season: Season.homeEffect(previewDate ?? Date()), dark: colorScheme == .dark,
+                          width: min(geometry.size.width * 0.28, 104))
                 .padding(.top, 0)
                 .homeLogoEditPencil()
             Text(greeting)
@@ -541,3 +519,54 @@ private struct DarkLogoPlaque: ViewModifier {
         }
     }
 }
+
+
+/// The Home logo with its season effect: leaves (fall) / snow (winter) fall behind
+/// and in front of the artwork and rest on its silhouette. In dark mode the cream
+/// plaque surrounds it and nothing draws outside the plaque.
+struct HomeLogoImage: View {
+    let season: Season?
+    let dark: Bool
+    let width: CGFloat
+    @State private var store = ParticleStore()
+
+    var body: some View {
+        let live = season == .fall || season == .winter
+        let kind: ParticleKind = season == .fall ? .leaf : .snow
+        SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
+            .scaledToFit()
+            .background {
+                if live { FallingParticlesFX(kind: kind, layer: .back, store: store, plaque: dark) }
+            }
+            .overlay {
+                if live {
+                    ZStack {
+                        SeasonalLogoFX(season: season ?? .fall, progress: 1, particles: false)
+                        FallingParticlesFX(kind: kind, layer: .front, store: store, plaque: dark)
+                    }
+                } else if let season {
+                    SeasonalLogoFX(season: season, progress: 1).allowsHitTesting(false)
+                }
+            }
+            .frame(width: width)
+            .modifier(DarkLogoPlaque(active: dark))
+    }
+}
+
+#if DEBUG
+/// `-startRoute leaf-lab`: just the Home logo block on the app backdrop (no sign-in).
+struct LeafLabView: View {
+    @Environment(\.colorScheme) private var colorScheme
+    var body: some View {
+        VStack(spacing: 6) {
+            HomeLogoImage(season: Season.homeEffect(), dark: colorScheme == .dark, width: 104)
+            Text("Good morning")
+                .font(.mlrScaled(24, weight: .semibold, design: .serif, relativeTo: .title1))
+                .foregroundStyle(Color.mlrText)
+        }
+        .padding(.top, 60)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        .mlrBackdrop()
+    }
+}
+#endif
