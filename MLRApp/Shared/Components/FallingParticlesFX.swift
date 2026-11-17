@@ -4,50 +4,41 @@ import UIKit
 // MARK: - Falling leaves / snow that land on the logo
 //
 // Live particle scene for the Home logo (fall = leaves, winter = snow).
-// The logo artwork is the landscape: a height map built once from the
-// artwork's alpha channel tells leaves where treetops, the cabin roof, the hill
-// and the lettering are. Leaves rest only on gentle spots, slide off steep ones,
-// and anything that misses the art drifts down and fades before the greeting.
-// Two canvases (behind and in front of the artwork) share one fixed-step
-// simulation (1/60 s) driven from the timeline date.
+// The logo artwork is the landscape. A 2D mask built once from the artwork's
+// alpha channel yields every UPWARD-FACING EDGE (an opaque cell with clear
+// space above it): treetops, the cabin roof, the tops of each letter, the hill.
+// Edges are grouped into segments that never bridge gaps. Leaves rest only on
+// gentle, supported segments and slide off steep ones; snow is absorbed by an
+// edge and grows a small cap on gentle segments. Anything that misses the art
+// drifts down and fades before the greeting. Two canvases (behind and in front
+// of the artwork) share one fixed-step simulation (1/60 s).
 
 enum ParticleKind { case leaf, snow }
 enum ParticleLayer { case back, front }
 
-// MARK: Height map
+// MARK: Mask
 
-/// Top silhouette of the logo artwork: for each of 96 columns, the normalised Y
-/// (0 = top, 1 = bottom) of the topmost opaque pixel, NaN where the column is
-/// empty. Built once from the asset's alpha channel and cached. Because it is
-/// stored in normalised units, a size change never needs a rebuild.
-enum LogoHeightMap {
-    static let columns = 96
-    static let top: [Double] = build()
+/// The logo artwork's alpha channel at 416x278, built once and cached.
+final class LogoMask {
+    static let shared = LogoMask()
+    let w = 416, h = 278
+    private(set) var alpha: [UInt8]
 
-    private static func build() -> [Double] {
-        var out = [Double](repeating: .nan, count: columns)
-        guard let cg = UIImage(named: "brand-logo-green")?.cgImage else { return out }
-        let w = 384, h = 256
+    private init() {
+        alpha = [UInt8](repeating: 0, count: 416 * 278)
+        guard let cg = UIImage(named: "brand-logo-green")?.cgImage else { return }
         var buf = [UInt8](repeating: 0, count: w * h * 4)
+        let width = w, height = h
         let ok: Bool = buf.withUnsafeMutableBytes { raw in
-            guard let c = CGContext(data: raw.baseAddress, width: w, height: h, bitsPerComponent: 8,
-                                    bytesPerRow: w * 4, space: CGColorSpaceCreateDeviceRGB(),
+            guard let c = CGContext(data: raw.baseAddress, width: width, height: height, bitsPerComponent: 8,
+                                    bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
                                     bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
             else { return false }
-            c.draw(cg, in: CGRect(x: 0, y: 0, width: w, height: h))
+            c.draw(cg, in: CGRect(x: 0, y: 0, width: width, height: height))
             return true
         }
-        guard ok else { return out }
-        let per = w / columns
-        for i in 0..<columns {
-            rows: for r in 0..<h {
-                for k in 0..<per where buf[(r * w + i * per + k) * 4 + 3] > 140 {
-                    out[i] = Double(r) / Double(h)
-                    break rows
-                }
-            }
-        }
-        return out
+        guard ok else { return }
+        for i in 0..<(w * h) { alpha[i] = buf[i * 4 + 3] }
     }
 }
 
@@ -83,25 +74,37 @@ private struct SplitMix: RandomNumberGenerator {
 final class ParticleSim {
     enum Phase { case air, slide, rest }
 
+    /// One upward-facing edge cell of the artwork (canvas points).
+    struct Edge {
+        var y: Double
+        var slope: Double      // |dy/dx| of the smoothed segment around it
+        var down: Double       // +1: downhill toward +x, -1: toward -x
+        var tang: Double       // surface angle in degrees
+        var supported: Bool    // segment long enough to hold a leaf
+        var cap: Int           // snow cap index, -1 when too steep / short
+    }
+    /// A small snow cap: points along the surface and its full depth.
+    struct Cap { var pts: [CGPoint]; var maxD: Double }
+
     struct P {
         var phase = Phase.air
         var back = false
-        var x0 = 0.0, y = 0.0              // air: base x (wind-integrated) and y
+        var x0 = 0.0, y = 0.0
         var vTerm = 30.0, amp = 10.0, omega = 2.8, phi = 0.0
         var flutterW = 2.0, flutterPhi = 0.0
-        var size = 14.0                    // points across (1x)
+        var size = 12.0
         var shape = 0, colorIdx = 0
         var alpha = 1.0
         var t = 0.0, life = 0.0
-        var vx = 0.0, vyLift = 0.0         // decaying extra velocities (air)
-        var spin = 0.0                     // extra rotation offset, decays in air
+        var vx = 0.0, vyLift = 0.0
+        var spin = 0.0
         var tumble = 0.0, tumbleDir = 1.0
-        var flatBack = 0.0                 // 1 -> 0: easing from flattened back to full height
+        var flatBack = 0.0
         var noRest = false
         var slideV = 0.0
+        var surfY = 0.0
         var landSX = 1.0, landSY = 1.0, restFrom = 0.0, restTo = 0.0
-        var restFor = 14.0, meltLen = 2.5
-        // current pose (written by step)
+        var restFor = 14.0
         var px = 0.0, py = 0.0, rot = 0.0, sx = 1.0, sy = 1.0
     }
 
@@ -121,24 +124,16 @@ final class ParticleSim {
     private var ox = 0.0, oy = 0.0, lw = 1.0, lh = 1.0
     private var endY = 0.0, spawnY = 0.0, unit = 1.0
     private var geoKey = ""
-    private var hs: [Double] = []          // smoothed surface Y per column (NaN = none)
-    private var slopeAbs: [Double] = []
-    private var downDir: [Double] = []
-    private var tangDeg: [Double] = []
-    private var gentleCols: [Int] = []
+    private let cols = 208
+    private var rows = 139
+    private var edgesByCol: [[Edge]] = []
+    private var gentleSpots: [(x: Double, e: Edge)] = []
+    private(set) var caps: [Cap] = []
+    private(set) var capLevel: [Double] = []
     private var artMinX = 0.0, artMaxX = 1.0
-    // snow accumulation (points of depth per column) and its cap
-    private(set) var snowDepth: [Double] = []
-    private var snowCap: [Double] = []
-    private var snowTick = 0
-    /// Columns carrying a visible snow cap: x, surface Y, depth.
-    var capColumns: [(x: Double, base: Double, depth: Double)] {
-        guard !snowDepth.isEmpty else { return [] }
-        return (0..<LogoHeightMap.columns).map { i in (colX(i), hs[i], hs[i].isNaN ? 0 : snowDepth[i] * unit) }
-    }
 
-    /// Leaves rest below ~35 degrees; snow clings a little more readily (56).
-    private var gentleTan: Double { tan((isLeaf ? 35.0 : 56.0) * .pi / 180) }
+    private var gentleTan: Double { tan(35.0 * .pi / 180) }
+    private static let capTan = tan(40.0 * .pi / 180)
     static let palette: [UInt32] = [0xB5482A, 0xD98A1F, 0xE3B23C, 0x9C2F2F, 0x8A6A2B]
 
     init(kind: ParticleKind, fastForward: Double = 0, seed: UInt64) {
@@ -151,33 +146,29 @@ final class ParticleSim {
     private func chance(_ p: Double) -> Bool { Double.random(in: 0...1, using: &rng) < p }
     private var isLeaf: Bool { kind == .leaf }
     private var maxAir: Int { isLeaf ? 4 : 12 }
-    private var maxRest: Int { isLeaf ? 6 : 12 }
-    private var lift: Double { 0 }
+    private var maxRest: Int { 6 }
 
     // MARK: Geometry
 
-    /// Logo frame (origin + size) in canvas points; `endY` is where airborne
-    /// particles have fully faded; `spawnLift` how far above the logo they appear.
     func configure(origin: CGPoint, size: CGSize, endY: Double, spawnLift: Double, unit: Double, reduceMotion: Bool) {
         let key = "\(origin.x),\(origin.y),\(size.width),\(size.height),\(endY),\(spawnLift),\(unit)"
         guard !configured || key != geoKey else { return }
         geoKey = key
         ox = Double(origin.x); oy = Double(origin.y); lw = Double(size.width); lh = Double(size.height)
         self.endY = endY; self.unit = unit; spawnY = oy - spawnLift * unit
+        let hadCaps = caps.count
         buildSurface()
+        if capLevel.count != caps.count { capLevel = [Double](repeating: 0.5, count: caps.count) }
+        _ = hadCaps
         let first = !configured
         configured = true
         guard first else { return }
-        if !isLeaf {
-            for i in 0..<LogoHeightMap.columns where gentleCols.contains(i) { snowDepth[i] = snowCap[i] * (reduceMotion ? 0.6 : 0.5) }
-            smoothSnow(passes: 3)
-            if reduceMotion { return }
-        }
         if reduceMotion {
+            if !isLeaf { capLevel = [Double](repeating: 0.65, count: caps.count); return }
             var xs: [Double] = []
-            for _ in 0..<(isLeaf ? 5 : 8) {
-                if var p = restingAtGentle(avoiding: xs, spacing: isLeaf ? 12 : 6) {
-                    p.restFor = 1e9; p.t = 1; p.sy = isLeaf ? 0.6 : 0.5
+            for _ in 0..<5 {
+                if var p = restingAtGentle(avoiding: xs, spacing: 12) {
+                    p.restFor = 1e9; p.t = 1; p.sy = 0.6
                     xs.append(p.px); ps.append(p)
                 }
             }
@@ -203,63 +194,129 @@ final class ParticleSim {
         }
     }
 
+    /// Edges from the 2D mask: opaque cells with >= 3 pt of clear space above,
+    /// grouped into segments (broken at gaps / height jumps > 1.5 pt).
     private func buildSurface() {
-        let n = LogoHeightMap.columns
-        let raw = LogoHeightMap.top.map { $0.isNaN ? Double.nan : oy + $0 * lh }
-        var s = [Double](repeating: .nan, count: n)
-        for i in 0..<n where !raw[i].isNaN {
-            var sum = 0.0, c = 0.0
-            for j in max(0, i - 2)...min(n - 1, i + 2) where !raw[j].isNaN { sum += raw[j]; c += 1 }
-            s[i] = sum / c
+        let mask = LogoMask.shared
+        rows = max(1, Int((Double(cols) * Double(mask.h) / Double(mask.w)).rounded()))
+        func opaque(_ c: Int, _ rr: Int) -> Bool {
+            guard c >= 0, c < cols, rr >= 0, rr < rows else { return false }
+            let sx = min(mask.w - 1, Int((Double(c) + 0.5) / Double(cols) * Double(mask.w)))
+            let sy = min(mask.h - 1, Int((Double(rr) + 0.5) / Double(rows) * Double(mask.h)))
+            return mask.alpha[sy * mask.w + sx] > 110
         }
-        hs = s
-        let cw = lw / Double(n)
-        slopeAbs = [Double](repeating: 99, count: n)
-        downDir = [Double](repeating: 1, count: n)
-        tangDeg = [Double](repeating: 0, count: n)
-        gentleCols = []
-        for i in 0..<n where !s[i].isNaN {
-            func side(_ j: Int) -> Double? { (j >= 0 && j < n && !s[j].isNaN) ? (s[j] - s[i]) : nil }
-            let l = side(i - 3), rr = side(i + 3)
-            // A missing neighbour means the artwork ends (a cliff): steep.
-            let sl = l.map { abs($0) / (3 * cw) } ?? 99
-            let sr = rr.map { abs($0) / (3 * cw) } ?? 99
-            slopeAbs[i] = max(sl, sr)
-            let gl = l ?? 0, gr = rr ?? 0
-            downDir[i] = gr >= gl ? 1 : -1
-            if let a = side(i - 2), let b = side(i + 2) {
-                tangDeg[i] = atan((b - a) / (4 * cw)) * 180 / .pi
+        let clear = 6          // 3 design pt
+        // edge rows per column
+        var colEdges = [[Int]](repeating: [], count: cols)
+        var minC = cols, maxC = 0
+        for c in 0..<cols {
+            for rr in 0..<rows where opaque(c, rr) {
+                minC = min(minC, c); maxC = max(maxC, c)
+                guard rr == 0 || !opaque(c, rr - 1) else { continue }
+                var ok = true
+                for k in 1...clear where opaque(c, rr - k) { ok = false; break }
+                if ok { colEdges[c].append(rr) }
             }
-            if slopeAbs[i] < gentleTan { gentleCols.append(i) }
         }
-        snowCap = (0..<n).map { i in
-            guard !s[i].isNaN else { return 0 }
-            let y = LogoHeightMap.top[i], x = (Double(i) + 0.5) / Double(n)
-            let cabin = x > 0.39 && x < 0.60 && y < 0.62
-            return (cabin || y >= 0.62) ? 3.0 : 1.8
+        artMinX = ox + Double(minC) / Double(cols) * lw
+        artMaxX = ox + Double(maxC + 1) / Double(cols) * lw
+        // group into segments
+        struct Seg { var cs: [Int] = []; var rs: [Int] = [] }
+        var segs: [Seg] = []
+        var open: [Int] = []                  // segment ids continuing from previous column
+        for c in 0..<cols {
+            var next: [Int] = []
+            var used = Set<Int>()
+            for rr in colEdges[c] {
+                var best: Int?
+                var bd = 99
+                for id in open where !used.contains(id) {
+                    let d = abs(segs[id].rs.last! - rr)
+                    if d <= 3 && d < bd { best = id; bd = d }
+                }
+                if let b = best { used.insert(b); segs[b].cs.append(c); segs[b].rs.append(rr); next.append(b) }
+                else { segs.append(Seg(cs: [c], rs: [rr])); next.append(segs.count - 1) }
+            }
+            open = next
         }
-        if snowDepth.count != n { snowDepth = [Double](repeating: 0, count: n) }
-        let valid = (0..<n).filter { !s[$0].isNaN }
-        artMinX = ox + (Double(valid.first ?? 0)) * cw
-        artMaxX = ox + (Double(valid.last ?? n - 1) + 1) * cw
+        // per-segment smoothing, slope, caps
+        edgesByCol = [[Edge]](repeating: [], count: cols)
+        gentleSpots = []
+        caps = []
+        let cw = lw / Double(cols), chh = lh / Double(rows)
+        for sgm in segs {
+            let n = sgm.cs.count
+            guard n >= 2 else { continue }
+            let rs = sgm.rs.map(Double.init)
+            var sm = [Double](repeating: 0, count: n)
+            for j in 0..<n {
+                let a = max(0, j - 3), b = min(n - 1, j + 3)
+                sm[j] = rs[a...b].reduce(0, +) / Double(b - a + 1)
+            }
+            let supported = n >= 6
+            var tans = [Double](repeating: 0, count: n)
+            var downs = [Double](repeating: 1, count: n)
+            var tangs = [Double](repeating: 0, count: n)
+            for j in 0..<n {
+                let a = max(0, j - 3), b = min(n - 1, j + 3)
+                let dc = Double(sgm.cs[b] - sgm.cs[a])
+                let dr = sm[b] - sm[a]
+                tans[j] = dc > 0 ? abs(dr / dc) : 99
+                downs[j] = dr >= 0 ? 1 : -1
+                tangs[j] = dc > 0 ? atan(dr / dc * chh / cw) * 180 / .pi : 0
+            }
+            // cap runs: consecutive gentle points
+            var capIdx = [Int](repeating: -1, count: n)
+            var j = 0
+            while j < n {
+                guard tans[j] * chh / cw <= Self.capTan else { j += 1; continue }
+                var k = j
+                while k + 1 < n && tans[k + 1] * chh / cw <= Self.capTan { k += 1 }
+                if k - j + 1 >= 6 {
+                    let mid = (j + k) / 2
+                    let nx = Double(sgm.cs[mid]) / Double(cols), ny = sm[mid] / Double(rows)
+                    var d: Double
+                    if ny >= 0.60 { d = 2.5 }
+                    else if nx >= 0.38 && nx <= 0.61 && ny >= 0.36 && ny <= 0.57 { d = 2.5 }
+                    else if nx < 0.33 || nx > 0.68 || ny < 0.26 { d = 1.0 }
+                    else { d = 1.2 }
+                    var pts: [CGPoint] = []
+                    for q in j...k { pts.append(CGPoint(x: ox + (Double(sgm.cs[q]) + 0.5) * cw, y: oy + sm[q] * chh)) }
+                    caps.append(Cap(pts: pts, maxD: d))
+                    for q in j...k { capIdx[q] = caps.count - 1 }
+                }
+                j = k + 1
+            }
+            for q in 0..<n {
+                let e = Edge(y: oy + sm[q] * chh, slope: tans[q] * chh / cw, down: downs[q], tang: tangs[q],
+                             supported: supported, cap: capIdx[q])
+                edgesByCol[sgm.cs[q]].append(e)
+                if supported && e.slope < gentleTan && q >= 2 && q < n - 2 {
+                    gentleSpots.append((ox + (Double(sgm.cs[q]) + 0.5) * cw, e))
+                }
+            }
+        }
+        for c in 0..<cols { edgesByCol[c].sort { $0.y < $1.y } }
     }
 
-    private func colX(_ i: Int) -> Double { ox + (Double(i) + 0.5) * lw / Double(LogoHeightMap.columns) }
-    private func nearestCol(_ x: Double) -> Int? {
-        let n = LogoHeightMap.columns
-        let i = Int(((x - ox) / lw * Double(n)).rounded(.down))
-        return (i >= 0 && i < n && !hs[i].isNaN) ? i : nil
+    private func colOf(_ x: Double) -> Int? {
+        let c = Int(((x - ox) / lw * Double(cols)).rounded(.down))
+        return (c >= 0 && c < cols) ? c : nil
     }
-    private func surfY(_ x: Double) -> Double? {
-        let n = LogoHeightMap.columns
-        let u = (x - ox) / lw * Double(n) - 0.5
-        let i0 = Int(u.rounded(.down))
-        guard i0 >= 0, i0 + 1 < n else { return nil }
-        let a = hs[i0], b = hs[i0 + 1]
-        guard !a.isNaN, !b.isNaN else { return nil }
-        return a + (b - a) * (u - Double(i0))
+    /// First upward edge crossed when moving from yPrev to yNow at x.
+    private func edgeCross(_ x: Double, _ yPrev: Double, _ yNow: Double) -> Edge? {
+        guard let c = colOf(x) else { return nil }
+        for e in edgesByCol[c] where e.y > yPrev && e.y <= yNow { return e }
+        return nil
     }
-    private func isGentle(_ x: Double) -> Bool { nearestCol(x).map { slopeAbs[$0] < gentleTan } ?? false }
+    /// The edge at x closest to height y (within a small tolerance), for sliding.
+    private func edgeNear(_ x: Double, _ y: Double, tol: Double) -> Edge? {
+        guard let c = colOf(x) else { return nil }
+        var best: Edge?
+        var bd = tol
+        for e in edgesByCol[c] where abs(e.y - y) <= bd { best = e; bd = abs(e.y - y) }
+        return best
+    }
 
     // MARK: Spawn
 
@@ -267,7 +324,7 @@ final class ParticleSim {
         var p = P()
         if isLeaf {
             p.back = chance(0.35)
-            p.size = p.back ? r(11, 17) * 0.7 / 0.7 : r(11, 17)   // back layer scaled 0.7 at draw
+            p.size = r(9.5, 14.5)
             p.shape = [0, 0, 0, 1, 1, 2, 2][Int.random(in: 0..<7, using: &rng)]
             p.colorIdx = Int.random(in: 0..<Self.palette.count, using: &rng)
             p.vTerm = r(22, 38)
@@ -292,19 +349,20 @@ final class ParticleSim {
     }
 
     private func restingAtGentle(avoiding xs: [Double], spacing: Double) -> P? {
-        var cols = gentleCols.shuffled(using: &rng)
-        cols.removeAll { c in xs.contains { abs($0 - colX(c)) < spacing * unit } }
-        guard let c = cols.first, let sy = surfY(colX(c)) else { return nil }
+        var spots = gentleSpots.shuffled(using: &rng)
+        spots.removeAll { s in xs.contains { abs($0 - s.x) < spacing * unit } }
+        guard let s = spots.first else { return nil }
         var p = airParticle()
         p.back = false
         p.alpha = 1
-        p.px = colX(c) + r(-0.4, 0.4) * unit
-        p.py = sy - lift
+        p.px = s.x
+        p.surfY = s.e.y
+        p.py = s.e.y
         p.phase = .rest
-        p.sx = 1; p.sy = isLeaf ? 0.6 : 0.5
-        p.restTo = tangDeg[c] + (chance(0.5) ? 90 : -90) + r(-12, 12)
+        p.sx = 1; p.sy = 0.6
+        p.restTo = s.e.tang + (chance(0.5) ? 90 : -90) + r(-12, 12)
         p.rot = p.restTo; p.restFrom = p.restTo
-        p.restFor = isLeaf ? r(10, 18) : r(6, 9)
+        p.restFor = r(10, 18)
         p.t = 1
         return p
     }
@@ -314,7 +372,7 @@ final class ParticleSim {
     func advance(to date: Date) {
         guard configured else { return }
         guard let last = lastDate else { lastDate = date; return }
-        guard date > last else { return }          // two canvases share this: stay monotonic
+        guard date > last else { return }
         lastDate = date
         acc += min(date.timeIntervalSince(last), 0.25)
         while acc >= Self.dt { acc -= Self.dt; step() }
@@ -372,6 +430,7 @@ final class ParticleSim {
             var p = ps[i]
             switch p.phase {
             case .air:
+                let yOld = p.y
                 p.life += dt
                 let a = p.omega * p.life + p.phi
                 p.x0 += (wind + p.vx) * dt
@@ -398,29 +457,27 @@ final class ParticleSim {
                 p.sy = 1 - 0.4 * p.flatBack
                 p.py = p.y
                 if p.y >= endY { removeIdx.append(i); ps[i] = p; continue }
-                // contact with the artwork
-                if !p.back, !p.noRest, let sy = surfY(p.px) {
-                    let over = p.y - (sy - lift)
-                    if over >= 0 && over < 4 * unit {
+                if !p.back, !p.noRest, p.y > yOld, let e = edgeCross(p.px, yOld, p.y) {
+                    if isLeaf {
                         p.landSX = p.sx; p.landSY = p.sy
-                        p.py = sy - lift
-                        if isLeaf {
-                            p.phase = .slide; p.t = 0
-                            p.slideV = max(-12 * unit, min(12 * unit, (vlat + wind) * 0.25))
-                        } else {
-                            if isGentle(p.px), let c = nearestCol(p.px) { deposit(c) }
-                            removeIdx.append(i); ps[i] = p; continue
-                        }
+                        p.py = e.y; p.surfY = e.y
+                        p.phase = .slide; p.t = 0
+                        p.slideV = max(-12 * unit, min(12 * unit, (vlat + wind) * 0.25))
+                    } else {
+                        // a flake is absorbed by the edge; gentle segments gain depth
+                        if e.cap >= 0 { capLevel[e.cap] = min(1, capLevel[e.cap] + 0.12) }
+                        removeIdx.append(i); ps[i] = p; continue
                     }
                 }
             case .slide:
                 p.t += dt
                 let x = p.px
-                guard let sy = surfY(x), let ci = nearestCol(x) else { toAir(&p); ps[i] = p; continue }
-                let gentle = slopeAbs[ci] < gentleTan
+                guard let e = edgeNear(x, p.surfY, tol: 2.2 * unit) else { toAir(&p); ps[i] = p; continue }
+                let gentle = e.slope < gentleTan && e.supported
                 var crowdDir = 0.0
                 var crowd = 0
-                for (j, q) in ps.enumerated() where j != i && q.phase == .rest && !q.back && abs(q.px - x) < 10 * unit {
+                for (j, q) in ps.enumerated() where j != i && q.phase == .rest && !q.back
+                    && abs(q.px - x) < 10 * unit && abs(q.surfY - p.surfY) < 8 * unit {
                     crowd += 1; crowdDir = x >= q.px ? 1 : -1
                 }
                 let crowded = crowd >= 2
@@ -428,50 +485,37 @@ final class ParticleSim {
                     p.phase = .rest; p.t = 0
                     p.slideV = 0
                     p.restFrom = p.rot
-                    let base = tangDeg[ci] + (chance(0.5) ? 90 : -90) + r(-12, 12)
+                    let base = e.tang + (chance(0.5) ? 90 : -90) + r(-12, 12)
                     p.restTo = p.rot + shortest(p.rot, base)
                     p.restFor = r(10, 18)
                     p.landSY = p.sy; p.landSX = p.sx
-                    p.px = x; p.py = sy - lift
+                    p.py = e.y; p.surfY = e.y
                     ps[i] = p; continue
                 }
                 if gentle {
-                    if crowded {
-                        p.slideV = crowdDir * max(abs(p.slideV), 10 * unit)
-                    } else {
-                        p.slideV *= (1 - 2.5 * dt)
-                    }
+                    if crowded { p.slideV = crowdDir * max(abs(p.slideV), 10 * unit) }
+                    else { p.slideV *= (1 - 2.5 * dt) }
                 } else {
-                    p.slideV += downDir[ci] * 70 * unit * dt
+                    p.slideV += e.down * 70 * unit * dt
                     p.slideV = max(-45 * unit, min(45 * unit, p.slideV))
                 }
                 let nx = x + p.slideV * dt
-                guard let ny = surfY(nx), let nc = nearestCol(nx), ny - sy < 2.2 * unit else {
-                    p.px = nx; toAir(&p); ps[i] = p; continue
-                }
-                p.px = nx; p.py = ny - lift
-                let target = tangDeg[nc] + (p.slideV >= 0 ? 90 : -90) * 0 + p.rot.rounded(.towardZero) * 0
-                _ = target
-                // turn toward the surface while rolling a little
+                guard let ne = edgeNear(nx, e.y, tol: 2.2 * unit) else { p.px = nx; toAir(&p); ps[i] = p; continue }
+                p.px = nx; p.py = ne.y; p.surfY = ne.y
                 let roll = p.slideV * 1.4
-                p.rot += (tangDeg[nc] + 90 * (shortest(0, p.rot - tangDeg[nc]) >= 0 ? 1 : -1) - p.rot) * min(1, 3 * dt)
+                p.rot += (ne.tang + 90 * (shortest(0, p.rot - ne.tang) >= 0 ? 1 : -1) - p.rot) * min(1, 3 * dt)
                 p.rot += roll * dt
-                let e = min(p.t / 0.3, 1)
-                p.sx = p.landSX + (1 - p.landSX) * e
-                p.sy = p.landSY + (0.6 - p.landSY) * e
+                let k = min(p.t / 0.3, 1)
+                p.sx = p.landSX + (1 - p.landSX) * k
+                p.sy = p.landSY + (0.6 - p.landSY) * k
             case .rest:
                 p.t += dt
-                if let sy = surfY(p.px) {
-                    let u = min(p.t / 0.5, 1)
-                    let bump = (isLeaf ? 0.9 : 0.4) * unit * sin(.pi * u)
-                    p.py = sy - lift + bump
-                }
-                let e = 1 - pow(1 - min(p.t / 0.35, 1), 2)
-                p.sx = p.landSX + (1 - p.landSX) * e
-                let tgtSY = isLeaf ? 0.6 : 0.5
-                p.sy = p.landSY + (tgtSY - p.landSY) * e
-                p.rot = p.restFrom + shortest(p.restFrom, p.restTo) * e
-                if !isLeaf, p.t >= p.restFor + p.meltLen { removeIdx.append(i) }
+                let u = min(p.t / 0.5, 1)
+                p.py = p.surfY + 0.9 * unit * sin(.pi * u)
+                let k = 1 - pow(1 - min(p.t / 0.35, 1), 2)
+                p.sx = p.landSX + (1 - p.landSX) * k
+                p.sy = p.landSY + (0.6 - p.landSY) * k
+                p.rot = p.restFrom + shortest(p.restFrom, p.restTo) * k
             }
             ps[i] = p
         }
@@ -479,11 +523,8 @@ final class ParticleSim {
             let s = Set(removeIdx)
             ps = ps.enumerated().filter { !s.contains($0.offset) }.map { $0.element }
         }
-
         if !isLeaf {
-            for i in snowDepth.indices where snowDepth[i] > 0 { snowDepth[i] = max(0, snowDepth[i] - 0.009 * dt) }
-            snowTick += 1
-            if snowTick % 10 == 0 { smoothSnow(passes: 1) }
+            for i in capLevel.indices { capLevel[i] = max(0, capLevel[i] - 0.002 * dt) }
         }
         spawnIn -= dt
         if spawnIn <= 0 {
@@ -491,29 +532,6 @@ final class ParticleSim {
             let resting = ps.count - air
             if air < maxAir && resting < maxRest { ps.append(airParticle()) }
             spawnIn = isLeaf ? r(1.6, 3.2) : r(0.35, 0.8)
-        }
-    }
-
-    private func deposit(_ c: Int) {
-        let n = LogoHeightMap.columns
-        for (d, w) in [(0, 1.0), (1, 0.6), (2, 0.35), (3, 0.15)] {
-            for j in Set([c - d, c + d]) where j >= 0 && j < n && !hs[j].isNaN {
-                snowDepth[j] = min(snowCap[j], snowDepth[j] + 0.5 * w)
-            }
-        }
-    }
-
-    private func smoothSnow(passes: Int) {
-        let n = LogoHeightMap.columns
-        for _ in 0..<passes {
-            var o = snowDepth
-            for i in 0..<n where !hs[i].isNaN {
-                let l = i > 0 ? snowDepth[i - 1] : 0, rr = i < n - 1 ? snowDepth[i + 1] : 0
-                o[i] = 0.5 * snowDepth[i] + 0.25 * (l + rr)
-                let gentle = slopeAbs[i] < gentleTan
-                o[i] = min(o[i], gentle ? snowCap[i] : 0.25)
-            }
-            snowDepth = o
         }
     }
 
@@ -529,10 +547,7 @@ final class ParticleSim {
             let fin = min(1, max(0, (p.y - spawnY) / (5 * unit) + 0.1))
             let fout = min(1, max(0, (endY - p.y) / (14 * unit)))
             return p.alpha * fin * fout
-        case .slide: return p.alpha
-        case .rest:
-            if isLeaf { return p.alpha }
-            return p.alpha * max(0, 1 - max(0, p.t - p.restFor) / max(p.meltLen, 0.01))
+        default: return p.alpha
         }
     }
 }
@@ -594,7 +609,7 @@ private struct ParticleScene: View {
                     c.clip(to: Path(roundedRect: rect, cornerRadius: 16))
                 }
                 for p in sim.ps where (layer == .back) == p.back { draw(p, sim, &c, unit) }
-                if kind == .snow && layer == .front { drawCap(sim, &c) }
+                if kind == .snow && layer == .front { drawCap(sim, &c, unit) }
             }
         }
         .onScrollVisibilityChange(threshold: 0.01) { onScreen = $0 }
@@ -635,25 +650,30 @@ private struct ParticleScene: View {
 
     private static let cool = Color(red: 0x9F / 255, green: 0xB4 / 255, blue: 0xC4 / 255)
 
-    /// Thin snow cap hugging the silhouette top where snow has built up.
-    private func drawCap(_ sim: ParticleSim, _ ctx: inout GraphicsContext) {
-        let cols = sim.capColumns
-        var run: [(x: Double, base: Double, depth: Double)] = []
-        func flush() {
-            guard run.count >= 2 else { run = []; return }
-            var path = Path()
-            path.move(to: CGPoint(x: run[0].x, y: run[0].base + 0.3))
-            for c in run { path.addLine(to: CGPoint(x: c.x, y: c.base - c.depth)) }
-            for c in run.reversed() { path.addLine(to: CGPoint(x: c.x, y: c.base + 0.3)) }
-            path.closeSubpath()
-            ctx.fill(path, with: .color(.white))
-            ctx.stroke(path, with: .color(Self.cool.opacity(0.6)), style: StrokeStyle(lineWidth: 0.6, lineJoin: .round))
-            run = []
+    /// Small snow caps sitting on the gentle upward edges: domed, tapering to
+    /// nothing at both ends, with a faint cool underside line.
+    private func drawCap(_ sim: ParticleSim, _ ctx: inout GraphicsContext, _ unit: Double) {
+        for (i, cap) in sim.caps.enumerated() {
+            let d = cap.maxD * sim.capLevel[i] * unit
+            guard d > 0.15, cap.pts.count >= 2 else { continue }
+            let n = cap.pts.count
+            var top = Path(), under = Path(), shape = Path()
+            for (j, pt) in cap.pts.enumerated() {
+                let t = Double(j) / Double(n - 1)
+                let h = d * pow(sin(.pi * t), 0.6)
+                let tp = CGPoint(x: pt.x, y: pt.y - h)
+                if j == 0 { top.move(to: tp); under.move(to: CGPoint(x: pt.x, y: pt.y + 0.3)) }
+                else { top.addLine(to: tp); under.addLine(to: CGPoint(x: pt.x, y: pt.y + 0.3)) }
+            }
+            shape.addPath(top)
+            for pt in cap.pts.reversed() { shape.addLine(to: CGPoint(x: pt.x, y: pt.y + 0.3)) }
+            shape.closeSubpath()
+            var g = ctx
+            g.addFilter(.shadow(color: .black.opacity(0.12), radius: 0.8, x: 0, y: 0.5))
+            g.fill(shape, with: .color(.white))
+            ctx.stroke(under, with: .color(Color(red: 0x8F / 255, green: 0xA6 / 255, blue: 0xB8 / 255).opacity(0.45)),
+                       style: StrokeStyle(lineWidth: 0.6, lineCap: .round))
         }
-        for c in cols {
-            if c.depth > 0.12 { run.append(c) } else { flush() }
-        }
-        flush()
     }
 
     // MARK: Leaf silhouettes (100-unit box, tip up, stem down)
