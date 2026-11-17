@@ -175,13 +175,22 @@ struct FestYearLookSheet: View {
         var theme: String?
         var coverUrl: String?
         var look: FestTheme = .builtIn
+        var icons: String?
+        var iconUrl: String?
     }
 
     @State private var draft = EditorDraft(Values())
     @State private var loaded = false
+    @State private var originalIcons = ""
+    @State private var originalIconUrl = ""
     @State private var confirmReset = false
 
     private var service: FestContentService { env.festContentService }
+
+    /// Up to 5 emoji (one per visible character), spaces dropped.
+    static func splitIcons(_ s: String) -> [String] {
+        Array(s.filter { !$0.isWhitespace }.map { String($0) }.prefix(5))
+    }
 
     private func slot(_ title: String, _ s: FestTheme.Slot, _ kp: WritableKeyPath<FestTheme, String?>) -> some View {
         EditorColorField(title,
@@ -201,6 +210,28 @@ struct FestYearLookSheet: View {
         Haptics.select()
     }
 
+    private func uploadIcon(_ image: UIImage) async throws -> String {
+        try await env.mediaService.uploadFestIcon(image: image, key: "fest/\(service.year)")
+    }
+
+    /// The Home tile as it renders (static).
+    private var tilePreview: some View {
+        let icons = Self.splitIcons(draft.value.icons ?? "")
+        let first = icons.first ?? service.config?.autoThemeIcons.first ?? "🎪"
+        return ZStack {
+            RoundedRectangle(cornerRadius: 16, style: .continuous)
+                .fill(LinearGradient(colors: [Color.mlrFest.opacity(0.9), Color.mlrFestGold],
+                                     startPoint: .topLeading, endPoint: .bottomTrailing))
+                .frame(width: 60, height: 60)
+            if let u = draft.value.iconUrl, !u.isEmpty {
+                FestIconImage(url: u, emoji: first, side: 60)
+            } else {
+                Text(first).font(.system(size: 28))
+            }
+        }
+        .frame(maxWidth: .infinity)
+    }
+
     private func upload(_ image: UIImage) async throws -> String {
         try await env.mediaService.uploadSiteImage(image: image, key: "fest/\(service.year)")
     }
@@ -214,6 +245,13 @@ struct FestYearLookSheet: View {
             try await service.saveYearLook(theme: t.isEmpty ? nil : t,
                                            coverUrl: c.isEmpty ? nil : c,
                                            look: v.look)
+            let icons = Self.splitIcons(v.icons ?? "")
+            let iu = v.iconUrl?.trimmingCharacters(in: .whitespaces) ?? ""
+            if icons.joined() != originalIcons || iu != originalIconUrl {
+                try await service.saveThemeIcons(icons, iconUrl: iu.isEmpty ? nil : iu)
+                originalIcons = icons.joined()
+                originalIconUrl = iu
+            }
         }) {
             // Live preview: drawn from the draft, never written, and it never
             // touches FestThemeStore.active.
@@ -231,6 +269,20 @@ struct FestYearLookSheet: View {
                 Text("This year's theme")
             } footer: {
                 Text("The line people remember the year by. Leave it empty for no theme.")
+            }
+
+            Section {
+                tilePreview
+                EditorImageField("Logo or image", url: $draft.value.iconUrl, upload: uploadIcon)
+                EditorTextField("Icons", text: $draft.value.icons,
+                                placeholder: (service.config?.autoThemeIcons ?? FestConfig.fallbackIcons).joined(),
+                                limit: nil)
+                    .onChange(of: draft.value.icons) { _, new in
+                        let clipped = Self.splitIcons(new ?? "").joined()
+                        if clipped != (new ?? "") { draft.value.icons = clipped }
+                    }
+            } footer: {
+                Text("Shown on the Family Fest card and tiles. An image wins over emoji; leave both empty to pick automatically from the theme.")
             }
 
             Section {
@@ -335,7 +387,10 @@ struct FestYearLookSheet: View {
             await service.load()
             guard !loaded else { return }
             let cfg = service.config
-            draft = EditorDraft(Values(theme: cfg?.theme, coverUrl: cfg?.coverUrl, look: cfg?.look ?? .builtIn))
+            draft = EditorDraft(Values(theme: cfg?.theme, coverUrl: cfg?.coverUrl, look: cfg?.look ?? .builtIn,
+                                      icons: cfg?.icons?.joined(), iconUrl: cfg?.iconUrl))
+            originalIconUrl = cfg?.iconUrl ?? ""
+            originalIcons = cfg?.icons?.joined() ?? ""
             loaded = true
         }
     }

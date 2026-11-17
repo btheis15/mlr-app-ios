@@ -1,4 +1,5 @@
 import SwiftUI
+import Kingfisher
 
 // MARK: - FamilyFestSpotlight
 // A compact, phase-aware Family Fest summary at the top of Home (kept small —
@@ -33,6 +34,15 @@ struct FamilyFestSpotlight: View {
         case .live:      return "star.fill"
         case .wrap:      return "photo.fill"
         case .concluded: return "crown.fill"
+        }
+    }
+
+    /// Theme emoji for phases where the tile stands for "the fest" itself.
+    private var themedTileIcons: [String]? {
+        switch season.phase {
+        case .offSeason, .live, .concluded:
+            return env.festContentService.config?.themeIcons ?? FestConfig.fallbackIcons
+        default: return nil
         }
     }
 
@@ -292,9 +302,13 @@ struct FamilyFestSpotlight: View {
                         .fill(LinearGradient(colors: [Color.mlrFest.opacity(0.9), Color.mlrFestGold],
                                              startPoint: .topLeading, endPoint: .bottomTrailing))
                         .frame(width: 60, height: 60)
-                    Image(systemName: iconName)
-                        .font(.system(size: 24, weight: .semibold))
-                        .foregroundStyle(.white)
+                    if let themed = themedTileIcons {
+                        FestThemeIconView(icons: themed, imageUrl: env.festContentService.config?.iconUrl)
+                    } else {
+                        Image(systemName: iconName)
+                            .font(.system(size: 24, weight: .semibold))
+                            .foregroundStyle(.white)
+                    }
                 }
 
                 VStack(alignment: .leading, spacing: 3) {
@@ -409,5 +423,88 @@ struct PulsingDot: View {
                 pulsing = true
             }
         }
+    }
+}
+
+
+// MARK: - FestIconImage
+// A fest's uploaded logo in a rounded tile: transparent PNGs are aspect-fit with
+// an inset, opaque photos aspect-fill clipped. Emoji shows while loading/failed.
+
+struct FestIconImage: View {
+    let url: String
+    let emoji: String
+    let side: CGFloat
+    var corner: CGFloat = 16
+
+    private var isPNG: Bool { url.lowercased().hasSuffix(".png") }
+
+    var body: some View {
+        let inset: CGFloat = isPNG ? 6 : 0
+        KFImage(URL(string: url))
+            .placeholder { Text(emoji).font(.system(size: side * 0.46)) }
+            .onFailureView { Text(emoji).font(.system(size: side * 0.46)) }
+            .resizable()
+            .aspectRatio(contentMode: isPNG ? .fit : .fill)
+            .frame(width: side - inset * 2, height: side - inset * 2)
+            .clipShape(RoundedRectangle(cornerRadius: isPNG ? 8 : corner, style: .continuous))
+            .frame(width: side, height: side)
+            .clipShape(RoundedRectangle(cornerRadius: corner, style: .continuous))
+    }
+}
+
+// MARK: - FestThemeIconView
+// Cycles a fest's theme emoji inside the Home tile with a gentle party rock.
+// Reduce Motion: first icon, static. Animation stops when off screen.
+
+struct FestThemeIconView: View {
+    let icons: [String]
+    var imageUrl: String?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var index = 0
+    @State private var rock = false
+    @State private var visible = false
+    @State private var glint = false
+
+    private var animating: Bool { visible && !reduceMotion }
+    private var current: String { icons.isEmpty ? "🎪" : icons[index % icons.count] }
+
+    var body: some View {
+        ZStack {
+            if let imageUrl, !imageUrl.isEmpty {
+                FestIconImage(url: imageUrl, emoji: icons.first ?? "🎪", side: 60)
+                    .rotationEffect(.degrees(animating ? (rock ? 6 : -6) : 0))
+            } else {
+            Text(current)
+                .font(.system(size: 28))
+                .id(current)
+                .transition(.scale(scale: 0.6).combined(with: .opacity))
+                .rotationEffect(.degrees(animating ? (rock ? 6 : -6) : 0))
+            }
+            if imageUrl == nil && current == "🪩" && !reduceMotion {
+                Image(systemName: "sparkle")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(.white)
+                    .offset(x: glint ? 11 : -11, y: glint ? -10 : 6)
+                    .opacity(animating ? (glint ? 0.9 : 0.1) : 0)
+            }
+        }
+        .accessibilityHidden(true)
+        .onAppear { visible = true; startRock() }
+        .onDisappear { visible = false }
+        .task(id: animating) {
+            guard animating, imageUrl == nil, icons.count > 1 else { return }
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 3_500_000_000)
+                if Task.isCancelled { break }
+                withAnimation(.easeInOut(duration: 0.25)) { index = (index + 1) % icons.count }
+            }
+        }
+    }
+
+    private func startRock() {
+        guard !reduceMotion else { return }
+        withAnimation(.easeInOut(duration: 1.6).repeatForever(autoreverses: true)) { rock = true }
+        withAnimation(.easeInOut(duration: 1.1).repeatForever(autoreverses: true)) { glint = true }
     }
 }
