@@ -306,13 +306,32 @@ struct HomeView: View {
         return "\(base), \(first)"
     }
 
+    /// Live landing leaves (fall) / snow (winter) over the still artwork. The
+    /// ground is the logo's bottom edge; in dark mode the cream plaque extends
+    /// 10 pt below the logo, so the ground is its inside bottom edge.
+    @ViewBuilder
+    private var homeLogoFX: some View {
+        let season = Season.current(previewDate ?? Date())
+        let dark = colorScheme == .dark
+        switch season {
+        case .fall, .winter:
+            ZStack {
+                SeasonalLogoFX(season: season, progress: 1, particles: false)
+                FallingParticlesFX(kind: season == .fall ? .leaf : .snow,
+                                   groundInset: dark ? 3 : -9, sideInset: dark ? 2 : 6)
+            }
+        default:
+            SeasonalLogoFX(season: season, progress: 1).allowsHitTesting(false)
+        }
+    }
+
     @ViewBuilder
     private func logoHero(geometry: GeometryProxy) -> some View {
         VStack(spacing: 6) {
             SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
                 .scaledToFit()
                 // The season's still scene (the splash's final frame), as on web.
-                .overlay { SeasonalLogoFX(season: .current(), progress: 1).allowsHitTesting(false) }
+                .overlay { homeLogoFX }
                 .frame(width: min(geometry.size.width * 0.28, 104))
                 .modifier(DarkLogoPlaque(active: colorScheme == .dark))
                 .padding(.top, 0)
