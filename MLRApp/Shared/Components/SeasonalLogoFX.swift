@@ -31,13 +31,15 @@ struct SeasonalLogoFX: View {
     let season: Season
     /// 0...1, 1 = final still snapshot.
     let progress: Double
+    /// false = skip the falling leaves/flakes (a live FallingParticlesFX draws them).
+    var particles: Bool = true
 
     var body: some View {
         Canvas { ctx, size in
             let k = size.width / SeasonalArt.width
             var c = ctx
             c.scaleBy(x: k, y: k)
-            SeasonalArt.draw(&c, season: season, p: min(max(progress, 0), 1))
+            SeasonalArt.draw(&c, season: season, p: min(max(progress, 0), 1), particles: particles)
         }
         .aspectRatio(SeasonalArt.width / SeasonalArt.height, contentMode: .fit)
         .allowsHitTesting(false)
@@ -96,10 +98,10 @@ private enum SeasonalArt {
     /// Local 0...1 progress of an element that starts at `delay` and takes `len`.
     static func local(_ p: Double, delay: Double, len: Double) -> Double { clamp((p - delay) / len) }
 
-    static func draw(_ c: inout GraphicsContext, season: Season, p: Double) {
+    static func draw(_ c: inout GraphicsContext, season: Season, p: Double, particles: Bool = true) {
         switch season {
-        case .fall: fall(&c, p)
-        case .winter: winter(&c, p)
+        case .fall: if particles { fall(&c, p) }
+        case .winter: winter(&c, p, particles: particles)
         case .spring: spring(&c, p)
         case .summer: summer(&c, p)
         }
@@ -187,7 +189,7 @@ private enum SeasonalArt {
         return p
     }()
 
-    private static func winter(_ c: inout GraphicsContext, _ p: Double) {
+    private static func winter(_ c: inout GraphicsContext, _ p: Double, particles: Bool = true) {
         // Snow settles into caps over the second half.
         let settle = ease(local(p, delay: 0.45, len: 0.5))
         if settle > 0 {
@@ -204,7 +206,7 @@ private enum SeasonalArt {
                 h.stroke(capPath, with: .color(snowStroke), style: StrokeStyle(lineWidth: 3, lineJoin: .round))
             }
         }
-        for (i, f) in flakes.enumerated() {
+        for (i, f) in flakes.enumerated() where particles {
             let t = local(p, delay: Double(i) * 0.03, len: 0.62)
             let e = ease(t)
             let dir: Double = i % 2 == 0 ? -1 : 1
