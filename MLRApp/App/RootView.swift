@@ -173,6 +173,7 @@ struct RootView: View {
                 case "events": EventsView()
                 case "local-places": LocalPlacesView()
                 case "main-feed": MainFeedView(title: "Main Feed")
+                case "leaf-lab": LeafLabView()
                 default: AdminView()
                 }
             }
@@ -193,6 +194,7 @@ struct RootView: View {
             case "house-chat": router.requestRoute(.houseChat)
             case "fest": selectedTab = .fest
             case "feed": selectedTab = .feed
+            case "leaf-lab": debugScreen = v
             default: break
             }
         }
