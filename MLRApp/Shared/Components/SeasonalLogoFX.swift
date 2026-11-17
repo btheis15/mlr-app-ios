@@ -245,46 +245,6 @@ struct SeasonalLogoFX: View {
     }
 }
 
-// MARK: Animated (splash)
-
-/// Plays the effect once over `duration`, then stops the TimelineView and
-/// fires `onSettle` (single haptic is the caller's choice). Reduce Motion
-/// shows the final state immediately.
-struct SeasonalLogoAnimatedFX: View {
-    let season: Season
-    var duration: Double = 2.4
-    var delay: Double = 0.25
-    var onSettle: () -> Void = {}
-
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    @State private var start = Date()
-    @State private var finished = false
-
-    var body: some View {
-        Group {
-            if reduceMotion || finished {
-                SeasonalLogoFX(season: season, progress: 1)
-            } else {
-                TimelineView(.animation(paused: finished)) { tl in
-                    let raw = (tl.date.timeIntervalSince(start) - delay) / duration
-                    SeasonalLogoFX(season: season, progress: max(0, min(raw, 1)))
-                        .onChange(of: raw >= 1) { _, done in if done { settle() } }
-                }
-            }
-        }
-        .onAppear {
-            start = Date()
-            if reduceMotion { finished = true }
-        }
-    }
-
-    private func settle() {
-        guard !finished else { return }
-        finished = true
-        onSettle()
-    }
-}
-
 // MARK: - Art
 
 private enum SeasonalArt {

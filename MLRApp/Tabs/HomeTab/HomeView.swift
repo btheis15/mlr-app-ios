@@ -528,12 +528,21 @@ struct HomeLogoImage: View {
     let season: Season?
     let dark: Bool
     let width: CGFloat
-    @State private var store = ParticleStore()
+    /// Splash: use the bundled logo directly (no network image) and pre-run the sim.
+    var bundledOnly = false
+    var warmStart: Double = 0
+    @State private var store: ParticleStore
+
+    init(season: Season?, dark: Bool, width: CGFloat, bundledOnly: Bool = false, warmStart: Double = 0) {
+        self.season = season; self.dark = dark; self.width = width
+        self.bundledOnly = bundledOnly; self.warmStart = warmStart
+        _store = State(initialValue: ParticleStore(warmStart: warmStart))
+    }
 
     var body: some View {
         let live = season == .fall || season == .winter
         let kind: ParticleKind = season == .fall ? .leaf : .snow
-        SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green")
+        logoImage
             .scaledToFit()
             .background {
                 if live { FallingParticlesFX(kind: kind, layer: .back, store: store, plaque: dark) }
@@ -550,6 +559,13 @@ struct HomeLogoImage: View {
             }
             .frame(width: width)
             .modifier(DarkLogoPlaque(active: dark))
+    }
+}
+
+extension HomeLogoImage {
+    @ViewBuilder fileprivate var logoImage: some View {
+        if bundledOnly { Image("brand-logo-green").resizable() }
+        else { SiteImage(key: SiteImageKey.homeLogo, fallback: "brand-logo-green") }
     }
 }
 

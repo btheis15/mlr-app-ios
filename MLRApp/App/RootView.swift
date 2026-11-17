@@ -657,7 +657,8 @@ struct SplashView: View {
     // Exit: clean fade + slight scale-down hand-off (no fly-to-header).
     @State private var exitOpacity: Double = 1
     @State private var exitScale: CGFloat = 1
-    private let season = Season.current()
+    @Environment(\.colorScheme) private var colorScheme
+    private let season = Season.homeEffect()
 
     var body: some View {
         ZStack {
@@ -670,19 +671,12 @@ struct SplashView: View {
                 .opacity(glowOpacity)
 
             VStack(spacing: 10) {
-                Image("brand-logo-green")
-                    .resizable()
-                    .scaledToFit()
-                    .frame(width: 140)
+                // Same live effect as Home (fast-forwarded so it is alive on frame one).
+                HomeLogoImage(season: season, dark: colorScheme == .dark, width: 140,
+                              bundledOnly: true, warmStart: 6)
                     .shadow(.medium)
                     .scaleEffect(logoScale)
                     .opacity(logoOpacity)
-                    // Seasonal effect layered exactly over the artwork; ends still.
-                    .overlay {
-                        SeasonalLogoAnimatedFX(season: season, onSettle: { Haptics.tap() })
-                            .scaleEffect(logoScale)
-                            .opacity(logoOpacity)
-                    }
 
                 Text("Muskellunge Lake Resort")
                     .font(.script(26))
@@ -712,8 +706,10 @@ struct SplashView: View {
             wordmarkOpacity = 1
             wordmarkOffset = 0
         }
-        // Effect runs ~0.25s + 2.4s and settles (haptic fires there); hold a
-        // beat on the still, then fade/scale out while main fades in.
+        // Let the leaves/snow play a few seconds, then fade/scale out while main fades in.
+        #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("-holdSplash") { return }
+        #endif
         DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
             onBeginExit()
             withAnimation(.easeOut(duration: 0.25)) {
