@@ -212,7 +212,7 @@ extension View {
                 bottomLeadingRadius: (!isOwn && tail) ? small : big,
                 bottomTrailingRadius: (isOwn && tail) ? small : big,
                 topTrailingRadius: big, style: .continuous)
-        return background(isOwn ? Color.mlrPrimary : Color.mlrCard, in: shape)
+        return background(isOwn ? Color.mlrPrimary : Color.mlrSurface2, in: shape)
             .overlay { if !isOwn { shape.strokeBorder(Color.mlrBorder, lineWidth: 1) } }
     }
 }
@@ -263,11 +263,11 @@ struct ChatDaySeparator: View {
 struct ChatNewDivider: View {
     var body: some View {
         HStack(spacing: 8) {
-            Rectangle().fill(Color.mlrPrimary.opacity(0.35)).frame(height: 1)
+            Rectangle().fill(Color.mlrPrimary.mlrTint(0.35)).frame(height: 1)
             Text("New")
                 .font(.mlrScaled(11, weight: .bold))
-                .foregroundStyle(Color.mlrPrimary)
-            Rectangle().fill(Color.mlrPrimary.opacity(0.35)).frame(height: 1)
+                .foregroundStyle(Color.mlrPineText)
+            Rectangle().fill(Color.mlrPrimary.mlrTint(0.35)).frame(height: 1)
         }
         .padding(.horizontal, 14)
         .padding(.top, 12).padding(.bottom, 2)
@@ -329,7 +329,7 @@ struct ChatReactionPills: View {
                 if item.count > 1 {
                     Text("\(item.count)")
                         .font(.mlrScaled(11, weight: .semibold))
-                        .foregroundStyle(mine ? Color.mlrPrimary : Color.mlrTextMuted)
+                        .foregroundStyle(mine ? Color.mlrPineText : Color.mlrTextMuted)
                         .contentTransition(.numericText())
                 }
             }
@@ -604,7 +604,7 @@ private struct SwipeToReply<Content: View>: View {
             ZStack(alignment: isOwn ? .trailing : .leading) {
                 Image(systemName: "arrowshape.turn.up.left.fill")
                     .font(.mlrScaled(15, weight: .semibold))
-                    .foregroundStyle(armed ? Color.mlrPrimary : Color.mlrTextSubtle)
+                    .foregroundStyle(armed ? Color.mlrPineText : Color.mlrTextSubtle)
                     .scaleEffect(armed ? 1.15 : 0.6 + 0.4 * progress)
                     .opacity(Double(progress))
                     .padding(.horizontal, 18)

@@ -312,7 +312,7 @@ struct FestOverviewView: View {
                                     }
                                     .foregroundStyle(Color.mlrFestReadable)
                                     .frame(minWidth: 52).padding(.vertical, 8)
-                                    .background(Color.mlrFest.opacity(0.1), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
+                                    .background(Color.mlrFest.mlrTint(0.1, over: .mlrFestCard), in: RoundedRectangle(cornerRadius: 14, style: .continuous))
                                 }
                             }
                         }
@@ -397,7 +397,7 @@ private struct FestDaySection: View {
             VStack(spacing: 0) {
                 ForEach(Array(rows.enumerated()), id: \.element.id) { index, row in
                     if index > 0 {
-                        Divider().background(Color.mlrFest.opacity(0.1))
+                        Divider().background(Color.mlrFest.mlrTint(0.1, over: .mlrFestCard))
                     }
                     switch row {
                     case .event(let item):  ExpandableScheduleRow(item: item)
@@ -584,7 +584,7 @@ private struct FestAnytimeCard: View {
                     ForEach(Array(items.enumerated()), id: \.element.id) { idx, item in
                         ExpandableScheduleRow(item: item)
                         if idx < items.count - 1 {
-                            Divider().background(Color.mlrFest.opacity(0.15))
+                            Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                         }
                     }
                 }

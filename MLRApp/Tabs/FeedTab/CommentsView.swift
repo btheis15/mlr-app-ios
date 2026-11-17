@@ -220,7 +220,7 @@ struct CommentsView: View {
                                 Button { replyTo(comment) } label: {
                                     Label("Reply", systemImage: "arrowshape.turn.up.left")
                                 }
-                                .tint(Color.mlrPrimary)
+                                .tint(Color.mlrPineText)
                                 if env.isVerifiedMember {
                                     Button {
                                         Task { await toggleReaction(comment, "❤️") }
@@ -313,7 +313,7 @@ struct CommentsView: View {
                     ProgressView().font(.caption)
                 }
             }
-            .tint(Color.mlrPrimary)
+            .tint(Color.mlrPineText)
             .padding(.horizontal, 12)
             .padding(.top, 8)
 
@@ -405,7 +405,7 @@ struct CommentsView: View {
             Spacer()
             Button("Sign in") { showSignIn = true }
                 .font(.mlrScaled(15, weight: .semibold))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
@@ -724,7 +724,7 @@ struct CommentRow: View {
                         } label: {
                             Image(systemName: "face.smiling")
                                 .font(.caption)
-                                .foregroundStyle(showPalette ? Color.mlrPrimary : Color.mlrTextMuted)
+                                .foregroundStyle(showPalette ? Color.mlrPineText : Color.mlrTextMuted)
                                 .padding(6)
                                 .contentShape(Rectangle())
                         }
@@ -799,11 +799,11 @@ struct CommentRow: View {
                                 Text(item.emoji).font(.mlrScaled(13))
                                 Text("\(item.count)")
                                     .font(.mlrScaled(12, weight: .semibold))
-                                    .foregroundStyle(mine ? Color.mlrPrimary : Color.mlrTextMuted)
+                                    .foregroundStyle(mine ? Color.mlrPineText : Color.mlrTextMuted)
                                     .contentTransition(.numericText())
                             }
                             .padding(.horizontal, 8).padding(.vertical, 4)
-                            .background(mine ? Color.mlrPrimary.opacity(0.12) : Color.secondary.opacity(0.08))
+                            .background(mine ? Color.mlrPrimary.mlrTint(0.12) : Color.secondary.opacity(0.08))
                             .clipShape(Capsule())
                             .overlay(Capsule().strokeBorder(mine ? Color.mlrPrimary.opacity(0.35) : Color.secondary.opacity(0.18), lineWidth: 1))
                         }
@@ -827,14 +827,14 @@ struct CommentRow: View {
                                 Text(emoji)
                                     .font(.system(size: 24))
                                     .padding(5)
-                                    .background(myEmoji == emoji ? Color.mlrPrimary.opacity(0.12) : Color.clear)
+                                    .background(myEmoji == emoji ? Color.mlrPrimary.mlrTint(0.12) : Color.clear)
                                     .clipShape(Circle())
                             }
                             .buttonStyle(.pressable)
                         }
                     }
                     .padding(.horizontal, 6).padding(.vertical, 4)
-                    .background(.ultraThinMaterial)
+                    .background(MLRChipFill())
                     .clipShape(Capsule())
                     .transition(reduceMotion ? .opacity : .scale(scale: 0.8, anchor: .topLeading).combined(with: .opacity))
                 }

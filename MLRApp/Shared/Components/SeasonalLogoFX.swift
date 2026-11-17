@@ -311,5 +311,5 @@ private func previewLogo(_ s: Season) -> some View {
         .resizable().scaledToFit()
         .overlay { SeasonalLogoFX(season: s, progress: 1) }
         .padding(24)
-        .background(Color.mlrPrimary.opacity(0.2))
+        .background(Color.mlrPrimary.mlrTint(0.2))
 }

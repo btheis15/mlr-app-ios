@@ -70,7 +70,7 @@ private extension View {
                         Button(action: markRead) {
                             Label("Mark read", systemImage: "checkmark.message")
                         }
-                        .tint(Color.mlrPrimary)
+                        .tint(Color.mlrPineText)
                     }
                 }
                 .swipeActions(edge: .trailing, allowsFullSwipe: true) {
@@ -456,7 +456,7 @@ private struct ConversationRow: View {
                         if let at = summary?.lastAt {
                             Text(Self.relative(at))
                                 .font(.mlrCaption13)
-                                .foregroundStyle(hasUnread ? Color.mlrPrimary : Color.mlrTextMuted)
+                                .foregroundStyle(hasUnread ? Color.mlrPineText : Color.mlrTextMuted)
                         }
                     }
                     HStack(spacing: 6) {
@@ -585,7 +585,7 @@ struct MainFeedView: View {
                     } label: {
                         Label("Tagged me", systemImage: showTaggedOnly ? "tag.fill" : "tag")
                             .font(.mlrScaled(14, weight: .medium))
-                            .foregroundStyle(showTaggedOnly ? Color.mlrPrimary : Color.mlrTextMuted)
+                            .foregroundStyle(showTaggedOnly ? Color.mlrPineText : Color.mlrTextMuted)
                     }
                 }
             }
@@ -593,7 +593,7 @@ struct MainFeedView: View {
                 if !env.isSignedIn {
                     Button("Sign in") { showSignIn = true }
                         .font(.mlrScaled(15, weight: .medium))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 } else {
                     feedMuteBell
                 }

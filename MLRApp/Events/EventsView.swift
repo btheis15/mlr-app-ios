@@ -105,7 +105,7 @@ struct EventsView: View {
                         } label: {
                             Image(systemName: "plus")
                         }
-                        .tint(Color.mlrPrimary)
+                        .tint(Color.mlrPineText)
                         .accessibilityLabel("Create")
                     }
                 }
@@ -222,7 +222,7 @@ struct EventsView: View {
                             .minimumScaleFactor(0.8)
                             .foregroundStyle(Color.mlrCampfire)
                             .frame(maxWidth: .infinity, minHeight: 52)
-                            .background(Color.mlrCampfire.opacity(0.10))
+                            .background(Color.mlrCampfire.mlrTint(0.10))
                             .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
                     }
                     .buttonStyle(.pressable)
@@ -296,7 +296,7 @@ struct EventsView: View {
             if env.isSignedIn, !env.isAwaitingVerification, env.isAdmin, filter == .upcoming {
                 Button("Create Event") { showComposer = true }
                     .buttonStyle(.borderedProminent)
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
             }
         }
     }

@@ -82,7 +82,7 @@ struct EventCard: View {
                                 .foregroundStyle(accent)
                                 .padding(.horizontal, 12)
                                 .padding(.vertical, 6)
-                                .background(accent.opacity(0.12))
+                                .background(accent.mlrTint(0.12))
                                 .clipShape(Capsule())
                         }
                     }

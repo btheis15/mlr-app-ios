@@ -134,7 +134,7 @@ struct WorkItemComposer: View {
                                 .foregroundStyle(Color.mlrDanger)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.mlrDanger.opacity(0.1))
+                                .background(Color.mlrDanger.mlrTint(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.plain)
@@ -152,7 +152,7 @@ struct WorkItemComposer: View {
                 .listRowBackground(Color.clear)
             }
         }
-        .tint(Color.mlrPrimary)
+        .tint(Color.mlrPineText)
         .confirmationDialog("Remove this item?", isPresented: $confirmRemove, titleVisibility: .visible) {
             Button("Remove from checklist", role: .destructive) { Task { await remove() } }
             Button("Cancel", role: .cancel) {}
@@ -287,17 +287,17 @@ struct WorkItemComposer: View {
                 Text(emoji)
                 Text(label)
                     .font(.mlrScaled(14, weight: selected ? .semibold : .regular))
-                    .foregroundStyle(selected ? Color.mlrPrimary : Color.mlrText)
+                    .foregroundStyle(selected ? Color.mlrPineText : Color.mlrText)
                 Spacer()
                 if selected {
                     Image(systemName: "checkmark")
                         .font(.mlrScaled(12, weight: .bold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
             }
             .padding(.horizontal, 14)
             .padding(.vertical, 12)
-            .background(selected ? Color.mlrPrimary.opacity(0.1) : Color.mlrCard)
+            .background(selected ? Color.mlrPrimary.mlrTint(0.1) : Color.mlrCard)
             .clipShape(RoundedRectangle(cornerRadius: 12))
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
@@ -338,7 +338,7 @@ struct WorkItemComposer: View {
         Button(action: action) {
             Image(systemName: icon)
                 .font(.mlrScaled(14, weight: .bold))
-                .foregroundStyle(enabled ? Color.mlrPrimary : Color.mlrTextSubtle)
+                .foregroundStyle(enabled ? Color.mlrPineText : Color.mlrTextSubtle)
                 .frame(width: 32, height: 32)
                 .background(Color.mlrSurface)
                 .clipShape(Circle())
@@ -378,7 +378,7 @@ struct WorkItemComposer: View {
                                 RoundedRectangle(cornerRadius: 12)
                                     .fill(Color.mlrCard)
                                     .frame(width: 96, height: 96)
-                                    .overlay(Image(systemName: "film").font(.mlrScaled(22)).foregroundStyle(Color.mlrPrimary))
+                                    .overlay(Image(systemName: "film").font(.mlrScaled(22)).foregroundStyle(Color.mlrPineText))
                                 removeBadge { videoData = nil; selectedVideo = nil }
                             }
                         }
@@ -390,13 +390,13 @@ struct WorkItemComposer: View {
                 PhotosPicker(selection: $selectedPhotos, maxSelectionCount: 5, matching: .images) {
                     Label("Add photos", systemImage: "photo.on.rectangle")
                         .font(.mlrScaled(14, weight: .medium))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
                 .disabled(pending || uploading)
                 PhotosPicker(selection: $selectedVideo, matching: .videos) {
                     Label("Video", systemImage: "video.badge.plus")
                         .font(.mlrScaled(14, weight: .medium))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
                 .disabled(pending || uploading)
             }
@@ -408,7 +408,7 @@ struct WorkItemComposer: View {
             if media.isVideo {
                 RoundedRectangle(cornerRadius: 12)
                     .fill(Color.mlrCard)
-                    .overlay(Image(systemName: "film").font(.mlrScaled(22)).foregroundStyle(Color.mlrPrimary))
+                    .overlay(Image(systemName: "film").font(.mlrScaled(22)).foregroundStyle(Color.mlrPineText))
             } else {
                 MediaThumb(url: media.url)
             }
@@ -444,12 +444,12 @@ struct WorkItemComposer: View {
                             if selectedEventId == ev.id {
                                 Image(systemName: "checkmark")
                                     .font(.mlrScaled(12, weight: .bold))
-                                    .foregroundStyle(Color.mlrPrimary)
+                                    .foregroundStyle(Color.mlrPineText)
                             }
                         }
                         .padding(.horizontal, 14)
                         .padding(.vertical, 12)
-                        .background(selectedEventId == ev.id ? Color.mlrPrimary.opacity(0.1) : Color.mlrCard)
+                        .background(selectedEventId == ev.id ? Color.mlrPrimary.mlrTint(0.1) : Color.mlrCard)
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)

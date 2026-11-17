@@ -61,7 +61,7 @@ struct FestScheduleDetailView: View {
                 .padding(.bottom, 20)
 
                 Divider()
-                    .background(Color.mlrFest.opacity(0.15))
+                    .background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
 
                 // Location
                 if let location = item.location {
@@ -76,7 +76,7 @@ struct FestScheduleDetailView: View {
                     }
 
                     Divider()
-                        .background(Color.mlrFest.opacity(0.15))
+                        .background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                 }
 
                 // Description
@@ -89,7 +89,7 @@ struct FestScheduleDetailView: View {
                     }
 
                     Divider()
-                        .background(Color.mlrFest.opacity(0.15))
+                        .background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                 }
 
                 // What to bring
@@ -100,7 +100,7 @@ struct FestScheduleDetailView: View {
                             .foregroundStyle(Color.mlrText)
                             .fixedSize(horizontal: false, vertical: true)
                     }
-                    Divider().background(Color.mlrFest.opacity(0.15))
+                    Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                 }
 
                 // Links (migration 0142) — e.g. a sign-up form + a separate info doc.
@@ -110,20 +110,20 @@ struct FestScheduleDetailView: View {
                     DetailSection(icon: "link", title: "Links") {
                         ScheduleLinkButtons(links: item.links)
                     }
-                    Divider().background(Color.mlrFest.opacity(0.15))
+                    Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                 }
 
                 // Sign-ups (migrations 0135/0136/0143) — self-hides when disabled.
                 if item.signupEnabled {
                     EventSignupSection(item: item)
-                    Divider().background(Color.mlrFest.opacity(0.15))
+                    Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                 }
 
                 // Tournament (migrations 0144–0154) — self-hides when disabled.
                 if item.tournamentEnabled {
                     TournamentEntryCard(item: item, canManage: canManage)
                         .padding(.horizontal, 20).padding(.vertical, 16)
-                    Divider().background(Color.mlrFest.opacity(0.15))
+                    Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                 }
 
                 // Leads — last, matching web's "In charge" contact card position.
@@ -217,7 +217,7 @@ struct ScheduleLinkButtons: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 10)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.mlrFest.opacity(0.1))
+                        .background(Color.mlrFest.mlrTint(0.1, over: .mlrFestCard))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                     }
                 }
@@ -235,7 +235,7 @@ struct LeadRow: View {
         HStack(spacing: 12) {
             // Avatar placeholder
             Circle()
-                .fill(Color.mlrFest.opacity(0.15))
+                .fill(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                 .frame(width: 36, height: 36)
                 .overlay(
                     Text(String(name.prefix(1)).uppercased())
@@ -258,7 +258,7 @@ struct LeadRow: View {
                         .font(.mlrScaled(13))
                         .foregroundStyle(Color.mlrFestReadable)
                         .padding(8)
-                        .background(Color.mlrFest.opacity(0.1))
+                        .background(Color.mlrFest.mlrTint(0.1, over: .mlrFestCard))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.pressable)
@@ -270,7 +270,7 @@ struct LeadRow: View {
                         .font(.mlrScaled(13))
                         .foregroundStyle(Color.mlrFestReadable)
                         .padding(8)
-                        .background(Color.mlrFest.opacity(0.1))
+                        .background(Color.mlrFest.mlrTint(0.1, over: .mlrFestCard))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.pressable)
@@ -294,7 +294,7 @@ struct ProtectedField: View {
         .foregroundStyle(Color.mlrFest.opacity(0.5))
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
-        .background(Color.mlrFest.opacity(0.06))
+        .background(Color.mlrFest.mlrTint(0.06, over: .mlrFestCard))
         .clipShape(RoundedRectangle(cornerRadius: 8))
     }
 }
@@ -396,7 +396,7 @@ struct ExpandableScheduleRow: View {
                     .frame(maxWidth: .infinity).frame(height: 150).clipped()
             }
             if let location = item.location {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 DetailSection(icon: "mappin.and.ellipse", title: "Location") {
                     if env.isSignedIn {
                         Text(location)
@@ -409,7 +409,7 @@ struct ExpandableScheduleRow: View {
             }
 
             if let description = item.description, !description.isEmpty {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 DetailSection(icon: "text.alignleft", title: "About") {
                     Text(description)
                         .font(.mlrScaled(15))
@@ -419,7 +419,7 @@ struct ExpandableScheduleRow: View {
             }
 
             if let bring = item.bring, !bring.isEmpty {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 DetailSection(icon: "bag.fill", title: "What to bring") {
                     Text(bring)
                         .font(.mlrScaled(15))
@@ -431,26 +431,26 @@ struct ExpandableScheduleRow: View {
             // Links → signup → tournament → leads, matching web's
             // FestScheduleDetail/FestWeek ordering (lead/contact renders last).
             if !item.links.isEmpty {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 DetailSection(icon: "link", title: "Links") {
                     ScheduleLinkButtons(links: item.links)
                 }
             }
 
             if item.signupEnabled {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 EventSignupSection(item: item)
             }
 
             if item.tournamentEnabled {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 TournamentEntryCard(item: item, canManage: canEditItem)
                     .padding(.horizontal, 20).padding(.vertical, 16)
             }
 
             // Leads — last, matching web's "In charge" contact card position.
             if !item.leads.isEmpty {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 DetailSection(icon: "person.fill", title: "Leads") {
                     if env.isSignedIn {
                         VStack(alignment: .leading, spacing: 10) {
@@ -465,7 +465,7 @@ struct ExpandableScheduleRow: View {
             }
 
             if canEditItem {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 Button { showEditSheet = true } label: {
                     Label("Edit event", systemImage: "pencil")
                         .font(.mlrScaled(13, weight: .medium))
@@ -573,7 +573,7 @@ struct ExpandableDinnerRow: View {
     @ViewBuilder
     private var expanded: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Divider().background(Color.mlrFest.opacity(0.12))
+            Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
             DetailSection(icon: "person.fill", title: "Chef") {
                 Text(dinner.chef)
                     .font(.mlrScaled(15, weight: .medium))
@@ -581,7 +581,7 @@ struct ExpandableDinnerRow: View {
             }
 
             if !dinner.menuLines.isEmpty {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 DetailSection(icon: "fork.knife", title: "On the Menu") {
                     VStack(alignment: .leading, spacing: 6) {
                         ForEach(dinner.menuLines, id: \.self) { line in
@@ -598,7 +598,7 @@ struct ExpandableDinnerRow: View {
                 }
             }
 
-            Divider().background(Color.mlrFest.opacity(0.12))
+            Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
             DetailSection(icon: "mappin.and.ellipse", title: "Location") {
                 if env.isSignedIn {
                     Text(dinner.location ?? "TBD")
@@ -610,7 +610,7 @@ struct ExpandableDinnerRow: View {
             }
 
             if !dinner.crew.isEmpty {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 DetailSection(icon: "person.3.fill", title: "Crew") {
                     if env.isSignedIn {
                         VStack(alignment: .leading, spacing: 6) {
@@ -627,7 +627,7 @@ struct ExpandableDinnerRow: View {
             }
 
             if canEditDinner {
-                Divider().background(Color.mlrFest.opacity(0.12))
+                Divider().background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                 HStack(spacing: 0) {
                     Button { showEditSheet = true } label: {
                         Label(env.isFullFestEditor ? "Edit dinner" : "Edit menu & details", systemImage: "pencil")

@@ -56,7 +56,7 @@ struct MyCommitteeAreasSheet: View {
                                 }
                                 Spacer()
                                 if selected.contains(area) {
-                                    Image(systemName: "checkmark").foregroundStyle(Color.mlrPrimary).fontWeight(.semibold)
+                                    Image(systemName: "checkmark").foregroundStyle(Color.mlrPineText).fontWeight(.semibold)
                                 }
                             }
                         }

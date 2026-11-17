@@ -190,7 +190,7 @@ struct HouseCalendarView: View {
                 Spacer()
                 Button { shiftMonth(1) } label: { Image(systemName: "chevron.right") }
             }
-            .foregroundStyle(Color.mlrPrimary)
+            .foregroundStyle(Color.mlrPineText)
 
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 4), count: 7), spacing: 4) {
                 ForEach(["S", "M", "T", "W", "T", "F", "S"].indices, id: \.self) { i in
@@ -227,7 +227,7 @@ struct HouseCalendarView: View {
             VStack(spacing: 2) {
                 Text("\(dayNum)")
                     .font(.mlrScaled(13, weight: isToday ? .bold : .regular))
-                    .foregroundStyle(isToday ? Color.mlrPrimary : Color.mlrText)
+                    .foregroundStyle(isToday ? Color.mlrPineText : Color.mlrText)
                 HStack(spacing: 2) {
                     if hasStay { Circle().fill(Color.mlrPrimary).frame(width: 5, height: 5) }
                     if hasEvent { Circle().fill(Color.mlrAccent).frame(width: 5, height: 5) }
@@ -365,7 +365,7 @@ private struct StayRow: View {
                             Text("On now")
                                 .font(.mlrScaled(10, weight: .bold))
                                 .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Color.mlrPrimaryLight).foregroundStyle(Color.mlrPrimary)
+                                .background(Color.mlrPrimaryLight).foregroundStyle(Color.mlrPineText)
                                 .clipShape(Capsule())
                         }
                     }
@@ -428,7 +428,7 @@ private struct ImpliedStayRow: View {
                         Text("for \(person.eventTitle)")
                             .font(.mlrScaled(10, weight: .semibold))
                             .padding(.horizontal, 6).padding(.vertical, 2)
-                            .background(Color.mlrInfo.opacity(0.15))
+                            .background(Color.mlrInfo.mlrTint(0.15))
                             .foregroundStyle(Color.mlrInfo)
                             .clipShape(Capsule())
                             .lineLimit(1)

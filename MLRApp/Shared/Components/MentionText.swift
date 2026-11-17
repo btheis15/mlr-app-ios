@@ -483,7 +483,7 @@ struct ChatComposer: View {
                     Spacer()
                     Button("Cancel") { onCancelEdit() }
                         .font(.mlrScaled(12, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 6)
@@ -548,7 +548,7 @@ struct ChatComposer: View {
                     // sendable (symbol replace + a bounce), instead of a tinted disc.
                     Group {
                         if sending {
-                            ProgressView().tint(Color.mlrPrimary)
+                            ProgressView().tint(Color.mlrPineText)
                         } else {
                             Image(systemName: "arrow.up")
                                 .font(.system(size: 17, weight: .bold))

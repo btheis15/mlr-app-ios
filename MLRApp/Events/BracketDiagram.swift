@@ -190,7 +190,7 @@ struct BracketDiagram: View {
         }
         .font(.mlrScaled(16, weight: .bold))
         .foregroundStyle(Color.mlrText)
-        .background(.regularMaterial, in: Capsule())
+        .background(MLRChipFill(thick: true), in: Capsule())
         .overlay(Capsule().strokeBorder(Color.mlrBorder, lineWidth: 1))
         .padding(10)
         .opacity(focusedId == nil ? 1 : 0)
@@ -463,7 +463,7 @@ private struct BracketCell: View {
                 .truncationMode(.middle)
             Spacer(minLength: 2)
             if isMe && !compact {
-                Image(systemName: "person.fill").font(.mlrScaled(9)).foregroundStyle(Color.mlrPrimary)
+                Image(systemName: "person.fill").font(.mlrScaled(9)).foregroundStyle(Color.mlrPineText)
             }
             if isWinner && !compact {
                 Image(systemName: "crown.fill").font(.mlrScaled(10)).foregroundStyle(Color.mlrFestGold)
@@ -479,7 +479,7 @@ private struct BracketCell: View {
         .padding(.trailing, 8)
         .frame(maxHeight: .infinity)
         .opacity(isLoser ? 0.62 : 1)
-        .background(isPicked ? Color.mlrPrimary.opacity(0.2) : (isWinner ? Color.mlrPrimary.opacity(0.10) : (isMe ? Color.mlrPrimary.opacity(0.05) : Color.clear)))
+        .background(isPicked ? Color.mlrPrimary.mlrTint(0.2) : (isWinner ? Color.mlrPrimary.mlrTint(0.10) : (isMe ? Color.mlrPrimary.mlrTint(0.05) : Color.clear)))
         .animation(reduceMotion ? nil : MLRMotion.spring, value: entrantId)
         .contentShape(Rectangle())
         .modifier(SlotTap(enabled: rearranging && canManage) { Haptics.select(); onSlotTap(slot) })

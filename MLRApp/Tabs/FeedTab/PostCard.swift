@@ -56,7 +56,7 @@ struct PostCard: View {
                     .foregroundStyle(Color.mlrWarning)
                     .padding(.horizontal, 10).padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.mlrWarning.opacity(0.12))
+                    .background(Color.mlrWarning.mlrTint(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrWarning.opacity(0.35), lineWidth: 1))
                     .padding(.horizontal, 16)
@@ -66,7 +66,7 @@ struct PostCard: View {
                     .foregroundStyle(Color.mlrDanger)
                     .padding(.horizontal, 10).padding(.vertical, 8)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .background(Color.mlrDanger.opacity(0.12))
+                    .background(Color.mlrDanger.mlrTint(0.12))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.mlrDanger.opacity(0.35), lineWidth: 1))
                     .padding(.horizontal, 16)
@@ -286,7 +286,7 @@ struct PostCard: View {
                         }
                         .padding(.horizontal, 12).frame(height: 30)
                         .contentShape(Rectangle().inset(by: -6))
-                        .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.12) : Color.mlrCard)
+                        .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.mlrTint(0.12) : Color.mlrCard)
                         .clipShape(Capsule())
                         .overlay(Capsule().strokeBorder(
                             isMineReaction(emoji: emoji) ? Color.mlrPrimary : Color.mlrBorder,
@@ -321,9 +321,9 @@ struct PostCard: View {
                     } label: {
                         Image(systemName: "face.smiling")
                             .font(.mlrScaled(15))
-                            .foregroundStyle(showEmojiPicker ? Color.mlrPrimary : Color.mlrTextMuted)
+                            .foregroundStyle(showEmojiPicker ? Color.mlrPineText : Color.mlrTextMuted)
                             .padding(6)
-                            .background(showEmojiPicker ? Color.mlrPrimary.opacity(0.1) : Color.clear)
+                            .background(showEmojiPicker ? Color.mlrPrimary.mlrTint(0.1) : Color.clear)
                             .clipShape(Circle())
                     }
                     .buttonStyle(.pressable)
@@ -368,14 +368,14 @@ struct PostCard: View {
                                 .font(.system(size: 28))
                                 .scaleEffect(isMineReaction(emoji: emoji) ? 0.85 : 1.0)
                                 .padding(6)
-                                .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.opacity(0.12) : Color.clear)
+                                .background(isMineReaction(emoji: emoji) ? Color.mlrPrimary.mlrTint(0.12) : Color.clear)
                                 .clipShape(Circle())
                         }
                         .buttonStyle(.pressable)
                     }
                 }
                 .padding(.horizontal, 8).padding(.vertical, 6)
-                .background(.ultraThinMaterial)
+                .background(MLRChipFill())
                 .clipShape(Capsule())
                 .shadow(color: .black.opacity(0.12), radius: 8, y: 3)
                 .transition(.scale(scale: 0.8, anchor: .topLeading).combined(with: .opacity))

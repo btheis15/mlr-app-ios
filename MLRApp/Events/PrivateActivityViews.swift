@@ -84,7 +84,7 @@ struct InitialsStack: View {
                 ForEach(Array(names.prefix(max).enumerated()), id: \.offset) { _, name in
                     Text(String(name.prefix(1)).uppercased())
                         .font(.system(size: diameter * 0.5, weight: .bold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                         .frame(width: diameter, height: diameter)
                         .background(Color.mlrPrimaryLight)
                         .clipShape(Circle())
@@ -513,13 +513,13 @@ struct PrivateActivitySheet: View {
                     HStack(spacing: 10) {
                         Text(String(m.name.prefix(1)).uppercased())
                             .font(.mlrScaled(13, weight: .bold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                             .frame(width: 28, height: 28)
                             .background(Color.mlrPrimaryLight)
                             .clipShape(Circle())
                         Text(m.name).font(.mlrScaled(15, weight: m.isHost ? .semibold : .regular))
                         if m.isHost {
-                            Text("Host").font(.mlrScaled(10, weight: .bold)).foregroundStyle(Color.mlrPrimary)
+                            Text("Host").font(.mlrScaled(10, weight: .bold)).foregroundStyle(Color.mlrPineText)
                                 .padding(.horizontal, 6).padding(.vertical, 2)
                                 .background(Color.mlrPrimaryLight).clipShape(Capsule())
                         }
@@ -785,7 +785,7 @@ struct MemberMultiPicker: View {
                         Text(p.displayName).foregroundStyle(Color.mlrText)
                         Spacer()
                         if selected.contains(where: { $0.id == p.id }) {
-                            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.mlrPrimary)
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(Color.mlrPineText)
                         }
                     }
                 }

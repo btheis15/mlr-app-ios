@@ -51,7 +51,7 @@ struct GuideView: View {
                 .multilineTextAlignment(.center)
             Link("Open in Safari ↗", destination: MLRLinks.guidePDF)
                 .font(.mlrScaled(15, weight: .semibold))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
         }
         .padding(32)
         .frame(maxWidth: .infinity, maxHeight: .infinity)

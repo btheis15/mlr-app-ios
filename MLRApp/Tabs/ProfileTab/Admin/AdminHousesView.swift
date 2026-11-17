@@ -29,7 +29,7 @@ struct AdminHousesView: View {
                         HStack(spacing: 12) {
                             Text(house.emoji).font(.mlrScaled(24))
                                 .frame(width: 40, height: 40)
-                                .background(Color.mlrPrimary.opacity(0.1))
+                                .background(Color.mlrPrimary.mlrTint(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 10))
                             VStack(alignment: .leading, spacing: 2) {
                                 Text(house.name)

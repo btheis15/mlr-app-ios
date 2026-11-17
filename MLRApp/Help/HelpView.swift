@@ -135,7 +135,7 @@ struct HelpView: View {
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.mlrPrimary.opacity(0.06))
+        .background(Color.mlrPrimary.mlrTint(0.06))
         .overlay(RoundedRectangle(cornerRadius: 16).stroke(Color.mlrPrimary.opacity(0.15), lineWidth: 1))
         .clipShape(RoundedRectangle(cornerRadius: 16))
     }
@@ -164,7 +164,7 @@ struct HelpView: View {
                     Link(destination: tel) {
                         Label("Call \(contactName)", systemImage: "phone.fill")
                             .font(.mlrScaled(14, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                             .frame(maxWidth: .infinity)
                             .padding(.vertical, 12)
                             .background(Color.mlrCard)

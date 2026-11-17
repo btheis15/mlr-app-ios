@@ -8,6 +8,7 @@ import SwiftUI
 // tokens, so light/dark and the fest theme resolve at render time.
 
 struct MLRBackdrop: View {
+    @Environment(\.colorScheme) private var scheme
     enum Kind { case standard, fest }
     var kind: Kind
 
@@ -20,8 +21,8 @@ struct MLRBackdrop: View {
                 case .standard:
                     LinearGradient(colors: [.mlrBackdropTop, .mlrBackdropBottom],
                                    startPoint: .top, endPoint: .bottom)
-                    glow(.mlrLake, opacity: 0.10, size: geo.size, atTop: true)
-                    glow(.mlrPrimary, opacity: 0.08, size: geo.size, atTop: false)
+                    glow(.mlrLake, opacity: scheme == .dark ? 0.06 : 0.10, size: geo.size, atTop: true)
+                    glow(scheme == .dark ? .mlrPineText : .mlrPrimary, opacity: scheme == .dark ? 0.05 : 0.08, size: geo.size, atTop: false)
                 case .fest:
                     // Parchment from the active theme background, easing slightly
                     // darker toward the bottom; glow in the theme primary.
@@ -46,7 +47,21 @@ struct MLRBackdrop: View {
     }
 }
 
+private struct DarkBackdropModifier: ViewModifier {
+    let kind: MLRBackdrop.Kind
+    @Environment(\.colorScheme) private var scheme
+    func body(content: Content) -> some View {
+        content.background { if scheme == .dark { MLRBackdrop(kind).ignoresSafeArea() } }
+    }
+}
+
 extension View {
+    /// Dark mode only: paints the backdrop INSIDE a NavigationStack whose root
+    /// would otherwise show the system black. Light mode is untouched.
+    func mlrDarkBackdrop(_ kind: MLRBackdrop.Kind = .standard) -> some View {
+        modifier(DarkBackdropModifier(kind: kind))
+    }
+
     /// Puts the MLR backdrop behind a screen: hides list/scroll/form system
     /// backgrounds, makes the navigation bar transparent, and (iOS 18
     /// `containerBackground`) lets pushed screens inherit the backdrop.

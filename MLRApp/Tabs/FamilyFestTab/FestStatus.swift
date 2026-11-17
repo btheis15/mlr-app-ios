@@ -45,7 +45,7 @@ private extension View {
             .background(
                 RoundedRectangle(cornerRadius: 14)
                     .fill(Color.mlrFestCard)
-                    .overlay(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.opacity(0.06)))
+                    .overlay(RoundedRectangle(cornerRadius: 14).fill(Color.mlrFest.mlrTint(0.06, over: .mlrFestCard)))
                     .overlay(alignment: .top) {
                         if accent {
                             LinearGradient.festHeraldic
@@ -140,11 +140,11 @@ private struct LiveCard: View {
                 // shows everything inline, matching the web.
                 VStack(spacing: 0) {
                     ForEach(Array(todayItems.enumerated()), id: \.element.id) { index, item in
-                        if index > 0 { Divider().background(Color.mlrFest.opacity(0.1)) }
+                        if index > 0 { Divider().background(Color.mlrFest.mlrTint(0.1, over: .mlrFestCard)) }
                         ExpandableScheduleRow(item: item)
                     }
                     if let d = dinner {
-                        Divider().background(Color.mlrFest.opacity(0.15))
+                        Divider().background(Color.mlrFest.mlrTint(0.15, over: .mlrFestCard))
                         ExpandableDinnerRow(dinner: d)
                     }
                 }

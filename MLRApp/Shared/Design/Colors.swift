@@ -22,34 +22,34 @@ import UIKit
 
 extension Color {
     // Primary brand — forest green (the logo)
-    static let mlrPrimary      = Color(light: "#15503a", dark: "#46A578")
+    static let mlrPrimary      = Color(light: "#15503a", dark: "#2E8566")   // dark: solid button/fill green (white text >= 4.5:1)
     static let mlrPrimaryDark  = Color(light: "#0f3d2b", dark: "#2E7D5B")
     /// Pale fill used behind secondary buttons / tint chips. Dim green in dark.
-    static let mlrPrimaryLight = Color(light: "#e8f2ec", dark: "#16352A")
+    static let mlrPrimaryLight = Color(light: "#e8f2ec", dark: "#34473D")
 
     // Accent — campfire orange (was a dull chestnut #804020, which read muddy).
     // The warm orange gives CTAs/highlights the "Northwoods sunset" energy the web
     // app has, and reads cleanly on both the birch light bg and OLED dark.
-    static let mlrAccent       = Color(light: "#c2410c", dark: "#F08A4B")
+    static let mlrAccent       = Color(light: "#c2410c", dark: "#F0875A")
 
     // MARK: Northwoods accent palette
     // A small warm→cool set used for gradient heroes, garnish icons, and status
     // pops. Each is an adaptive pair (brightened on dark for OLED contrast).
-    static let mlrLake         = Color(light: "#0e7490", dark: "#5FB0D4")  // deep lake blue
-    static let mlrCampfire     = Color(light: "#c2410c", dark: "#F08A4B")  // campfire orange
-    static let mlrSun          = Color(light: "#b45309", dark: "#FACC46")  // afternoon sun gold
-    static let mlrDusk         = Color(light: "#6d28d9", dark: "#A78BFA")  // twilight violet
+    static let mlrLake         = Color(light: "#0e7490", dark: "#5CC3DA")  // deep lake blue
+    static let mlrCampfire     = Color(light: "#c2410c", dark: "#F0875A")  // campfire orange
+    static let mlrSun          = Color(light: "#b45309", dark: "#F0B44C")  // afternoon sun gold
+    static let mlrDusk         = Color(light: "#6d28d9", dark: "#B79CF5")  // twilight violet
 
     // Family Fest heraldic wine + parchment (the FF section's identity).
     // Parchment becomes a dark warm brown in dark mode so the section still reads
     // as a distinct "Renaissance" world rather than the resort's pure-black canvas.
     static let mlrFest          = Color(light: "#8b2e2e", dark: "#E0708A", festSlot: .primary)
-    static let mlrFestLight     = Color(light: "#F6E4CF", dark: "#3A2A22")
-    static let mlrFestParchment = Color(light: "#f4ecd8", dark: "#1E1712", festSlot: .background)
+    static let mlrFestLight     = Color(light: "#F6E4CF", dark: "#4A3A2E")
+    static let mlrFestParchment = Color(light: "#f4ecd8", dark: "#2E2519", festSlot: .background)
     /// Raised card surface inside the Fest section — white on parchment (light),
     /// clearly elevated warm brown in dark mode. Use for day-section cards, info
     /// cards, and utility links so they stand out against the parchment page bg.
-    static let mlrFestCard      = Color(light: "#fdfaf1", dark: "#40332A", festSlot: .card)
+    static let mlrFestCard      = Color(light: "#fdfaf1", dark: "#3A3022", festSlot: .card)
     /// Fest BODY text — warm sepia ink on light parchment, warm cream on dark.
     /// Reserve `mlrFest` (wine) for headings/accents; body should use this so it
     /// stops reading as low-contrast tinted grey. (Renaissance manuscript ink.)
@@ -58,8 +58,9 @@ extension Color {
     /// Fest card/divider stroke: the year's border colour, else gold at 60%.
     static let mlrFestBorder = Color(uiColor: UIColor { traits in
         let isDark = traits.userInterfaceStyle == .dark
-        if let hex = FestThemeStore.active.hex(.border, dark: isDark) { return UIColor(Color(hex: hex)) }
-        return isDark ? UIColor(Color(hex: "#E7C05A")).withAlphaComponent(0.6) : UIColor(Color(hex: "#d8c7a3"))
+        if isDark { return UIColor(Color(hex: FestDark.hex(.border, fallback: "#6B5A3A"))) }
+        if let hex = FestThemeStore.active.hex(.border, dark: false) { return UIColor(Color(hex: hex)) }
+        return UIColor(Color(hex: "#d8c7a3"))
     })
     static let mlrFestGold      = Color(light: "#C29A2E", dark: "#E7C05A", festSlot: .accent)
 
@@ -71,29 +72,34 @@ extension Color {
     // Surfaces — match the web app's palette in light mode (warm birch page /
     // white raised cards / soft hairline border); fall back to Apple semantics
     // in dark mode so the app adapts cleanly to OLED black.
-    static let mlrSurface     = Color(light: "#f6f6f1", dark: "#0f1613")  // warm birch bg
-    static let mlrCard        = Color(light: "#ffffff", dark: "#1a2420")  // raised white card
+    static let mlrSurface     = Color(light: "#f6f6f1", dark: "#1B2721")  // warm birch bg
+    static let mlrCard        = Color(light: "#ffffff", dark: "#26352D")  // raised white card
     static let mlrGroupedCard = Color(.tertiarySystemBackground)
-    static let mlrBorder      = Color(light: "#e5e4da", dark: "#2c3a33")  // soft warm hairline
+    static let mlrBorder      = Color(light: "#e5e4da", dark: "#3A4C42")  // soft warm hairline
 
     // Text — semantic, auto-adapting
-    static let mlrText         = Color(light: "#14241c", dark: "#F2F5F3")  // foreground
-    static let mlrTextMuted    = Color(light: "#4b5b52", dark: "#A8B4AD")
-    static let mlrTextSubtle   = Color(light: "#64716a", dark: "#8A978F")  // "faint"
+    static let mlrText         = Color(light: "#14241c", dark: "#F1F4EE")  // foreground
+    static let mlrTextMuted    = Color(light: "#4b5b52", dark: "#B4C2B8")
+    static let mlrTextSubtle   = Color(light: "#64716a", dark: "#8FA096")  // "faint"
     static let mlrTextFaint    = mlrTextSubtle
 
     // Revamp additions
     /// Logo green (brand mark only).
     static let mlrLogoGreen    = Color(light: "#0c4029", dark: "#4fae8a")
     /// Pine as TEXT/tint on dark surfaces (lightened); same as mlrPrimary on light.
-    static let mlrPineText     = Color(light: "#15503a", dark: "#4fae8a")
+    static let mlrPineText     = Color(light: "#15503a", dark: "#7BD0A8")
     /// Fest azure accent (theme accent slot).
     static let mlrFestAzure    = Color(light: "#1e3a8a", dark: "#8fa8f0", festSlot: .accent)
     /// Fest wine (theme primary slot); alias of mlrFest.
     static let mlrFestWine     = mlrFest
     /// Backdrop gradient stops (birch to sage) and glows.
-    static let mlrBackdropTop    = Color(light: "#f3f4ee", dark: "#0f1613")
-    static let mlrBackdropBottom = Color(light: "#e6ebe1", dark: "#0b110e")
+    static let mlrBackdropTop    = Color(light: "#f3f4ee", dark: "#1B2721")
+    static let mlrBackdropBottom = Color(light: "#e6ebe1", dark: "#151E19")
+
+    /// Dark-mode surface steps (opaque): surface 2 = hero cards/sheets, surface 3 =
+    /// inputs/chips/pills/tile bases. Light values equal the card/page colours.
+    static let mlrSurface2 = Color(light: "#ffffff", dark: "#2D3E35")
+    static let mlrSurface3 = Color(light: "#f6f6f1", dark: "#34473D")
 
     // Status — brightened in dark for contrast on black
     static let mlrSuccess      = Color(light: "#16a34a", dark: "#34D17F")
@@ -127,10 +133,11 @@ extension Color {
     init(light: String, dark: String, festSlot: FestTheme.Slot) {
         self.init(uiColor: UIColor { traits in
             let isDark = traits.userInterfaceStyle == .dark
-            if let hex = FestThemeStore.active.hex(festSlot, dark: isDark) {
+            if isDark { return UIColor(Color(hex: FestDark.hex(festSlot, fallback: dark))) }
+            if let hex = FestThemeStore.active.hex(festSlot, dark: false) {
                 return UIColor(Color(hex: hex))
             }
-            return UIColor(Color(hex: isDark ? dark : light))
+            return UIColor(Color(hex: light))
         })
     }
 
@@ -141,5 +148,94 @@ extension Color {
                 ? UIColor(Color(hex: dark))
                 : UIColor(Color(hex: light))
         })
+    }
+}
+
+
+// MARK: - Dark-mode tint + Fest dark derivation
+
+extension UIColor {
+    fileprivate func mlrMixed(over base: UIColor, ratio: CGFloat) -> UIColor {
+        var (r1, g1, b1, a1): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        var (r2, g2, b2, a2): (CGFloat, CGFloat, CGFloat, CGFloat) = (0, 0, 0, 0)
+        getRed(&r1, green: &g1, blue: &b1, alpha: &a1)
+        base.getRed(&r2, green: &g2, blue: &b2, alpha: &a2)
+        return UIColor(red: r2 + (r1 - r2) * ratio, green: g2 + (g1 - g2) * ratio,
+                       blue: b2 + (b1 - b2) * ratio, alpha: 1)
+    }
+}
+
+extension Color {
+    /// A tinted fill. Light mode: exactly `opacity(o)`. Dark mode: the colour
+    /// pre-mixed (opaque) into the card colour, never see-through.
+    func mlrTint(_ o: Double, over base: Color = .mlrCard) -> Color {
+        let me = self
+        return Color(uiColor: UIColor { t in
+            let c = UIColor(me).resolvedColor(with: t)
+            if t.userInterfaceStyle != .dark { return c.withAlphaComponent(o) }
+            let b = UIColor(base).resolvedColor(with: t)
+            return c.mlrMixed(over: b, ratio: CGFloat(min(0.22, o + 0.06)))
+        })
+    }
+}
+
+/// Fest dark mode: a deep version of the active year's theme (never the pale
+/// light look, never black). Hue kept; background ~18% lightness, cards one step up.
+enum FestDark {
+    static func hex(_ slot: FestTheme.Slot, fallback: String) -> String {
+        let theme = FestThemeStore.active
+        switch slot {
+        case .primary, .accent:
+            guard let src = FestTheme.validHex(theme.raw(slot)) else { return fallback }
+            return lightened(src, on: cardHex(theme))
+        default:
+            return derivedFromBackground(slot, theme: theme) ?? fallback
+        }
+    }
+
+    private static func hsl(_ hex: String) -> (CGFloat, CGFloat, CGFloat) {
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        UIColor(Color(hex: hex)).getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        let l = b * (1 - s / 2)
+        let sl = (l == 0 || l == 1) ? 0 : (b - l) / min(l, 1 - l)
+        return (h, sl, l)
+    }
+    private static func fromHSL(_ h: CGFloat, _ s: CGFloat, _ l: CGFloat) -> String {
+        let b = l + s * min(l, 1 - l)
+        let sb = b == 0 ? 0 : 2 * (1 - l / b)
+        let c = UIColor(hue: h, saturation: sb, brightness: b, alpha: 1)
+        var r: CGFloat = 0, g: CGFloat = 0, bl: CGFloat = 0, a: CGFloat = 0
+        c.getRed(&r, green: &g, blue: &bl, alpha: &a)
+        return String(format: "#%02X%02X%02X", Int(round(r * 255)), Int(round(g * 255)), Int(round(bl * 255)))
+    }
+
+    /// background / card / border / ink derived from the theme background hue.
+    private static func derivedFromBackground(_ slot: FestTheme.Slot, theme: FestTheme) -> String? {
+        let base = FestTheme.validHex(theme.background) ?? FestTheme.defaults[.background]!
+        let (h, s, _) = hsl(base)
+        let sat = min(s, 0.30)
+        switch slot {
+        case .background: return fromHSL(h, sat, 0.18)
+        case .card: return fromHSL(h, sat, 0.235)
+        case .border: return fromHSL(h, sat, 0.34)
+        case .ink: return fromHSL(h, min(s, 0.35), 0.92)
+        default: return nil
+        }
+    }
+
+    private static func cardHex(_ theme: FestTheme) -> String {
+        derivedFromBackground(.card, theme: theme) ?? "#3A3022"
+    }
+
+    /// Mix toward white until contrast against `bg` is >= 4.5.
+    private static func lightened(_ hex: String, on bg: String) -> String {
+        let (h, s, l0) = hsl(hex)
+        var l = max(l0, 0.5)
+        var out = fromHSL(h, s, l)
+        while FestTheme.contrast(out, bg) < 4.5 && l < 0.97 {
+            l += 0.03
+            out = fromHSL(h, s, l)
+        }
+        return out
     }
 }

@@ -278,9 +278,9 @@ struct CommitteeDetailView: View {
                 } label: {
                     Text(manageOpen ? "Done" : "⋯ Manage")
                         .font(.mlrScaled(12, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                         .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Color.mlrPrimary.opacity(0.1))
+                        .background(Color.mlrPrimary.mlrTint(0.1))
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.pressable)
@@ -306,10 +306,10 @@ struct CommitteeDetailView: View {
                             Label(myAreas.isEmpty ? "Choose your areas" : "Edit your areas",
                                   systemImage: "checklist")
                                 .font(.mlrScaled(15, weight: .semibold))
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.mlrPrimary.opacity(0.1))
+                                .background(Color.mlrPrimary.mlrTint(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .buttonStyle(.pressable)
@@ -324,7 +324,7 @@ struct CommitteeDetailView: View {
                         }
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 12)
-                        .background(Color.mlrDanger.opacity(0.1))
+                        .background(Color.mlrDanger.mlrTint(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 12))
                     }
                     .buttonStyle(.pressable)
@@ -558,7 +558,7 @@ struct CommitteeDetailView: View {
                     Button { review(req, approve: true) } label: {
                         Image(systemName: "checkmark.circle.fill")
                             .font(.mlrScaled(24))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                     }
                     .buttonStyle(.pressable)
                 }
@@ -637,9 +637,9 @@ struct CommitteeDetailView: View {
                 Button { addingNew = true } label: {
                     Text("＋ Add")
                         .font(.mlrScaled(12, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                         .padding(.horizontal, 10).padding(.vertical, 4)
-                        .background(Color.mlrPrimary.opacity(0.1))
+                        .background(Color.mlrPrimary.mlrTint(0.1))
                         .clipShape(Capsule())
                 }
                 .buttonStyle(.pressable)
@@ -724,7 +724,7 @@ struct CommitteeDetailView: View {
                         .font(.mlrScaled(10, weight: .medium))
                         .foregroundStyle(Color.mlrTextMuted)
                         .padding(.horizontal, 6).padding(.vertical, 2)
-                        .background(Color.mlrTextMuted.opacity(0.12))
+                        .background(Color.mlrTextMuted.mlrTint(0.12))
                         .clipShape(Capsule())
                 }
             }
@@ -732,7 +732,7 @@ struct CommitteeDetailView: View {
             if showLead {
                 Text("Lead")
                     .font(.mlrScaled(11, weight: .bold))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(Color.mlrPrimaryLight)
                     .clipShape(Capsule())
@@ -758,7 +758,7 @@ struct CommitteeDetailView: View {
                 if let phone = entry.effectivePhone?.trimmedNonEmpty {
                     if let url = URL(string: "tel:\(phone)") {
                         Link(destination: url) {
-                            Image(systemName: "phone.fill").font(.mlrScaled(13)).foregroundStyle(Color.mlrPrimary)
+                            Image(systemName: "phone.fill").font(.mlrScaled(13)).foregroundStyle(Color.mlrPineText)
                         }
                     }
                     if let sms = URL(string: "sms:\(phone)") {
@@ -824,7 +824,7 @@ private struct FlowChips: View {
             ForEach(items, id: \.self) { item in
                 Text(item)
                     .font(.mlrScaled(11, weight: .semibold))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .padding(.horizontal, 8).padding(.vertical, 3)
                     .background(Color.mlrPrimaryLight)
                     .clipShape(Capsule())

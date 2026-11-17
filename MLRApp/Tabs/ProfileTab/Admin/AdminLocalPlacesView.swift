@@ -86,7 +86,7 @@ struct AdminLocalPlacesView: View {
                             Text("Hidden")
                                 .font(.mlrScaled(10, weight: .bold))
                                 .padding(.horizontal, 6).padding(.vertical, 2)
-                                .background(Color.mlrWarning.opacity(0.18), in: Capsule())
+                                .background(Color.mlrWarning.mlrTint(0.18), in: Capsule())
                                 .foregroundStyle(Color.mlrWarning)
                         }
                     }

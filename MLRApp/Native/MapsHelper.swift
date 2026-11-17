@@ -59,7 +59,7 @@ struct HelpRequestMap: View {
             span: MKCoordinateSpan(latitudeDelta: 0.006, longitudeDelta: 0.006)
         ))) {
             Marker(title, coordinate: coordinate)
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
         }
         .frame(height: 180)
         .clipShape(RoundedRectangle(cornerRadius: 14))
@@ -90,7 +90,7 @@ struct ResortLocationMap: View {
             span: MKCoordinateSpan(latitudeDelta: 0.02, longitudeDelta: 0.02)
         ))) {
             Marker(title, systemImage: "tree.fill", coordinate: coordinate)
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
         }
     }
 }

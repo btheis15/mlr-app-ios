@@ -56,7 +56,7 @@ struct AdminView: View {
             // sheets in the People tab; this row is the directory + overview.
             Tool(id: "members", title: "Members",
                  description: "Directory with emails · promote admins · edit a member's info",
-                 icon: "person.2.fill", color: Color.mlrPrimary, keywords: "directory roster people",
+                 icon: "person.2.fill", color: Color.mlrPineText, keywords: "directory roster people",
                  action: push { AdminMembersView() }),
             Tool(id: "houses", title: "Houses",
                  description: "Create houses, reorder them, and assign members",
@@ -77,7 +77,7 @@ struct AdminView: View {
                  action: push { PreviewAsView() }),
             Tool(id: "invite", title: "Invite People",
                  description: "Branded welcome email · signs them straight in",
-                 icon: "envelope.badge.fill", color: Color.mlrPrimary, keywords: "email welcome",
+                 icon: "envelope.badge.fill", color: Color.mlrPineText, keywords: "email welcome",
                  action: .sheetInvite),
         ]
 
@@ -108,7 +108,7 @@ struct AdminView: View {
                  action: push { FamilyFestPlannerView() }),
             Tool(id: "images", title: "App Images",
                  description: "Swap the Home logo and Family Fest cover",
-                 icon: "photo.stack.fill", color: Color.mlrPrimary, keywords: "logo cover photo",
+                 icon: "photo.stack.fill", color: Color.mlrPineText, keywords: "logo cover photo",
                  action: push { AppImagesAdminView() }),
         ]
         if let url = URL(string: "https://docs.google.com/forms/create") {
@@ -125,7 +125,7 @@ struct AdminView: View {
                  action: push { AdminCabinBookings() }),
             Tool(id: "cabins", title: "Cabins",
                  description: "Edit cabins, rooms, beds, and availability",
-                 icon: "house.lodge", color: Color.mlrPrimary, keywords: "rooms beds",
+                 icon: "house.lodge", color: Color.mlrPineText, keywords: "rooms beds",
                  action: push { AdminCabinDetails() }),
             Tool(id: "local-places", title: "Local Places",
                  description: "Add, edit, reorder or hide the nearby spots members see",
@@ -140,7 +140,7 @@ struct AdminView: View {
                  action: push { AdminHelpContactView() }),
             Tool(id: "notiftest", title: "Notification Test",
                  description: "Ping one member, track who's confirmed",
-                 icon: "bell.badge.fill", color: Color.mlrPrimary, keywords: "push",
+                 icon: "bell.badge.fill", color: Color.mlrPineText, keywords: "push",
                  action: push { NotificationTestView() }),
         ]
         // Hidden from every admin except lib/owner.ts's OWNER_EMAIL — see

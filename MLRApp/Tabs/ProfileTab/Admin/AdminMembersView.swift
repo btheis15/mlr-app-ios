@@ -54,7 +54,7 @@ struct AdminMembersView: View {
                 NavigationLink { AdminFamilyRosterView() } label: {
                     Label("Family roster", systemImage: "person.crop.rectangle.stack.fill")
                 }
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
             }
         }
         .refreshable { await load() }
@@ -72,7 +72,7 @@ struct AdminMembersView: View {
                     Text(m.displayNameOrEmail).font(.mlrScaled(15, weight: .medium)).foregroundStyle(Color.mlrText)
                     if m.isAdmin {
                         Text("Admin").font(.mlrScaled(10, weight: .bold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                             .padding(.horizontal, 6).padding(.vertical, 1)
                             .background(Color.mlrPrimaryLight).clipShape(Capsule())
                     }

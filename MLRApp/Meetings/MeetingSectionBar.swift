@@ -71,10 +71,10 @@ struct MeetingSectionBar: View {
                     .font(.mlrScaled(12)).foregroundStyle(Color.mlrTextMuted).lineLimit(1)
             }
             Spacer()
-            Image(systemName: "chevron.right").font(.mlrScaled(13, weight: .semibold)).foregroundStyle(Color.mlrPrimary)
+            Image(systemName: "chevron.right").font(.mlrScaled(13, weight: .semibold)).foregroundStyle(Color.mlrPineText)
         }
         .padding(.horizontal, 12).padding(.vertical, 8)
-        .background(Color.mlrPrimary.opacity(0.05))
+        .background(Color.mlrPrimary.mlrTint(0.05))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).stroke(Color.mlrPrimary.opacity(0.2), lineWidth: 1))
     }

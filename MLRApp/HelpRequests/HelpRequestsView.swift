@@ -262,7 +262,7 @@ private struct HelpRequestCard: View {
             actionRow
         }
         .padding(16)
-        .background(isUrgent ? Color.mlrDanger.opacity(0.06) : Color.mlrCard)
+        .background(isUrgent ? Color.mlrDanger.mlrTint(0.06) : Color.mlrCard)
         .clipShape(RoundedRectangle(cornerRadius: 16))
         .overlay(
             RoundedRectangle(cornerRadius: 16)
@@ -351,7 +351,7 @@ private struct HelpRequestCard: View {
         }
         .frame(maxWidth: .infinity)
         .padding(.vertical, 11)
-        .background(filled ? color : color.opacity(0.1))
+        .background(filled ? color : color.mlrTint(0.1))
         .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }

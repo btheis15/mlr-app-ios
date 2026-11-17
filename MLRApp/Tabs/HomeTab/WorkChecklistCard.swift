@@ -54,7 +54,7 @@ struct WorkChecklistCard: View {
                         Text("\(done.count)/\(total)")
                     }
                     .gaugeStyle(.accessoryLinearCapacity)
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
                     .padding(.horizontal, 14)
                     .padding(.bottom, 10)
                     .accessibilityLabel("Work checklist progress")
@@ -196,9 +196,9 @@ struct WorkChecklistCard: View {
             } label: {
                 Image(systemName: "plus")
                     .font(.mlrScaled(15, weight: .bold))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .frame(width: 32, height: 32)
-                    .background(Color.mlrPrimary.opacity(0.1))
+                    .background(Color.mlrPrimary.mlrTint(0.1))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
             }
             .buttonStyle(.pressable)

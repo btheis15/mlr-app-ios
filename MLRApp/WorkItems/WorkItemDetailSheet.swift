@@ -131,7 +131,7 @@ struct WorkItemDetailSheet: View {
                 } label: {
                     Label(marking ? "Marking…" : "Mark done", systemImage: "checkmark.circle")
                         .font(.mlrScaled(14, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
                 .buttonStyle(.pressable)
                 .disabled(marking)
@@ -164,7 +164,7 @@ struct WorkItemDetailSheet: View {
             .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(color.opacity(0.12))
+            .background(color.mlrTint(0.12))
             .clipShape(Capsule())
     }
 

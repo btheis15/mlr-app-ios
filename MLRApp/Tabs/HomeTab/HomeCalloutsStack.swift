@@ -111,7 +111,7 @@ struct HomeCalloutsStack: View {
                 Button { Haptics.tap(); composer = CalloutComposerTarget(callout: nil) } label: {
                     Label("Add a call-out", systemImage: "plus.circle.fill")
                         .font(.mlrScaled(13, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                         .padding(.horizontal, 14)
                         .frame(minHeight: 44)
                         .contentShape(Rectangle())
@@ -310,7 +310,7 @@ struct HomeCalloutCard: View {
                 Button(action: markDone) {
                     Text(isMarkingDone ? "Marking done…" : "✓ I did this — don't show again")
                         .font(.mlrScaled(12, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 13)
                         .background(Color.mlrSurface)
@@ -339,7 +339,7 @@ struct HomeCalloutCard: View {
                         .frame(width: 26, height: 26)
                         .background(hasImage
                             ? AnyShapeStyle(.black.opacity(0.35))
-                            : AnyShapeStyle(.ultraThinMaterial))
+                            : AnyShapeStyle(MLRChipFill()))
                         .clipShape(Circle())
                 }
                 .buttonStyle(.pressable)
@@ -393,13 +393,13 @@ struct HomeCalloutCard: View {
         return HStack {
             Text(link.label?.nilIfEmpty ?? (isTel ? "📞 Call" : isExt ? "Open link" : "✉️ Email"))
                 .font(.mlrScaled(14, weight: .semibold))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
             Spacer()
-            if let t = digits { Text(formatPhone(t)).font(.mlrScaled(13)).foregroundStyle(Color.mlrPrimary.opacity(0.7)) }
+            if let t = digits { Text(formatPhone(t)).font(.mlrScaled(13)).foregroundStyle(Color.mlrPineText.opacity(0.7)) }
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 13)
-        .background(Color.mlrPrimary.opacity(0.09))
+        .background(Color.mlrPrimary.mlrTint(0.09))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.mlrPrimary.opacity(0.22), lineWidth: 1))
     }

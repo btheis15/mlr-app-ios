@@ -37,7 +37,7 @@ struct SignInWall<Content: View>: View {
         VStack(spacing: 20) {
             Image(systemName: "lock.fill")
                 .font(.mlrScaled(40))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
 
             VStack(spacing: 6) {
                 Text("Sign in to see this")
@@ -141,7 +141,7 @@ struct SignInChip: View {
         } label: {
             Label("Sign in", systemImage: "lock.fill")
                 .font(.mlrScaled(12, weight: .medium))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(Color.mlrPrimaryLight)

@@ -45,6 +45,7 @@ enum MLRCardVariant {
 private struct MLRCardSurface: ViewModifier {
     let variant: MLRCardVariant
     var padding: CGFloat?
+    @Environment(\.colorScheme) private var scheme
 
     private var isHero: Bool { if case .hero = variant { return true }; return false }
 
@@ -54,8 +55,9 @@ private struct MLRCardSurface: ViewModifier {
             .padding(padding ?? 0)
             .background {
                 switch variant {
-                case .plain, .hero: Color.mlrCard
-                case .tinted(let c): ZStack { Color.mlrCard; c.opacity(0.08) }
+                case .plain: Color.mlrCard
+                case .hero: scheme == .dark ? Color.mlrSurface2 : Color.mlrCard
+                case .tinted(let c): ZStack { Color.mlrCard; c.mlrTint(scheme == .dark ? 0.12 : 0.08) }
                 case .fest: Color.mlrFestCard
                 }
             }
@@ -63,11 +65,11 @@ private struct MLRCardSurface: ViewModifier {
             .overlay {
                 switch variant {
                 case .plain, .hero: shape.strokeBorder(Color.mlrBorder, lineWidth: 1)
-                case .tinted(let c): shape.strokeBorder(c.opacity(0.20), lineWidth: 1)
+                case .tinted(let c): shape.strokeBorder(scheme == .dark ? Color.mlrBorder : c.opacity(0.20), lineWidth: 1)
                 case .fest: shape.strokeBorder(Color.mlrFestBorder, lineWidth: 1)
                 }
             }
-            .shadow(color: .black.opacity(isHero ? 0.10 : 0.06),
+            .shadow(color: .black.opacity(scheme == .dark ? (isHero ? 0.12 : 0) : (isHero ? 0.10 : 0.06)),
                     radius: isHero ? 18 : 10, x: 0, y: isHero ? 8 : 2)
     }
 }
@@ -117,7 +119,7 @@ struct IconTile: View {
         let scale = size / 40
         ZStack {
             RoundedRectangle(cornerRadius: 12 * scale, style: .continuous)
-                .fill(accent.opacity(0.12))
+                .fill(accent.mlrTint(0.12, over: .mlrSurface3))
             if let emoji {
                 Text(emoji).font(.system(size: 24 * scale))
             } else if let symbol {
@@ -178,7 +180,7 @@ struct MLRFilledButtonStyle: ButtonStyle {
             switch kind {
             case .primary: return .mlrPrimary
             case .destructive: return .mlrCampfire
-            case .secondary: return Color.mlrPrimary.opacity(0.10)
+            case .secondary: return Color.mlrPrimary.mlrTint(0.10, over: .mlrSurface3)
             }
         }()
         configuration.label
@@ -325,7 +327,7 @@ struct MLRAvatar: View {
                 KFImage(u).resizable().scaledToFill()
             } else {
                 ZStack {
-                    Color.mlrPrimary.opacity(0.14)
+                    Color.mlrPrimary.mlrTint(0.14, over: .mlrSurface3)
                     Text(initials)
                         .font(.system(size: size * 0.38, weight: .semibold))
                         .foregroundStyle(Color.mlrPineText)

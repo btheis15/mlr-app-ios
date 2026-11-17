@@ -43,9 +43,9 @@ struct ScheduleSendPicker: View {
         Button(action: action) {
             Text(title)
                 .font(.mlrScaled(13, weight: .medium))
-                .foregroundStyle(isOn ? Color.mlrPrimary : Color.mlrTextMuted)
+                .foregroundStyle(isOn ? Color.mlrPineText : Color.mlrTextMuted)
                 .frame(maxWidth: .infinity, minHeight: 30)
-                .background(isOn ? Color.mlrPrimary.opacity(0.12) : Color.mlrSurface)
+                .background(isOn ? Color.mlrPrimary.mlrTint(0.12) : Color.mlrSurface)
                 .clipShape(RoundedRectangle(cornerRadius: 8))
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)

@@ -60,7 +60,7 @@ struct ChatPollCard: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "chart.bar.fill")
                 .font(.mlrScaled(13, weight: .semibold))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
                 .padding(.top, 2)
             VStack(alignment: .leading, spacing: 2) {
                 Text(poll.question)
@@ -111,7 +111,7 @@ struct ChatPollCard: View {
                     Image(systemName: isMine ? (poll.allowMultiple ? "checkmark.square.fill" : "checkmark.circle.fill")
                                              : (poll.allowMultiple ? "square" : "circle"))
                         .font(.mlrScaled(14))
-                        .foregroundStyle(isMine ? Color.mlrPrimary : Color.mlrTextSubtle)
+                        .foregroundStyle(isMine ? Color.mlrPineText : Color.mlrTextSubtle)
                     Text(option.isOther ? (option.label.isEmpty ? "Other" : option.label) : option.label)
                         .font(.mlrScaled(14, weight: isMine ? .semibold : .regular))
                         .foregroundStyle(Color.mlrText)
@@ -124,7 +124,7 @@ struct ChatPollCard: View {
                 // Proportional tally bar.
                 GeometryReader { geo in
                     ZStack(alignment: .leading) {
-                        Capsule().fill(Color.mlrPrimary.opacity(0.08))
+                        Capsule().fill(Color.mlrPrimary.mlrTint(0.08))
                         Capsule().fill(Color.mlrPrimary.opacity(isMine ? 0.35 : 0.18))
                             .frame(width: max(4, geo.size.width * fraction))
                     }
@@ -167,7 +167,7 @@ struct ChatPollCard: View {
                 Button { showVoters = true } label: {
                     Label("Who voted", systemImage: "person.2")
                         .font(.mlrScaled(11, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
                 .buttonStyle(.pressable)
             }

@@ -124,7 +124,7 @@ struct AdminCommitteesView: View {
             Text(committee.emoji ?? "👥")
                 .font(.mlrScaled(22))
                 .frame(width: 40, height: 40)
-                .background(Color.mlrInfo.opacity(0.12))
+                .background(Color.mlrInfo.mlrTint(0.12))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
             Text(committee.name)
                 .font(.mlrScaled(15, weight: .semibold))

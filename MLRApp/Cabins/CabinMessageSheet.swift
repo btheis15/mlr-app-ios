@@ -42,7 +42,7 @@ struct CabinMessageSheet: View {
                         Text("Goes to everyone with an approved stay that hasn't ended yet.")
                     }
                     Section {
-                        Toggle("Also email them", isOn: $alsoEmail).tint(Color.mlrPrimary)
+                        Toggle("Also email them", isOn: $alsoEmail).tint(Color.mlrPineText)
                     } footer: {
                         Text("Emails guests who have email alerts on, in addition to the in-app notification.")
                     }

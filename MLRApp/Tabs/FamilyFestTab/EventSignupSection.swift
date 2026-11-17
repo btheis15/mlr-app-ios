@@ -215,7 +215,7 @@ struct EventSignupSection: View {
         }
         .padding(10)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.mlrFest.opacity(0.06))
+        .background(Color.mlrFest.mlrTint(0.06, over: .mlrFestCard))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
@@ -487,7 +487,7 @@ struct TournamentEntryCard: View {
                         .foregroundStyle(Color.mlrFest.opacity(0.5))
                 }
                 .padding(12)
-                .background(Color.mlrFest.opacity(0.08))
+                .background(Color.mlrFest.mlrTint(0.08, over: .mlrFestCard))
                 .clipShape(RoundedRectangle(cornerRadius: 12))
                 .overlay(RoundedRectangle(cornerRadius: 12).strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1))
             }

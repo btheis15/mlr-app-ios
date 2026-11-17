@@ -149,7 +149,7 @@ private struct AttendeeCard: View {
                         .font(.mlrScaled(13, weight: .bold))
                         .foregroundStyle(Color.mlrFestReadable)
                         .frame(width: 32, height: 32)
-                        .background(Color.mlrFest.opacity(0.12))
+                        .background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                         .clipShape(Circle())
                     VStack(alignment: .leading, spacing: 1) {
                         Text(attendee.name)
@@ -168,14 +168,14 @@ private struct AttendeeCard: View {
                         .font(.mlrScaled(11, weight: .semibold))
                         .foregroundStyle(Color.mlrFestReadable)
                         .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(Color.mlrFest.opacity(0.12))
+                        .background(Color.mlrFest.mlrTint(0.12, over: .mlrFestCard))
                         .clipShape(Capsule())
                 } else if attendee.status == .maybe {
                     Text("Maybe")
                         .font(.mlrScaled(11, weight: .semibold))
                         .foregroundStyle(Color.mlrFest.opacity(0.7))
                         .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(Color.mlrFest.opacity(0.08))
+                        .background(Color.mlrFest.mlrTint(0.08, over: .mlrFestCard))
                         .clipShape(Capsule())
                 }
             }
@@ -188,7 +188,7 @@ private struct AttendeeCard: View {
                         .foregroundStyle(on ? Color.white : Color.mlrFest.opacity(0.35))
                         .padding(.horizontal, 9)
                         .padding(.vertical, 4)
-                        .background(on ? Color.mlrFest : Color.mlrFest.opacity(0.08))
+                        .background(on ? Color.mlrFest : Color.mlrFest.mlrTint(0.08, over: .mlrFestCard))
                         .clipShape(RoundedRectangle(cornerRadius: 5))
                 }
             }

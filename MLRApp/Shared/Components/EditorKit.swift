@@ -108,7 +108,7 @@ struct EditorErrorBanner: View {
             }
         }
         .padding(MLRSpacing.md)
-        .background(Color.mlrDanger.opacity(0.12), in: RoundedRectangle(cornerRadius: MLRRadius.sm))
+        .background(Color.mlrDanger.mlrTint(0.12), in: RoundedRectangle(cornerRadius: MLRRadius.sm))
         .padding(.horizontal, MLRSpacing.page)
         .padding(.top, MLRSpacing.sm)
         .accessibilityElement(children: .combine)
@@ -439,7 +439,7 @@ struct EditorToggle: View {
                 }
             }
         }
-        .tint(Color.mlrPrimary)
+        .tint(Color.mlrPineText)
     }
 }
 
@@ -468,7 +468,7 @@ struct EditorEmojiField: View {
                 Button { showPicker = true } label: {
                     HStack(spacing: MLRSpacing.sm) {
                         Text(emoji ?? "☺︎").font(.mlrScaled(26)).opacity(emoji == nil ? 0.35 : 1)
-                        Text(emoji == nil ? "Choose" : "Change").foregroundStyle(Color.mlrPrimary)
+                        Text(emoji == nil ? "Choose" : "Change").foregroundStyle(Color.mlrPineText)
                     }
                 }
                 .buttonStyle(.plain)
@@ -560,7 +560,7 @@ struct EditorDateField: View {
             HStack {
                 if iso == nil && isOptional {
                     Button { iso = minISO ?? fmt.string(from: Date()); Haptics.select() } label: {
-                        Label("Add date", systemImage: "calendar.badge.plus").foregroundStyle(Color.mlrPrimary)
+                        Label("Add date", systemImage: "calendar.badge.plus").foregroundStyle(Color.mlrPineText)
                     }
                     .buttonStyle(.plain)
                     Spacer()
@@ -631,7 +631,7 @@ struct EditorTimeField: View {
             HStack {
                 if Self.parts(time) == nil && time?.isEmpty != false && isOptional {
                     Button { time = "12:00"; Haptics.select() } label: {
-                        Label("Add time", systemImage: "clock.badge.plus").foregroundStyle(Color.mlrPrimary)
+                        Label("Add time", systemImage: "clock.badge.plus").foregroundStyle(Color.mlrPineText)
                     }
                     .buttonStyle(.plain)
                     Spacer()

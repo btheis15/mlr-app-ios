@@ -73,7 +73,7 @@ struct EmailPoolsView: View {
                 if let emoji, !emoji.isEmpty {
                     Text(emoji).font(.mlrScaled(18))
                 } else {
-                    Image(systemName: icon).foregroundStyle(Color.mlrPrimary).frame(width: 24)
+                    Image(systemName: icon).foregroundStyle(Color.mlrPineText).frame(width: 24)
                 }
                 Text(title).font(.mlrScaled(15)).foregroundStyle(Color.mlrText)
                 Spacer()

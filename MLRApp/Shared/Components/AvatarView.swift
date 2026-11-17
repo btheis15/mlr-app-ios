@@ -102,7 +102,7 @@ struct AvatarView: View {
             .overlay(
                 Image(systemName: "person.fill")
                     .font(.mlrScaled(size.iconSize))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
             )
     }
 }

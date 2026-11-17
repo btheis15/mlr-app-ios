@@ -193,7 +193,7 @@ struct PollCard: View {
             .foregroundStyle(color)
             .padding(.horizontal, 8)
             .padding(.vertical, 3)
-            .background(color.opacity(0.12))
+            .background(color.mlrTint(0.12))
             .clipShape(Capsule())
     }
 }
@@ -213,14 +213,14 @@ private struct PollOptionRow: View {
             HStack(spacing: 8) {
                 Image(systemName: isVoted ? "checkmark.circle.fill" : "circle")
                     .font(.mlrScaled(16))
-                    .foregroundStyle(isVoted ? Color.mlrPrimary : Color.mlrTextSubtle)
+                    .foregroundStyle(isVoted ? Color.mlrPineText : Color.mlrTextSubtle)
                     .frame(width: 20)
 
                 VStack(alignment: .leading, spacing: 4) {
                     HStack {
                         Text(option.label)
                             .font(.mlrScaled(14, weight: isVoted ? .semibold : .regular))
-                            .foregroundStyle(isVoted ? Color.mlrPrimary : Color.mlrText)
+                            .foregroundStyle(isVoted ? Color.mlrPineText : Color.mlrText)
                         Spacer()
                         Text("\(Int(percent * 100))%")
                             .font(.mlrScaled(12, weight: .medium))
@@ -367,7 +367,7 @@ struct PollHomeCard: View {
                     HStack {
                         Label("Polls", systemImage: "chart.bar.xaxis.ascending")
                             .font(.mlrScaled(13, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                         Spacer()
                         Text("See all")
                             .font(.mlrScaled(12))

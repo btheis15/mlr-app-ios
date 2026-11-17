@@ -191,6 +191,8 @@ struct RootView: View {
             case "profile": selectedTab = .profile
             case "events", "local-places", "admin", "main-feed": debugScreen = v
             case "house-chat": router.requestRoute(.houseChat)
+            case "fest": selectedTab = .fest
+            case "feed": selectedTab = .feed
             default: break
             }
         }
@@ -660,7 +662,7 @@ struct SplashView: View {
             Color(.systemBackground).ignoresSafeArea()
 
             Circle()
-                .fill(RadialGradient(colors: [Color.mlrPrimary.opacity(0.22), .clear],
+                .fill(RadialGradient(colors: [Color.mlrPrimary.mlrTint(0.22), .clear],
                                       center: .center, startRadius: 0, endRadius: 160))
                 .frame(width: 320, height: 320)
                 .opacity(glowOpacity)
@@ -682,7 +684,7 @@ struct SplashView: View {
 
                 Text("Muskellunge Lake Resort")
                     .font(.script(26))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .opacity(wordmarkOpacity)
                     .offset(y: wordmarkOffset)
             }

@@ -185,7 +185,7 @@ struct SignInView: View {
                         Task { await resend() }
                     }
                     .font(.subheadline.bold())
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .disabled(auth.isLoading)
                 }
             }

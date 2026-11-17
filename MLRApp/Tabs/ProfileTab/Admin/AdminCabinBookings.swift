@@ -70,7 +70,7 @@ struct AdminCabinBookings: View {
                     } label: {
                         Label("Message guests", systemImage: "megaphone.fill")
                     }
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
                 }
             }
         }
@@ -283,7 +283,7 @@ private struct BookingRow: View {
 
                 Toggle("Email them a confirmation", isOn: $emailConfirm)
                     .font(.mlrScaled(13))
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
 
                 HStack(spacing: 10) {
                     filledButton("Approve", icon: "checkmark.circle.fill", color: Color.mlrSuccess) {
@@ -297,7 +297,7 @@ private struct BookingRow: View {
                 HStack(spacing: 16) {
                     Button("Edit") { onEdit() }
                         .font(.mlrScaled(12, weight: .medium))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                     Button("Cancel booking") { onCancel(); showReviewForm = false }
                         .font(.mlrScaled(12, weight: .medium))
                         .foregroundStyle(Color.mlrDanger)
@@ -311,7 +311,7 @@ private struct BookingRow: View {
             Button { showReviewForm = true } label: {
                 Text("Review request")
                     .font(.mlrScaled(13, weight: .semibold))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .frame(maxWidth: .infinity, minHeight: 32)
                     .overlay(RoundedRectangle(cornerRadius: 8).stroke(Color.mlrPrimary.opacity(0.4), lineWidth: 1))
             }

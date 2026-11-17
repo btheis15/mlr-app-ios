@@ -62,7 +62,7 @@ struct HouseStayComposer: View {
                 Section {
                     // The member is always coming (fixed).
                     HStack {
-                        Image(systemName: "person.fill").foregroundStyle(Color.mlrPrimary)
+                        Image(systemName: "person.fill").foregroundStyle(Color.mlrPineText)
                         Text("\(memberFirstName) (you)").foregroundStyle(Color.mlrText)
                         Spacer()
                     }
@@ -101,7 +101,7 @@ struct HouseStayComposer: View {
             }
             .navigationTitle(isEditing ? "Edit stay" : "Add your stay")
             .navigationBarTitleDisplayMode(.inline)
-            .tint(Color.mlrPrimary)
+            .tint(Color.mlrPineText)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }

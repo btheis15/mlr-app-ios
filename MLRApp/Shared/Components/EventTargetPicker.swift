@@ -37,7 +37,7 @@ struct EventTargetPicker: View {
                             .foregroundStyle(Color.mlrTextSubtle)
                     }
                 }
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
             }
         } header: {
             Text("Event filter")

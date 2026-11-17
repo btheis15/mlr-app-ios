@@ -38,13 +38,13 @@ struct WelcomeCard: View {
                         .frame(width: 44, height: 44)
                     Image(systemName: "house.fill")
                         .font(.mlrScaled(20))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                 }
 
                 VStack(alignment: .leading, spacing: 2) {
                     Text("Welcome to MLR")
                         .font(.mlrScaled(15, weight: .bold, design: .rounded))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
 
                     Text("Muskellunge Lake Resort — Est. 1987")
                         .font(.mlrCaption)
@@ -126,7 +126,7 @@ private struct WelcomeBullet: View {
         HStack(alignment: .top, spacing: 10) {
             Image(systemName: icon)
                 .font(.mlrScaled(13))
-                .foregroundStyle(Color.mlrPrimary)
+                .foregroundStyle(Color.mlrPineText)
                 .frame(width: 20)
                 .padding(.top, 1)
 

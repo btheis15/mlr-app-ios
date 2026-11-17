@@ -134,8 +134,8 @@ extension Color {
         Color(uiColor: UIColor { traits in
             let isDark = traits.userInterfaceStyle == .dark
             let theme = FestThemeStore.active
-            let text = theme.hex(slot, dark: isDark) ?? (isDark ? dark : light)
-            let back = theme.hex(bg, dark: isDark) ?? (isDark ? bgDark : bgLight)
+            let text = isDark ? FestDark.hex(slot, fallback: dark) : (theme.hex(slot, dark: false) ?? light)
+            let back = isDark ? FestDark.hex(bg, fallback: bgDark) : (theme.hex(bg, dark: false) ?? bgLight)
             return UIColor(Color(hex: FestTheme.readableOn(background: back, text: text)))
         })
     }

@@ -111,7 +111,7 @@ struct HomeHero: View {
                 .font(.mlrScaled(16, weight: .semibold))
                 .foregroundStyle(tint)
                 .frame(width: 38, height: 38)
-                .background(.ultraThinMaterial, in: Circle())
+                .background(MLRChipFill(), in: Circle())
         }
         .buttonStyle(.pressable)
         .accessibilityLabel(label)

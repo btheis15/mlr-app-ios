@@ -252,7 +252,7 @@ struct FestYearLookSheet: View {
                                     Text(p.name).font(.mlrScaled(13, weight: .medium))
                                 }
                                 .padding(.horizontal, 12).padding(.vertical, 8)
-                                .background(Color.mlrPrimary.opacity(0.08), in: Capsule())
+                                .background(Color.mlrPrimary.mlrTint(0.08, over: .mlrFestCard), in: Capsule())
                             }
                             .buttonStyle(.plain)
                         }

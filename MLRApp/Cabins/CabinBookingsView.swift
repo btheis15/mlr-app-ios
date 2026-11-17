@@ -46,7 +46,7 @@ struct CabinBookingsView: View {
                         NavigationLink { AdminCabinBookings() } label: {
                             Label("Requests to approve", systemImage: "tray.full")
                         }
-                        .tint(Color.mlrPrimary)
+                        .tint(Color.mlrPineText)
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
@@ -55,7 +55,7 @@ struct CabinBookingsView: View {
                     } label: {
                         Image(systemName: "plus")
                     }
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
                 }
             }
             .sheet(isPresented: $showRequestSheet) {
@@ -124,7 +124,7 @@ struct CabinBookingsView: View {
         } actions: {
             Button("Request a Cabin") { showRequestSheet = true }
                 .buttonStyle(.borderedProminent)
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
         }
     }
 
@@ -215,7 +215,7 @@ private struct BookingCard: View {
                     }
                 }
                 .buttonStyle(.pressable)
-                .background(Color.mlrDanger.opacity(0.08))
+                .background(Color.mlrDanger.mlrTint(0.08))
                 .clipShape(RoundedRectangle(cornerRadius: 10))
                 .disabled(isCancelling)
             }
@@ -226,10 +226,10 @@ private struct BookingCard: View {
                 Button { showPickRoom = true } label: {
                     Label("Choose your room", systemImage: "bed.double.fill")
                         .font(.mlrScaled(14, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 8)
-                        .background(Color.mlrPrimary.opacity(0.1))
+                        .background(Color.mlrPrimary.mlrTint(0.1))
                         .clipShape(RoundedRectangle(cornerRadius: 10))
                 }
                 .buttonStyle(.pressable)
@@ -315,7 +315,7 @@ private struct StatusBadge: View {
             .foregroundStyle(color)
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(color.opacity(0.14))
+            .background(color.mlrTint(0.14))
             .clipShape(Capsule())
     }
 }

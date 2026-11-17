@@ -99,7 +99,7 @@ struct AdminCalloutsView: View {
         .toolbar {
             ToolbarItem(placement: .topBarTrailing) {
                 Button { composing = true } label: { Image(systemName: "plus") }
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
                     .accessibilityLabel("New callout")
             }
         }
@@ -198,7 +198,7 @@ struct AdminCalloutsView: View {
                         if !callout.links.isEmpty {
                             Text("\(callout.links.count) link\(callout.links.count == 1 ? "" : "s")")
                                 .font(.mlrScaled(11))
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                         }
                     }
                     if status == .showingNow, let e = callout.endsOn {
@@ -213,7 +213,7 @@ struct AdminCalloutsView: View {
 
             Toggle("Active", isOn: Binding(get: { callout.isActive }, set: { setActive(callout, $0) }))
                 .labelsHidden()
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
                 .accessibilityLabel("\(callout.title ?? "Call-out") active")
         }
         .padding(.vertical, 4)
@@ -424,7 +424,7 @@ struct CalloutComposerView: View {
             } header: { Text("Visibility") }
 
             Section {
-                Toggle("Has deadline", isOn: $draft.value.hasDeadline.animation()).tint(Color.mlrPrimary)
+                Toggle("Has deadline", isOn: $draft.value.hasDeadline.animation()).tint(Color.mlrPineText)
                 if d.hasDeadline {
                     DatePicker("Deadline", selection: $draft.value.deadline,
                                displayedComponents: [.date, .hourAndMinute])
@@ -450,8 +450,8 @@ struct CalloutComposerView: View {
             }
 
             Section {
-                Toggle("Also send a notification", isOn: $alsoNotify).tint(Color.mlrPrimary)
-                Toggle("Also email everyone", isOn: $alsoEmail).tint(Color.mlrPrimary)
+                Toggle("Also send a notification", isOn: $alsoNotify).tint(Color.mlrPineText)
+                Toggle("Also email everyone", isOn: $alsoEmail).tint(Color.mlrPineText)
             } header: {
                 Text("On save")
             } footer: {

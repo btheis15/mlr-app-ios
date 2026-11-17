@@ -74,7 +74,7 @@ struct RosterEditSheet: View {
                 if draft.value.linkedUserId != nil {
                     HStack {
                         Label(draft.value.linkedName ?? "Linked account", systemImage: "checkmark.circle.fill")
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                         Spacer()
                         Button("Change") {
                             draft.value.linkedUserId = nil
@@ -87,7 +87,7 @@ struct RosterEditSheet: View {
                     } label: {
                         Label("Choose a member", systemImage: "person.crop.circle.badge.checkmark")
                             .font(.mlrScaled(16, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                     }
                 }
             } header: {
@@ -109,7 +109,7 @@ struct RosterEditSheet: View {
 
             Section {
                 Toggle("Committee lead", isOn: $draft.value.isCommitteeLead)
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
             } footer: {
                 Text("A lead of the whole committee — no subcommittee required. Gets the private Leads chat and can manage this committee's roster.")
             }
@@ -133,7 +133,7 @@ struct RosterEditSheet: View {
                                 }
                             ))
                             .labelsHidden()
-                            .tint(Color.mlrPrimary)
+                            .tint(Color.mlrPineText)
                         }
                     }
                 } header: {
@@ -187,7 +187,7 @@ struct RosterEditSheet: View {
                 Text("Lead")
             }
             .font(.mlrScaled(12, weight: .semibold))
-            .foregroundStyle(isLead ? Color.mlrPrimary : Color.mlrTextMuted)
+            .foregroundStyle(isLead ? Color.mlrPineText : Color.mlrTextMuted)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background((isLead ? Color.mlrPrimary : Color.mlrTextMuted).opacity(0.12))

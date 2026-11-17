@@ -769,7 +769,7 @@ struct EventChatView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text(q.author)
                             .font(.mlrScaled(11, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                         Text(q.text)
                             .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrTextMuted)
@@ -777,7 +777,7 @@ struct EventChatView: View {
                     }
                     .padding(.horizontal, 10).padding(.vertical, 6)
                     .frame(maxWidth: 240, alignment: .leading)
-                    .background(Color.mlrPrimary.opacity(0.08))
+                    .background(Color.mlrPrimary.mlrTint(0.08))
                     .clipShape(RoundedRectangle(cornerRadius: 10))
                     .overlay(alignment: .leading) {
                         RoundedRectangle(cornerRadius: 1).fill(Color.mlrPrimary).frame(width: 2.5).padding(.vertical, 4)
@@ -885,7 +885,7 @@ struct EventChatView: View {
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Replying to \(quote(for: replyingTo.id)?.author ?? replyingTo.authorName)")
                             .font(.mlrScaled(12, weight: .semibold))
-                            .foregroundStyle(Color.mlrPrimary)
+                            .foregroundStyle(Color.mlrPineText)
                         Text(quote(for: replyingTo.id)?.text ?? "")
                             .font(.mlrScaled(12))
                             .foregroundStyle(Color.mlrTextMuted)

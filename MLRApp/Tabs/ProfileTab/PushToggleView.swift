@@ -60,10 +60,10 @@ struct PushToggleView: View {
                         }
                     } icon: {
                         Image(systemName: masterEnabled ? "bell.badge.fill" : "bell.slash.fill")
-                            .foregroundStyle(masterEnabled ? Color.mlrPrimary : Color.mlrTextSubtle)
+                            .foregroundStyle(masterEnabled ? Color.mlrPineText : Color.mlrTextSubtle)
                     }
                 }
-                .tint(Color.mlrPrimary)
+                .tint(Color.mlrPineText)
                 .disabled(isRequesting || isSaving)
 
                 // Permission denied banner
@@ -83,7 +83,7 @@ struct PushToggleView: View {
                             openSettings()
                         }
                         .font(.caption.bold())
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                     }
                     .padding(.vertical, 4)
                 }
@@ -177,10 +177,10 @@ struct PushToggleView: View {
                 }
             } icon: {
                 Image(systemName: icon)
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
             }
         }
-        .tint(Color.mlrPrimary)
+        .tint(Color.mlrPineText)
         .disabled(isSaving)
     }
 
@@ -204,10 +204,10 @@ struct PushToggleView: View {
                 }
             } icon: {
                 Image(systemName: "person.badge.plus.fill")
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
             }
         }
-        .tint(Color.mlrPrimary)
+        .tint(Color.mlrPineText)
         .disabled(isSaving)
     }
 

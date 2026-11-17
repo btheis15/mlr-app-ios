@@ -73,9 +73,9 @@ struct DropBoxesView: View {
             Button { creating = true } label: {
                 Label("New folder", systemImage: "plus")
                     .font(.mlrScaled(15, weight: .semibold))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .padding(.horizontal, 16).padding(.vertical, 10)
-                    .background(Color.mlrPrimary.opacity(0.1))
+                    .background(Color.mlrPrimary.mlrTint(0.1))
                     .clipShape(Capsule())
             }
             .buttonStyle(.pressable)
@@ -157,10 +157,10 @@ struct DropBoxDetailView: View {
                             Label(uploading ? "Uploading \(uploadedCount)/\(uploadTotal)…" : "Add photos & videos",
                                   systemImage: "plus.circle.fill")
                                 .font(.mlrScaled(15, weight: .semibold))
-                                .foregroundStyle(Color.mlrPrimary)
+                                .foregroundStyle(Color.mlrPineText)
                                 .frame(maxWidth: .infinity)
                                 .padding(.vertical, 12)
-                                .background(Color.mlrPrimary.opacity(0.1))
+                                .background(Color.mlrPrimary.mlrTint(0.1))
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                         }
                         .disabled(uploading || box.isArchived)
@@ -303,7 +303,7 @@ struct DropBoxDetailView: View {
                 if selectMode {
                     Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
                         .font(.mlrScaled(20))
-                        .foregroundStyle(isSelected ? Color.mlrPrimary : .white)
+                        .foregroundStyle(isSelected ? Color.mlrPineText : .white)
                         .shadow(radius: 1)
                         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topTrailing)
                         .padding(6)

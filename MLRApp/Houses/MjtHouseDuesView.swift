@@ -96,7 +96,7 @@ struct MjtHouseDuesCard: View {
             Button { Task { await markPaid(festYear) } } label: {
                 Text("✅ I've already paid")
                     .font(.mlrScaled(13, weight: .medium))
-                    .foregroundStyle(Color.mlrPrimary)
+                    .foregroundStyle(Color.mlrPineText)
                     .frame(maxWidth: .infinity)
             }
             .buttonStyle(.pressable)
@@ -188,7 +188,7 @@ struct MjtHousePayView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFest.opacity(0.07))
+                .fill(Color.mlrFest.mlrTint(0.07))
                 .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1.5))
         )
     }
@@ -263,7 +263,7 @@ struct MjtHousePayView: View {
             }
         }
         .padding(10)
-        .background(Color.mlrFest.opacity(0.06))
+        .background(Color.mlrFest.mlrTint(0.06))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

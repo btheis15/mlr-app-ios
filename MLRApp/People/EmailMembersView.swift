@@ -110,7 +110,7 @@ struct EmailMembersView: View {
                                         .foregroundStyle(selectedArea == area ? Color.mlrPrimary : Color.mlrTextMuted)
                                 }
                                 .padding(.horizontal, 14).padding(.vertical, 12)
-                                .background(selectedArea == area ? Color.mlrPrimary.opacity(0.1) : Color.mlrCard)
+                                .background(selectedArea == area ? Color.mlrPrimary.mlrTint(0.1) : Color.mlrCard)
                                 .clipShape(RoundedRectangle(cornerRadius: 12))
                             }
                             .buttonStyle(.pressable)
@@ -155,9 +155,9 @@ struct EmailMembersView: View {
 
                 Button { copyAddresses() } label: {
                     Text(copied ? "Copied ✓" : "Copy addresses")
-                        .font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrPrimary)
+                        .font(.mlrScaled(14, weight: .semibold)).foregroundStyle(Color.mlrPineText)
                         .frame(maxWidth: .infinity).padding(.vertical, 12)
-                        .background(Color.mlrPrimary.opacity(0.1)).clipShape(RoundedRectangle(cornerRadius: 12))
+                        .background(Color.mlrPrimary.mlrTint(0.1)).clipShape(RoundedRectangle(cornerRadius: 12))
                 }
                 .disabled(audienceEmails.isEmpty)
             }

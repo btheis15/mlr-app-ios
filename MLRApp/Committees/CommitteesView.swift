@@ -218,12 +218,12 @@ private struct CommitteeRowCard: View {
                 .foregroundStyle(Color.mlrWarning)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 6)
-                .background(Color.mlrWarning.opacity(0.12))
+                .background(Color.mlrWarning.mlrTint(0.12))
                 .clipShape(Capsule())
         } else {
             Button(action: onJoin) {
                 if isJoining {
-                    ProgressView().tint(Color.mlrPrimary)
+                    ProgressView().tint(Color.mlrPineText)
                         .frame(width: 54)
                 } else {
                     Text("Join")
@@ -253,7 +253,7 @@ private struct AreaChipsRow: View {
                 ForEach(areas, id: \.self) { area in
                     Text(area)
                         .font(.mlrScaled(11, weight: .semibold))
-                        .foregroundStyle(Color.mlrPrimary)
+                        .foregroundStyle(Color.mlrPineText)
                         .padding(.horizontal, 8).padding(.vertical, 3)
                         .background(Color.mlrPrimaryLight)
                         .clipShape(Capsule())
@@ -315,7 +315,7 @@ struct CommitteeJoinSheet: View {
                                     if selected.contains(area) {
                                         Image(systemName: "checkmark")
                                             .font(.mlrScaled(14, weight: .semibold))
-                                            .foregroundStyle(Color.mlrPrimary)
+                                            .foregroundStyle(Color.mlrPineText)
                                     }
                                 }
                                 .contentShape(Rectangle())

@@ -70,7 +70,7 @@ struct FestPayView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
             RoundedRectangle(cornerRadius: 14)
-                .fill(Color.mlrFest.opacity(0.07))
+                .fill(Color.mlrFest.mlrTint(0.07, over: .mlrFestCard))
                 .overlay(RoundedRectangle(cornerRadius: 14).strokeBorder(Color.mlrFest.opacity(0.2), lineWidth: 1.5))
         )
     }
@@ -248,7 +248,7 @@ private struct PayeeCard: View {
             }
         }
         .padding(10)
-        .background(tint.opacity(0.10))
+        .background(tint.mlrTint(0.10, over: .mlrFestCard))
         .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 }

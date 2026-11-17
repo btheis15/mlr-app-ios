@@ -144,7 +144,7 @@ struct ErrorStateView: View {
             if let retry {
                 Button("Try Again", action: retry)
                     .buttonStyle(.borderedProminent)
-                    .tint(Color.mlrPrimary)
+                    .tint(Color.mlrPineText)
             }
         }
     }
